@@ -50,6 +50,8 @@ dependencies:
   intl:
   syncfusion_flutter_charts:
   shimmer:
+  #qr_code_scanner:
+  country_pickers:
 
 
 dev_dependencies:

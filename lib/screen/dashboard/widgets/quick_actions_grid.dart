@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -20,6 +21,7 @@ class QuickActionsGrid extends GetView<DashboardController> {
           ),
         ),
         SizedBox(height: 12),
+
         GridView.count(
           crossAxisCount: 4,
           shrinkWrap: true,
@@ -33,12 +35,19 @@ class QuickActionsGrid extends GetView<DashboardController> {
               color: Colors.blue,
               onTap: controller.navigateToCreateInvoice,
             ),
-            _buildActionCard(
-              icon: Icons.list_alt,
-              label: 'New Challan',
-              color: Colors.green,
-              onTap: controller.navigateToNewChallan,
-            ),
+            // _buildActionCard(
+            //   icon: Icons.list_alt,
+            //   label: 'New Challan',
+            //   color: Colors.green,
+            //   onTap: controller.navigateToNewChallan,
+            // ),
+            if (AppConstants.isChallan.value)
+              _buildActionCard(
+                icon: Icons.list_alt,
+                label: 'New Challan',
+                color: Colors.green,
+                onTap: controller.navigateToNewChallan,
+              ),
             _buildActionCard(
               icon: Icons.people,
               label: 'Customers',
@@ -52,7 +61,7 @@ class QuickActionsGrid extends GetView<DashboardController> {
               onTap: controller.navigateToItems,
             ),
           ],
-        ),
+        )
       ],
     );
   }

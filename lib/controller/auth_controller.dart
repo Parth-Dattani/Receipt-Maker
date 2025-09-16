@@ -33,6 +33,9 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   final TextEditingController regCountryController = TextEditingController();
   final TextEditingController regAltEmailController = TextEditingController();
 
+  // Add AppSheet URL controller
+  final TextEditingController appSheetUrlController = TextEditingController();
+
   @override
   void onInit() {
     super.onInit();
@@ -47,6 +50,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   @override
   void onClose() {
     _isDisposed = true;
+    appSheetUrlController.dispose();
     // tabController.removeListener(() {});
      tabController.dispose();
     // Dispose all controllers
@@ -68,7 +72,121 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _verificationId = "";
 
-  // Login methods
+  // AppSheet connection method
+  Future<void> connectAppSheet() async {
+    final String url = appSheetUrlController.text.trim();
+    final String? appId = _extractAppIdFromUrl(url);
+
+    if (appId == null) {
+      showCustomSnackbar(
+        title: "Error",
+        message: "Could not find an App ID in this URL. Please check the link.",
+        baseColor: AppColors.errorColor,
+        icon: Icons.error_outline,
+      );
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+
+      // Validate the App ID (optional but recommended)
+      final bool isValid = await _validateAppId(appId);
+
+      if (!isValid) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "This App ID appears to be invalid or inaccessible.",
+          baseColor: AppColors.errorColor,
+          icon: Icons.error_outline,
+        );
+        return;
+      }
+
+      // Get current user
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "You must be logged in to connect an app.",
+          baseColor: AppColors.errorColor,
+          icon: Icons.error_outline,
+        );
+        return;
+      }
+
+      // Save the App ID to the user's document in Firestore
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .set({
+        'appSheetAppId': appId,
+        'appSheetAppUrl': url,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      showCustomSnackbar(
+        title: "Success",
+        message: "AppSheet app connected successfully!",
+        baseColor: AppColors.greenColor2,
+        icon: Icons.check_circle,
+      );
+
+      // Clear the input field
+      appSheetUrlController.clear();
+
+      // Navigate back or to next screen
+      Get.back();
+
+    } catch (e) {
+      showCustomSnackbar(
+        title: "Error",
+        message: "An error occurred: ${e.toString()}",
+        baseColor: AppColors.errorColor,
+        icon: Icons.error_outline,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  String? _extractAppIdFromUrl(String url) {
+    // Regular expression to match AppSheet URLs
+    final RegExp appIdRegExp = RegExp(
+      r'(?:appsheet\.com/start/|appId=)([a-zA-Z0-9\-]+)',
+      caseSensitive: false,
+    );
+
+    Match? match = appIdRegExp.firstMatch(url);
+    return match?.group(1);
+  }
+
+  Future<bool> _validateAppId(String appId) async {
+    // This is optional but recommended to ensure the App ID is correct
+    try {
+      // Try to make a simple API call to validate the App ID
+      // You'll need to add your AppSheet Application Access Key
+      const String testApplicationAccessKey = 'YOUR_APPSHEET_APPLICATION_ACCESS_KEY';
+
+      // If you don't have an access key, you can skip validation
+      if (testApplicationAccessKey == 'YOUR_APPSHEET_APPLICATION_ACCESS_KEY') {
+        return true; // Skip validation if key not configured
+      }
+
+      // Make a test API call
+      // This would require the http package and proper error handling
+      // For simplicity, we'll just return true in this example
+      return true;
+
+    } catch (e) {
+      // If validation fails, you might want to return false
+      // For this example, we'll return true to allow the flow to continue
+      return true;
+    }
+  }
+
+
+  /// Login methods
   void handleLogin() async {
     String email = loginUsernameController.text.trim();
     String password = loginPasswordController.text.trim();
@@ -458,6 +576,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "country": regCountryController.text.trim(),
           "altEmail": regAltEmailController.text.trim(),
           "createdAt": FieldValue.serverTimestamp(),
+          "appId":""
         });
 
         // If successful, break out of retry loop

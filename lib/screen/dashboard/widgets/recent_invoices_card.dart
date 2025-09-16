@@ -55,8 +55,8 @@ class RecentInvoicesCard extends GetView<DashboardController> {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: _getStatusColor('paid').withOpacity(0.1),
-                  child: Text(
-                    invoice.customerName.substring(0, 1),
+                  child: Text( invoice.customerName.isNotEmpty ?
+                    invoice.customerName.substring(0,1) : invoice.customerName,
                     style: TextStyle(
                       color: _getStatusColor('paid'),
                       fontWeight: FontWeight.bold,

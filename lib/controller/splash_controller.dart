@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/constant/app_constant.dart';
 import 'package:demo_prac_getx/controller/controller.dart';
 import 'package:demo_prac_getx/screen/screen.dart';
+import 'package:demo_prac_getx/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
+import '../screen/auth/ConnectAppSheetScreen.dart';
 import '../utils/utils.dart';
 
 class SplashController extends BaseController{
@@ -33,6 +35,73 @@ class SplashController extends BaseController{
   //   }
   // }
 
+  ///After QE
+  // void goToNext2() async {
+  //   await Future.delayed(const Duration(seconds: 3));
+  //
+  //   final user = FirebaseAuth.instance.currentUser;
+  //
+  //   // Check if user is null FIRST before using it
+  //   if (user == null) {
+  //     print("No user logged in, going to auth screen");
+  //     Get.offAllNamed(AuthScreen.pageId);
+  //     return;
+  //   }
+  //
+  //   print("-=-=-========:User:----${user.uid}----");
+  //   String userId = user.uid;
+  //   String useremail = user.email!;
+  //   AppConstants.userId = userId;
+  //   print("-=-=-========:User:-Email--$useremail----");
+  //
+  //   try {
+  //     // Check if company exists - using the correct collection structure
+  //     final companies = await FirebaseFirestore.instance
+  //         .collection("users")
+  //         .doc(user.uid)
+  //         .collection("companies")
+  //         .limit(1)
+  //         .get();
+  //     print("Companies query result: ${companies.docs.length} companies found");
+  //
+  //     if (companies.docs.isEmpty) {
+  //       // No company → go to company registration
+  //       print("No company found, going to company registration");
+  //       Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //       return;
+  //     }
+  //
+  //     final companyId = companies.docs.first.id;
+  //     final companyData = companies.docs.first.data();
+  //
+  //     await sharedPreferencesHelper.storePrefData("CompanyId", companyId);
+  //     print("----Cmp Id---Splash: ${companyId}");
+  //
+  //     // Check if user already has an AppSheet ID
+  //     final userDoc = await FirebaseFirestore.instance
+  //         .collection("users")
+  //         .doc(user.uid)
+  //         .get();
+  //
+  //     final hasAppSheetId = userDoc.exists && userDoc.data()?.containsKey('appSheetAppId') == true;
+  //
+  //     if (hasAppSheetId) {
+  //       // User already has AppSheet connected → go to dashboard
+  //       print("AppSheet already connected, going to dashboard");
+  //       Get.offAllNamed(DashboardScreen.pageId);
+  //     } else {
+  //       // User needs to connect AppSheet
+  //       print("No AppSheet connection found, redirecting to ConnectAppSheetScreen");
+  //       Get.offAll(() => ConnectAppSheetScreen());
+  //     }
+  //   } catch (e) {
+  //     print("Error checking company: $e");
+  //     // If there's an error (like permission denied), go to company registration
+  //     Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //   }
+  // }
+  //
+  ///
   void goToNext() async {
     await Future.delayed(const Duration(seconds: 3));
 
@@ -47,8 +116,27 @@ class SplashController extends BaseController{
 
     print("-=-=-========:User:----${user.uid}----");
     String userId = user.uid;
+    String useremail = user.email!;
     AppConstants.userId = userId;
-    print("-=-=-========:User:--222--$userId----");
+    print("-=-=-========:User:-Email--$useremail----");
+
+
+    // if(useremail == null){
+    //   print("Nio Usseer0000");
+    //   throw Exception('No user logged in');
+    // }
+    // String? appId = await RemoteService.getUserAppId(useremail);
+    //
+    // print("apppapapa ID: -----------${appId}");
+    // // If not found locally, try to get from backend
+    // if (appId == null) {
+    //   //appId = await UserAppIdService.getUserAppId(currentUser);
+    //
+    //   if (appId != null) {
+    //     // Cache it locally for faster access
+    //     await RemoteService.saveUserAppId(useremail, appId);
+    //   }
+    // }
 
     try {
       // Check if company exists - using the correct collection structure
@@ -73,16 +161,117 @@ class SplashController extends BaseController{
       await sharedPreferencesHelper.storePrefData("CompanyId", companyId);
       print("----Cmp Id---Splash: ${companyId}");
 
-      // Both company exists → go to dashboard
-      print("Company found, going to dashboard");
-      Get.offAllNamed(DashboardScreen.pageId);
 
-    } catch (e) {
+      // Check if user has AppSheet credentials in their document
+      final userDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+
+      loadCompanySettings(companyId);
+
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        final hasAppId = userData.containsKey('appId') &&
+            userData['appId'] != null;
+        final hasAccessKey = userData.containsKey('accessKey') &&
+            userData['accessKey'] != null;
+
+        print("User has AppSheet App ID: $hasAppId");
+        print("User has AppSheet Access Key: $hasAccessKey");
+
+        if (hasAppId && hasAccessKey) {
+          // Store AppSheet credentials in shared preferences for easy access
+          await sharedPreferencesHelper.storePrefData(
+              "appSheetAppId", userData['appId']);
+          await sharedPreferencesHelper.storePrefData(
+              "appSheetAccessKey", userData['accessKey']);
+
+          AppConstants.appId =  userData['appId'].toString();
+          AppConstants.accessKey = userData['accessKey'].toString();
+
+
+          // Both company and AppSheet credentials exist → go to dashboard
+          print("Company and AppSheet credentials found, going to dashboard:--- ${AppConstants.appId}-----${AppConstants.accessKey}");
+          Get.offAllNamed(DashboardScreen.pageId);
+        }
+        else {
+          // Company exists but no AppSheet credentials → go to AppSheet connection screen
+          print("Company found but no AppSheet credentials, redirecting to ConnectAppSheetScreen");
+
+          ///Get.offAll(() => ConnectAppSheetScreen());
+        }
+        // Both company exists → go to dashboard
+        print("Company found, going to dashboard");
+        Get.offAllNamed(DashboardScreen.pageId);
+      } } catch (e) {
       print("Error checking company: $e");
       // If there's an error (like permission denied), go to company registration
       Get.offAllNamed(CompanyRegistrationScreen.pageId);
     }
   }
 
+  // Future<void> loadCompanySettings(String companyId) async {
+  //   print("-------------cmpyID:-------${companyId}");
+  //   try {
+  //     final user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       final doc = await FirebaseFirestore.instance
+  //           .collection('users')
+  //           .doc(user.uid)
+  //           .collection('companies')
+  //           .doc(companyId)
+  //           .get();
+  //
+  //       if (doc.exists) {
+  //         final data = doc.data();
+  //         if (data != null) {
+  //           final isChallanEnabled = data['isChallanEnabled'] ?? false;
+  //
+  //
+  //           // Update SharedPreferences and AppConstants
+  //           final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+  //           await prefs.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+  //           AppConstants.isChallan.value = isChallanEnabled;
+  //           print("IsssChallN-------------${isChallanEnabled}");
+  //         }
+  //         print("IsssChallN-------ccc------${AppConstants.isChallan.value}");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('Error loading company settings: $e');
+  //   }
+  // }
+  Future<void> loadCompanySettings(String companyId) async {
+    print("-------------cmpyID:-------${companyId}");
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('companies')
+            .doc(companyId)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data();
+          print("------------Data===============:$data");
+          if (data != null) {
+            final isChallanEnabled = data['isChallanEnabled'] ?? false;
+
+            // Use the helper method instead of getting the instance
+            await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+            AppConstants.isChallan.value = isChallanEnabled;
+            print("IsssChallN-------------${isChallanEnabled}");
+          }
+          print("IsssChallN-------ccc------${AppConstants.isChallan.value}");
+        }
+      }
+    } catch (e) {
+      print('Error loading company settings: $e');
+    }
+  }
 
 }

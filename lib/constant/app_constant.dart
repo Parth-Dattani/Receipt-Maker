@@ -1,7 +1,13 @@
 
+import 'package:get/get.dart';
+
 class AppConstants{
 
    static String  userId = "";
   // static String verticalId =  "2799";
-  // static int appId = 2818;
+   static String appId = "";
+   static String accessKey = "";
+   static final isChallan = false.obs;
+
+
 }

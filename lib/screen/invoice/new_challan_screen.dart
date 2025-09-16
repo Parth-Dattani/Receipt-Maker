@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -16,41 +17,41 @@ class NewChallanScreen extends GetView<NewChallanController> {
         title: Text('New Challan'),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
-        actions: [
-          Obx(() => controller.isLoading.value
-              ? Padding(
-            padding: EdgeInsets.all(16),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-          )
-              : Row(
-            children: [
-              TextButton(
-                onPressed: () => controller.saveChallan(isDraft: true),
-                child: Text(
-                  'Save Draft',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              TextButton(
-                onPressed: () => controller.saveChallan(isDraft: false),
-                child: Text(
-                  'Create Challan',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          )),
-        ],
+        // actions: [
+        //   Obx(() => controller.isLoading.value
+        //       ? Padding(
+        //     padding: EdgeInsets.all(16),
+        //     child: SizedBox(
+        //       width: 20,
+        //       height: 20,
+        //       child: CircularProgressIndicator(
+        //         strokeWidth: 2,
+        //         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        //       ),
+        //     ),
+        //   )
+        //       : Row(
+        //     children: [
+        //       TextButton(
+        //         onPressed: () => controller.saveChallan(isDraft: true),
+        //         child: Text(
+        //           'Save Draft',
+        //           style: TextStyle(color: Colors.white),
+        //         ),
+        //       ),
+        //       TextButton(
+        //         onPressed: () => controller.saveChallan(isDraft: false),
+        //         child: Text(
+        //           'Create Challan',
+        //           style: TextStyle(
+        //             color: Colors.white,
+        //             fontWeight: FontWeight.bold,
+        //           ),
+        //         ),
+        //       ),
+        //     ],
+        //   )),
+        // ],
       ),
       body: Stack(
         children: [
@@ -922,21 +923,21 @@ class NewChallanScreen extends GetView<NewChallanController> {
         ),
         SizedBox(width: 8),
 
-        // Save Draft button
-        Expanded(
-          flex: 3,
-          child: ElevatedButton(
-            onPressed: controller.isLoading.value ? null : () => controller.saveChallan(isDraft: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade600,
-              padding: EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text('Save Draft'),
-          ),
-        ),
-        SizedBox(width: 8),
+        /// Save Draft button
+        // Expanded(
+        //   flex: 3,
+        //   child: ElevatedButton(
+        //     onPressed: controller.isLoading.value ? null : () => controller.saveChallan(isDraft: true),
+        //     style: ElevatedButton.styleFrom(
+        //       backgroundColor: Colors.grey.shade600,
+        //       padding: EdgeInsets.symmetric(vertical: 12),
+        //     ),
+        //     child: Text('Save Draft'),
+        //   ),
+        // ),
+        // SizedBox(width: 8),
 
-        // Main action button
+        /// Main action button
         Expanded(
           flex: 4,
           child: ElevatedButton(
@@ -947,7 +948,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
             ),
             child: Text(
               'Create Challan',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.whiteColor),
             ),
           ),
         ),

@@ -26,6 +26,9 @@ class CompanyController extends BaseController {
   final ifscController = TextEditingController();
   final accountNumberController = TextEditingController();
   final authorisedSignatureController = TextEditingController();
+  var isChallanEnabled = false.obs;
+  var selectedCountry = ''.obs;
+  var selectedState = ''.obs;
 
   final formKey = GlobalKey<FormState>();
 
@@ -33,17 +36,32 @@ class CompanyController extends BaseController {
   var isCompanyRegistered = false.obs;
   var currentCompany = Rxn<Map<String, dynamic>>();
 
+  var isEditMode = false.obs;
+  String? existingCompanyId;
+
+
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+
   @override
   void onInit() {
     super.onInit();
-   /// _checkCompanyRegistration();
-  }
+    final args = Get.arguments;
+    print('Arguments received: $args'); // Debug print
 
-  // Check if current user has registered a company
+    if (args != null && args['isEdit'] == true && args['companyData'] != null) {
+      isEditMode.value = true;
+      existingCompanyId = args['companyId'];
+      print('Edit mode enabled with company ID: $existingCompanyId'); // Debug print
+      _populateFields(args['companyData']);
+    } else {
+      print('Create mode enabled'); // Debug print
+      _checkCompanyRegistration();
+    }
+  }
+  /// Check if current user has registered a company
   Future<void> _checkCompanyRegistration() async {
     try {
       final user = _auth.currentUser;
@@ -77,14 +95,13 @@ class CompanyController extends BaseController {
     }
   }
 
-  // Populate form fields with existing company data
+  /// Populate form fields with existing company data
   void _populateFields(Map<String, dynamic> companyData) {
+    print('Populating fields with data: $companyData');
     companyCodeController.text = companyData['companyCode'] ?? '';
     companyNameController.text = companyData['companyName'] ?? '';
     addressController.text = companyData['address'] ?? '';
     cityController.text = companyData['city'] ?? '';
-    stateController.text = companyData['state'] ?? '';
-    countryController.text = companyData['country'] ?? '';
     pincodeController.text = companyData['pincode'] ?? '';
     logoController.text = companyData['logo'] ?? '';
     businessCategoryController.text = companyData['businessCategory'] ?? '';
@@ -94,22 +111,58 @@ class CompanyController extends BaseController {
     ifscController.text = companyData['ifsc'] ?? '';
     accountNumberController.text = companyData['accountNumber'] ?? '';
     authorisedSignatureController.text = companyData['authorisedSignature'] ?? '';
+    isChallanEnabled.value = companyData['isChallanEnabled'] ?? false;
+
+    // Handle country first
+    final String country = companyData['country'] ?? '';
+    print('Country from data: $country, available countries: $countries');
+
+    if (countries.contains(country)) {
+      selectedCountry.value = country;
+
+      // Now handle state after country is set
+      final String state = companyData['state'] ?? '';
+      final availableStates = getStatesForCountry();
+      print('State from data: $state, available states: $availableStates');
+
+      if (availableStates.contains(state)) {
+        selectedState.value = state;
+        print('State set to: $state');
+      } else {
+        selectedState.value = '';
+        print('State not found in available states, setting to empty');
+      }
+    } else {
+      selectedCountry.value = '';
+      selectedState.value = '';
+      print('Country not found in available countries, setting both to empty');
+    }
   }
 
+  /// Check if company code already exists
   /// Check if company code already exists
   Future<bool> _isCompanyCodeUnique(String companyCode) async {
     final user = _auth.currentUser;
     if (user == null) return false;
 
-    final querySnapshot = await _firestore
-        .collection("users")
-        .doc(user.uid)
-        .collection("companies")
-        .where('companyCode', isEqualTo: companyCode.trim().toUpperCase())
-        .limit(1)
-        .get();
+    try {
+      Query query = _firestore
+          .collection("users")
+          .doc(user.uid)
+          .collection("companies")
+          .where('companyCode', isEqualTo: companyCode.trim().toUpperCase());
 
-    return querySnapshot.docs.isEmpty;
+      // If we're in edit mode, exclude the current company from the check
+      if (isEditMode.value && existingCompanyId != null && existingCompanyId!.isNotEmpty) {
+        query = query.where(FieldPath.documentId, isNotEqualTo: existingCompanyId);
+      }
+
+      final querySnapshot = await query.limit(1).get();
+      return querySnapshot.docs.isEmpty;
+    } catch (e) {
+      print("Error checking company code uniqueness: $e");
+      return false;
+    }
   }
 
   // Validate required fields
@@ -144,7 +197,18 @@ class CompanyController extends BaseController {
       return false;
     }
 
-    if (stateController.text.trim().isEmpty) {
+    // if (stateController.text.trim().isEmpty) {
+    //   showCustomSnackbar(
+    //     title: "",
+    //     message: "State is required",
+    //     icon: Icons.close,
+    //     baseColor: AppColors.appColor,
+    //   );
+    //
+    //   return false;
+    // }
+    // Replace state and country validation with dropdown validation
+    if (selectedState.value.isEmpty) {
       showCustomSnackbar(
         title: "",
         message: "State is required",
@@ -154,7 +218,17 @@ class CompanyController extends BaseController {
       return false;
     }
 
-    if (countryController.text.trim().isEmpty) {
+    // if (countryController.text.trim().isEmpty) {
+    //   showCustomSnackbar(
+    //     title: "",
+    //     message: "Country is required",
+    //     icon: Icons.close,
+    //     baseColor: AppColors.appColor,
+    //   );
+    //   return false;
+    // }
+
+    if (selectedCountry.value.isEmpty) {
       showCustomSnackbar(
         title: "",
         message: "Country is required",
@@ -282,8 +356,8 @@ class CompanyController extends BaseController {
         'companyName': companyNameController.text.trim(),
         'address': addressController.text.trim(),
         'city': cityController.text.trim(),
-        'state': stateController.text.trim(),
-        'country': countryController.text.trim(),
+        'state': selectedState.value,
+        'country': selectedCountry.value,
         'pincode': pincodeController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
@@ -296,6 +370,7 @@ class CompanyController extends BaseController {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
+        'isChallanEnabled': isChallanEnabled.value,
       };
 
       await companyRef.set(companyData);
@@ -332,21 +407,54 @@ class CompanyController extends BaseController {
     }
   }
 
-  /// Update existing company
+  /// Update an existing company
   Future<void> updateCompany() async {
+    if (!formKey.currentState!.validate()) return;
+    if (!_validateRequiredFields()) return;
+
     final user = _auth.currentUser;
-    if (user == null || currentCompany.value == null) return;
+    if (user == null) {
+      showCustomSnackbar(
+        title: "Error",
+        message: "Please login first!",
+        baseColor: AppColors.errorColor,
+        icon: Icons.error,
+      );
+      return;
+    }
 
     try {
       isLoading.value = true;
 
-      final companyId = currentCompany.value!['id'];
+      // Debug: Print the document ID we're trying to update
+      print('Attempting to update document with ID: $existingCompanyId');
+      print('User ID: ${user.uid}');
+
+      // First, check if the document exists
+      final docSnapshot = await _firestore
+          .collection("users")
+          .doc(user.uid)
+          .collection("companies")
+          .doc(existingCompanyId)
+          .get();
+
+      if (!docSnapshot.exists) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "Company document not found. It may have been deleted.",
+          baseColor: AppColors.errorColor,
+          icon: Icons.error,
+        );
+        return;
+      }
+
+      // Prepare update data
       final updateData = {
         'companyName': companyNameController.text.trim(),
         'address': addressController.text.trim(),
         'city': cityController.text.trim(),
-        'state': stateController.text.trim(),
-        'country': countryController.text.trim(),
+        'state': selectedState.value,
+        'country': selectedCountry.value,
         'pincode': pincodeController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
@@ -357,16 +465,20 @@ class CompanyController extends BaseController {
         'accountNumber': accountNumberController.text.trim(),
         'authorisedSignature': authorisedSignatureController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'isChallanEnabled': isChallanEnabled.value,
       };
 
       await _firestore
           .collection("users")
           .doc(user.uid)
           .collection("companies")
-          .doc(companyId)
+          .doc(existingCompanyId)
           .update(updateData);
 
-      currentCompany.value = {...currentCompany.value!, ...updateData};
+      // Update local data
+      if (currentCompany.value != null) {
+        currentCompany.value = {...currentCompany.value!, ...updateData};
+      }
 
       showCustomSnackbar(
         title: "Success",
@@ -374,7 +486,11 @@ class CompanyController extends BaseController {
         baseColor: AppColors.greenColor2,
         icon: Icons.done_all,
       );
+
+      // Go back to previous screen
+      Get.back();
     } catch (e) {
+      print('Update error: $e');
       showCustomSnackbar(
         title: "Error",
         message: "Update failed: ${e.toString()}",
@@ -383,6 +499,15 @@ class CompanyController extends BaseController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Save company (decides whether to register or update based on mode)
+  Future<void> saveCompany() async {
+    if (isEditMode.value) {
+      await updateCompany();
+    } else {
+      await registerCompany();
     }
   }
 
@@ -452,5 +577,54 @@ class CompanyController extends BaseController {
     authorisedSignatureController.dispose();
     super.dispose();
   }
+
+  // Add these lists for dropdown data
+  final List<String> countries = ['USA', 'Canada', 'India', 'UK', 'Australia'];
+
+  final Map<String, List<String>> countryStates = {
+    'India': [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+      'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+      'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+      'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+      'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+      'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi',
+      'Jammu and Kashmir', 'Ladakh',
+    ],
+    'United States': [
+      'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+      'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+      'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+      'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
+      'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+      'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+      'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+      'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
+      'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+      'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming',
+    ],
+    'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+    'Canada': [
+      'Alberta', 'British Columbia', 'Manitoba', 'New Brunswick',
+      'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia',
+      'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec',
+      'Saskatchewan', 'Yukon',
+    ],
+    'Australia': [
+      'New South Wales', 'Victoria', 'Queensland', 'Western Australia',
+      'South Australia', 'Tasmania', 'Australian Capital Territory',
+      'Northern Territory',
+    ],
+  };
+
+  // Add this method to get states for selected country
+  List<String> getStatesForCountry() {
+    if (selectedCountry.value.isEmpty) {
+      return [];
+    }
+    return countryStates[selectedCountry.value] ?? [];
+  }
+
+
 
 }

@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/constant/app_constant.dart' show AppConstants;
 import 'package:demo_prac_getx/screen/dashboard/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -370,6 +371,20 @@ class DashboardScreen extends GetView<DashboardController> {
                     controller.navigateToCustomerList();
                   },
                 ),
+                // Add Challan Option Toggle
+                Obx(() => ListTile(
+                  leading: Icon(Icons.list_alt, color: Colors.green),
+                  title: Text("Enable Challan Feature"),
+                  trailing: Switch(
+                    value: AppConstants.isChallan.value,
+                    onChanged: (value) {
+                      AppConstants.isChallan.value = value;
+                      // Optionally save this preference to Firebase or local storage
+                      controller.saveChallanPreference(value);
+                    },
+                    activeColor: Colors.green,
+                  ),
+                )),
                 ListTile(
                   leading: Icon(Icons.analytics, color: Colors.purple),
                   title: Text("Reports"),
@@ -393,10 +408,13 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.add_business, color: Colors.teal),
-                  title: Text("Add New Company"),
+                  title: Text("Edit Company Info"),
                   onTap: () {
-                    Get.back();
-                    Get.toNamed(CompanyRegistrationScreen.pageId);
+                    controller.navigateToEditCompany(
+                        controller.companyData,
+                        controller.companyData['id']);
+                    // Get.back();
+                    // Get.toNamed(CompanyRegistrationScreen.pageId);
                   },
                 ),
 

@@ -175,6 +175,7 @@ class DashboardController extends BaseController {
   var allUserCompanies = <Map<String, dynamic>>[].obs; // Store all companies
   var hasMultipleCompanies = false.obs; // Track if user has multiple companies
   var invoiceList = <Invoice>[].obs;
+  var companyData = <String, dynamic>{}.obs;
 
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -186,7 +187,89 @@ class DashboardController extends BaseController {
   void onInit() {
     super.onInit();
     _loadCompanyData();
+    loadCompanyData();
     loadDashboardData();
+    ///loadChallanPreference();
+  }
+
+  // Add this method to save the challan preference to SharedPreferences
+  Future<void> saveChallanPreference(bool isEnabled) async {
+    try {
+      final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+      await prefs.storeBoolPrefData('isChallanEnabled', isEnabled);
+      AppConstants.isChallan.value = isEnabled;
+      print('Challan preference saved: $isEnabled');
+    } catch (e) {
+      print('Error saving challan preference to SharedPreferences: $e');
+    }
+  }
+
+  // Add this method to load the challan preference from SharedPreferences
+  Future<void> loadChallanPreference() async {
+    try {
+      final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+      final isEnabled = prefs.retrievePrefBoolData('isChallanEnabled') ?? false;
+      AppConstants.isChallan.value = isEnabled;
+      print('Challan preference loaded: $isEnabled');
+    } catch (e) {
+      print('Error loading challan preference from SharedPreferences: $e');
+      AppConstants.isChallan.value = false; // Default value if error occurs
+    }
+  }
+
+  // In your DashboardController or CompanyController
+  Future<void> loadCompanySettings(String companyId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('companies')
+            .doc(companyId)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null) {
+            final isChallanEnabled = data['isChallanEnabled'] ?? false;
+
+            print("IsssChallN-------------${isChallanEnabled}");
+            // Update SharedPreferences and AppConstants
+            final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+            await prefs.setBool('isChallanEnabled', isChallanEnabled);
+            AppConstants.isChallan.value = isChallanEnabled;
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading company settings: $e');
+    }
+  }
+
+  Future<void> loadCompanyData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+     print("------------cmptyID:----------${companyId}");
+      if (companyId.isEmpty) return;
+
+      final companyDoc = await _firestore
+          .collection("users")
+          .doc(user.uid)
+          .collection("companies")
+          .doc(companyId)
+          .get();
+
+      if (companyDoc.exists) {
+        companyData.value = companyDoc.data() ?? {};
+        print("Company data loaded");
+      }
+    } catch (e) {
+      print("Error loading company data: $e");
+    }
   }
 
   Future<void> checkSubscriptionStatus() async {
@@ -1074,6 +1157,18 @@ class DashboardController extends BaseController {
     //   transition: Transition.rightToLeft,
     //   duration: Duration(milliseconds: 300),
     // );
+  }
+
+  // Example of navigating to edit mode from a company list screen
+  void navigateToEditCompany(Map<String, dynamic> companyData, String companyId) {
+    Get.toNamed(
+      CompanyRegistrationScreen.pageId,
+      arguments: {
+        'isEdit': true,
+        'companyData': companyData,
+        'companyId': companyId,
+      },
+    );
   }
 
   void viewInvoiceDetails(String invoiceId) {

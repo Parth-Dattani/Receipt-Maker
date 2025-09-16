@@ -7,6 +7,7 @@ class CustomTextFormField extends StatelessWidget {
   final bool isRequired;
   final TextInputType keyboardType;
   final IconData? prefixIcon; // ✅ make prefixIcon optional
+  final bool readOnly;
 
   const CustomTextFormField({
     Key? key,
@@ -16,6 +17,7 @@ class CustomTextFormField extends StatelessWidget {
     this.isRequired = false,
     this.keyboardType = TextInputType.text,
     this.prefixIcon, // ✅ optional
+    this.readOnly = false,
   }) : super(key: key);
 
   @override
@@ -31,6 +33,7 @@ class CustomTextFormField extends StatelessWidget {
           border: const OutlineInputBorder(),
           prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null, // ✅ only show if provided
         ),
+          readOnly: readOnly,
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) {
             return "$label is required";

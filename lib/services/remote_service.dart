@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:demo_prac_getx/constant/app_constant.dart';
 import 'package:demo_prac_getx/model/comment_model.dart';
 import 'package:demo_prac_getx/services/api.dart';
+import 'package:demo_prac_getx/utils/shared_preferences_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -270,15 +271,39 @@ class RemoteService {
 
   String userId = AppConstants.userId;
 
-  static const String appId = "24b22f90-835f-4202-a038-3f1dd7057aa8";
-  static const String accessKey = "V2-9NVog-SGuQ6-prAu2-HG5GE-Y6K1d-w40RW-XAlD5-EbLcB";
+  //static const String appId = "7c98235e-c3c5-45f5-8eb5-821e663cfb18";
+  static  String appId = "${AppConstants.appId}";
+  static  String accessKey = "${AppConstants.accessKey}";
+  //static const String accessKey = "V2-5d3Ce-l3bYG-DdBdG-YeamP-d2BeZ-f9ono-4x5TT-CfCJP";
   static const String invoiceTableName = "Invoice";
-  static const String invoiceItemTableName = "invoiceItems";
+  static const String invoiceItemTableName = "InvoiceItems";
   static const String challanItemTableName = "ChallanItems";
   static const String itemsTableName = "Item";
   static const String challanTableName = "Challan";
   ///static const String itemsTableName2 = "Item_";
   static const String apiKey = "cnp1X-AFICA-X25lf-NuAwm-jQfEr-Cj9nr-S9mqj-xOYni";
+
+  // Save user's AppId when they first register or admin assigns
+  static Future<void> saveUserAppId(String userEmail, String appId) async {
+    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+    await prefs.setString('appid_$userEmail', appId);
+  }
+
+  // Get user's AppId
+  static Future<String?> getUserAppId(String userEmail) async {
+    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+    return prefs.getString('appid_$userEmail');
+  }
+
+  // Get current logged-in user's AppId
+  static Future<String?> getCurrentUserAppId() async {
+    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
+    final currentUser = prefs.getString('current_user_email');
+
+    if (currentUser == null) return null;
+
+    return getUserAppId(currentUser);
+  }
 
   static Future<http.Response> getComment() async {
     Map<String, String> header = {
@@ -300,7 +325,7 @@ class RemoteService {
         ///"https://api.appsheet.com/api/v2/apps/$appId/tables/$dynamicTableName/Action"
     );
 
-    print("Dynamic Item Tabel Api Url :--------- ${dynamicTableName}");
+    print("Dynamic Item Tabel Api Url :--------- ${url}");
 
     // Ensure userId is included in the item data
     final itemData = {
