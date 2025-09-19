@@ -1,6 +1,7 @@
 // new_invoice_screen.dart
 import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -1251,6 +1252,17 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     Expanded(
                       flex: 1,
                       child: Text(
+                        'Price',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: Text(
                         'Qty',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -1343,9 +1355,19 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                     SizedBox(height: 8),
                                     // Make item selection read-only when from challan
                                     if (isFromChallan)
-                                      Text(
-                                        item.description,
-                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                      Column(mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.description,
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                          ),
+                                          if (item.challanId != null)
+                                            Text(
+                                              '${item.challanId}',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                            ),
+                                        ],
                                       )
                                     else if (controller.itemList.isNotEmpty)
                                       Container(
@@ -1414,7 +1436,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                 ),
                               ),
 
-                              SizedBox(width: 12),
+                              SizedBox(width: 6),
                               // Price (new column)
                               Expanded(
                                 flex: 2,
@@ -1422,7 +1444,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Price',
+                                      'RS',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
@@ -1431,7 +1453,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                     SizedBox(height: 4),
                                     Container(
                                       height: 40,
-                                      padding: EdgeInsets.all(8),
+                                      padding: EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: Colors.grey.shade100,
                                         borderRadius: BorderRadius.circular(6),
@@ -1439,7 +1461,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '${item.rate.toStringAsFixed(2)}', // 👈 show price here
+                                          '${item.rate.toInt()}', // 👈 show price here
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.green.shade700,
@@ -1472,7 +1494,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                 ),
                               ),
 
-                              SizedBox(width: 12),
+                              SizedBox(width: 6),
 
                               // Quantity - make read-only when from challan
                               Expanded(
@@ -1513,7 +1535,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                 ),
                               ),
 
-                              SizedBox(width: 12),
+                              SizedBox(width: 6),
 
                               // Amount
                               Expanded(
@@ -1539,7 +1561,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '₹${item.amount.toStringAsFixed(2)}',
+                                          '${item.amount.toStringAsFixed(2)}',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.blue.shade700,
@@ -1568,6 +1590,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       ),
                     );
                   }).toList(),
+
 
 
                   /// Add item button - hide when from challan
@@ -1731,6 +1754,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
   //     ),
   //   );
   // }
+
 
   Widget _buildCalculationsSection() {
     return Card(

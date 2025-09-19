@@ -181,6 +181,7 @@ class Invoice {
   final String? status;
   final List<InvoiceItem>? items;
   final String? userId;
+  final String? challanId;
 
   Invoice({
     required this.invoiceId,
@@ -204,7 +205,8 @@ class Invoice {
     this.notes,
     this.status,
     this.items,
-    this.userId
+    this.userId,
+    this.challanId,
   });
 
   Map<String, dynamic> toMap() {
@@ -406,6 +408,7 @@ class InvoiceItem {
     String? itemId,
     String? itemName,
     double? totalPrice,
+    String? challanId,
   }) {
     return InvoiceItem(
       description: description ?? this.description,
@@ -414,6 +417,7 @@ class InvoiceItem {
       itemId: itemId ?? this.itemId,
       itemName: itemName ?? this.itemName,
       totalPrice: totalPrice ?? this.totalPrice,
+      challanId: challanId ?? this.challanId,
     );
   }
 }

@@ -349,12 +349,12 @@ class NewInvoiceController extends GetxController {
 //     calculateTotals();
 //     print("\nInvoice populated with ${invoiceItems.length} items from ${uniqueChallans.length} unique challans");
 //   }
+//
+//
+/// Fix in your challan selection method
 
-
-// Fix in your challan selection method
-
-  /////18/9 ---commet -- night 10-23
-  void populateInvoiceFromCustomerChallans() {
+  ///18/9 ---commet -- night 10-23
+  void populateInvoiceFromCustomerChallans2() {
     invoiceItems.clear();
 
     if (selectedCustomerChallans.isEmpty) {
@@ -364,6 +364,7 @@ class NewInvoiceController extends GetxController {
     // Group items by product to avoid duplicates
     Map<String, InvoiceItem> itemMap = {};
 
+    ///working 19-9 - 11:20 am
     for (var challan in selectedCustomerChallans) {
       if (challan.items != null && challan.items!.isNotEmpty) {
         for (var challanItem in challan.items!) {
@@ -395,7 +396,7 @@ class NewInvoiceController extends GetxController {
       }
     }
 
-    // Add all items to invoice
+    /// Add all items to invoice
     invoiceItems.addAll(itemMap.values);
 
     // Auto-fill customer information from the first challan
@@ -408,6 +409,45 @@ class NewInvoiceController extends GetxController {
       customerAddressController.text = firstChallan.customerAddress ?? '';
       // You can add more customer info fields here if available in challan
     }
+
+    calculateTotals();
+  }
+
+  void populateInvoiceFromCustomerChallans() {
+    invoiceItems.clear();
+
+    if (selectedCustomerChallans.isEmpty) {
+      return;
+    }
+
+    for (var challan in selectedCustomerChallans) {
+      if (challan.items != null && challan.items!.isNotEmpty) {
+        for (var challanItem in challan.items!) {
+          // ✅ Create a separate invoice item for each challan item
+          invoiceItems.add(
+            InvoiceItem(
+              itemId: challanItem.itemId,
+              description: challanItem.itemName,
+              quantity: challanItem.quantity,
+              rate: challanItem.price,
+              itemName: challanItem.itemName,
+              totalPrice: challanItem.totalPrice,
+              challanId: challan.challanId, // 👈 add challan reference
+            ),
+          );
+        }
+      }
+    }
+
+    /// Auto-fill customer information from the first challan
+    //if (selectedCustomerChallans.isNotEmpty) {
+      final firstChallan = selectedCustomerChallans.first;
+      customerNameController.text = firstChallan.customerName ?? '';
+      selectedCustomerId.value = firstChallan.customerId ?? '';
+      customerMobileController.text = firstChallan.customerMobile ?? '';
+      customerEmailController.text = firstChallan.customerEmail ?? '';
+      customerAddressController.text = firstChallan.customerAddress ?? '';
+    //}
 
     calculateTotals();
   }
@@ -1039,22 +1079,72 @@ class NewInvoiceController extends GetxController {
         return false;
       }
 
-      await InvoiceHelper.generateAndShareInvoice(
-        invoiceModels,
-        customerNameController.text.trim(),
-        customerMobileController.text.trim(),
-        customerEmailController.text.trim(),
-        customerAddressController.text.trim(),
-        subtotal.value,
-        taxAmount.value,
-        discountAmount.value,
-        totalAmount.value,
-        taxRate.value,
-        discountType.value,
-        notesController.text,
-        companyData.value,
-        invoiceType.value
-      );
+
+      // after you build invoiceModels and invoiceItems are populated
+      final bool hasChallan = invoiceItems.any((it) {
+        try {
+          return (it.challanId ?? '').toString().isNotEmpty;
+        } catch (_) { return false; }
+      });
+
+      print("----------===============----------IS Challan----$hasChallan");
+      if (hasChallan) {
+        // pass invoiceItems (the actual list that contains challanId)
+        await InvoiceHelper.generateAndShareInvoiceFromChallan(
+          invoiceItems, // List<dynamic> (InvoiceItem objects)
+          invoiceNumberController.text, // invoiceId
+          customerNameController.text.trim(),
+          customerMobileController.text.trim(),
+          customerEmailController.text.trim(),
+          customerAddressController.text.trim(),
+          subtotal.value,
+          taxAmount.value,
+          discountAmount.value,
+          totalAmount.value,
+          taxRate.value,
+          discountType.value,
+          notesController.text,
+          companyData.value,
+          invoiceType.value,
+        );
+      }
+      else {
+        // fallback to your existing function
+        await InvoiceHelper.generateAndShareInvoice(
+          invoiceModels,
+          customerNameController.text.trim(),
+          customerMobileController.text.trim(),
+          customerEmailController.text.trim(),
+          customerAddressController.text.trim(),
+          subtotal.value,
+          taxAmount.value,
+          discountAmount.value,
+          totalAmount.value,
+          taxRate.value,
+          discountType.value,
+          notesController.text,
+          companyData.value,
+          invoiceType.value,
+        );
+      }
+
+
+      // await InvoiceHelper.generateAndShareInvoice(
+      //   invoiceModels,
+      //   customerNameController.text.trim(),
+      //   customerMobileController.text.trim(),
+      //   customerEmailController.text.trim(),
+      //   customerAddressController.text.trim(),
+      //   subtotal.value,
+      //   taxAmount.value,
+      //   discountAmount.value,
+      //   totalAmount.value,
+      //   taxRate.value,
+      //   discountType.value,
+      //   notesController.text,
+      //   companyData.value,
+      //   invoiceType.value
+      // );
 
 
       showCustomSnackbar(
