@@ -258,7 +258,7 @@ class ItemController extends GetxController {
     'pcs', 'kg', 'gm', 'ltr', 'ml', 'mtr', 'cm', 'ft', 'inch', 'box', 'pack', 'dozen'
   ];
 
-  double get total => cart.fold(0, (sum, item) => sum + (item.qty * item.price));
+  double get total => cart.fold(0, (sum, item) => sum + (item.qty! * item.price!));
 
   // Filtered item list based on active status
   List<Item> get filteredItemList => showInactiveItems.value
@@ -279,38 +279,38 @@ class ItemController extends GetxController {
     // });
   }
 
-  Future<void> fetchItems2i() async {
-    try {
-      isLoading.value = true;
-      final items = await RemoteService.getItems();
-      print("Fetched items: ${items.length}");
+  // Future<void> fetchItems2i() async {
+  //   try {
+  //     isLoading.value = true;
+  //     final items = await RemoteService.getItems();
+  //     print("Fetched items: ${items.length}");
+  //
+  //     /// Debug each item
+  //     for (var item in items) {
+  //       print("Item: ${item.itemName}, ID: ${item.itemId}, Price: ${item.price}");
+  //     }
+  //
+  //
+  //     itemList.assignAll(items);
+  //     print("itemLListLengt------:${items.length}");
+  //   } catch (e) {
+  //     print("-----Error on fetchItems() in Controller,,,, ${e.toString()}");
+  //
+  //     print("Stack trace: ${e is Error ? (e as Error).stackTrace : ''}");
+  //
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Failed to load items: $e",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error_outline,
+  //     );
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
 
-      /// Debug each item
-      for (var item in items) {
-        print("Item: ${item.itemName}, ID: ${item.itemId}, Price: ${item.price}");
-      }
 
-
-      itemList.assignAll(items);
-      print("itemLListLengt------:${items.length}");
-    } catch (e) {
-      print("-----Error on fetchItems() in Controller,,,, ${e.toString()}");
-
-      print("Stack trace: ${e is Error ? (e as Error).stackTrace : ''}");
-
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load items: $e",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-
-// Updated controller method
+/// Updated controller method
   Future<void> fetchItems2() async {
     try {
       isLoading.value = true;
@@ -320,13 +320,13 @@ class ItemController extends GetxController {
       print("=== ATTEMPTING TO FETCH ITEMS FOR USER: $userId ===");
 
       // Try Method 1: Standard approach
-      List<Item> items = await RemoteService.getItems(userId: userId);
+      List<Item> items = await GoogleSheetService.getItems(userId: userId);
 
-      // If no items found, try alternative methods
-      if (items.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        items = await RemoteService.getItemsAlternative(userId);
-      }
+      /// If no items found, try alternative methods
+      // if (items.isEmpty) {
+      //   print("Standard method failed, trying alternative...");
+      //   items = await RemoteService.getItemsAlternative(userId);
+      // }
 
       print("Final result: ${items.length} items found");
 
@@ -377,72 +377,45 @@ class ItemController extends GetxController {
     return userId;
   }
 
-  Future<void> fetchItems() async {
-    print("=== CONTROLLER: Starting fetchItems ===");
-    print("AppConstants.userId: ${AppConstants.userId}");
-
-    try {
-      isLoading.value = true;
-
-      // Clear existing items first
-      itemList.clear();
-
-      print("Calling RemoteService.getUserItems...");
-      final items = await RemoteService.getUserItems(AppConstants.userId);
-
-      print("=== CONTROLLER: Received ${items.length} items ===");
-      for (int i = 0; i < items.length; i++) {
-        print("Item $i: ${items[i].toMap()}");
-      }
-
-      itemList.assignAll(items);
-      print("=== CONTROLLER: itemList length after assignAll: ${itemList.length} ===");
-
-      // Trigger UI update
-      update();
-
-    } catch (e) {
-      print("=== CONTROLLER ERROR: ${e.toString()} ===");
-      print("Stack trace: ${e.toString()}");
-
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load items: $e",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
-    } finally {
-      isLoading.value = false;
-      print("=== CONTROLLER: fetchItems completed ===");
-    }
-  }
-
-// Add this method to test different approaches
-  Future<void> testFetchItems() async {
-    print("=== Testing different fetch approaches ===");
-
-    try {
-      // Test approach 1: Original
-      print("Testing original approach...");
-      final items1 = await RemoteService.getUserItems(AppConstants.userId);
-      print("Original approach result: ${items1.length} items");
-
-      // Test approach 2: Alternative
-      print("Testing alternative approach...");
-      final items2 = await RemoteService.getUserItemsAlternative(AppConstants.userId);
-      print("Alternative approach result: ${items2.length} items");
-
-      // Use whichever works
-      if (items1.isNotEmpty) {
-        itemList.assignAll(items1);
-      } else if (items2.isNotEmpty) {
-        itemList.assignAll(items2);
-      }
-
-    } catch (e) {
-      print("Test error: $e");
-    }
-  }
+  // Future<void> fetchItems() async {
+  //   print("=== CONTROLLER: Starting fetchItems ===");
+  //   print("AppConstants.userId: ${AppConstants.userId}");
+  //
+  //   try {
+  //     isLoading.value = true;
+  //
+  //     // Clear existing items first
+  //     itemList.clear();
+  //
+  //     print("Calling RemoteService.getUserItems...");
+  //     final items = await RemoteService.getUserItems(AppConstants.userId);
+  //
+  //     print("=== CONTROLLER: Received ${items.length} items ===");
+  //     for (int i = 0; i < items.length; i++) {
+  //       print("Item $i: ${items[i].toMap()}");
+  //     }
+  //
+  //     itemList.assignAll(items);
+  //     print("=== CONTROLLER: itemList length after assignAll: ${itemList.length} ===");
+  //
+  //     // Trigger UI update
+  //     update();
+  //
+  //   } catch (e) {
+  //     print("=== CONTROLLER ERROR: ${e.toString()} ===");
+  //     print("Stack trace: ${e.toString()}");
+  //
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Failed to load items: $e",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error_outline,
+  //     );
+  //   } finally {
+  //     isLoading.value = false;
+  //     print("=== CONTROLLER: fetchItems completed ===");
+  //   }
+  // }
 
   void generateInvoiceIdIfNeeded() {
     if (currentInvoiceId.value.isEmpty) {
@@ -469,7 +442,7 @@ class ItemController extends GetxController {
 
     if (existingIndex >= 0) {
       final existingItem = cart[existingIndex];
-      final newQty = existingItem.qty + 1;
+      final newQty = existingItem.qty! + 1;
 
       // Check if new quantity exceeds stock
       if (item.currentStock != -1 && newQty > item.currentStock) {
@@ -553,7 +526,7 @@ class ItemController extends GetxController {
 
     print("=======ICCC---UID:-----${AppConstants.userId}");
     try {
-      await RemoteService.addItem(AppConstants.userId ,newItem);
+      await GoogleSheetService.addItem(AppConstants.userId ,newItem);
       itemList.add(newItem);
       showCustomSnackbar(
         title: "Success",
@@ -572,79 +545,79 @@ class ItemController extends GetxController {
     }
   }
 
-  Future<bool> saveInvoice(List<Invoice> invoices, String userName, String phone) async {
-    if (invoices.isEmpty) {
-      showCustomSnackbar(
-        title: "Error",
-        message: "Cart is empty",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
-      return false;
-    }
-    isSavingInvoice.value = true;
-    try {
-      final String invoiceId = currentInvoiceId.value;
+  // Future<bool> saveInvoice(List<Invoice> invoices, String userName, String phone) async {
+  //   if (invoices.isEmpty) {
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Cart is empty",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error_outline,
+  //     );
+  //     return false;
+  //   }
+  //   isSavingInvoice.value = true;
+  //   try {
+  //     final String invoiceId = currentInvoiceId.value;
+  //
+  //     final invoicesWithUser = invoices.map((e) => Invoice(
+  //       invoiceId: invoiceId,
+  //       itemId: e.itemId,
+  //       itemName: e.itemName,
+  //       qty: e.qty,
+  //       price: e.price,
+  //       mobile: phone,
+  //       customerName: userName,
+  //     )).toList();
+  //
+  //     print("Sending invoice data: ${invoicesWithUser.map((e) => e.toMap()).toList()}");
+  //     await GoogleSheetService.addInvoice(invoicesWithUser, AppConstants.userId);
+  //
+  //     // Update stock after successful invoice
+  //     await _updateStockAfterSale(invoices);
+  //
+  //     showCustomSnackbar(
+  //       title: "Success",
+  //       message: "Invoice saved successfully!",
+  //       baseColor: AppColors.darkGreenColor,
+  //       icon: Icons.check_circle_outline,
+  //     );
+  //     clearCart();
+  //     return true;
+  //   } catch (e) {
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Failed to save invoice: $e",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error_outline,
+  //     );
+  //     print("Save invoice error: $e");
+  //     return false;
+  //   } finally {
+  //     isSavingInvoice.value = false;
+  //   }
+  // }
 
-      final invoicesWithUser = invoices.map((e) => Invoice(
-        invoiceId: invoiceId,
-        itemId: e.itemId,
-        itemName: e.itemName,
-        qty: e.qty,
-        price: e.price,
-        mobile: phone,
-        customerName: userName,
-      )).toList();
-
-      print("Sending invoice data: ${invoicesWithUser.map((e) => e.toMap()).toList()}");
-      await RemoteService.addInvoice(invoicesWithUser, AppConstants.userId);
-
-      // Update stock after successful invoice
-      await _updateStockAfterSale(invoices);
-
-      showCustomSnackbar(
-        title: "Success",
-        message: "Invoice saved successfully!",
-        baseColor: AppColors.darkGreenColor,
-        icon: Icons.check_circle_outline,
-      );
-      clearCart();
-      return true;
-    } catch (e) {
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to save invoice: $e",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
-      print("Save invoice error: $e");
-      return false;
-    } finally {
-      isSavingInvoice.value = false;
-    }
-  }
-
-  Future<void> _updateStockAfterSale(List<Invoice> soldItems) async {
-    for (final soldItem in soldItems) {
-      final itemIndex = itemList.indexWhere((item) => item.itemId == soldItem.itemId);
-      if (itemIndex != -1) {
-        final item = itemList[itemIndex];
-        if (item.currentStock != -1) { // Don't update unlimited stock items
-          final newStock = item.currentStock - soldItem.qty;
-          itemList[itemIndex] = item.copyWith(currentStock: newStock);
-
-          // Update in database
-          try {
-            await RemoteService.updateItemStock(item.itemId, newStock);
-          } catch (e) {
-            print("Failed to update stock for ${item.itemName}: $e");
-          }
-        }
-      }
-    }
-    itemList.refresh();
-  }
-
+  // Future<void> _updateStockAfterSale(List<Invoice> soldItems) async {
+  //   for (final soldItem in soldItems) {
+  //     final itemIndex = itemList.indexWhere((item) => item.itemId == soldItem.itemId);
+  //     if (itemIndex != -1) {
+  //       final item = itemList[itemIndex];
+  //       if (item.currentStock != -1) { // Don't update unlimited stock items
+  //         final newStock = item.currentStock - soldItem.qty!;
+  //         itemList[itemIndex] = item.copyWith(currentStock: newStock);
+  //
+  //         // Update in database
+  //         try {
+  //           await RemoteService.updateItemStock(item.itemId, newStock);
+  //         } catch (e) {
+  //           print("Failed to update stock for ${item.itemName}: $e");
+  //         }
+  //       }
+  //     }
+  //   }
+  //   itemList.refresh();
+  // }
+  //
 
   Future<void> editItem({
     required String itemId,
@@ -683,7 +656,7 @@ class ItemController extends GetxController {
       print("Created updated item: ${updatedItem.toMap()}");
 
       // Call API to update
-      await RemoteService.editItemAlternative3(AppConstants.userId, updatedItem);
+      await GoogleSheetService.editItemAlternative3(AppConstants.userId, updatedItem);
       print("API call successful");
 
       // Update local list
@@ -752,7 +725,7 @@ class ItemController extends GetxController {
       print("Created updated item for soft delete: ${updatedItem.toMap()}");
 
       // Call API to update (same as edit, just setting isActive = false)
-      await RemoteService.editItemAlternative3(AppConstants.userId, updatedItem);
+      await GoogleSheetService.editItemAlternative3(AppConstants.userId, updatedItem);
       print("API call successful - item marked as inactive");
 
       // Remove from local list (since it's now inactive)
@@ -988,6 +961,7 @@ class ItemController extends GetxController {
     }
   }
 }
+
 ///for Single row
 //   Future<bool> saveInvoice(List<Invoice> invoices, String userName, String phone) async {
 //   if (invoices.isEmpty) {

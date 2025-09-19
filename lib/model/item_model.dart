@@ -160,10 +160,10 @@ class Item {
 ///
 class Invoice {
   final String invoiceId;
-  final String itemId;
-  final String itemName;
-  final int qty;
-  final double price;
+  final String? itemId;
+  final String? itemName;
+  final int? qty;
+  final double? price;
   final String mobile;
   final String customerId;
   final String customerName;
@@ -184,10 +184,10 @@ class Invoice {
 
   Invoice({
     required this.invoiceId,
-    required this.itemId,
-    required this.itemName,
-    required this.qty,
-    required this.price,
+     this.itemId,
+     this.itemName,
+     this.qty,
+     this.price,
     required this.mobile,
     required this.customerName,
     this.customerId = '',
@@ -360,6 +360,7 @@ class InvoiceItem {
   final String itemId;
   final String itemName;
   final double totalPrice;
+  final String? challanId;
 
   InvoiceItem({
     required this.description,
@@ -368,6 +369,7 @@ class InvoiceItem {
     required this.itemId,
     required this.itemName,
     required this.totalPrice,
+    this.challanId,
   });
 
   // Use the totalPrice from API instead of calculating

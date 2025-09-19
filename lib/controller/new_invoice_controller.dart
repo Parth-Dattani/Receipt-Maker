@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../constant/constant.dart';
 import '../model/model.dart';
 import '../services/service.dart';
@@ -35,7 +36,7 @@ class NewInvoiceController extends GetxController {
   var invoiceList = <Invoice>[].obs;
   var invoiceItems = <InvoiceItem>[].obs;
   var selectedDate = DateTime.now().obs;
-  var dueDate = DateTime.now().add(Duration(days: 30)).obs;
+  var dueDate = DateTime.now().obs;
   var taxRate = 0.0.obs;
   var discountAmount = 0.0.obs;
   var discountType = 'amount'.obs;
@@ -73,6 +74,8 @@ class NewInvoiceController extends GetxController {
   var selectedFromDate = DateTime.now().subtract(Duration(days: 30)).obs;
   var selectedToDate = DateTime.now().obs;
 
+  var paymentStatus = 'Pending'.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -84,8 +87,10 @@ class NewInvoiceController extends GetxController {
     loadChallans();
     fetchItems2();
 
-    fromDateController.text = DateFormat('dd/MM/yyyy').format(selectedFromDate.value);
-    toDateController.text = DateFormat('dd/MM/yyyy').format(selectedToDate.value);
+    // fromDateController.text = DateFormat('dd/MM/yyyy').format(selectedFromDate.value);
+    // toDateController.text = DateFormat('dd/MM/yyyy').format(selectedToDate.value);
+    fromDateController.text = _formatDateForDisplay(selectedFromDate.value);
+    toDateController.text = _formatDateForDisplay(selectedToDate.value);
   }
 
   @override
@@ -146,7 +151,7 @@ class NewInvoiceController extends GetxController {
       invoiceItems.clear();
 
       // FIX: Fetch challans WITH ITEMS, not just basic challan data
-      final challans = await RemoteService.getChallansByDateRange(
+      final challans = await GoogleSheetService.getChallansByDateRange(
         fromDate: selectedFromDate.value,
         toDate: selectedToDate.value,
         userId: AppConstants.userId,
@@ -182,12 +187,17 @@ class NewInvoiceController extends GetxController {
         print("Loading challans with items for customer: $customerName");
 
         // Load ONLY the challans for this specific customer WITH ITEMS
-        List<Challan> customerChallans = await RemoteService.getChallansWithItemsByCustomer(customerName);
+        List<Challan> customerChallans = await GoogleSheetService.getChallansWithItemsByCustomer(customerName);
 
 // DOUBLE-CHECK: Filter by customer name AND ID to ensure no mixed data
-        selectedCustomerChallans.value = customerChallans.where(
-                (challan) => challan.customerName == customerName
-        ).toList();
+        // Filter to only include challans within date range
+        customerChallans = customerChallans.where((challan) {
+          return challan.challanDate != null &&
+              !challan.challanDate!.isBefore(selectedFromDate.value) &&
+              !challan.challanDate!.isAfter(selectedToDate.value);
+        }).toList();
+
+        selectedCustomerChallans.assignAll(customerChallans);
 
         /// Load ONLY the challans for this specific customer WITH ITEMS
         //selectedCustomerChallans.value = await RemoteService.getChallansWithItemsByCustomer(customerName);
@@ -228,103 +238,6 @@ class NewInvoiceController extends GetxController {
     }
   }
 
-  void populateInvoiceFromCustomerChallans2() {
-    print("populateInvoiceFromCustomerChallans called");
-    print("Selected customer challans count: ${selectedCustomerChallans.length}");
-
-    // Debug: Print all challan details to see what data we have
-    for (var i = 0; i < selectedCustomerChallans.length; i++) {
-      var challan = selectedCustomerChallans[i];
-      print("Challan $i: ID=${challan.challanId}, CustomerID=${challan.customerId}, CustomerName=${challan.customerName}");
-    }
-
-    if (selectedCustomerChallans.isEmpty) return;
-
-    // Clear existing items
-    invoiceItems.clear();
-
-    // Group challans by challanId (since each challan represents one item)
-    final groupedChallans = <String, List<Challan>>{};
-
-    for (var challan in selectedCustomerChallans) {
-      if (!groupedChallans.containsKey(challan.challanId)) {
-        groupedChallans[challan.challanId] = [];
-      }
-      groupedChallans[challan.challanId]!.add(challan);
-    }
-
-    print("Found ${groupedChallans.length} unique challan IDs");
-
-    // Process each group of challans (each group represents one delivery)
-    for (var challanGroup in groupedChallans.values) {
-      if (challanGroup.isEmpty) continue;
-
-      // Each challan in the group represents one item
-      for (var challan in challanGroup) {
-        try {
-          // Convert Challan to InvoiceItem
-          final invoiceItem = InvoiceItem(
-            itemId: challan.itemId,
-            description: challan.itemName,
-            quantity: challan.qty,
-            rate: challan.price,
-            itemName: challan.itemName,
-            totalPrice: challan.subtotal
-          );
-
-          // Check if item already exists (by description and rate)
-          final existingItemIndex = invoiceItems.indexWhere(
-                  (invItem) => invItem.description == invoiceItem.description && invItem.rate == invoiceItem.rate
-          );
-
-          if (existingItemIndex != -1) {
-            // Update quantity if item exists
-            invoiceItems[existingItemIndex] = invoiceItems[existingItemIndex].copyWith(
-                quantity: invoiceItems[existingItemIndex].quantity + invoiceItem.quantity
-            );
-
-            print("Updated item: ${invoiceItem.description}, new quantity: ${invoiceItems[existingItemIndex].quantity}");
-          } else {
-            // Add new item
-            invoiceItems.add(invoiceItem);
-            print("Added new item: ${invoiceItem.description}");
-          }
-        } catch (e) {
-          print("Error processing challan ${challan.challanId}: $e");
-        }
-      }
-    }
-
-    // Set customer information from the first challan
-    if (selectedCustomerChallans.isNotEmpty) {
-      final firstChallan = selectedCustomerChallans.first;
-      customerNameController.text = firstChallan.customerName;
-      customerMobileController.text = firstChallan.customerMobile;
-      customerEmailController.text = firstChallan.customerEmail;
-      customerAddressController.text = firstChallan.customerAddress;
-
-      // CAPTURE CUSTOMER ID FROM CHALLAN
-      selectedCustomerId.value = firstChallan.customerId;
-
-      print("Set customer details: ${firstChallan.customerName}");
-      print("Customer ID: ${firstChallan.customerId}");
-    }
-
-    calculateTotals();
-
-    // Debug info
-    print("Final invoice items count: ${invoiceItems.length}");
-    for (var item in invoiceItems) {
-      print("Item: ${item.description}, Qty: ${item.quantity}, Rate: ${item.rate}");
-    }
-
-    showCustomSnackbar(
-      title: "Challans Combined",
-      message: "Combined ${groupedChallans.length} challans for ${selectedCustomerForInvoice.value}",
-      baseColor: Colors.green.shade700,
-      icon: Icons.check_circle_outline,
-    );
-  }
 
   /// working Existing methods 9-9- Eving
   // Future<void> loadChallans() async {
@@ -371,9 +284,12 @@ class NewInvoiceController extends GetxController {
   // }
 
 
-/// OPTION 1: Don't combine items - Show each challan's items separately
+
+
+// Enhanced populate method with better filtering working-10 23 pm
+  ///18/9 ---commet
 //   void populateInvoiceFromCustomerChallans() {
-//     print("=== POPULATING INVOICE (SEPARATE ITEMS) ===");
+//     print("=== POPULATING INVOICE (FIXED VERSION) ===");
 //
 //     invoiceItems.clear();
 //
@@ -381,173 +297,15 @@ class NewInvoiceController extends GetxController {
 //       print("No challans selected");
 //       return;
 //     }
+// // Group items by product to avoid duplicates
+//     Map<String, InvoiceItem> itemMap = {};
 //
 //     final String targetCustomerId = selectedCustomerChallans.first.customerId;
 //     final String targetCustomerName = selectedCustomerChallans.first.customerName;
 //
 //     print("Target Customer: $targetCustomerName (ID: $targetCustomerId)");
 //
-//     final filteredChallans = selectedCustomerChallans.where(
-//             (challan) => challan.customerId == targetCustomerId
-//     ).toList();
-//
-//     for (var challan in filteredChallans) {
-//       print("Processing challan: ${challan.challanId}");
-//
-//       if (challan.items != null && challan.items!.isNotEmpty) {
-//         for (var challanItem in challan.items!) {
-//           bool challanMatches = challan.customerId == targetCustomerId;
-//           bool itemMatches = challanItem.customerId == targetCustomerId;
-//
-//           if (challanMatches && itemMatches) {
-//             // Create unique item by adding challan ID
-//             final invoiceItem = InvoiceItem(
-//               itemId: "${challanItem.itemId}_${challan.challanId}",
-//               description: "${challanItem.itemName} (${challan.challanId})",
-//               quantity: challanItem.quantity,
-//               rate: challanItem.price,
-//               itemName: "${challanItem.itemName} (${challan.challanId})",
-//               totalPrice: challanItem.totalPrice,
-//             );
-//
-//             invoiceItems.add(invoiceItem);
-//             print("Added: ${invoiceItem.itemName}, Qty: ${invoiceItem.quantity}");
-//           }
-//         }
-//       }
-//     }
-//
-//     calculateTotals();
-//     print("Invoice populated with ${invoiceItems.length} separate items");
-//   }
-
-  // OPTION 2: Use only the FIRST occurrence of each item
-  /// OPTION 3: Use only the LATEST occurrence of each item
-  // void populateInvoiceFromCustomerChallans() {
-  //   print("=== POPULATING INVOICE (LATEST OCCURRENCE ONLY) ===");
-  //
-  //   invoiceItems.clear();
-  //   Map<String, InvoiceItem> latestItems = {}; // Track latest version of each item
-  //
-  //   if (selectedCustomerChallans.isEmpty) {
-  //     print("No challans selected");
-  //     return;
-  //   }
-  //
-  //   final String targetCustomerId = selectedCustomerChallans.first.customerId;
-  //   final String targetCustomerName = selectedCustomerChallans.first.customerName;
-  //
-  //   print("Target Customer: $targetCustomerName (ID: $targetCustomerId)");
-  //
-  //   final filteredChallans = selectedCustomerChallans.where(
-  //           (challan) => challan.customerId == targetCustomerId
-  //   ).toList();
-  //
-  //   for (var challan in filteredChallans) {
-  //     print("Processing challan: ${challan.challanId}");
-  //
-  //     if (challan.items != null && challan.items!.isNotEmpty) {
-  //       for (var challanItem in challan.items!) {
-  //         bool challanMatches = challan.customerId == targetCustomerId;
-  //         bool itemMatches = challanItem.customerId == targetCustomerId;
-  //
-  //         if (challanMatches && itemMatches) {
-  //           String itemKey = challanItem.itemName.toLowerCase().trim();
-  //
-  //           final invoiceItem = InvoiceItem(
-  //             itemId: challanItem.itemId,
-  //             description: challanItem.itemName,
-  //             quantity: challanItem.quantity,
-  //             rate: challanItem.price,
-  //             itemName: challanItem.itemName,
-  //             totalPrice: challanItem.totalPrice,
-  //           );
-  //
-  //           latestItems[itemKey] = invoiceItem; // This will overwrite previous occurrences
-  //           print("Updated latest occurrence: ${invoiceItem.itemName}, Qty: ${invoiceItem.quantity}");
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  //   // Add all latest items to invoice
-  //   invoiceItems.addAll(latestItems.values);
-  //
-  //   calculateTotals();
-  //   print("Invoice populated with ${invoiceItems.length} unique items (latest occurrence only)");
-  // }
-
-  /// OPTION 4: Let user choose which challans to include (RECOMMENDED)
-  // void populateInvoiceFromCustomerChallans() {
-  //   print("=== POPULATING INVOICE (USER SELECTED CHALLANS ONLY) ===");
-  //
-  //   invoiceItems.clear();
-  //
-  //   if (selectedCustomerChallans.isEmpty) {
-  //     print("No challans selected");
-  //     return;
-  //   }
-  //
-  //   final String targetCustomerId = selectedCustomerChallans.first.customerId;
-  //   final String targetCustomerName = selectedCustomerChallans.first.customerName;
-  //
-  //   print("Target Customer: $targetCustomerName (ID: $targetCustomerId)");
-  //
-  //   // Only process the SPECIFICALLY SELECTED challans
-  //   // Don't filter by customer ID again - trust user's selection
-  //   for (var challan in selectedCustomerChallans) {
-  //     print("Processing SELECTED challan: ${challan.challanId}");
-  //
-  //     if (challan.items != null && challan.items!.isNotEmpty) {
-  //       for (var challanItem in challan.items!) {
-  //         bool challanMatches = challan.customerId == targetCustomerId;
-  //         bool itemMatches = challanItem.customerId == targetCustomerId;
-  //
-  //         if (challanMatches && itemMatches) {
-  //           print("✓ Adding item from SELECTED challan ${challan.challanId}: ${challanItem.itemName} (Qty: ${challanItem.quantity})");
-  //
-  //           final invoiceItem = InvoiceItem(
-  //             itemId: "${challanItem.itemId}_${challan.challanId}", // Make unique
-  //             description: challanItem.itemName,
-  //             quantity: challanItem.quantity,
-  //             rate: challanItem.price,
-  //             itemName: challanItem.itemName,
-  //             totalPrice: challanItem.totalPrice,
-  //           );
-  //
-  //           invoiceItems.add(invoiceItem); // Don't use _addOrUpdateInvoiceItem
-  //         }
-  //       }
-  //     }
-  //   }
-  //
-  //   calculateTotals();
-  //   print("Invoice populated with ${invoiceItems.length} items from selected challans");
-  // }
-///
-//   void populateInvoiceFromCustomerChallans() {
-//     print("=== POPULATING INVOICE (USER SELECTED CHALLANS ONLY) ===");
-//
-//     invoiceItems.clear();
-//
-//     if (selectedCustomerChallans.isEmpty) {
-//       print("No challans selected");
-//       return;
-//     }
-//
-//     final String targetCustomerId = selectedCustomerChallans.first.customerId;
-//     final String targetCustomerName = selectedCustomerChallans.first.customerName;
-//
-//     print("Target Customer: $targetCustomerName (ID: $targetCustomerId)");
-//     print("Selected challans count: ${selectedCustomerChallans.length}");
-//
-//     // DEBUG: Print all selected challans to see duplicates
-//     print("=== DEBUG: All selected challans ===");
-//     for (int i = 0; i < selectedCustomerChallans.length; i++) {
-//       print("Index $i: ${selectedCustomerChallans[i].challanId} - ${selectedCustomerChallans[i].customerName}");
-//     }
-//
-//     // SOLUTION 1: Remove duplicates by challanId
+//     // Remove duplicates by challanId
 //     Map<String, Challan> uniqueChallans = {};
 //     for (var challan in selectedCustomerChallans) {
 //       if (challan.customerId == targetCustomerId) {
@@ -555,174 +313,109 @@ class NewInvoiceController extends GetxController {
 //       }
 //     }
 //
-//     print("=== After removing duplicates ===");
-//     print("Unique challans: ${uniqueChallans.keys.toList()}");
+//     print("Processing ${uniqueChallans.length} unique challans");
 //
-//     // Process only unique challans
+//     // Process each unique challan
 //     for (var challan in uniqueChallans.values) {
-//       print("Processing UNIQUE challan: ${challan.challanId}");
+//       print("\n--- Processing challan: ${challan.challanId} ---");
 //
 //       if (challan.items != null && challan.items!.isNotEmpty) {
-//         for (var challanItem in challan.items!) {
-//           bool challanMatches = challan.customerId == targetCustomerId;
-//           bool itemMatches = challanItem.customerId == targetCustomerId;
+//         // Filter items that belong to THIS specific challan AND customer
+//         var validItems = challan.items!.where((item) =>
+//         item.customerId == targetCustomerId &&
+//             // ADD THIS: Check if item actually belongs to this challan
+//             (item.challanId == challan.challanId || item.challanId == null)
+//         ).toList();
 //
-//           if (challanMatches && itemMatches) {
-//             print("✓ Adding item from challan ${challan.challanId}: ${challanItem.itemName} (Qty: ${challanItem.quantity})");
+//         print("Valid items for ${challan.challanId}: ${validItems.length}");
 //
-//             final invoiceItem = InvoiceItem(
-//               itemId: "${challanItem.itemId}_${challan.challanId}", // Make unique
-//               description: challanItem.itemName,
-//               quantity: challanItem.quantity,
-//               rate: challanItem.price,
-//               itemName: challanItem.itemName,
-//               totalPrice: challanItem.totalPrice,
-//             );
+//         for (var challanItem in validItems) {
+//           print("✓ Adding: ${challanItem.itemName} (Qty: ${challanItem.quantity}) from ${challan.challanId}");
 //
-//             invoiceItems.add(invoiceItem);
-//           }
+//           final invoiceItem = InvoiceItem(
+//             itemId: "${challanItem.itemId}_${challan.challanId}",
+//             description: challanItem.itemName,
+//             quantity: challanItem.quantity,
+//             rate: challanItem.price,
+//             itemName: "${challanItem.itemName} (${challan.challanId})", // Show which challan
+//             totalPrice: challanItem.totalPrice,
+//           );
+//
+//           invoiceItems.add(invoiceItem);
 //         }
 //       }
 //     }
 //
 //     calculateTotals();
-//     print("Invoice populated with ${invoiceItems.length} items from ${uniqueChallans.length} unique challans");
+//     print("\nInvoice populated with ${invoiceItems.length} items from ${uniqueChallans.length} unique challans");
 //   }
 
 
-  void debugChallanData() {
-    print("=== DEBUGGING CHALLAN DATA STRUCTURE ===");
+// Fix in your challan selection method
 
-    if (selectedCustomerChallans.isEmpty) {
-      print("No challans selected");
-      return;
-    }
-
-    final String targetCustomerId = selectedCustomerChallans.first.customerId;
-
-    // Remove duplicates first
-    Map<String, Challan> uniqueChallans = {};
-    for (var challan in selectedCustomerChallans) {
-      if (challan.customerId == targetCustomerId) {
-        uniqueChallans[challan.challanId] = challan;
-      }
-    }
-
-    print("Customer ID: $targetCustomerId");
-    print("Unique challans count: ${uniqueChallans.length}");
-
-    // Debug each challan's data
-    for (var challan in uniqueChallans.values) {
-      print("\n--- CHALLAN ${challan.challanId} ---");
-      print("Customer ID: ${challan.customerId}");
-      print("Customer Name: ${challan.customerName}");
-
-      if (challan.items != null && challan.items!.isNotEmpty) {
-        print("Items count: ${challan.items!.length}");
-
-        for (int i = 0; i < challan.items!.length; i++) {
-          var item = challan.items![i];
-          print("  Item $i:");
-          print("    ItemID: ${item.itemId}");
-          print("    ItemName: ${item.itemName}");
-          print("    Quantity: ${item.quantity}");
-          print("    Price: ${item.price}");
-          print("    CustomerID: ${item.customerId}");
-          print("    TotalPrice: ${item.totalPrice}");
-        }
-      } else {
-        print("No items found!");
-      }
-    }
-  }
-
-// Enhanced populate method with better filtering working-10 23 pm
+  /////18/9 ---commet -- night 10-23
   void populateInvoiceFromCustomerChallans() {
-    print("=== POPULATING INVOICE (FIXED VERSION) ===");
-
     invoiceItems.clear();
 
     if (selectedCustomerChallans.isEmpty) {
-      print("No challans selected");
       return;
     }
 
-    final String targetCustomerId = selectedCustomerChallans.first.customerId;
-    final String targetCustomerName = selectedCustomerChallans.first.customerName;
+    // Group items by product to avoid duplicates
+    Map<String, InvoiceItem> itemMap = {};
 
-    print("Target Customer: $targetCustomerName (ID: $targetCustomerId)");
-
-    // Remove duplicates by challanId
-    Map<String, Challan> uniqueChallans = {};
     for (var challan in selectedCustomerChallans) {
-      if (challan.customerId == targetCustomerId) {
-        uniqueChallans[challan.challanId] = challan;
-      }
-    }
-
-    print("Processing ${uniqueChallans.length} unique challans");
-
-    // Process each unique challan
-    for (var challan in uniqueChallans.values) {
-      print("\n--- Processing challan: ${challan.challanId} ---");
-
       if (challan.items != null && challan.items!.isNotEmpty) {
-        // Filter items that belong to THIS specific challan AND customer
-        var validItems = challan.items!.where((item) =>
-        item.customerId == targetCustomerId &&
-            // ADD THIS: Check if item actually belongs to this challan
-            (item.challanId == challan.challanId || item.challanId == null)
-        ).toList();
+        for (var challanItem in challan.items!) {
+          String itemKey = "${challanItem.itemId}_${challanItem.itemName}";
 
-        print("Valid items for ${challan.challanId}: ${validItems.length}");
-
-        for (var challanItem in validItems) {
-          print("✓ Adding: ${challanItem.itemName} (Qty: ${challanItem.quantity}) from ${challan.challanId}");
-
-          final invoiceItem = InvoiceItem(
-            itemId: "${challanItem.itemId}_${challan.challanId}",
-            description: challanItem.itemName,
-            quantity: challanItem.quantity,
-            rate: challanItem.price,
-            itemName: "${challanItem.itemName} (${challan.challanId})", // Show which challan
-            totalPrice: challanItem.totalPrice,
-          );
-
-          invoiceItems.add(invoiceItem);
+          if (itemMap.containsKey(itemKey)) {
+            // Update quantity for existing item
+            InvoiceItem existingItem = itemMap[itemKey]!;
+            itemMap[itemKey] = InvoiceItem(
+              itemId: existingItem.itemId,
+              description: existingItem.description,
+              quantity: existingItem.quantity + challanItem.quantity,
+              rate: existingItem.rate,
+              itemName: existingItem.itemName,
+              totalPrice: existingItem.totalPrice + challanItem.totalPrice,
+            );
+          } else {
+            // Add new item
+            itemMap[itemKey] = InvoiceItem(
+              itemId: challanItem.itemId,
+              description: challanItem.itemName,
+              quantity: challanItem.quantity,
+              rate: challanItem.price,
+              itemName: challanItem.itemName,
+              totalPrice: challanItem.totalPrice,
+            );
+          }
         }
       }
     }
 
+    // Add all items to invoice
+    invoiceItems.addAll(itemMap.values);
+
+    // Auto-fill customer information from the first challan
+    if (selectedCustomerChallans.isNotEmpty) {
+      final firstChallan = selectedCustomerChallans.first;
+      customerNameController.text = firstChallan.customerName ?? '';
+      selectedCustomerId.value = firstChallan.customerId ?? '';
+      customerMobileController.text = firstChallan.customerMobile ?? '';
+      customerEmailController.text = firstChallan.customerEmail ?? '';
+      customerAddressController.text = firstChallan.customerAddress ?? '';
+      // You can add more customer info fields here if available in challan
+    }
+
     calculateTotals();
-    print("\nInvoice populated with ${invoiceItems.length} items from ${uniqueChallans.length} unique challans");
   }
 
-// ALTERNATIVE: Clean the selectedCustomerChallans list first
-  void cleanAndPopulateInvoice() {
-    print("=== CLEANING DUPLICATES FIRST ===");
-
-    if (selectedCustomerChallans.isEmpty) {
-      print("No challans selected");
-      return;
-    }
-
-    // Get unique challans only
-    Map<String, Challan> uniqueChallansMap = {};
-    for (var challan in selectedCustomerChallans) {
-      uniqueChallansMap[challan.challanId] = challan;
-    }
-
-    // Replace selectedCustomerChallans with unique ones
-    selectedCustomerChallans.clear();
-    selectedCustomerChallans.addAll(uniqueChallansMap.values);
-
-    print("Cleaned duplicates. Unique challans: ${selectedCustomerChallans.length}");
-
-    // Now call the normal populate function
-    populateInvoiceFromCustomerChallans();
+  String _formatDateForDisplay(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
   }
 
-// Fix in your challan selection method
   void selectChallan(Challan challan) {
     // Check if already selected
     bool alreadySelected = selectedCustomerChallans.any(
@@ -799,13 +492,16 @@ class NewInvoiceController extends GetxController {
   }
 
 
+
   Future<void> loadChallans() async {
     try {
       isLoading.value = true;
       print("=== FETCHING CHALLANS WITH ITEMS FROM APPSHEET ===");
 
+      ///17/09 eving
+      ///     List<Challan> challans = await RemoteService.getChallansWithItems();
       // Use the new method that includes items
-      List<Challan> challans = await RemoteService.getChallansWithItems();
+      List<Challan> challans = await GoogleSheetService.getChallans();
       print("Final result: ${challans.length} challans found");
 
       // Detailed logging
@@ -818,7 +514,7 @@ class NewInvoiceController extends GetxController {
       // Log each challan with items
       for (var i = 0; i < challans.length; i++) {
         var challan = challans[i];
-        RemoteService.getChallanItemsByChallanId(challan.challanId);
+        GoogleSheetService.getChallanItemsByChallanId(challan.challanId);
         print("\nChallan ${i + 1}: ${challan.challanId}");
         print("  - Customer: ${challan.customerName}");
         print("  - Items: ${challan.items?.length ?? 0}");
@@ -940,12 +636,12 @@ class NewInvoiceController extends GetxController {
 
       print("=== ATTEMPTING TO FETCH ITEMS FOR USER: $userId ===");
 
-      List<Item> items = await RemoteService.getItems(userId: userId);
+      List<Item> items = await GoogleSheetService.getItems(userId: userId);
 
-      if (items.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        items = await RemoteService.getItemsAlternative(userId);
-      }
+      // if (items.isEmpty) {
+      //   print("Standard method failed, trying alternative...");
+      //   items = await RemoteService.getItemsAlternative(userId);
+      // }
 
       print("Final result: ${items.length} items found");
 
@@ -989,11 +685,11 @@ class NewInvoiceController extends GetxController {
       isLoading.value = true;
       print("=== ATTEMPTING TO FETCH INVOICES ===");
 
-      List<Invoice> invoices = await RemoteService.getInvoices();
+      List<Invoice> invoices = await GoogleSheetService.getInvoices();
 
       if (invoices.isEmpty) {
         print("Standard method failed, trying alternative...");
-        invoices = await RemoteService.getInvoices();
+        invoices = await GoogleSheetService.getInvoices();
       }
 
       print("Final result: ${invoices.length} invoices found");
@@ -1212,6 +908,11 @@ class NewInvoiceController extends GetxController {
     calculateTotals();
   }
 
+  void updatePaymentStatus(String status) {
+    paymentStatus.value = status;
+  }
+
+
   void updateDiscount(double amount, String type) {
     discountAmount.value = amount;
     discountType.value = type;
@@ -1222,8 +923,8 @@ class NewInvoiceController extends GetxController {
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
       initialDate: dueDate.value,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
     );
 
     if (picked != null && picked != dueDate.value) {
@@ -1235,6 +936,8 @@ class NewInvoiceController extends GetxController {
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
+
+
 
   ///Workig just comment 5-6- 99
   Future<bool> saveInvoice({required bool isDraft}) async {
@@ -1253,9 +956,7 @@ class NewInvoiceController extends GetxController {
 
       // Get customer ID logic (keep your existing logic)
       String finalCustomerId = selectedCustomerId.value;
-      // ... your existing customer ID logic ...
 
-      // Create the main invoice record
       Map<String, dynamic> invoiceData = {
         'invoiceId': invoiceNumberController.text,
         'customerId': finalCustomerId,
@@ -1271,37 +972,90 @@ class NewInvoiceController extends GetxController {
         'discountAmount': discountAmount.value,
         'totalAmount': totalAmount.value,
         'notes': notesController.text,
-        'status': isDraft ? 'draft' : 'issued',
+        'status': paymentStatus.value,
+        //status': isDraft ? 'draft' : 'issued',
         'userId': AppConstants.userId,
       };
 
       print("Saving invoice: ${invoiceData['invoiceId']}");
 
       // 1. First save the main invoice
-      await RemoteService.addInvoice(invoiceData, AppConstants.userId);
+      await GoogleSheetService.addInvoice(invoiceData, AppConstants.userId);
 
 
       // 2. Then save each invoice item
       for (var item in invoiceItems) {
         Map<String, dynamic> invoiceItemData = {
-          '_RowNumber': '',
+          //'_RowNumber': '',
           'invoiceId': invoiceNumberController.text, // This must match the main invoice ID
           'itemId': item.itemId,
-          'itemName': item.description,
+          'itemName': item.itemName,
           'description': item.description,
-          'quantity': item.quantity.toString(), // Convert to string if API expects string
-          'price': item.rate.toString(), // Convert to string if API expects string
-          'totalPrice': item.amount.toString(), // Convert to string if API expects string
+          'quantity': item.quantity, // Convert to string if API expects string
+          'price': item.rate, // Convert to string if API expects string
+          'totalPrice': item.amount, // Convert to string if API expects string
         };
 
         print("Saving invoice item: ${jsonEncode(invoiceItemData)}");
 
-         await RemoteService.addInvoiceItem(invoiceItemData, AppConstants.userId);
-
-
-        // 3. Update stock (if needed)
-        await _updateStockForItem(item.itemId, item.quantity);
+        await GoogleSheetService.addInvoiceItem(invoiceItemData, AppConstants.userId);
       }
+
+      // 3. Update stock (if needed)
+      await GoogleSheetService.updateStockAfterInvoice(invoiceItems);
+
+      // 4. Generate & share PDF (no need to pass invoiceItems again!)
+      List<Invoice> invoiceModels = invoiceItems.map((item) {
+        return Invoice(
+          invoiceId: invoiceNumberController.text,
+          itemId: item.itemId,
+          itemName: item.description,
+          qty: item.quantity,
+          price: item.rate.toDouble(),
+          mobile: customerMobileController.text.trim(),
+          customerId: selectedCustomerId.value,
+          customerName: customerNameController.text.trim(),
+          customerEmail: customerEmailController.text.trim(),
+          customerAddress: customerAddressController.text.trim(),
+          issueDate: DateTime.now(),
+          dueDate: dueDate.value,
+          subtotal: subtotal.value,
+          taxRate: taxRate.value,
+          taxAmount: taxAmount.value,
+          discountAmount: discountAmount.value,
+          totalAmount: totalAmount.value,
+          notes: notesController.text,
+          status: paymentStatus.value,
+        );
+      }).toList();
+
+      if (invoiceModels.isEmpty) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "Invoice must have at least one item",
+          baseColor: Colors.red.shade700,
+          icon: Icons.error_outline,
+        );
+        return false;
+      }
+
+      await InvoiceHelper.generateAndShareInvoice(
+        invoiceModels,
+        customerNameController.text.trim(),
+        customerMobileController.text.trim(),
+        customerEmailController.text.trim(),
+        customerAddressController.text.trim(),
+        subtotal.value,
+        taxAmount.value,
+        discountAmount.value,
+        totalAmount.value,
+        taxRate.value,
+        discountType.value,
+        notesController.text,
+        companyData.value,
+        invoiceType.value
+      );
+
 
       showCustomSnackbar(
         title: "Success",
@@ -1332,6 +1086,7 @@ class NewInvoiceController extends GetxController {
       isLoading.value = false;
     }
   }
+
 
 
 
@@ -1412,18 +1167,6 @@ class NewInvoiceController extends GetxController {
     }
   }
 
-  Future<void> _updateStockForItem(String itemId, int quantity) async {
-    try {
-      // Implement your stock update logic here
-      print("Updating stock for item $itemId, quantity: $quantity");
-      // await _firestore.collection('items').doc(itemId).update({
-      //   'stock': FieldValue.increment(-quantity)
-      // });
-    } catch (e) {
-      print("Error updating stock for item $itemId: $e");
-    }
-  }
-
   void clearForm() {
     formKey.currentState?.reset();
     invoiceItems.clear();
@@ -1463,7 +1206,7 @@ class NewInvoiceController extends GetxController {
     );
     if (picked != null && picked != selectedFromDate.value) {
       selectedFromDate.value = picked;
-      fromDateController.text = DateFormat('dd-MM-yyyy').format(picked);
+      fromDateController.text = _formatDateForDisplay(picked);
       // Reload challans with new date range
       loadChallansForInvoice();
     }
@@ -1478,7 +1221,7 @@ class NewInvoiceController extends GetxController {
     );
     if (picked != null && picked != selectedToDate.value) {
       selectedToDate.value = picked;
-      toDateController.text = DateFormat('dd-MM-yyyy').format(picked);
+      toDateController.text = _formatDateForDisplay(picked);
       // Reload challans with new date range
       loadChallansForInvoice();
     }

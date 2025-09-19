@@ -83,7 +83,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
             ),
             const SizedBox(height: 20),
             Text(
-              "Invoice Generator",
+              "Invoice Sathi",
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,

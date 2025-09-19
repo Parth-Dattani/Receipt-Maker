@@ -1,4 +1,5 @@
 // new_invoice_screen.dart
+import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -966,7 +967,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                   child: TextFormField(
                     controller: controller.dueDateController,
                     decoration: InputDecoration(
-                      labelText: 'Due Date',
+                      labelText: 'Invoice Date',
                       prefixIcon: Icon(Icons.calendar_today),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1301,7 +1302,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       ),
                     ),
 
-                  // Invoice items list
+                  /// Invoice items list
                   ...controller.invoiceItems.asMap().entries.map((entry) {
                     int index = entry.key;
                     InvoiceItem item = entry.value;
@@ -1380,7 +1381,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                 child: Padding(
                                                   padding: EdgeInsets.symmetric(horizontal: 8),
                                                   child: Text(
-                                                    '${item.itemName} - ₹${item.price.toStringAsFixed(2)}',
+                                                    '${item.itemName}',
                                                     style: TextStyle(fontSize: 14),
                                                   ),
                                                 ),
@@ -1409,6 +1410,64 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           controller.updateItem(index, description: value);
                                         },
                                       ),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(width: 12),
+                              // Price (new column)
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Price',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Container(
+                                      height: 40,
+                                      padding: EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${item.rate.toStringAsFixed(2)}', // 👈 show price here
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green.shade700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Container(
+                                    //   height: 40,
+                                    //   child: TextFormField(
+                                    //     initialValue: item.rate.toStringAsFixed(2),
+                                    //     textAlign: TextAlign.center,
+                                    //     decoration: InputDecoration(
+                                    //       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    //       border: OutlineInputBorder(
+                                    //         borderRadius: BorderRadius.circular(6),
+                                    //       ),
+                                    //     ),
+                                    //     readOnly: isFromChallan,
+                                    //     keyboardType: TextInputType.number,
+                                    //     onChanged: isFromChallan ? null : (value) {
+                                    //       int? qty = int.tryParse(value);
+                                    //       if (qty != null && qty > 0) {
+                                    //         controller.updateItem(index, quantity: qty);
+                                    //       }
+                                    //     },
+                                    //   ),
+                                    // ),
                                   ],
                                 ),
                               ),
@@ -1510,7 +1569,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     );
                   }).toList(),
 
-                  // Add item button - hide when from challan
+
+                  /// Add item button - hide when from challan
                   if (!isFromChallan) ...[
                     SizedBox(height: 16),
                     Container(
@@ -1569,15 +1629,119 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     });
   }
 
+  // Widget _buildCalculationsSection() {
+  //   return Card(
+  //     elevation: 4,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //     child: Padding(
+  //       padding: EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Text(
+  //             'Calculations',
+  //             style: TextStyle(
+  //               fontSize: 18,
+  //               fontWeight: FontWeight.bold,
+  //               color: Colors.blue.shade700,
+  //             ),
+  //           ),
+  //           SizedBox(height: 16),
+  //           Row(
+  //             children: [
+  //               Expanded(
+  //                 child: TextFormField(
+  //                   decoration: InputDecoration(
+  //                     labelText: 'Tax Rate (%)',
+  //                     prefixIcon: Icon(Icons.percent),
+  //                     border: OutlineInputBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                   ),
+  //                   keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                   onChanged: (value) {
+  //                     double? rate = double.tryParse(value);
+  //                     if (rate != null && rate >= 0) {
+  //                       controller.updateTaxRate(rate);
+  //                     }
+  //                   },
+  //                 ),
+  //               ),
+  //               SizedBox(width: 16),
+  //               Expanded(
+  //                 child: TextFormField(
+  //                   decoration: InputDecoration(
+  //                     labelText: 'Discount',
+  //                     prefixIcon: Icon(Icons.discount),
+  //                     border: OutlineInputBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                     suffixIcon: Obx(() => DropdownButton<String>(
+  //                       value: controller.discountType.value,
+  //                       underline: SizedBox(),
+  //                       items: [
+  //                         DropdownMenuItem(value: 'amount', child: Text('₹')),
+  //                         DropdownMenuItem(value: 'percentage', child: Text('%')),
+  //                       ],
+  //                       onChanged: (value) {
+  //                         if (value != null) {
+  //                           controller.updateDiscount(
+  //                             controller.discountAmount.value,
+  //                             value,
+  //                           );
+  //                         }
+  //                       },
+  //                     )),
+  //                   ),
+  //                   keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                   onChanged: (value) {
+  //                     double? discount = double.tryParse(value);
+  //                     if (discount != null && discount >= 0) {
+  //                       controller.updateDiscount(
+  //                         discount,
+  //                         controller.discountType.value,
+  //                       );
+  //                     }
+  //                   },
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           SizedBox(height: 20),
+  //           Divider(),
+  //           Obx(() => Column(
+  //             children: [
+  //               _buildTotalRow('Subtotal', controller.subtotal.value),
+  //               if (controller.discountAmount.value > 0)
+  //                 _buildTotalRow(
+  //                   'Discount',
+  //                   controller.discountType.value == 'percentage'
+  //                       ? controller.subtotal.value * (controller.discountAmount.value / 100)
+  //                       : controller.discountAmount.value,
+  //                   isDiscount: true,
+  //                 ),
+  //               if (controller.taxRate.value > 0)
+  //                 _buildTotalRow('Tax (${controller.taxRate.value}%)', controller.taxAmount.value),
+  //               Divider(),
+  //               _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
+  //             ],
+  //           )),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget _buildCalculationsSection() {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// Title
             Text(
               'Calculations',
               style: TextStyle(
@@ -1586,56 +1750,69 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 color: Colors.blue.shade700,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+
+            /// Tax + Discount in one row
             Row(
               children: [
+                /// Tax Rate (40%)
                 Expanded(
+                  flex: 4, // 40%
                   child: TextFormField(
                     decoration: InputDecoration(
                       labelText: 'Tax Rate (%)',
-                      prefixIcon: Icon(Icons.percent),
+                      prefixIcon: const Icon(Icons.percent, size: 18,),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 30,  // shrink the space
+                        minHeight: 30,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (value) {
-                      double? rate = double.tryParse(value);
+                      final rate = double.tryParse(value);
                       if (rate != null && rate >= 0) {
                         controller.updateTaxRate(rate);
                       }
                     },
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 6),
+
+                /// Discount (60%)
                 Expanded(
+                  flex: 6, // 60%
                   child: TextFormField(
                     decoration: InputDecoration(
                       labelText: 'Discount',
-                      prefixIcon: Icon(Icons.discount),
+                      //prefixIcon: const Icon(Icons.discount),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      suffixIcon: Obx(() => DropdownButton<String>(
-                        value: controller.discountType.value,
-                        underline: SizedBox(),
-                        items: [
-                          DropdownMenuItem(value: 'amount', child: Text('₹')),
-                          DropdownMenuItem(value: 'percentage', child: Text('%')),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            controller.updateDiscount(
-                              controller.discountAmount.value,
-                              value,
-                            );
-                          }
-                        },
-                      )),
+                      suffixIcon: Obx(
+                            () => DropdownButton<String>(
+                          value: controller.discountType.value,
+                          underline: const SizedBox(),
+                          items: const [
+                            DropdownMenuItem(value: 'amount', child: Text('₹')),
+                            DropdownMenuItem(value: 'percentage', child: Text('%')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              controller.updateDiscount(
+                                controller.discountAmount.value,
+                                value,
+                              );
+                            }
+                          },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (value) {
-                      double? discount = double.tryParse(value);
+                      final discount = double.tryParse(value);
                       if (discount != null && discount >= 0) {
                         controller.updateDiscount(
                           discount,
@@ -1647,30 +1824,73 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            Divider(),
-            Obx(() => Column(
-              children: [
-                _buildTotalRow('Subtotal', controller.subtotal.value),
-                if (controller.discountAmount.value > 0)
+
+            ///paymrt Status
+            const SizedBox(height: 16),
+
+            /// Payment Status
+            Obx(
+                  () => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButton<String>(
+                  value: controller.paymentStatus.value,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                    DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                    DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.updatePaymentStatus(value);
+                    }
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const Divider(),
+
+            /// Totals Section
+            Obx(
+                  () => Column(
+                children: [
+                  _buildTotalRow('Subtotal', controller.subtotal.value),
+                  if (controller.discountAmount.value > 0)
+                    _buildTotalRow(
+                      'Discount',
+                      controller.discountType.value == 'percentage'
+                          ? controller.subtotal.value *
+                          (controller.discountAmount.value / 100)
+                          : controller.discountAmount.value,
+                      isDiscount: true,
+                    ),
+                  if (controller.taxRate.value > 0)
+                    _buildTotalRow(
+                      'Tax (${controller.taxRate.value}%)',
+                      controller.taxAmount.value,
+                    ),
+                  const Divider(),
                   _buildTotalRow(
-                    'Discount',
-                    controller.discountType.value == 'percentage'
-                        ? controller.subtotal.value * (controller.discountAmount.value / 100)
-                        : controller.discountAmount.value,
-                    isDiscount: true,
+                    'Total Amount',
+                    controller.totalAmount.value,
+                    isTotal: true,
                   ),
-                if (controller.taxRate.value > 0)
-                  _buildTotalRow('Tax (${controller.taxRate.value}%)', controller.taxAmount.value),
-                Divider(),
-                _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
-              ],
-            )),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildTotalRow(String label, double amount, {bool isDiscount = false, bool isTotal = false}) {
     return Padding(
@@ -1749,23 +1969,23 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         ),
         SizedBox(width: 8),
 
-        // Save Draft button
+        /// Save Draft button
+        // Expanded(
+        //   flex: 3,
+        //   child: ElevatedButton(
+        //     onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: true),
+        //     style: ElevatedButton.styleFrom(
+        //       backgroundColor: Colors.grey.shade600,
+        //       padding: EdgeInsets.symmetric(vertical: 12),
+        //     ),
+        //     child: Text('Save Draft'),
+        //   ),
+        // ),
+        // SizedBox(width: 8),
+
+        /// Main action button
         Expanded(
           flex: 3,
-          child: ElevatedButton(
-            onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade600,
-              padding: EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text('Save Draft'),
-          ),
-        ),
-        SizedBox(width: 8),
-
-        // Main action button
-        Expanded(
-          flex: 4,
           child: ElevatedButton(
             onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: false),
             style: ElevatedButton.styleFrom(
@@ -1778,15 +1998,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               controller.invoiceType.value == InvoiceType.invoice
                   ? 'Create Invoice'
                   : 'Create Quotation',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.whiteColor),
             )),
           ),
         ),
       ],
     ));
   }
-
-
 
   /// In your _buildChallanToInvoiceSection method
   Widget _buildChallanToInvoiceSection() {

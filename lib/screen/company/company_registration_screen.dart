@@ -146,6 +146,15 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             prefixIcon: Icons.location_on,
                           ),
 
+                          // 📞 Phone Number Field
+                          CustomTextFormField(
+                            controller: controller.phoneController,  // <-- Create this controller in your controller class
+                            label: "Phone Number *",
+                            prefixIcon: Icons.phone,
+                            keyboardType: TextInputType.phone,
+                            isRequired: true,
+                          ),
+
                           /// Country Dropdown
                           // Obx(() => _customDropdown(
                           //   label: "Country *",

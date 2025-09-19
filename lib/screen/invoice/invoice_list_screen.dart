@@ -391,30 +391,25 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search and Filter Section
-          _buildSearchFilterSection(),
+      body: Obx((){
+        if(controller.isLoading.value){
+          return _buildFullShimmer();
+        }
+        return Column(
+          children: [
+            /// Search and Filter Section
+            _buildSearchFilterSection(),
+            /// Statistics Section
+            _buildStatisticsSection(),
 
-          // Statistics Section
-          _buildStatisticsSection(),
-
-          // Invoice List
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return _buildShimmerLoading(); // Changed to shimmer effect
-              }
-
-              if (controller.filteredInvoiceList.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return _buildInvoiceList();
-            }),
-          ),
-        ],
-      ),
+            Expanded(
+              child: controller.filteredInvoiceList.isEmpty
+                  ? _buildEmptyState()
+                  : _buildInvoiceList(),
+            ),
+          ],
+        );
+      }),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Get.toNamed('/new-invoice'),
         backgroundColor: Colors.blue.shade700,
@@ -423,93 +418,94 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
     );
   }
 
-  // Add shimmer loading effect
-  Widget _buildShimmerLoading() {
-    return ListView.builder(
-      padding: EdgeInsets.only(bottom: 80),
-      itemCount: 6, // Show 6 shimmer items
-      itemBuilder: (context, index) {
-        return _buildShimmerInvoiceListItem();
-      },
-    );
-  }
 
-  // Shimmer effect for invoice list items
-  Widget _buildShimmerInvoiceListItem() {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      elevation: 2,
-      child: ListTile(
-        leading: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: CircleAvatar(
-            backgroundColor: Colors.grey,
-            child: Icon(
-              Icons.receipt,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ),
-        title: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 100,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 8),
-            Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: Container(
-                width: 150,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: Colors.grey,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-            SizedBox(height: 8),
-            Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: Container(
-                width: 200,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.grey,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-          ],
-        ),
-        trailing: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // // Add shimmer loading effect
+  // Widget _buildShimmerLoading() {
+  //   return ListView.builder(
+  //     padding: EdgeInsets.only(bottom: 80),
+  //     itemCount: 6, // Show 6 shimmer items
+  //     itemBuilder: (context, index) {
+  //       return _buildShimmerInvoiceListItem();
+  //     },
+  //   );
+  // }
+  //
+  // // Shimmer effect for invoice list items
+  // Widget _buildShimmerInvoiceListItem() {
+  //   return Card(
+  //     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+  //     elevation: 2,
+  //     child: ListTile(
+  //       leading: Shimmer.fromColors(
+  //         baseColor: Colors.grey.shade300,
+  //         highlightColor: Colors.grey.shade100,
+  //         child: CircleAvatar(
+  //           backgroundColor: Colors.grey,
+  //           child: Icon(
+  //             Icons.receipt,
+  //             color: Colors.white,
+  //             size: 20,
+  //           ),
+  //         ),
+  //       ),
+  //       title: Shimmer.fromColors(
+  //         baseColor: Colors.grey.shade300,
+  //         highlightColor: Colors.grey.shade100,
+  //         child: Container(
+  //           width: 100,
+  //           height: 16,
+  //           decoration: BoxDecoration(
+  //             color: Colors.grey,
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //         ),
+  //       ),
+  //       subtitle: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           SizedBox(height: 8),
+  //           Shimmer.fromColors(
+  //             baseColor: Colors.grey.shade300,
+  //             highlightColor: Colors.grey.shade100,
+  //             child: Container(
+  //               width: 150,
+  //               height: 14,
+  //               decoration: BoxDecoration(
+  //                 color: Colors.grey,
+  //                 borderRadius: BorderRadius.circular(6),
+  //               ),
+  //             ),
+  //           ),
+  //           SizedBox(height: 8),
+  //           Shimmer.fromColors(
+  //             baseColor: Colors.grey.shade300,
+  //             highlightColor: Colors.grey.shade100,
+  //             child: Container(
+  //               width: 200,
+  //               height: 12,
+  //               decoration: BoxDecoration(
+  //                 color: Colors.grey,
+  //                 borderRadius: BorderRadius.circular(6),
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       trailing: Shimmer.fromColors(
+  //         baseColor: Colors.grey.shade300,
+  //         highlightColor: Colors.grey.shade100,
+  //         child: Container(
+  //           width: 30,
+  //           height: 30,
+  //           decoration: BoxDecoration(
+  //             color: Colors.grey,
+  //             shape: BoxShape.circle,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   // Add shimmer effect for statistics section during loading
   Widget _buildStatisticsSection() {
@@ -553,45 +549,45 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
     );
   }
 
-  // Shimmer effect for statistics
-  Widget _buildShimmerStatistics() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: List.generate(4, (index) => _buildShimmerStatItem()),
-    );
-  }
-
-  Widget _buildShimmerStatItem() {
-    return Column(
-      children: [
-        Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 40,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        SizedBox(height: 4),
-        Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 30,
-            height: 12,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // // Shimmer effect for statistics
+  // Widget _buildShimmerStatistics() {
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+  //     children: List.generate(4, (index) => _buildShimmerStatItem()),
+  //   );
+  // }
+  //
+  // Widget _buildShimmerStatItem() {
+  //   return Column(
+  //     children: [
+  //       Shimmer.fromColors(
+  //         baseColor: Colors.grey.shade300,
+  //         highlightColor: Colors.grey.shade100,
+  //         child: Container(
+  //           width: 40,
+  //           height: 16,
+  //           decoration: BoxDecoration(
+  //             color: Colors.grey,
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //         ),
+  //       ),
+  //       SizedBox(height: 4),
+  //       Shimmer.fromColors(
+  //         baseColor: Colors.grey.shade300,
+  //         highlightColor: Colors.grey.shade100,
+  //         child: Container(
+  //           width: 30,
+  //           height: 12,
+  //           decoration: BoxDecoration(
+  //             color: Colors.grey,
+  //             borderRadius: BorderRadius.circular(6),
+  //           ),
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   // Rest of your existing code remains the same...
   Widget _buildSearchFilterSection() {
@@ -878,4 +874,186 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
         return Colors.grey;
     }
   }
+
+  // 🔹 FULL PAGE SHIMMER
+  Widget _buildFullShimmer() {
+    return Column(
+      children: [
+        _buildShimmerSearchFilterSection(),
+        _buildShimmerStatistics(),
+        Expanded(
+          child: _buildShimmerLoading(),
+        ),
+      ],
+    );
+  }
+
+  // 🔹 Shimmer for search + filter
+  Widget _buildShimmerSearchFilterSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              height: 40,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(
+              3,
+                  (_) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Shimmer.fromColors(
+                  baseColor: Colors.grey.shade300,
+                  highlightColor: Colors.grey.shade100,
+                  child: Container(
+                    width: 60,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  // 🔹 Shimmer for invoice list
+  Widget _buildShimmerLoading() {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: 6,
+      itemBuilder: (context, index) => _buildShimmerInvoiceListItem(),
+    );
+  }
+
+  Widget _buildShimmerInvoiceListItem() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      elevation: 2,
+      child: ListTile(
+        leading: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: const CircleAvatar(
+            backgroundColor: Colors.grey,
+          ),
+        ),
+        title: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 100,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: 150,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: 200,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ],
+        ),
+        trailing: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              color: Colors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Shimmer for statistics
+  Widget _buildShimmerStatistics() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.grey.shade50,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(4, (_) => _buildShimmerStatItem()),
+      ),
+    );
+  }
+
+  Widget _buildShimmerStatItem() {
+    return Column(
+      children: [
+        Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 40,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 30,
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.grey,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 }

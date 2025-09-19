@@ -19,6 +19,7 @@ class CompanyController extends BaseController {
   final countryController = TextEditingController();
   final pincodeController = TextEditingController();
   final logoController = TextEditingController(); // File/Image path (Optional)
+  final phoneController = TextEditingController(); // File/Image path (Optional)
   final businessCategoryController = TextEditingController();
   final gstController = TextEditingController();
   final panController = TextEditingController();
@@ -107,6 +108,7 @@ class CompanyController extends BaseController {
     businessCategoryController.text = companyData['businessCategory'] ?? '';
     gstController.text = companyData['gst'] ?? '';
     panController.text = companyData['pan'] ?? '';
+    phoneController.text = companyData['phone'] ?? '';
     bankNameController.text = companyData['bankName'] ?? '';
     ifscController.text = companyData['ifsc'] ?? '';
     accountNumberController.text = companyData['accountNumber'] ?? '';
@@ -228,6 +230,8 @@ class CompanyController extends BaseController {
     //   return false;
     // }
 
+
+
     if (selectedCountry.value.isEmpty) {
       showCustomSnackbar(
         title: "",
@@ -247,6 +251,17 @@ class CompanyController extends BaseController {
       );
       return false;
     }
+
+    if (phoneController.text.trim().isEmpty) {
+      showCustomSnackbar(
+        title: "",
+        message: "Phone number is required",
+        icon: Icons.close,
+        baseColor: AppColors.appColor,
+      );
+      return false;
+    }
+
 
     if (businessCategoryController.text.trim().isEmpty) {
       showCustomSnackbar(
@@ -310,7 +325,6 @@ class CompanyController extends BaseController {
     return true;
   }
 
-  /// Save company details to Firestore
   Future<void> registerCompany() async {
     if (!formKey.currentState!.validate()) return;
     if (!_validateRequiredFields()) return;
@@ -359,6 +373,7 @@ class CompanyController extends BaseController {
         'state': selectedState.value,
         'country': selectedCountry.value,
         'pincode': pincodeController.text.trim(),
+        'phone': phoneController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
         'gst': gstController.text.trim().toUpperCase(),
@@ -456,6 +471,7 @@ class CompanyController extends BaseController {
         'state': selectedState.value,
         'country': selectedCountry.value,
         'pincode': pincodeController.text.trim(),
+        'phone': phoneController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
         'gst': gstController.text.trim().toUpperCase(),
@@ -478,6 +494,7 @@ class CompanyController extends BaseController {
       // Update local data
       if (currentCompany.value != null) {
         currentCompany.value = {...currentCompany.value!, ...updateData};
+        currentCompany.refresh();
       }
 
       showCustomSnackbar(
@@ -486,9 +503,15 @@ class CompanyController extends BaseController {
         baseColor: AppColors.greenColor2,
         icon: Icons.done_all,
       );
-
-      // Go back to previous screen
-      Get.back();
+// Delay slightly so snackbar shows, then go back
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (Get.isOverlaysOpen) {
+          Get.back(); // close snackbar first
+          Future.delayed(const Duration(milliseconds: 200), () => Get.back()); // then pop screen
+        } else {
+          Get.back(); // directly pop screen
+        }
+      });
     } catch (e) {
       print('Update error: $e');
       showCustomSnackbar(

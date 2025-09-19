@@ -177,19 +177,26 @@ class SplashController extends BaseController{
             userData['appId'] != null;
         final hasAccessKey = userData.containsKey('accessKey') &&
             userData['accessKey'] != null;
+        final hasSpreadsheetId = userData.containsKey('spreadsheetId') &&
+            userData['spreadsheetId'] != null;
 
         print("User has AppSheet App ID: $hasAppId");
         print("User has AppSheet Access Key: $hasAccessKey");
+        print("User has AppSheet SpreadsheetId  Key: $hasSpreadsheetId");
 
-        if (hasAppId && hasAccessKey) {
+        if (hasSpreadsheetId) {
           // Store AppSheet credentials in shared preferences for easy access
           await sharedPreferencesHelper.storePrefData(
               "appSheetAppId", userData['appId']);
           await sharedPreferencesHelper.storePrefData(
               "appSheetAccessKey", userData['accessKey']);
 
+          await sharedPreferencesHelper.storePrefData(
+              "spreadsheetId", userData['spreadsheetId']);
+
           AppConstants.appId =  userData['appId'].toString();
           AppConstants.accessKey = userData['accessKey'].toString();
+          AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
 
 
           // Both company and AppSheet credentials exist → go to dashboard

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../controller/controller.dart';
 import '../screen.dart';
+import 'package:shimmer/shimmer.dart';
 
 class DashboardScreen extends GetView<DashboardController> {
   static const String pageId = '/DashboardScreen';
@@ -39,7 +40,7 @@ class DashboardScreen extends GetView<DashboardController> {
         ],
       ),
       body: Obx(() => controller.isLoading.value
-          ? Center(child: CircularProgressIndicator())
+          ? const DashboardShimmer()
           : RefreshIndicator(
         onRefresh: () async => controller.refreshDashboard(),
         child: SingleChildScrollView(
@@ -377,11 +378,13 @@ class DashboardScreen extends GetView<DashboardController> {
                   title: Text("Enable Challan Feature"),
                   trailing: Switch(
                     value: AppConstants.isChallan.value,
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       AppConstants.isChallan.value = value;
                       // Optionally save this preference to Firebase or local storage
-                      controller.saveChallanPreference(value);
-                    },
+                      await controller.saveChallanPreference(value);
+
+
+                      },
                     activeColor: Colors.green,
                   ),
                 )),
@@ -445,6 +448,93 @@ class DashboardScreen extends GetView<DashboardController> {
   }
 
 
+}
+
+
+
+
+
+class DashboardShimmer extends StatelessWidget {
+  const DashboardShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Top banner
+          _shimmerBox(height: 100, width: double.infinity, borderRadius: 15),
+
+          const SizedBox(height: 20),
+
+          // Statistics cards row
+          Row(
+            children: [
+              Expanded(child: _shimmerBox(height: 100, borderRadius: 12)),
+              const SizedBox(width: 10),
+              Expanded(child: _shimmerBox(height: 100, borderRadius: 12)),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Quick actions
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
+            ),
+            itemCount: 4,
+            itemBuilder: (_, __) => _shimmerBox(borderRadius: 12),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Chart placeholders
+          Row(
+            children: [
+              Expanded(child: _shimmerBox(height: 200, borderRadius: 12)),
+              const SizedBox(width: 10),
+              Expanded(child: _shimmerBox(height: 200, borderRadius: 12)),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Recent invoices list
+          Column(
+            children: List.generate(
+              3,
+                  (_) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: _shimmerBox(height: 60, borderRadius: 12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shimmerBox({double height = 80, double? width, double borderRadius = 8}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: height,
+        width: width,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+    );
+  }
 }
 
 

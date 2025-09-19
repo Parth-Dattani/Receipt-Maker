@@ -162,7 +162,7 @@ class InvoiceDetailsController extends GetxController {
       print("Loading items for invoice: $invoiceId");
 
       // Fetch ONLY the items for this specific invoice
-      List<InvoiceItem> items = await RemoteService.getInvoiceItemsByInvoiceId(invoiceId);
+      List<InvoiceItem> items = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
       invoiceItems.assignAll(items);
 
       print("✅ Successfully loaded ${items.length} items for invoice $invoiceId");
@@ -171,7 +171,7 @@ class InvoiceDetailsController extends GetxController {
       if (items.isNotEmpty) {
         print("Items breakdown:");
         for (var item in items) {
-          print("  - ${item.description}: Qty ${item.quantity} × \$${item.rate} = \$${item.totalPrice}");
+          print("Items name:-${item.itemName} :  Desc:- ${item.description}: Qty ${item.quantity} × \$${item.rate} = \$${item.totalPrice}");
         }
       }
     } catch (e) {
@@ -203,54 +203,54 @@ class InvoiceDetailsController extends GetxController {
     );
   }
 
-  void deleteInvoice() async {
-    final confirmed = await Get.dialog(
-      AlertDialog(
-        title: Text('Delete Invoice?'),
-        content: Text('Are you sure you want to delete this invoice?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  // void deleteInvoice() async {
+  //   final confirmed = await Get.dialog(
+  //     AlertDialog(
+  //       title: Text('Delete Invoice?'),
+  //       content: Text('Are you sure you want to delete this invoice?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Get.back(result: false),
+  //           child: Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Get.back(result: true),
+  //           child: Text('Delete', style: TextStyle(color: Colors.red)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (confirmed == true) {
+  //     try {
+  //       isLoading.value = true;
+  //
+  //       // Delete from remote service
+  //       if (invoice.value != null) {
+  //         await RemoteService.deleteInvoiceItems(invoice.value!.invoiceId);
+  //       }
+  //
+  //       Get.back(); // Go back to invoice list
+  //       Get.snackbar(
+  //         'Deleted',
+  //         'Invoice deleted successfully',
+  //         backgroundColor: Colors.green.shade100,
+  //         colorText: Colors.green.shade800,
+  //       );
+  //     } catch (e) {
+  //       Get.snackbar(
+  //         'Error',
+  //         'Failed to delete invoice: ${e.toString()}',
+  //         backgroundColor: Colors.red.shade100,
+  //         colorText: Colors.red.shade800,
+  //       );
+  //     } finally {
+  //       isLoading.value = false;
+  //     }
+  //   }
+  // }
 
-    if (confirmed == true) {
-      try {
-        isLoading.value = true;
-
-        // Delete from remote service
-        if (invoice.value != null) {
-          await RemoteService.deleteInvoiceItems(invoice.value!.invoiceId);
-        }
-
-        Get.back(); // Go back to invoice list
-        Get.snackbar(
-          'Deleted',
-          'Invoice deleted successfully',
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade800,
-        );
-      } catch (e) {
-        Get.snackbar(
-          'Error',
-          'Failed to delete invoice: ${e.toString()}',
-          backgroundColor: Colors.red.shade100,
-          colorText: Colors.red.shade800,
-        );
-      } finally {
-        isLoading.value = false;
-      }
-    }
-  }
-
-  // Calculate totals from loaded items
+  /// Calculate totals from loaded items
   double get itemsSubtotal {
     return invoiceItems.fold(0.0, (sum, item) => sum + item.totalPrice);
   }

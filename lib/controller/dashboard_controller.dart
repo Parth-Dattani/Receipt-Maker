@@ -162,6 +162,10 @@ class DashboardController extends BaseController {
   // Add customer count observable
   var customerCount = 0.obs;
 
+  var pendingCount = 0.obs;
+  var paidCount = 0.obs;
+  var overdueCount = 0.obs;
+
   // Recent invoices list
   var recentInvoices = <Invoice>[].obs;
 
@@ -189,15 +193,34 @@ class DashboardController extends BaseController {
     _loadCompanyData();
     loadCompanyData();
     loadDashboardData();
+    // Auto-calculate whenever invoices change
+    ever(invoiceList, (_) {
+      calculateStats();
+      // calculatePendingAmount();
+      // calculateOverdueAmount();
+    });
     ///loadChallanPreference();
   }
 
   // Add this method to save the challan preference to SharedPreferences
   Future<void> saveChallanPreference(bool isEnabled) async {
+   print("Is Enable Valure : --------- ${isEnabled}");
+
     try {
-      final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-      await prefs.storeBoolPrefData('isChallanEnabled', isEnabled);
+      await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isEnabled);
       AppConstants.isChallan.value = isEnabled;
+
+      /// Also update in Firestore
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && companyId.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('companies')
+            .doc(companyId.toString())
+            .update({'isChallanEnabled': isEnabled});
+      }
+
       print('Challan preference saved: $isEnabled');
     } catch (e) {
       print('Error saving challan preference to SharedPreferences: $e');
@@ -236,8 +259,7 @@ class DashboardController extends BaseController {
 
             print("IsssChallN-------------${isChallanEnabled}");
             // Update SharedPreferences and AppConstants
-            final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-            await prefs.setBool('isChallanEnabled', isChallanEnabled);
+            await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
             AppConstants.isChallan.value = isChallanEnabled;
           }
         }
@@ -392,10 +414,91 @@ class DashboardController extends BaseController {
     }
   }
 
+  // Future<void> loadInvoices() async {
+  //   try {
+  //     isLoading.value = true;
+  //
+  //     print("=== ATTEMPTING TO FETCH INVOICES ===");
+  //
+  //     final currentUserId = _auth.currentUser?.uid;
+  //     if (currentUserId == null) {
+  //       showCustomSnackbar(
+  //         title: "Error",
+  //         message: "User not logged in",
+  //         baseColor: Colors.red.shade700,
+  //         icon: Icons.error_outline,
+  //       );
+  //       return;
+  //     }
+  //
+  //     // Try to get invoices
+  //     List<Invoice> invoices = await GoogleSheetService.getInvoices();
+  //
+  //     // If no invoices found, try alternative methods
+  //     if (invoices.isEmpty) {
+  //       print("Standard method failed, trying alternative...");
+  //       invoices = await GoogleSheetService.getInvoices();
+  //     }
+  //
+  //     // Filter invoices by current user ID
+  //     List<Invoice> userInvoices = invoices.where((invoice) {
+  //       // Check if invoice has userId field and it matches current user
+  //       return invoice.userId == currentUserId;
+  //     }).toList();
+  //     print("=============usrInvoice----${userInvoices}");
+  //
+  //     // If no invoices found, try alternative methods
+  //     if (userInvoices.isEmpty) {
+  //       print("Standard method failed, trying alternative...");
+  //       invoices = await RemoteService.getInvoices();
+  //       // Filter again
+  //       userInvoices = invoices.where((invoice) => invoice.userId == currentUserId).toList();
+  //     }
+  //
+  //
+  //     print("Final result: ${invoices.length} invoices found");
+  //
+  //     // Debug: Print each found invoice
+  //     double totalRevenueCalculated = 0.0;
+  //     for (var invoice in userInvoices) {
+  //       print("Found invoice: ${invoice.invoiceId} (ID: ${invoice.itemName}) - Amount: ${invoice.totalAmount}");
+  //       totalRevenueCalculated += invoice.totalAmount ?? 0.0;
+  //     }
+  //
+  //
+  //
+  //     invoiceList.assignAll(userInvoices);
+  //     // Update total revenue
+  //     totalRevenue.value = totalRevenueCalculated;
+  //
+  //     if (userInvoices.isEmpty) {
+  //       showCustomSnackbar(
+  //         title: "No Invoices",
+  //         message: "No invoices found",
+  //         baseColor: Colors.orange.shade700,
+  //         icon: Icons.info_outline,
+  //       );
+  //     } else {
+  //       print("Success---Found ${userInvoices.length} invoices");
+  //
+  //     }
+  //
+  //   } catch (e) {
+  //     print("Error in fetchInvoices2(): $e");
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Failed to load invoices: $e",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error_outline,
+  //     );
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
+
   Future<void> loadInvoices() async {
     try {
       isLoading.value = true;
-
       print("=== ATTEMPTING TO FETCH INVOICES ===");
 
       final currentUserId = _auth.currentUser?.uid;
@@ -406,66 +509,78 @@ class DashboardController extends BaseController {
           baseColor: Colors.red.shade700,
           icon: Icons.error_outline,
         );
+        isLoading.value = false;
         return;
       }
 
-      // Try to get invoices
-      List<Invoice> invoices = await RemoteService.getInvoices();
+      print("Current user ID: $currentUserId");
 
-      // If no invoices found, try alternative methods
-      if (invoices.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        invoices = await RemoteService.getInvoices();
+      List<Invoice> invoices = [];
+
+      // Try Google Sheets first
+      try {
+        print("Trying Google Sheets API...");
+        invoices = await GoogleSheetService.getInvoices();
+        print("Google Sheets returned ${invoices.length} invoices");
+      } catch (e) {
+        print("Google Sheets failed: $e");
+        // Fall back to AppSheet if Google Sheets fails
+        print("Falling back to AppSheet API...");
+        invoices = await GoogleSheetService.getInvoices();
+        print("AppSheet returned ${invoices.length} invoices");
       }
 
       // Filter invoices by current user ID
       List<Invoice> userInvoices = invoices.where((invoice) {
-        // Check if invoice has userId field and it matches current user
-        return invoice.userId == currentUserId;
+        bool matches = invoice.userId == currentUserId;
+        if (!matches) {
+          print("Invoice ${invoice.invoiceId} has userId ${invoice.userId}, expected $currentUserId");
+        }
+        return matches;
       }).toList();
-      print("=============usrInvoice----${userInvoices}");
 
-      // If no invoices found, try alternative methods
+      print("Filtered to ${userInvoices.length} user invoices");
+
+      // If no invoices found after filtering, show message
       if (userInvoices.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        invoices = await RemoteService.getInvoices();
-        // Filter again
-        userInvoices = invoices.where((invoice) => invoice.userId == currentUserId).toList();
-      }
-
-
-      print("Final result: ${invoices.length} invoices found");
-
-      // Debug: Print each found invoice
-      double totalRevenueCalculated = 0.0;
-      for (var invoice in userInvoices) {
-        print("Found invoice: ${invoice.invoiceId} (ID: ${invoice.itemName}) - Amount: ${invoice.totalAmount}");
-        totalRevenueCalculated += invoice.totalAmount ?? 0.0;
-      }
-
-
-
-      invoiceList.assignAll(userInvoices);
-      // Update total revenue
-      totalRevenue.value = totalRevenueCalculated;
-
-      if (userInvoices.isEmpty) {
+        print("No invoices found for user $currentUserId");
         showCustomSnackbar(
           title: "No Invoices",
-          message: "No invoices found",
+          message: "No invoices found for your account",
           baseColor: Colors.orange.shade700,
           icon: Icons.info_outline,
         );
-      } else {
-        print("Success---Found ${userInvoices.length} invoices");
-
+        invoiceList.clear();
+        totalRevenue.value = 0.0;
+        return;
       }
 
+      // Debug: Print each found invoice and calculate total
+      double totalRevenueCalculated = 0.0;
+      for (var invoice in userInvoices) {
+        print("Found invoice: ${invoice.invoiceId} - Item: ${invoice.itemName} - Amount: ${invoice.totalAmount} - User: ${invoice.userId}");
+        totalRevenueCalculated += invoice.totalAmount ?? 0.0;
+      }
+
+      // Update the observable lists and values
+      invoiceList.assignAll(userInvoices);
+      totalRevenue.value = totalRevenueCalculated;
+
+      calculateStats();
+
+      print("Success - Found ${userInvoices.length} invoices with total revenue: $totalRevenueCalculated");
+      showCustomSnackbar(
+        title: "Success",
+        message: "Loaded ${userInvoices.length} invoices",
+        baseColor: Colors.green.shade700,
+        icon: Icons.check_circle,
+      );
+
     } catch (e) {
-      print("Error in fetchInvoices2(): $e");
+      print("Error in loadInvoices(): $e");
       showCustomSnackbar(
         title: "Error",
-        message: "Failed to load invoices: $e",
+        message: "Failed to load invoices: ${e.toString()}",
         baseColor: Colors.red.shade700,
         icon: Icons.error_outline,
       );
@@ -481,6 +596,79 @@ class DashboardController extends BaseController {
     }
     return total;
   }
+
+  void calculateStats() {
+    int paidCount = 0;
+    int pendingCount = 0;
+    int overdueCount = 0;
+
+    double paidAmount = 0.0;
+    double pendingAmountCalc = 0.0;
+    double overdueAmountCalc = 0.0;
+
+    for (var invoice in invoiceList) {
+      final status = invoice.status?.toLowerCase().trim();
+
+      if (status == "paid") {
+        paidCount++;
+        paidAmount += invoice.totalAmount ?? 0.0;
+      } else if (status == "pending") {
+        pendingCount++;
+        pendingAmountCalc += invoice.totalAmount ?? 0.0;
+      } else if (status == "overdue") {
+        overdueCount++;
+        overdueAmountCalc += invoice.totalAmount ?? 0.0;
+      }
+    }
+
+    // ✅ Update observables
+    this.paidCount.value = paidCount;
+    this.pendingAmount.value = pendingAmountCalc;
+    this.overdueAmount.value = overdueAmountCalc;
+
+    // ✅ Update chart data counts
+    invoiceStatusData.assignAll([
+      ChartData("Paid", paidCount.toDouble(), Colors.green),
+      ChartData("Pending", pendingCount.toDouble(), Colors.orange),
+      ChartData("Overdue", overdueCount.toDouble(), Colors.red),
+    ]);
+  }
+
+
+
+  double calculatePendingAmount() {
+    double total = 0.0;
+    for (var invoice in invoiceList) {
+      if (invoice.status?.toLowerCase() == "pending" ||
+          invoice.status?.toLowerCase() == "unpaid") {
+        total += invoice.totalAmount ?? 0.0;
+      }
+    }
+    pendingAmount.value = total; // update observable
+    return total;
+  }
+
+  double calculatePaidAmount() {
+    double total = 0.0;
+    for (var invoice in invoiceList) {
+      if (invoice.status?.toLowerCase() == "paid") {
+        total += invoice.totalAmount ?? 0.0;
+      }
+    }
+    return total;
+  }
+
+  double calculateOverdueAmount() {
+    double total = 0.0;
+    for (var invoice in invoiceList) {
+      if (invoice.status?.toLowerCase() == "overdue") {
+        total += invoice.totalAmount ?? 0.0;
+      }
+    }
+    overdueAmount.value = total;
+    return total;
+  }
+
 
 // You can also add a reactive getter
   double get totalRevenueFromList => calculateTotalRevenue();
@@ -824,14 +1012,14 @@ class DashboardController extends BaseController {
 
   // Fallback mock data
   void _loadMockData() {
-    totalInvoices.value = 156;
-    paidInvoices.value = 89;
-    unpaidInvoices.value = 45;
-    overdueInvoices.value = 12;
-    draftInvoices.value = 10;
-    totalRevenue.value = 125430.50;
+    totalInvoices.value = 0;
+    paidInvoices.value = 0;
+    unpaidInvoices.value = 0;
+    overdueInvoices.value = 0;
+    draftInvoices.value = 0;
+    totalRevenue.value = 0.0;
     pendingAmount.value = 0.0;
-    overdueAmount.value = 8945.25;
+    overdueAmount.value = 0.0;
 
     recentInvoices.value = [
       Invoice(

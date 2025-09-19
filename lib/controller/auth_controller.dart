@@ -225,9 +225,23 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         print("userData: ${userDoc.exists ? 'Exists' : 'Does not exist'}");
 
         if (userDoc.exists) {
+          final userData = userDoc.data()!;
           final username = userDoc["username"] ?? "";
+          final hasSpreadsheetId = userData.containsKey('spreadsheetId') &&
+              userDoc['spreadsheetId'] != null;
+
           await sharedPreferencesHelper.storePrefData("username", username);
-          print("Username stored: $username");
+
+          print("User has AppSheet SpreadsheetId  Key: $hasSpreadsheetId");
+
+          if (hasSpreadsheetId) {
+            await sharedPreferencesHelper.storePrefData(
+                "spreadsheetId", userData['spreadsheetId']);
+
+            AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+
+          }
+            print("Username stored: $username");
         } else {
           print("User document does not exist in Firestore");
           // Optional: Create user document if it doesn't exist

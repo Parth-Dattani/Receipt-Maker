@@ -86,12 +86,12 @@ class InvoiceListController extends BaseController {
       }
 
 
-      List<Invoice> invoices = await RemoteService.getInvoices();
+      List<Invoice> invoices = await GoogleSheetService.getInvoices();
 
       // If no invoices found, try alternative method
       if (invoices.isEmpty) {
         print("Standard method failed, trying alternative...");
-        invoices = await RemoteService.getInvoices();
+        invoices = await GoogleSheetService.getInvoices();
       }
 
       // Filter invoices by current user ID
@@ -104,7 +104,7 @@ class InvoiceListController extends BaseController {
       // If no invoices found, try alternative methods
       if (userInvoices.isEmpty) {
         print("Standard method failed, trying alternative...");
-        invoices = await RemoteService.getInvoices();
+        invoices = await GoogleSheetService.getInvoices();
         // Filter again
         userInvoices = invoices.where((invoice) => invoice.userId == currentUserId).toList();
       }
@@ -149,7 +149,7 @@ class InvoiceListController extends BaseController {
       return invoice.invoiceId.toLowerCase().contains(query.toLowerCase()) == true ||
           invoice.customerName.toLowerCase().contains(query.toLowerCase()) == true ||
           invoice.totalAmount.toString().contains(query) ||
-          (invoice.itemName.toLowerCase().contains(query.toLowerCase()) ?? false);
+          (invoice.itemName!.toLowerCase().contains(query.toLowerCase()) ?? false);
     }).toList();
 
     filteredInvoiceList.assignAll(filtered);
@@ -231,7 +231,7 @@ class InvoiceListController extends BaseController {
     }
   }
 
-  // Updated method with proper parameter handling
+  /// Updated method with proper parameter handling
   void exportInvoiceAsPdf(Invoice invoice) async {
     try {
       // Show loading indicator
@@ -239,27 +239,50 @@ class InvoiceListController extends BaseController {
 
       // Fetch the invoice items for this specific invoice
       print("Fetching invoice items for PDF: ${invoice.invoiceId}");
-      List<InvoiceItem> fetchedInvoiceItems = await RemoteService.getInvoiceItemsByInvoiceId(invoice.invoiceId);
+      List<InvoiceItem> fetchedInvoiceItems = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoice.invoiceId);
 
-      print("Found ${fetchedInvoiceItems.length} items for invoice ${invoice.invoiceId}");
+      // ✅ Fix: Fallback itemName -> description if blank
+      final cleanedItems = fetchedInvoiceItems.map((item) {
+        final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
+            ? item.itemName
+            : (item.description ?? "Service/Product");
 
-      // If no items found, create a default item based on invoice data
-      if (fetchedInvoiceItems.isEmpty) {
-        print("No items found, creating default item from invoice data");
-        fetchedInvoiceItems = [
-          InvoiceItem(
-            description: invoice.itemName,
-            itemId: invoice.itemId,
-            itemName: invoice.itemName ?? 'Service/Product',
-            quantity: invoice.qty ?? 1,
-            rate: invoice.price ?? 0.0,
-            totalPrice: invoice.totalAmount ?? 0.0,
-          ),
-        ];
+        return InvoiceItem(
+          itemId: item.itemId,
+          itemName: fixedName,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          totalPrice: item.totalPrice,
+        );
+      }).toList();
+
+      invoiceItems.assignAll(cleanedItems);
+
+      print("Found ${invoiceItems.length} items for invoice ${invoice.invoiceId}");
+
+
+      /// If no items found, create a default item based on invoice data
+      // if (fetchedInvoiceItems.isEmpty) {
+      //   print("No items found, creating default item from invoice data");
+      //   fetchedInvoiceItems = [
+      //     InvoiceItem(
+      //       description: invoice.itemName!,
+      //       itemId: invoice.itemId!,
+      //       itemName: invoice.itemName!,
+      //       quantity: invoice.qty ?? 1,
+      //       rate: invoice.price ?? 0.0,
+      //       totalPrice: invoice.totalAmount ?? 0.0,
+      //     ),
+      //   ];
+      // }
+      for (var item in invoiceItems) {
+        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, rate: ${item.rate}");
       }
 
+
       // Generate PDF with the complete invoice data including items
-      final pdfFile = await InvoiceHelper.generate(invoice, fetchedInvoiceItems, companyData.value);
+      final pdfFile = await InvoiceHelper.generate(invoice, invoiceItems, companyData.value);
 
       // Open the PDF file
       ///await OpenFile.open(pdfFile.path);
@@ -288,6 +311,9 @@ class InvoiceListController extends BaseController {
       isLoading.value = false;
     }
   }
+
+
+
 
   double get totalRevenue {
     return invoiceList.fold(0, (sum, invoice) => sum + (invoice.totalAmount ?? 0));

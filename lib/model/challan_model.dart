@@ -1,44 +1,48 @@
+import 'package:intl/intl.dart';
+
 import 'item_model.dart';
 
 class Challan {
   final String challanId;
-  final DateTime? challanDate;
+   DateTime? challanDate;
   final String customerId;
   final String customerName;
   final String customerMobile;
   final String customerEmail;
   final String customerAddress;
-  final String itemId;
-  final String itemName;
-  final int qty;
-  final double price;
+  final String? itemId;
+  final String? itemName;
+  final int? qty;
+  final double? price;
   final double subtotal;
   final double taxRate;
   final double taxAmount;
   final String paymentStatus;
   final String notes;
   final String status;
-  final List<ChallanItem>? items;
+  List<ChallanItem>? items;
+  final String? userId;
 
   Challan({
     required this.challanId,
-    required this.challanDate,
+     this.challanDate,
     this.customerId = '',
     required this.customerName,
     required this.customerMobile,
     this.customerEmail = '',
     this.customerAddress = '',
-    required this.itemId,
-    required this.itemName,
-    required this.qty,
-    required this.price,
+     this.itemId,
+     this.itemName,
+     this.qty,
+     this.price,
     required this.subtotal,
     this.taxRate = 0.0,
     this.taxAmount = 0.0,
     this.paymentStatus = 'Pending',
     this.notes = '',
     this.status = 'Draft',
-    this.items
+    this.items,
+    this.userId
   });
 
   // Convert Challan object to Map
@@ -61,19 +65,29 @@ class Challan {
       'paymentStatus': paymentStatus,
       'notes': notes,
       'status': status,
+      'items': items?.map((item) => item.toMap()).toList(),
     };
   }
 
+  Challan withItems(List<ChallanItem> newItems) {
+    return Challan(
+      challanId: challanId,
+      customerName: customerName,
+      customerId: customerId,
+      challanDate: challanDate,
+      items: newItems,
+      customerMobile: customerMobile,
+      subtotal: subtotal,
+    );
+  }
 
   // Create Challan object from Map
   factory Challan.fromMap(Map<String, dynamic> map) {
+    String rawDate = map['challanDate']?.toString().trim() ?? "";
+    DateTime? parsedDate = _parseChallanDate(rawDate);
     return Challan(
       challanId: map['challanId'] ?? '',
-      challanDate: map['challanDate'] != null
-          ? DateTime.tryParse(map['challanDate'])
-          : map['challanDate'] != null
-          ?  DateTime.tryParse(map['ChallanDate'])
-          : null,
+      challanDate:parsedDate,
       customerId: map['customerId'] ?? '',
       customerName: map['customerName'] ?? '',
       customerMobile: map['customerMobile'] ?? '',
@@ -89,12 +103,29 @@ class Challan {
       paymentStatus: map['paymentStatus'] ?? 'Pending',
       notes: map['notes'] ?? '',
       status: map['status'] ?? 'Draft',
-      items: [],
+      items: null,
+      userId: map['userId'] ?? '',
     );
   }
 
+  /// 🔑 Helper to parse multiple formats
+  static DateTime? _parseChallanDate(String rawDate) {
+    try {
+      DateTime? parsed = DateTime.tryParse(rawDate);
+      if (parsed != null) return parsed;
+
+      return DateFormat('dd/MM/yyyy').parseStrict(rawDate);
+    } catch (_) {}
+
+    try {
+      return DateFormat('dd/MM/yyyy HH:mm:ss').parseStrict(rawDate);
+    } catch (_) {
+      return null;
+    }
+  }
   // Create Challan object from JSON
   factory Challan.fromJson(Map<String, dynamic> json) {
+
     return Challan(
       challanId: json['challanId']?.toString() ?? '',
       challanDate: json['challanDate'] != null

@@ -48,7 +48,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
             Expanded(
               child: _buildStatCard(
                 title: 'Overdue',
-                value: '${controller.overdueInvoices.value}',
+                value: '${controller.overdueAmount.value}',
                 icon: Icons.warning,
                 color: Colors.red,
               ),

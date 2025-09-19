@@ -82,7 +82,7 @@ class NewChallanController extends BaseController {
       print("=== ATTEMPTING TO FETCH CHALLANS ===");
 
       // Add more detailed error handling
-      List<Challan> challans = await RemoteService.getChallans();
+      List<Challan> challans = await GoogleSheetService.getChallans();
 
       print("Final result: ${challans.length} challans found");
 
@@ -270,13 +270,13 @@ class NewChallanController extends BaseController {
       print("=== ATTEMPTING TO FETCH ITEMS FOR USER: $userId ===");
 
       // Try to get items
-      List<Item> items = await RemoteService.getItems(userId: userId);
+      List<Item> items = await GoogleSheetService.getItems(userId: userId);
 
-      // If no items found, try alternative methods
-      if (items.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        items = await RemoteService.getItemsAlternative(userId);
-      }
+      /// If no items found, try alternative methods
+      // if (items.isEmpty) {
+      //   print("Standard method failed, trying alternative...");
+      //   items = await RemoteService.getItemsAlternative(userId);
+      // }
 
       print("Final result: ${items.length} items found");
 
@@ -430,8 +430,6 @@ customerId: ''
     }
   }
 
-
-
   void updateTaxRate(double rate) {
     taxRate.value = rate;
     calculateTotals();
@@ -445,8 +443,8 @@ customerId: ''
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
       initialDate: challanDate.value,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
     );
 
     if (picked != null && picked != challanDate.value) {
@@ -458,7 +456,6 @@ customerId: ''
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
-
 
   Future<bool> saveChallan({required bool isDraft}) async {
     try {
@@ -497,12 +494,12 @@ customerId: ''
       };
 
       print("Saving main challan record: ${jsonEncode(challanData)}");
-      await RemoteService.addChallan(challanData, AppConstants.userId);
+      await GoogleSheetService.addChallan(challanData, AppConstants.userId);
 
-      // 2. Then save each challan item separately to InvoiceItems table
+      /// 2. Then save each challan item separately to InvoiceItems table
       for (var item in challanItems) {
         Map<String, dynamic> challanItemData = {
-          '_RowNumber': '',
+         // '_RowNumber': '',
           'challanId': challanNumberController.text, // Use challan ID as reference
           'customerId': selectedCustomerId.value.toString(),
 
@@ -516,27 +513,51 @@ customerId: ''
 
         print("Saving challan item to InvoiceItems: ${jsonEncode(challanItemData)}");
 
-        await RemoteService.addChallanItem(challanItemData, AppConstants.userId);
+        await GoogleSheetService.addChallanItem(challanItemData, AppConstants.userId);
       }
 
-      // // 3. Update stock
-      // await _updateStockAfterDispatch(challanItems);
+
+      /// 3. Update stock in Google Sheets
+      await GoogleSheetService.updateStockAfterDispatch(challanItems);
+
+      List<Challan> challanModel = challanItems.map((item) {
+        return Challan(
+            challanId: challanNumberController.text,
+            itemId: item.itemId,
+            itemName: item.description,   // ✅ correctly mapped
+            qty: item.quantity,
+            price: item.price.toDouble(),  // ✅ correctly mapped
+          customerMobile: customerMobileController.text.trim(),
+          customerId: selectedCustomerId.value,
+          customerName: customerNameController.text.trim(),
+          customerEmail: customerEmailController.text.trim(),
+          customerAddress: customerAddressController.text.trim(),
+          subtotal: subtotal.value,
+          taxRate: taxRate.value,
+          taxAmount: taxAmount.value,
+          notes: notesController.text,
+          status: paymentStatus.value,
+        );
+      }).toList();
+
+
+
       //
-      // // Generate and share challan
-      // await InvoiceHelper.generateAndShareChallan(
-      //   challanItems, // Pass items instead of challanModels
-      //   customerNameController.text.trim(),
-      //   customerMobileController.text.trim(),
-      //   customerEmailController.text.trim(),
-      //   customerAddressController.text.trim(),
-      //   subtotal.value,
-      //   taxAmount.value,
-      //   totalAmount.value,
-      //   taxRate.value,
-      //   paymentStatus.value,
-      //   notesController.text,
-      //   companyData.value,
-      // );
+      // Generate and share challan
+      await InvoiceHelper.generateAndShareChallan(
+        challanModel, // Pass items instead of challanModels
+        customerNameController.text.trim(),
+        customerMobileController.text.trim(),
+        customerEmailController.text.trim(),
+        customerAddressController.text.trim(),
+        subtotal.value,
+        taxAmount.value,
+        totalAmount.value,
+        taxRate.value,
+        paymentStatus.value,
+        notesController.text,
+        companyData.value,
+      );
 
       showCustomSnackbar(
         title: "Success",
@@ -584,39 +605,6 @@ customerId: ''
     taxAmount.value = afterDiscount * (taxRate.value / 100);
     totalAmount.value = afterDiscount + taxAmount.value;
   }
-
-  // Future<void> _updateStockAfterDispatch(List<Challan> dispatchedItems) async {
-  //   try {
-  //     for (final dispatchedItem in dispatchedItems) {
-  //       if (dispatchedItem.itemId.isEmpty) continue; // Skip items without proper ID
-  //
-  //       // Find the item in local list
-  //       final itemIndex = itemList.indexWhere((item) => item.itemId == dispatchedItem.itemId);
-  //       if (itemIndex != -1) {
-  //         final item = itemList[itemIndex];
-  //         if (item.currentStock != -1) { // Don't update unlimited stock items
-  //           final newStock = item.currentStock - dispatchedItem.qty;
-  //
-  //           // Update local list
-  //           itemList[itemIndex] = item.copyWith(currentStock: newStock);
-  //
-  //           // Update in AppSheet database
-  //           try {
-  //             await RemoteService.updateItemStock(item.itemId, newStock);
-  //             print("Updated stock for ${item.itemName}: $newStock remaining");
-  //           } catch (e) {
-  //             print("Failed to update stock for ${item.itemName}: $e");
-  //           }
-  //         }
-  //       }
-  //     }
-  //     // Refresh the item list to reflect changes
-  //     itemList.refresh();
-  //   } catch (e) {
-  //     print("Error updating stock: $e");
-  //     // Don't show error to user as the challan was already saved successfully
-  //   }
-  // }
 
   void clearForm() {
     formKey.currentState?.reset();

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math';
+import 'dart:math' as Math;
 
 import 'package:demo_prac_getx/constant/app_constant.dart';
 import 'package:demo_prac_getx/model/comment_model.dart';
@@ -9,7 +11,11 @@ import 'package:intl/intl.dart';
 
 import '../model/model.dart';
 import '../utils/pdf_helper.dart';
-
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:googleapis/sheets/v4.dart';
+import 'package:googleapis_auth/googleapis_auth.dart';
+import 'package:http/http.dart' as http;
 ///old Working
 // class RemoteService{
 //
@@ -264,7 +270,7 @@ import '../utils/pdf_helper.dart';
 //     }
 //   }
 // }
-
+import 'package:googleapis_auth/auth_io.dart';
 
 ///new
 class RemoteService {
@@ -283,27 +289,6 @@ class RemoteService {
   ///static const String itemsTableName2 = "Item_";
   static const String apiKey = "cnp1X-AFICA-X25lf-NuAwm-jQfEr-Cj9nr-S9mqj-xOYni";
 
-  // Save user's AppId when they first register or admin assigns
-  static Future<void> saveUserAppId(String userEmail, String appId) async {
-    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-    await prefs.setString('appid_$userEmail', appId);
-  }
-
-  // Get user's AppId
-  static Future<String?> getUserAppId(String userEmail) async {
-    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-    return prefs.getString('appid_$userEmail');
-  }
-
-  // Get current logged-in user's AppId
-  static Future<String?> getCurrentUserAppId() async {
-    final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-    final currentUser = prefs.getString('current_user_email');
-
-    if (currentUser == null) return null;
-
-    return getUserAppId(currentUser);
-  }
 
   static Future<http.Response> getComment() async {
     Map<String, String> header = {
@@ -315,69 +300,87 @@ class RemoteService {
     http.Response response = await http.get(headers: header, uri);
     return response;
   }
-
+  /// its Workig With AppSheet
   /// Add item to Items table with enhanced fields
-  static Future<void> addItem(String userId,Item item) async {
-    final dynamicTableName = "${itemsTableName}_$userId";
-    print("Dynamic Item Tabel name   :--------- ${dynamicTableName}");
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
-        ///"https://api.appsheet.com/api/v2/apps/$appId/tables/$dynamicTableName/Action"
-    );
+  // static Future<void> addItem(String userId,Item item) async {
+  //   final dynamicTableName = "${itemsTableName}_$userId";
+  //   print("Dynamic Item Tabel name   :--------- ${dynamicTableName}");
+  //   final url = Uri.parse(
+  //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
+  //       ///"https://api.appsheet.com/api/v2/apps/$appId/tables/$dynamicTableName/Action"
+  //   );
+  //
+  //   print("Dynamic Item Tabel Api Url :--------- ${url}");
+  //
+  //   // Ensure userId is included in the item data
+  //   final itemData = {
+  //     ...item.toMap(),
+  //     "userId": userId, // Make sure this matches your column name exactly
+  //   };
+  //
+  //   final body = jsonEncode({
+  //     "Action": "Add",
+  //     "Rows": [
+  //       itemData
+  //      ],
+  //   });
+  //
+  //   print("Adding item with data-01: $itemData");
+  //   print("Adding item with data: ${item.toMap()}");
+  //
+  //   final response = await http.post(
+  //     url,
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       "ApplicationAccessKey": accessKey,
+  //     },
+  //     body: body,
+  //   );
+  //
+  //   print("Add Item Response: ${response.statusCode} - ${response.body}");
+  //
+  //   if (response.statusCode == 200) {
+  //     print("Item added successfully: ${response.body}");
+  //   } else {
+  //     throw Exception("Failed to add item: ${response.body}");
+  //   }
+  // }
 
-    print("Dynamic Item Tabel Api Url :--------- ${url}");
 
-    // Ensure userId is included in the item data
-    final itemData = {
-      ...item.toMap(),
-      "userId": userId, // Make sure this matches your column name exactly
-    };
 
-    final body = jsonEncode({
-      "Action": "Add",
-      "Rows": [
-        itemData
-       ],
-    });
-
-    print("Adding item with data-01: $itemData");
-    print("Adding item with data: ${item.toMap()}");
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: body,
-    );
-
-    print("Add Item Response: ${response.statusCode} - ${response.body}");
-
-    if (response.statusCode == 200) {
-      print("Item added successfully: ${response.body}");
-    } else {
-      throw Exception("Failed to add item: ${response.body}");
-    }
-  }
-
-  // static Future<void> addInvoice(List<Invoice> invoices,String userId) async {
+  /// its Workig With AppSheet
+  // static Future<void> addInvoice(dynamic invoiceData, String userId) async {
   //   checkInvoiceTableStructure();
   //   final url = Uri.parse(
   //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
   //
-  //   final invoiceData = invoices.map((inv) {
-  //     return {
-  //       ...inv.toMap(),
-  //       "userId": userId, // Make sure this matches your column name exactly
-  //     };
-  //   }).toList();
+  //   List<Map<String, dynamic>> rowsToSend = [];
   //
+  //   if (invoiceData is Map<String, dynamic>) {
+  //     // Single invoice with items
+  //     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+  //       invoiceData['items'] = jsonEncode(invoiceData['items']);
+  //     }
+  //     rowsToSend.add({
+  //       ...invoiceData,
+  //       "userId": userId,
+  //     });
+  //   } else if (invoiceData is List<Invoice>) {
+  //     // Multiple invoice rows (legacy format)
+  //     rowsToSend = invoiceData.map((inv) {
+  //       return {
+  //         ...inv.toMap(),
+  //         "userId": userId,
+  //       };
+  //     }).toList();
+  //   }
   //
   //   final body = jsonEncode({
   //     "Action": "Add",
-  //     "Rows": invoiceData,
+  //     "Rows": rowsToSend,
   //   });
+  //
+  //   print("Sending to AppSheet: ${jsonEncode(body)}");
   //
   //   final response = await http.post(
   //     url,
@@ -402,161 +405,383 @@ class RemoteService {
   //   }
   // }
 
-  static Future<void> addInvoice(dynamic invoiceData, String userId) async {
-    checkInvoiceTableStructure();
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+  /// its Workig With AppSheet
+  // static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
+  //   try {
+  //     print("Adding invoice item: ${jsonEncode(itemData)}");
+  //
+  //     final url = Uri.parse(
+  //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action");
+  //
+  //     final Map<String, dynamic> requestBody = {
+  //       "Action": "Add",
+  //       "Properties": {
+  //         "Locale": "en-US",
+  //       },
+  //       "Rows": [
+  //      {   ...itemData,
+  //        //"userId": userId,
+  //     }    ]
+  //     };
+  //
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "ApplicationAccessKey": accessKey, // Use the same access key as addInvoice
+  //       },
+  //       body: jsonEncode(requestBody),
+  //     );
+  //
+  //     print("Add Invoice Item Response: ${response.statusCode} - ${response.body}");
+  //
+  //     if (response.statusCode == 200) {
+  //       final responseData = jsonDecode(response.body);
+  //       if (responseData is Map && responseData.containsKey("RowsAffected")) {
+  //         print("Invoice item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+  //       } else {
+  //         print("Invoice item sent successfully: ${response.body}");
+  //       }
+  //     } else {
+  //       throw Exception("Failed to add invoice item: ${response.statusCode} - ${response.body}");
+  //     }
+  //   } catch (e) {
+  //     print("Error adding invoice item: $e");
+  //     rethrow;
+  //   }
+  // }
 
-    List<Map<String, dynamic>> rowsToSend = [];
 
-    if (invoiceData is Map<String, dynamic>) {
-      // Single invoice with items
-      if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
-        invoiceData['items'] = jsonEncode(invoiceData['items']);
-      }
-      rowsToSend.add({
-        ...invoiceData,
-        "userId": userId,
-      });
-    } else if (invoiceData is List<Invoice>) {
-      // Multiple invoice rows (legacy format)
-      rowsToSend = invoiceData.map((inv) {
-        return {
-          ...inv.toMap(),
-          "userId": userId,
-        };
-      }).toList();
-    }
+  /// its Workig With AppSheet
+  // static Future<void> addChallan(dynamic challanData, String userId) async {
+  //   checkChallanTableStructure();
+  //   try {
+  //     print("=== STARTING ADD CHALLAN ===");
+  //
+  //     final url = Uri.parse(
+  //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+  //
+  //     // Print the actual URL being called
+  //     print("API URL: $url");
+  //     print("App ID: $appId");
+  //     print("Table Name: $challanTableName");
+  //
+  //     List<Map<String, dynamic>> rowsToSend = [];
+  //
+  //     if (challanData is Map<String, dynamic>) {
+  //       if (challanData.containsKey('items') && challanData['items'] is List) {
+  //         challanData['items'] = jsonEncode(challanData['items']);
+  //       }
+  //       rowsToSend.add({
+  //         ...challanData,
+  //         "userId": userId,
+  //       });
+  //     } else if (challanData is List<Challan>) {
+  //       print("Processing as Challan object");
+  //       rowsToSend = challanData.map((chal){
+  //         return {
+  //           ...chal.toMap(),
+  //           "userId": userId,
+  //         };
+  //       }).toList();
+  //     }
+  //
+  //     print("Rows to send: ${jsonEncode(rowsToSend)}");
+  //
+  //     final body = jsonEncode({
+  //       "Action": "Add",
+  //       // "Properties": {
+  //       //   "Locale": "en-US",
+  //       // },
+  //       "Rows": rowsToSend,
+  //     });
+  //
+  //     print("Sending to AppSheet: ${jsonEncode(body)}");
+  //
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "ApplicationAccessKey": accessKey,
+  //       },
+  //       body: body,
+  //     );
+  //
+  //     print("=== RESPONSE ===");
+  //     print("Status Code: ${response.statusCode}");
+  //     print("Response Body: ${response.body}");
+  //     print("Response Headers: ${response.headers}");
+  //
+  //     if (response.statusCode == 200) {
+  //       if (response.body.isNotEmpty) {
+  //         try {
+  //           final responseData = jsonDecode(response.body);
+  //           if (responseData is Map && responseData.containsKey("RowsAffected")) {
+  //             print("Challan sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+  //           } else {
+  //             print("Challan sent successfully: ${response.body}");
+  //           }
+  //         } catch (e) {
+  //           print("⚠️ Could not decode response JSON: $e");
+  //         }
+  //       } else {
+  //         print("✅ Challan added successfully (empty response body).");
+  //       }
+  //     }
+  //
+  //   } catch (e) {
+  //     print("❌ ERROR in addChallan: $e");
+  //     rethrow;
+  //   }
+  // }
 
-    final body = jsonEncode({
-      "Action": "Add",
-      "Rows": rowsToSend,
-    });
+  /// its Workig With AppSheet
+  // static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
+  //
+  //   try {
+  //     print("Adding challan item: ${jsonEncode(challanData)}");
+  //
+  //     final url = Uri.parse(
+  //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action");
+  //
+  //     final Map<String, dynamic> requestBody = {
+  //       "Action": "Add",
+  //       "Properties": {
+  //         "Locale": "en-US",
+  //       },
+  //       "Rows": [
+  //         {
+  //           ...challanData,
+  //           //"userId": userId,
+  //         }
+  //       ]
+  //     };
+  //
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "ApplicationAccessKey": accessKey,
+  //       },
+  //       body: jsonEncode(requestBody),
+  //     );
+  //
+  //     print("Add Challan Item Response: ${response.statusCode} - ${response.body}");
+  //
+  //     if (response.statusCode == 200) {
+  //       // ✅ ADD THIS CHECK FOR EMPTY RESPONSE
+  //       if (response.body.isNotEmpty) {
+  //         final responseData = jsonDecode(response.body);
+  //         if (responseData is Map && responseData.containsKey("RowsAffected")) {
+  //           print("Challan item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+  //         } else {
+  //           print("Challan item sent successfully: ${response.body}");
+  //         }
+  //       } else {
+  //         // ✅ HANDLE EMPTY RESPONSE AS SUCCESS
+  //         print("Challan item sent successfully. Empty response received.");
+  //       }
+  //     } else {
+  //       throw Exception("Failed to add challan item: ${response.statusCode} - ${response.body}");
+  //     }
+  //   } catch (e) {
+  //     print("Error adding challan item: $e");
+  //     rethrow;
+  //   }
+  // }
 
-    print("Sending to AppSheet: ${jsonEncode(body)}");
+  /// its Workig With AppSheet
+  // static Future<List<Challan>> getChallans() async {
+  //   print("🔄 Fetching challans from AppSheet API...");
+  //
+  //   final url = Uri.parse(
+  //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+  //
+  //   final Map<String, dynamic> requestBody = {
+  //     "Action": "Find",
+  //     "Properties": {
+  //       "Locale": "en-US",
+  //     }
+  //   };
+  //
+  //   print("Challan request body: ${jsonEncode(requestBody)}");
+  //
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "ApplicationAccessKey": accessKey,
+  //       },
+  //       body: jsonEncode(requestBody),
+  //     );
+  //
+  //     print("Challan response status: ${response.statusCode}");
+  //
+  //     if (response.statusCode == 200) {
+  //       // Check for empty response
+  //       if (response.body.trim().isEmpty || response.body.trim() == "[]") {
+  //         print("Challan method returned empty data");
+  //         return <Challan>[];
+  //       }
+  //
+  //       dynamic data;
+  //       try {
+  //         data = jsonDecode(response.body);
+  //         print("Challan parsed data type: ${data.runtimeType}");
+  //       } catch (jsonError) {
+  //         print("Challan JSON decode error: $jsonError");
+  //         print("Raw response: ${response.body}");
+  //         return <Challan>[];
+  //       }
+  //
+  //       List<dynamic> challanData = [];
+  //
+  //       // Handle different response structures
+  //       if (data is List) {
+  //         challanData = data;
+  //         print("Direct list with ${challanData.length} challans");
+  //       } else if (data is Map) {
+  //         if (data.containsKey("Rows")) {
+  //           challanData = data["Rows"] ?? [];
+  //           print("Map with Rows: ${challanData.length} challans");
+  //         } else if (data.containsKey("Records")) {
+  //           challanData = data["Records"] ?? [];
+  //           print("Map with Records: ${challanData.length} challans");
+  //         } else if (data.containsKey("data")) {
+  //           challanData = data["data"] ?? [];
+  //           print("Map with data: ${challanData.length} challans");
+  //         } else {
+  //           print("Unknown map structure: ${data.keys}");
+  //           // Try to extract any list-like values
+  //           var listKeys = data.keys.where((key) => data[key] is List).toList();
+  //           if (listKeys.isNotEmpty) {
+  //             challanData = data[listKeys.first] ?? [];
+  //             print("Using first list key '${listKeys.first}': ${challanData.length} items");
+  //           } else {
+  //             // If it's a single record, wrap it in a list
+  //             challanData = [data];
+  //             print("Wrapping single record in list");
+  //           }
+  //         }
+  //       } else {
+  //         print("Unexpected data type: ${data.runtimeType}");
+  //         return <Challan>[];
+  //       }
+  //
+  //       // Handle empty data
+  //       if (challanData.isEmpty) {
+  //         print("No challan data found in response");
+  //         return <Challan>[];
+  //       }
+  //
+  //       // Convert to Challan objects with enhanced error handling
+  //       List<Challan> challans = [];
+  //       for (int i = 0; i < challanData.length; i++) {
+  //         try {
+  //           var item = challanData[i];
+  //
+  //           if (item is Map<String, dynamic>) {
+  //             print("Processing challan $i: $item");
+  //             Challan challan = Challan.fromJson(item);
+  //             challans.add(challan);
+  //           } else if (item is Map) {
+  //             // Convert dynamic map to String key map
+  //             var convertedMap = Map<String, dynamic>.from(item);
+  //             print("Processing challan $i: $convertedMap");
+  //             Challan challan = Challan.fromJson(convertedMap);
+  //             challans.add(challan);
+  //           } else {
+  //             print("Skipping invalid challan data at index $i: ${item.runtimeType}");
+  //             print("Problematic item: $item");
+  //           }
+  //         } catch (e) {
+  //           print("Error parsing challan item $i: $e");
+  //           print("Problematic item: ${challanData[i]}");
+  //           // Continue with other items instead of failing completely
+  //           continue;
+  //         }
+  //       }
+  //
+  //       print("Successfully parsed ${challans.length} challans");
+  //       return challans;
+  //
+  //     } else {
+  //       print("Challan HTTP error: ${response.statusCode}");
+  //       print("Error response: ${response.body}");
+  //       throw Exception('Failed to load challans: ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     print("Error in getChallans(): $e");
+  //     rethrow;
+  //   }
+  // }
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: body,
-    );
+  /// its Workig With AppSheet
+  // static Future<List<ChallanItem>> getChallanItemsByChallanId(String challanId) async {
+  //   try {
+  //     print("Fetching challan items for challan: $challanId");
+  //
+  //     final Map<String, dynamic> requestBody = {
+  //       "Action": "Find",
+  //       "Properties": {
+  //         "Locale": "en-US",
+  //       },
+  //       "Filters": [
+  //         ["challanId", "equals", challanId] // FIX: Changed "invoiceId" to "challanId"
+  //       ]
+  //     };
+  //
+  //     final response = await http.post(
+  //       Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action'),
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'ApplicationAccessKey': accessKey,
+  //       },
+  //       body: jsonEncode(requestBody),
+  //     );
+  //
+  //     print("Challan Items Response: ${response.statusCode} - ${response.body}");
+  //
+  //     if (response.statusCode == 200) {
+  //       final dynamic responseData = jsonDecode(response.body);
+  //
+  //       // FIX: AppSheet returns a Map, not a List directly
+  //       List<dynamic> itemsData = [];
+  //
+  //       if (responseData is Map<String, dynamic>) {
+  //         // Check if response has 'data' field (common in AppSheet)
+  //         if (responseData.containsKey('data')) {
+  //           itemsData = responseData['data'] ?? [];
+  //         } else {
+  //           // If no 'data' field, try to use the response as list
+  //           itemsData = responseData.values.toList();
+  //         }
+  //       } else if (responseData is List) {
+  //         itemsData = responseData;
+  //       }
+  //
+  //       print("API returned ${itemsData.length} items total");
+  //
+  //       // No need for additional filtering - the API filter should handle it
+  //       return itemsData.map((item) {
+  //         if (item is Map<String, dynamic>) {
+  //           return ChallanItem.fromJson(item);
+  //         } else {
+  //           print("Invalid item format: $item");
+  //           return ChallanItem.fromJson({}); // Return empty item
+  //         }
+  //       }).toList();
+  //     } else {
+  //       throw Exception('Failed to fetch challan items: ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     print("Error fetching Challan items: $e");
+  //     rethrow;
+  //   }
+  // }
 
-    print("AppSheet Response: ${response.statusCode} - ${response.body}");
-
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      if (responseData is Map && responseData.containsKey("RowsAffected")) {
-        print("Invoice sent successfully. Rows affected: ${responseData["RowsAffected"]}");
-      } else {
-        print("Invoice sent successfully: ${response.body}");
-      }
-    } else {
-      throw Exception("Failed to send invoice: ${response.body}");
-    }
-  }
-
-  static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
-    try {
-      print("Adding invoice item: ${jsonEncode(itemData)}");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action");
-
-      final Map<String, dynamic> requestBody = {
-        "Action": "Add",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [
-       {   ...itemData,
-         //"userId": userId,
-      }    ]
-      };
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey, // Use the same access key as addInvoice
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      print("Add Invoice Item Response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData is Map && responseData.containsKey("RowsAffected")) {
-          print("Invoice item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
-        } else {
-          print("Invoice item sent successfully: ${response.body}");
-        }
-      } else {
-        throw Exception("Failed to add invoice item: ${response.statusCode} - ${response.body}");
-      }
-    } catch (e) {
-      print("Error adding invoice item: $e");
-      rethrow;
-    }
-  }
-
-  static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
-
-    try {
-      print("Adding challan item: ${jsonEncode(challanData)}");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action");
-
-      final Map<String, dynamic> requestBody = {
-        "Action": "Add",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [
-          {
-            ...challanData,
-            //"userId": userId,
-          }
-        ]
-      };
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      print("Add Challan Item Response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200) {
-        // ✅ ADD THIS CHECK FOR EMPTY RESPONSE
-        if (response.body.isNotEmpty) {
-          final responseData = jsonDecode(response.body);
-          if (responseData is Map && responseData.containsKey("RowsAffected")) {
-            print("Challan item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
-          } else {
-            print("Challan item sent successfully: ${response.body}");
-          }
-        } else {
-          // ✅ HANDLE EMPTY RESPONSE AS SUCCESS
-          print("Challan item sent successfully. Empty response received.");
-        }
-      } else {
-        throw Exception("Failed to add challan item: ${response.statusCode} - ${response.body}");
-      }
-    } catch (e) {
-      print("Error adding challan item: $e");
-      rethrow;
-    }
-  }
-
+  ///
   static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
     try {
       print("Fetching invoice items for invoice: $invoiceId");
@@ -612,693 +837,9 @@ class RemoteService {
     }
   }
 
-  static Future<void> deleteInvoiceItems(String invoiceId) async {
-    try {
-      // First get all items for this invoice
-      List<InvoiceItem> items = await getInvoiceItemsByInvoiceId(invoiceId);
 
-      String url = 'https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action';
 
-      // Delete each item (you might need to adjust this based on your AppSheet setup)
-      for (var item in items) {
-        Map<String, dynamic> requestBody = {
-          "Action": "Delete",
-          "Properties": {},
-          "Rows": [
-            {
-              "invoiceId": invoiceId,
-              "itemId": item.itemId,
-            }
-          ]
-        };
-
-        await http.post(
-          Uri.parse(url),
-          headers: {
-            'ApplicationAccessKey': accessKey,
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(requestBody),
-        );
-      }
-
-      print("Deleted ${items.length} invoice items for invoice $invoiceId");
-    } catch (e) {
-      print('Error deleting invoice items: $e');
-      throw Exception('Failed to delete invoice items: $e');
-    }
-  }
-
-  // static Future<void> addChallan(List<Challan> challans, String userId) async {
-  //   final url = Uri.parse(
-  //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-  //
-  //   final challansData = challans.map((challan) {
-  //     return {
-  //       ...challan.toMap(),
-  //       "userId": userId, // Make sure this matches your column name exactly
-  //     };
-  //   }).toList();
-  //
-  //   final body = jsonEncode({
-  //     "Action": "Add",
-  //     "Rows": challansData,
-  //   });
-  //
-  //   final response = await http.post(
-  //     url,
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //       "ApplicationAccessKey": accessKey,
-  //     },
-  //     body: body,
-  //   );
-  //
-  //   print("AppSheet Response: ${response.statusCode} - ${response.body}");
-  //
-  //   if (response.statusCode == 200) {
-  //     final responseData = jsonDecode(response.body);
-  //     if (responseData is Map && responseData.containsKey("RowsAffected")) {
-  //       print("Challan sent successfully. Rows affected: ${responseData["RowsAffected"]}");
-  //     } else {
-  //       print("Challan sent successfully: ${response.body}");
-  //     }
-  //   } else {
-  //     throw Exception("Failed to send challan: ${response.body}");
-  //   }
-  // }
-
-  static Future<void> addChallan(dynamic challanData, String userId) async {
-    checkChallanTableStructure();
-    try {
-      print("=== STARTING ADD CHALLAN ===");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-
-      // Print the actual URL being called
-      print("API URL: $url");
-      print("App ID: $appId");
-      print("Table Name: $challanTableName");
-
-      List<Map<String, dynamic>> rowsToSend = [];
-
-      if (challanData is Map<String, dynamic>) {
-        if (challanData.containsKey('items') && challanData['items'] is List) {
-          challanData['items'] = jsonEncode(challanData['items']);
-        }
-        rowsToSend.add({
-          ...challanData,
-          "userId": userId,
-        });
-      } else if (challanData is List<Challan>) {
-        print("Processing as Challan object");
-        rowsToSend = challanData.map((chal){
-          return {
-            ...chal.toMap(),
-            "userId": userId,
-          };
-        }).toList();
-      }
-
-      print("Rows to send: ${jsonEncode(rowsToSend)}");
-
-      final body = jsonEncode({
-        "Action": "Add",
-        // "Properties": {
-        //   "Locale": "en-US",
-        // },
-        "Rows": rowsToSend,
-      });
-
-      print("Sending to AppSheet: ${jsonEncode(body)}");
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("=== RESPONSE ===");
-      print("Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-      print("Response Headers: ${response.headers}");
-
-      if (response.statusCode == 200) {
-        if (response.body.isNotEmpty) {
-          try {
-            final responseData = jsonDecode(response.body);
-            if (responseData is Map && responseData.containsKey("RowsAffected")) {
-              print("Challan sent successfully. Rows affected: ${responseData["RowsAffected"]}");
-            } else {
-              print("Challan sent successfully: ${response.body}");
-            }
-          } catch (e) {
-            print("⚠️ Could not decode response JSON: $e");
-          }
-        } else {
-          print("✅ Challan added successfully (empty response body).");
-        }
-      }
-
-    } catch (e) {
-      print("❌ ERROR in addChallan: $e");
-      rethrow;
-    }
-  }
-
-
-  // Method to verify challan exists after saving
-
-  static Future<bool> verifyChallanExists(String challanId) async {
-    try {
-      print("=== VERIFYING CHALLAN EXISTS: $challanId ===");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-
-      final body = jsonEncode({
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [
-          {"challanId": challanId}
-        ]
-      });
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("Verification response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        try {
-          final responseData = jsonDecode(response.body);
-          if (responseData is List && responseData.isNotEmpty) {
-            print("✅ Challan verified - exists in database");
-            return true;
-          } else {
-            print("❌ Challan not found in database");
-            return false;
-          }
-        } catch (e) {
-          print("Error parsing verification response: $e");
-          return false;
-        }
-      }
-      return false;
-    } catch (e) {
-      print("Error in verifyChallanExists: $e");
-      return false;
-    }
-  }
-  static Future<void> findChallanById(String challanId) async {
-    try {
-      print("=== SEARCHING FOR CHALLAN $challanId ===");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-
-      final body = jsonEncode({
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [
-          {"challanId": challanId}
-        ]
-      });
-
-      print("Find request: $body");
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("Find response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        try {
-          final responseData = jsonDecode(response.body);
-          print("Found challan data: $responseData");
-        } catch (e) {
-          print("Error parsing find response: $e");
-        }
-      }
-    } catch (e) {
-      print("Error in findChallanById: $e");
-    }
-  }
-
-  static Future<void> listAllChallans() async {
-    try {
-      print("=== LISTING ALL CHALLANS ===");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-
-      final body = jsonEncode({
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [] // Empty to get all rows
-      });
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("List all challans response: ${response.statusCode} - ${response.body}");
-    } catch (e) {
-      print("Error in listAllChallans: $e");
-    }
-  }
-
-  static Future<List<ChallanItem>> getChallanItemsByChallanId(String challanId) async {
-    try {
-      print("Fetching challan items for challan: $challanId");
-
-      final Map<String, dynamic> requestBody = {
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Filters": [
-          ["challanId", "equals", challanId] // FIX: Changed "invoiceId" to "challanId"
-        ]
-      };
-
-      final response = await http.post(
-        Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ApplicationAccessKey': accessKey,
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      print("Challan Items Response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200) {
-        final dynamic responseData = jsonDecode(response.body);
-
-        // FIX: AppSheet returns a Map, not a List directly
-        List<dynamic> itemsData = [];
-
-        if (responseData is Map<String, dynamic>) {
-          // Check if response has 'data' field (common in AppSheet)
-          if (responseData.containsKey('data')) {
-            itemsData = responseData['data'] ?? [];
-          } else {
-            // If no 'data' field, try to use the response as list
-            itemsData = responseData.values.toList();
-          }
-        } else if (responseData is List) {
-          itemsData = responseData;
-        }
-
-        print("API returned ${itemsData.length} items total");
-
-        // No need for additional filtering - the API filter should handle it
-        return itemsData.map((item) {
-          if (item is Map<String, dynamic>) {
-            return ChallanItem.fromJson(item);
-          } else {
-            print("Invalid item format: $item");
-            return ChallanItem.fromJson({}); // Return empty item
-          }
-        }).toList();
-      } else {
-        throw Exception('Failed to fetch challan items: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("Error fetching Challan items: $e");
-      rethrow;
-    }
-  }
-
-  // Method to check table structure for debugging
-  static Future<void> checkChallanTableStructure() async {
-
-      print("=== CHECKING CHALLAN TABLE STRUCTURE ===");
-
-      final url = Uri.parse(
-          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/columns");
-
-      final body = jsonEncode({
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-          "Selector": 'Filter(1=1)',
-          "SelectColumns": ["challanId",
-            "itemId",
-            "customerId",
-            "customerName",
-            "customerMobile",
-            "customerEmail",
-            "customerAddress",
-            "itemId",
-            "itemName", "qty", "price", "subtotal", "taxRate",
-          "taxAmount",
-          "paymentStatus", "notes", "status", "userId"]
-        }
-      });
-try{
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body
-      );
-      print("Table Structure Response: ${response.statusCode} - ${response.body}");
-
-    } catch (e) {
-  print("Error checking table structure: $e");
-  }
-
-  }
-
-
-
-
-  static Future<void> checkInvoiceTableStructure() async {
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
-
-    final body = jsonEncode({
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-        "Selector": 'Filter(1=1)',
-        "SelectColumns": ["invoiceId", "itemId", "itemName", "qty", "price", "mobile", "customerName"]
-      }
-    });
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("Table Structure Response: ${response.statusCode} - ${response.body}");
-    } catch (e) {
-      print("Error checking table structure: $e");
-    }
-  }
-
-  static Future<List<Invoice>> fetchInvoices() async {
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
-
-    final body = jsonEncode({
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-        "Selector": 'Sort([{ColumnName: "date", Ascending: false}])',
-      }
-    });
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is Map && data.containsKey("Rows")) {
-        final rows = data["Rows"] as List;
-        return rows.map((e) => Invoice.fromMap(e)).toList();
-      } else {
-        throw Exception("Invalid response format: ${response.body}");
-      }
-    } else {
-      throw Exception("Failed to load invoices: ${response.body}");
-    }
-  }
-
-  static Future<List<Challan>> getChallans() async {
-    print("🔄 Fetching challans from AppSheet API...");
-
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
-
-    final Map<String, dynamic> requestBody = {
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-      }
-    };
-
-    print("Challan request body: ${jsonEncode(requestBody)}");
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      print("Challan response status: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        // Check for empty response
-        if (response.body.trim().isEmpty || response.body.trim() == "[]") {
-          print("Challan method returned empty data");
-          return <Challan>[];
-        }
-
-        dynamic data;
-        try {
-          data = jsonDecode(response.body);
-          print("Challan parsed data type: ${data.runtimeType}");
-        } catch (jsonError) {
-          print("Challan JSON decode error: $jsonError");
-          print("Raw response: ${response.body}");
-          return <Challan>[];
-        }
-
-        List<dynamic> challanData = [];
-
-        // Handle different response structures
-        if (data is List) {
-          challanData = data;
-          print("Direct list with ${challanData.length} challans");
-        } else if (data is Map) {
-          if (data.containsKey("Rows")) {
-            challanData = data["Rows"] ?? [];
-            print("Map with Rows: ${challanData.length} challans");
-          } else if (data.containsKey("Records")) {
-            challanData = data["Records"] ?? [];
-            print("Map with Records: ${challanData.length} challans");
-          } else if (data.containsKey("data")) {
-            challanData = data["data"] ?? [];
-            print("Map with data: ${challanData.length} challans");
-          } else {
-            print("Unknown map structure: ${data.keys}");
-            // Try to extract any list-like values
-            var listKeys = data.keys.where((key) => data[key] is List).toList();
-            if (listKeys.isNotEmpty) {
-              challanData = data[listKeys.first] ?? [];
-              print("Using first list key '${listKeys.first}': ${challanData.length} items");
-            } else {
-              // If it's a single record, wrap it in a list
-              challanData = [data];
-              print("Wrapping single record in list");
-            }
-          }
-        } else {
-          print("Unexpected data type: ${data.runtimeType}");
-          return <Challan>[];
-        }
-
-        // Handle empty data
-        if (challanData.isEmpty) {
-          print("No challan data found in response");
-          return <Challan>[];
-        }
-
-        // Convert to Challan objects with enhanced error handling
-        List<Challan> challans = [];
-        for (int i = 0; i < challanData.length; i++) {
-          try {
-            var item = challanData[i];
-
-            if (item is Map<String, dynamic>) {
-              print("Processing challan $i: $item");
-              Challan challan = Challan.fromJson(item);
-              challans.add(challan);
-            } else if (item is Map) {
-              // Convert dynamic map to String key map
-              var convertedMap = Map<String, dynamic>.from(item);
-              print("Processing challan $i: $convertedMap");
-              Challan challan = Challan.fromJson(convertedMap);
-              challans.add(challan);
-            } else {
-              print("Skipping invalid challan data at index $i: ${item.runtimeType}");
-              print("Problematic item: $item");
-            }
-          } catch (e) {
-            print("Error parsing challan item $i: $e");
-            print("Problematic item: ${challanData[i]}");
-            // Continue with other items instead of failing completely
-            continue;
-          }
-        }
-
-        print("Successfully parsed ${challans.length} challans");
-        return challans;
-
-      } else {
-        print("Challan HTTP error: ${response.statusCode}");
-        print("Error response: ${response.body}");
-        throw Exception('Failed to load challans: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("Error in getChallans(): $e");
-      rethrow;
-    }
-  }
-
-  static Future<List<ChallanItem>> getChallanItems(String challanId) async {
-    try {
-      final Map<String, dynamic> requestBody = {
-        "Action": "Find",
-        "Properties": {
-          "Locale": "en-US",
-        },
-        "Rows": [
-          {
-            "ChallanId": challanId // Filter by challanId
-          }
-        ]
-      };
-
-      final response = await http.post(
-        Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/ChallanItems/Action'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ApplicationAccessKey': accessKey, // Add your AppSheet access key
-        },
-        body: json.encode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        final List<dynamic> data = responseData['data'] ?? [];
-
-        print("Found ${data.length} items for challan $challanId");
-
-        return data.map((item) => ChallanItem.fromJson(item)).toList();
-      } else {
-        print("Failed to load challan items. Status: ${response.statusCode}");
-        throw Exception('Failed to load challan items');
-      }
-    } catch (e) {
-      print('Error fetching challan items: $e');
-      return [];
-    }
-  }
-// In RemoteService - add this method
-  static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
-    try {
-      // First get all challans for this customer
-      List<Challan> customerChallans = await getChallansByDateRange(
-        fromDate: DateTime.now().subtract(Duration(days: 365)), // wider date range
-        toDate: DateTime.now(),
-        userId: AppConstants.userId,
-      );
-
-      // Filter by customer name
-      customerChallans = customerChallans.where((challan) =>
-      challan.customerName == customerName).toList();
-
-      print("Processing ${customerChallans.length} challans for $customerName to fetch items...");
-
-      // For each challan, fetch its items
-      for (int i = 0; i < customerChallans.length; i++) {
-        print("Fetching items for challan ${i + 1}/${customerChallans.length}: ${customerChallans[i].challanId}");
-
-        List<ChallanItem> items = await getChallanItemsByChallanId(customerChallans[i].challanId);
-
-        // Update the challan with items
-        customerChallans[i] = customerChallans[i].copyWith(items: items);
-
-        print("Added ${items.length} items to challan ${customerChallans[i].challanId}");
-      }
-
-      return customerChallans;
-    } catch (e) {
-      print('Error fetching challans with items for customer $customerName: $e');
-      return [];
-    }
-  }
-
-  // In RemoteService
-  static Future<List<Challan>> getChallansWithItems() async {
-    try {
-      // First get all challans
-      List<Challan> challans = await getChallansByDateRange(
-        fromDate: DateTime.now().subtract(Duration(days: 30)),
-        toDate: DateTime.now(),
-        userId: AppConstants.userId,
-      );
-
-      print("Processing ${challans.length} challans to fetch items...");
-
-      // For each challan, fetch its items from ChallanItems table
-      for (int i = 0; i < challans.length; i++) {
-        print("Fetching items for challan ${i + 1}/${challans.length}: ${challans[i].challanId}");
-
-        List<ChallanItem> items = await getChallanItemsByChallanId(challans[i].challanId);
-
-        // Update the challan with items
-        challans[i] = challans[i].copyWith(items: items);
-
-        print("Added ${items.length} items to challan ${challans[i].challanId}");
-      }
-
-      return challans;
-    } catch (e) {
-      print('Error fetching challans with items: $e');
-      return [];
-    }
-  }
-
-  // In your ApiService class
+  /// In your ApiService class
   static Future<List<Challan>> getChallansByDateRange({
     required DateTime fromDate,
     required DateTime toDate,
@@ -1371,57 +912,482 @@ try{
     }
   }
 
-  // Add this at the beginning of your RemoteService class
-  static void printAppSheetConfig() {
-    print("=== APPSHEET CONFIGURATION ===");
-    print("App ID: $appId");
-    print("Invoice Table: $invoiceTableName");
-    print("Challan Table: $challanTableName");
-    print("Access Key: ${accessKey.substring(0, 10)}..."); // Show first 10 chars only
+  ///  In your ApiService class
+  static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
+    try {
+      // First get all challans for this customer
+      List<Challan> customerChallans = await GoogleSheetService.getChallansByDateRange(
+        fromDate: DateTime.now().subtract(Duration(days: 365)), // wider date range
+        toDate: DateTime.now(),
+        userId: AppConstants.userId,
+      );
+
+      // Filter by customer name
+      customerChallans = customerChallans.where((challan) =>
+      challan.customerName == customerName).toList();
+
+      print("Processing ${customerChallans.length} challans for $customerName to fetch items...");
+
+      // For each challan, fetch its items
+      for (int i = 0; i < customerChallans.length; i++) {
+        print("Fetching items for challan ${i + 1}/${customerChallans.length}: ${customerChallans[i].challanId}");
+
+        List<ChallanItem> items = await GoogleSheetService.getChallanItemsByChallanId(customerChallans[i].challanId);
+
+        // Update the challan with items
+        customerChallans[i] = customerChallans[i].copyWith(items: items);
+
+        print("Added ${items.length} items to challan ${customerChallans[i].challanId}");
+      }
+
+      return customerChallans;
+    } catch (e) {
+      print('Error fetching challans with items for customer $customerName: $e');
+      return [];
+    }
   }
 
-/// Alternative method for fetching challans
-//   static Future<List<Challan>> getChallansAlternative() async {
-//     print("=== TRYING ALTERNATIVE METHOD: Read ===");
-//
-//     final url = Uri.parse(
-//         "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Data");
-//
-//     final response = await http.get(
-//       url,
-//       headers: {
-//         "Content-Type": "application/json",
-//         "ApplicationAccessKey": accessKey,
-//       },
-//     );
-//
-//     print("Read Response: ${response.statusCode} - ${response.body}");
-//
-//     if (response.statusCode == 200) {
-//       final data = jsonDecode(response.body);
-//
-//       if (data is List) {
-//         if (data.isEmpty) {
-//           print("✅ No challans found in alternative method");
-//           return [];
-//         }
-//         return data.map((e) => Challan.fromMap(e)).toList();
-//       } else if (data is Map && data.containsKey("")) {
-//         // Handle different response format
-//         List<dynamic> rows = data[""];
-//         if (rows.isEmpty) {
-//           print("✅ No challans found in alternative method");
-//           return [];
-//         }
-//         return rows.map((e) => Challan.fromMap(e)).toList();
-//       } else {
-//         print("⚠️ Unexpected response format in alternative method: $data");
-//         return [];
-//       }
-//     } else {
-//       throw Exception("Failed to load challans (alternative): ${response.body}");
-//     }
-//   }
+
+
+
+  ///unUsed Api
+  ///
+  ///
+  ///
+
+  /// In RemoteService
+  // static Future<List<Challan>> getChallansWithItems() async {
+  //   try {
+  //     // First get all challans
+  //     List<Challan> challans = await getChallansByDateRange(
+  //       fromDate: DateTime.now().subtract(Duration(days: 30)),
+  //       toDate: DateTime.now(),
+  //       userId: AppConstants.userId,
+  //     );
+  //
+  //     print("Processing ${challans.length} challans to fetch items...");
+  //
+  //     // For each challan, fetch its items from ChallanItems table
+  //     for (int i = 0; i < challans.length; i++) {
+  //       print("Fetching items for challan ${i + 1}/${challans.length}: ${challans[i].challanId}");
+  //
+  //       List<ChallanItem> items = await getChallanItemsByChallanId(challans[i].challanId);
+  //
+  //       // Update the challan with items
+  //       challans[i] = challans[i].copyWith(items: items);
+  //
+  //       print("Added ${items.length} items to challan ${challans[i].challanId}");
+  //     }
+  //
+  //     return challans;
+  //   } catch (e) {
+  //     print('Error fetching challans with items: $e');
+  //     return [];
+  //   }
+  // }
+
+  /// Alternative 3: Delete and Add (as last resort)
+  static Future<void> editItemAlternative3(String userId, Item item) async {
+    print("=== TRYING ALTERNATIVE 3: DELETE AND ADD ===");
+
+    final url = Uri.parse(
+        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+
+    // Step 1: Delete the existing item
+    final deleteBody = jsonEncode({
+      "Action": "Delete",
+      "Rows": [
+        {"itemId": item.itemId}
+      ],
+    });
+
+    print("Delete request: $deleteBody");
+
+    final deleteResponse = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "ApplicationAccessKey": accessKey,
+      },
+      body: deleteBody,
+    );
+
+    print("Delete response: ${deleteResponse.statusCode} - ${deleteResponse.body}");
+
+    if (deleteResponse.statusCode != 200) {
+      throw Exception("Failed to delete item: ${deleteResponse.body}");
+    }
+
+    // Step 2: Add the updated item
+    await Future.delayed(Duration(seconds: 1)); // Small delay
+
+    final addBody = jsonEncode({
+      "Action": "Add",
+      "Rows": [
+        {
+          "itemId": item.itemId,
+          "itemName": item.itemName,
+          "price": item.price,
+          "unitOfMeasurement": item.unitOfMeasurement,
+          "currentStock": item.currentStock,
+          "detailRequirement": item.detailRequirement ?? "",
+          "isActive": item.isActive,
+          "userId": userId,
+        }
+      ],
+    });
+
+    print("Add request: $addBody");
+
+    final addResponse = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "ApplicationAccessKey": accessKey,
+      },
+      body: addBody,
+    );
+
+    print("Add response: ${addResponse.statusCode} - ${addResponse.body}");
+
+    if (addResponse.statusCode != 200) {
+      throw Exception("Failed to re-add item: ${addResponse.body}");
+    }
+  }
+
+  static Future<void> deleteInvoiceItems(String invoiceId) async {
+    try {
+      // First get all items for this invoice
+      List<InvoiceItem> items = await getInvoiceItemsByInvoiceId(invoiceId);
+
+      String url = 'https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action';
+
+      // Delete each item (you might need to adjust this based on your AppSheet setup)
+      for (var item in items) {
+        Map<String, dynamic> requestBody = {
+          "Action": "Delete",
+          "Properties": {},
+          "Rows": [
+            {
+              "invoiceId": invoiceId,
+              "itemId": item.itemId,
+            }
+          ]
+        };
+
+        await http.post(
+          Uri.parse(url),
+          headers: {
+            'ApplicationAccessKey': accessKey,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(requestBody),
+        );
+      }
+
+      print("Deleted ${items.length} invoice items for invoice $invoiceId");
+    } catch (e) {
+      print('Error deleting invoice items: $e');
+      throw Exception('Failed to delete invoice items: $e');
+    }
+  }
+
+  static Future<void> listAllChallans() async {
+    try {
+      print("=== LISTING ALL CHALLANS ===");
+
+      final url = Uri.parse(
+          "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+
+      final body = jsonEncode({
+        "Action": "Find",
+        "Properties": {
+          "Locale": "en-US",
+        },
+        "Rows": [] // Empty to get all rows
+      });
+
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "ApplicationAccessKey": accessKey,
+        },
+        body: body,
+      );
+
+      print("List all challans response: ${response.statusCode} - ${response.body}");
+    } catch (e) {
+      print("Error in listAllChallans: $e");
+    }
+  }
+
+  static Future<List<Invoice>> fetchInvoices() async {
+    final url = Uri.parse(
+        "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+
+    final body = jsonEncode({
+      "Action": "Find",
+      "Properties": {
+        "Locale": "en-US",
+        "Selector": 'Sort([{ColumnName: "date", Ascending: false}])',
+      }
+    });
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "ApplicationAccessKey": accessKey,
+      },
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map && data.containsKey("Rows")) {
+        final rows = data["Rows"] as List;
+        return rows.map((e) => Invoice.fromMap(e)).toList();
+      } else {
+        throw Exception("Invalid response format: ${response.body}");
+      }
+    } else {
+      throw Exception("Failed to load invoices: ${response.body}");
+    }
+  }
+
+  /// Method 3: Try different AppSheet API approach
+  static Future<List<Item>> getItemsAlternative(String userId) async {
+    final url = Uri.parse(
+        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+
+    // Try different Action types
+    final actions = ["Find", "Read"];
+
+    for (String action in actions) {
+      print("=== TRYING ACTION: $action ===");
+
+      final body = jsonEncode({
+        "Action": action,
+        "Properties": {
+          "Locale": "en-US",
+          "Selector": 'Filter([userId] = "$userId")',
+        }
+      });
+
+      try {
+        final response = await http.post(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "ApplicationAccessKey": accessKey,
+          },
+          body: body,
+        );
+
+        print("$action Response: ${response.statusCode} - ${response.body}");
+
+        if (response.statusCode == 200 &&
+            response.body.trim().isNotEmpty &&
+            response.body.trim() != "[]") {
+
+          final data = jsonDecode(response.body);
+
+          if (data is List && data.isNotEmpty) {
+            print("Success with $action! Found ${data.length} items");
+            return data.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+          }
+        }
+      } catch (e) {
+        print("Error with $action: $e");
+      }
+    }
+
+    print("All alternative methods failed, falling back to manual filter");
+    return await getAllAndFilterManually(userId);
+  }
+
+  /// Method 1: Force AppSheet to sync before filtering
+  static Future<List<Item>> getItems({String? userId}) async {
+    final url = Uri.parse(
+        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+
+    // First, let's try without any selector to see if we can get data
+    Map<String, dynamic> requestBody = {
+      "Action": "Find",
+      "Properties": {
+        "Locale": "en-US",
+      }
+    };
+
+    // Only add selector if we have a userId
+    if (userId != null && userId.isNotEmpty) {
+      // Try the exact format that should work
+      requestBody["Properties"]["Selector"] = 'Filter([userId] = "$userId")';
+    }
+
+    final body = jsonEncode(requestBody);
+    print("Request body: $body");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "ApplicationAccessKey": accessKey,
+        },
+        body: body,
+      );
+
+      print("Response Status: ${response.statusCode}");
+      print("Response Body: '${response.body}'");
+      print("Response Body Length: ${response.body.length}");
+
+      if (response.statusCode == 200) {
+        if (response.body.trim().isEmpty || response.body.trim() == "[]") {
+          print("Empty response received");
+          return <Item>[];
+        }
+
+        dynamic data;
+        try {
+          data = jsonDecode(response.body);
+          print("Parsed data: $data");
+        } catch (jsonError) {
+          print("JSON decode error: $jsonError");
+          throw Exception("Failed to parse response: $jsonError");
+        }
+
+        List<dynamic> itemsData = [];
+
+        if (data is List) {
+          itemsData = data;
+          print("Direct list with ${itemsData.length} items");
+        } else if (data is Map) {
+          if (data.containsKey("Rows")) {
+            itemsData = data["Rows"];
+            print("Map with Rows: ${itemsData.length} items");
+          } else if (data.containsKey("Records")) {
+            itemsData = data["Records"];
+            print("Map with Records: ${itemsData.length} items");
+          } else {
+            print("Unknown map structure: ${data.keys}");
+          }
+        }
+
+        // If we have userId but no filtered results, get all and filter manually
+        if (userId != null && userId.isNotEmpty && itemsData.isEmpty) {
+          print("No filtered results, trying to get all data and filter manually...");
+          return await getAllAndFilterManually(userId);
+        }
+
+        return itemsData.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+
+      } else {
+        throw Exception("HTTP ${response.statusCode}: ${response.body}");
+      }
+    } catch (e) {
+      print("Error in getItems: $e");
+      rethrow;
+    }
+  }
+
+  /// Method 2: Get all data and filter manually (fallback)
+  static Future<List<Item>> getAllAndFilterManually(String userId) async {
+    print("=== MANUAL FILTERING FALLBACK ===");
+
+    final url = Uri.parse(
+        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+
+    final body = jsonEncode({
+      "Action": "Find",
+      "Properties": {
+        "Locale": "en-US",
+        // No selector - get all data
+      }
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "ApplicationAccessKey": accessKey,
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
+        final data = jsonDecode(response.body);
+
+        List<dynamic> allItems = [];
+        if (data is List) {
+          allItems = data;
+        } else if (data is Map && data.containsKey("Rows")) {
+          allItems = data["Rows"];
+        }
+
+        print("Got ${allItems.length} total items, filtering for userId: $userId");
+
+        // Filter manually
+        final filteredItems = allItems.where((item) {
+          final map = item as Map<String, dynamic>;
+          final itemUserId = map['userId']?.toString() ?? '';
+          print("Checking item userId: '$itemUserId' vs target: '$userId'");
+          return itemUserId == userId;
+        }).toList();
+
+        print("Manual filter found ${filteredItems.length} matching items");
+
+        return filteredItems.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+      }
+
+      return <Item>[];
+    } catch (e) {
+      print("Error in manual filtering: $e");
+      return <Item>[];
+    }
+  }
+
+  static Future<List<ChallanItem>> getChallanItems(String challanId) async {
+    try {
+      final Map<String, dynamic> requestBody = {
+        "Action": "Find",
+        "Properties": {
+          "Locale": "en-US",
+        },
+        "Rows": [
+          {
+            "ChallanId": challanId // Filter by challanId
+          }
+        ]
+      };
+
+      final response = await http.post(
+        Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/ChallanItems/Action'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ApplicationAccessKey': accessKey, // Add your AppSheet access key
+        },
+        body: json.encode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        final List<dynamic> data = responseData['data'] ?? [];
+
+        print("Found ${data.length} items for challan $challanId");
+
+        return data.map((item) => ChallanItem.fromJson(item)).toList();
+      } else {
+        print("Failed to load challan items. Status: ${response.statusCode}");
+        throw Exception('Failed to load challan items');
+      }
+    } catch (e) {
+      print('Error fetching challan items: $e');
+      return [];
+    }
+  }
 
   /// Get all items from Items table with enhanced fields
   static Future<List<Item>> getItemsoldwork() async {
@@ -1471,51 +1437,6 @@ try{
       }
     } else {
       throw Exception("Failed to load items: ${response.body}");
-    }
-  }
-
-  // Add this test method to your RemoteService class
-  static Future<void> testConnection() async {
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
-
-    // Test with minimal request first
-    final body = jsonEncode({
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US"
-        // No Selector or SelectColumns - get everything
-      }
-    });
-
-    print("Testing connection with: $body");
-    print("App ID: $appId");
-    print("Table Name: $itemsTableName");
-    print("Access Key: ${accessKey.substring(0, 10)}..."); // Show first 10 chars only
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: body,
-    );
-
-    print("Test Response: ${response.statusCode}");
-    print("Test Response Body: '${response.body}'");
-
-    if (response.statusCode == 200 && response.body.isNotEmpty) {
-      final data = jsonDecode(response.body);
-      print("Test Data Structure: ${data.runtimeType}");
-      if (data is List) {
-        print("Found ${data.length} items");
-        if (data.isNotEmpty) {
-          print("First item keys: ${data[0].keys.toList()}");
-        }
-      } else if (data is Map) {
-        print("Response keys: ${data.keys.toList()}");
-      }
     }
   }
 
@@ -1618,367 +1539,6 @@ try{
     }
   }
 
-  // The issue is AppSheet sync - let's force a sync and try different approaches
-
-// Method 1: Force AppSheet to sync before filtering
-  static Future<List<Item>> getItems({String? userId}) async {
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
-
-    // First, let's try without any selector to see if we can get data
-    Map<String, dynamic> requestBody = {
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-      }
-    };
-
-    // Only add selector if we have a userId
-    if (userId != null && userId.isNotEmpty) {
-      // Try the exact format that should work
-      requestBody["Properties"]["Selector"] = 'Filter([userId] = "$userId")';
-    }
-
-    final body = jsonEncode(requestBody);
-    print("Request body: $body");
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      print("Response Status: ${response.statusCode}");
-      print("Response Body: '${response.body}'");
-      print("Response Body Length: ${response.body.length}");
-
-      if (response.statusCode == 200) {
-        if (response.body.trim().isEmpty || response.body.trim() == "[]") {
-          print("Empty response received");
-          return <Item>[];
-        }
-
-        dynamic data;
-        try {
-          data = jsonDecode(response.body);
-          print("Parsed data: $data");
-        } catch (jsonError) {
-          print("JSON decode error: $jsonError");
-          throw Exception("Failed to parse response: $jsonError");
-        }
-
-        List<dynamic> itemsData = [];
-
-        if (data is List) {
-          itemsData = data;
-          print("Direct list with ${itemsData.length} items");
-        } else if (data is Map) {
-          if (data.containsKey("Rows")) {
-            itemsData = data["Rows"];
-            print("Map with Rows: ${itemsData.length} items");
-          } else if (data.containsKey("Records")) {
-            itemsData = data["Records"];
-            print("Map with Records: ${itemsData.length} items");
-          } else {
-            print("Unknown map structure: ${data.keys}");
-          }
-        }
-
-        // If we have userId but no filtered results, get all and filter manually
-        if (userId != null && userId.isNotEmpty && itemsData.isEmpty) {
-          print("No filtered results, trying to get all data and filter manually...");
-          return await getAllAndFilterManually(userId);
-        }
-
-        return itemsData.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
-
-      } else {
-        throw Exception("HTTP ${response.statusCode}: ${response.body}");
-      }
-    } catch (e) {
-      print("Error in getItems: $e");
-      rethrow;
-    }
-  }
-
-
-// Alternative 3: Delete and Add (as last resort)
-  static Future<void> editItemAlternative3(String userId, Item item) async {
-    print("=== TRYING ALTERNATIVE 3: DELETE AND ADD ===");
-
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
-
-    // Step 1: Delete the existing item
-    final deleteBody = jsonEncode({
-      "Action": "Delete",
-      "Rows": [
-        {"itemId": item.itemId}
-      ],
-    });
-
-    print("Delete request: $deleteBody");
-
-    final deleteResponse = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: deleteBody,
-    );
-
-    print("Delete response: ${deleteResponse.statusCode} - ${deleteResponse.body}");
-
-    if (deleteResponse.statusCode != 200) {
-      throw Exception("Failed to delete item: ${deleteResponse.body}");
-    }
-
-    // Step 2: Add the updated item
-    await Future.delayed(Duration(seconds: 1)); // Small delay
-
-    final addBody = jsonEncode({
-      "Action": "Add",
-      "Rows": [
-        {
-          "itemId": item.itemId,
-          "itemName": item.itemName,
-          "price": item.price,
-          "unitOfMeasurement": item.unitOfMeasurement,
-          "currentStock": item.currentStock,
-          "detailRequirement": item.detailRequirement ?? "",
-          "isActive": item.isActive,
-          "userId": userId,
-        }
-      ],
-    });
-
-    print("Add request: $addBody");
-
-    final addResponse = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "ApplicationAccessKey": accessKey,
-      },
-      body: addBody,
-    );
-
-    print("Add response: ${addResponse.statusCode} - ${addResponse.body}");
-
-    if (addResponse.statusCode != 200) {
-      throw Exception("Failed to re-add item: ${addResponse.body}");
-    }
-  } ///new
-
-
-  static Future<List<Invoice>> getInvoices() async {
-    print("🔄 Trying alternative invoice fetch method...");
-
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
-
-    // Try a simpler request without sorting
-    final simpleBody = jsonEncode({
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-      }
-    });
-
-    print("Alternative request body: $simpleBody");
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: simpleBody,
-      );
-
-      print("Alternative response status: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        if (response.body.trim().isEmpty || response.body.trim() == "[]") {
-          print("Alternative method also returned empty");
-          return <Invoice>[];
-        }
-
-        dynamic data;
-        try {
-          data = jsonDecode(response.body);
-          print("Alternative parsed data type: ${data.runtimeType}");
-        } catch (jsonError) {
-          print("Alternative JSON decode error: $jsonError");
-          return <Invoice>[];
-        }
-
-        List<dynamic> invoiceData = [];
-
-        if (data is List) {
-          invoiceData = data;
-          print("Alternative direct list with ${invoiceData.length} invoices");
-        } else if (data is Map) {
-          if (data.containsKey("Rows")) {
-            invoiceData = data["Rows"];
-            print("Alternative map with Rows: ${invoiceData.length} invoices");
-          } else if (data.containsKey("Records")) {
-            invoiceData = data["Records"];
-            print("Alternative map with Records: ${invoiceData.length} invoices");
-          } else {
-            print("Alternative unknown map structure: ${data.keys}");
-            invoiceData = [data];
-          }
-        }
-
-        return invoiceData.map((e) => Invoice.fromMap(e as Map<String, dynamic>)).toList();
-
-      } else {
-        print("Alternative HTTP error: ${response.statusCode}");
-        return <Invoice>[];
-      }
-    } catch (e) {
-      print("Error in getInvoicesAlternative: $e");
-      return <Invoice>[];
-    }
-  }
-
-// Method 2: Get all data and filter manually (fallback)
-  static Future<List<Item>> getAllAndFilterManually(String userId) async {
-    print("=== MANUAL FILTERING FALLBACK ===");
-
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
-
-    final body = jsonEncode({
-      "Action": "Find",
-      "Properties": {
-        "Locale": "en-US",
-        // No selector - get all data
-      }
-    });
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "ApplicationAccessKey": accessKey,
-        },
-        body: body,
-      );
-
-      if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
-        final data = jsonDecode(response.body);
-
-        List<dynamic> allItems = [];
-        if (data is List) {
-          allItems = data;
-        } else if (data is Map && data.containsKey("Rows")) {
-          allItems = data["Rows"];
-        }
-
-        print("Got ${allItems.length} total items, filtering for userId: $userId");
-
-        // Filter manually
-        final filteredItems = allItems.where((item) {
-          final map = item as Map<String, dynamic>;
-          final itemUserId = map['userId']?.toString() ?? '';
-          print("Checking item userId: '$itemUserId' vs target: '$userId'");
-          return itemUserId == userId;
-        }).toList();
-
-        print("Manual filter found ${filteredItems.length} matching items");
-
-        return filteredItems.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
-      }
-
-      return <Item>[];
-    } catch (e) {
-      print("Error in manual filtering: $e");
-      return <Item>[];
-    }
-  }
-
-// Method 3: Try different AppSheet API approach
-  static Future<List<Item>> getItemsAlternative(String userId) async {
-    final url = Uri.parse(
-        "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
-
-    // Try different Action types
-    final actions = ["Find", "Read"];
-
-    for (String action in actions) {
-      print("=== TRYING ACTION: $action ===");
-
-      final body = jsonEncode({
-        "Action": action,
-        "Properties": {
-          "Locale": "en-US",
-          "Selector": 'Filter([userId] = "$userId")',
-        }
-      });
-
-      try {
-        final response = await http.post(
-          url,
-          headers: {
-            "Content-Type": "application/json",
-            "ApplicationAccessKey": accessKey,
-          },
-          body: body,
-        );
-
-        print("$action Response: ${response.statusCode} - ${response.body}");
-
-        if (response.statusCode == 200 &&
-            response.body.trim().isNotEmpty &&
-            response.body.trim() != "[]") {
-
-          final data = jsonDecode(response.body);
-
-          if (data is List && data.isNotEmpty) {
-            print("Success with $action! Found ${data.length} items");
-            return data.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
-          }
-        }
-      } catch (e) {
-        print("Error with $action: $e");
-      }
-    }
-
-    print("All alternative methods failed, falling back to manual filter");
-    return await getAllAndFilterManually(userId);
-  }
-
-
-// Quick test method - try this first
-  Future<void> testSimpleFilter() async {
-    try {
-      print("=== TESTING SIMPLE APPROACH ===");
-
-      // Get all items first
-      final allItems = await RemoteService.getItems();
-      print("Total items without filter: ${allItems.length}");
-
-      // Now try with filter
-      final filteredItems = await RemoteService.getItems(userId: "Cueiq22u4QYqyzvjwHFbNVIxQXq2");
-      print("Filtered items: ${filteredItems.length}");
-
-      // Manual verification
-      final manualFilter = allItems.where((item) => item.userId == "Cueiq22u4QYqyzvjwHFbNVIxQXq2").toList();
-      print("Manual filter result: ${manualFilter.length}");
-
-    } catch (e) {
-      print("Test error: $e");
-    }
-  }
 
   String? getCurrentUserId() {
     // DEBUG: Print what you're returning
@@ -1988,66 +1548,7 @@ try{
     return userId;
   }
 
-
-// Step 5: Test different column names
-  static Future<void> testDifferentColumnNames(String userId) async {
-    final columnVariations = [
-      "userId",
-      "UserId",
-      "user_id",
-      "UserID",
-      "User ID",
-      "user",
-      "User"
-    ];
-
-    for (String columnName in columnVariations) {
-      try {
-        print("Testing column name: '$columnName'");
-
-        final selector = "Filter([$columnName] = '$userId')";
-        print("Selector: $selector");
-
-        final body = jsonEncode({
-          "Action": "Find",
-          "Properties": {
-            "Locale": "en-US",
-            "Selector": selector,
-          }
-        });
-
-        final response = await http.post(
-          Uri.parse("https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"),
-          headers: {
-            "Content-Type": "application/json",
-            "ApplicationAccessKey": accessKey,
-          },
-          body: body,
-        );
-
-        if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
-          final data = jsonDecode(response.body);
-          final count = data is List ? data.length : (data["Rows"]?.length ?? 0);
-
-          if (count > 0) {
-            print("SUCCESS with column '$columnName': Found $count items");
-            return; // Stop testing when we find the right column
-          }
-        }
-
-      } catch (e) {
-        print("Error testing column '$columnName': $e");
-      }
-    }
-
-    print("No working column name found for userId");
-  }
-  ///
-
-  ////
-
-
-  // Optional: Add method to get user-specific items
+  /// Optional: Add method to get user-specific items
   static Future<List<Item>> getUserItems(String userId) async {
     print("=== DEBUG getUserItems ===");
     print("UserId: $userId");
@@ -2143,7 +1644,7 @@ try{
     }
   }
 
-// Debug method to get all items (for testing)
+  /// Debug method to get all items (for testing)
   static Future<void> debugGetAllItems() async {
     print("=== DEBUG: Fetching ALL items ===");
 
@@ -2245,9 +1746,6 @@ try{
       throw Exception("Failed to send invoice: ${response.body}");
     }
   }
-
-
-
 
   /// Update only stock for an item
   static Future<void> updateItemStock(String itemId, int newStock) async {
@@ -2358,3 +1856,1510 @@ try{
     }
   }
 }
+
+
+
+class GoogleSheetService {
+  //static const spreadsheetId = "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ"; // from Sheet URL
+  static String spreadsheetId = "${AppConstants.spreadsheetId}"; // from Sheet URL
+  static const itemSheetName = "Item"; // your sheet/tab name
+  static const invoiceSheetName = "Invoice"; // your sheet/tab name
+  static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
+  static const challanSheetName = "Challan"; // your sheet/tab name
+  static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
+
+
+  static List<String>? _cachedHeaders;
+  static final Map<String, List<ChallanItem>> _challanCache = {};
+
+
+  /// Load credentials from assets/credentials.json
+  static Future<AuthClient> _getAuthClient() async {
+    final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+
+   print("------------Creddd-------------${credentialsJson}");
+    final accountCredentials =
+    ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+    final scopes = [SheetsApi.spreadsheetsScope];
+
+    return await clientViaServiceAccount(accountCredentials, scopes);
+  }
+
+  /// Add a new item row to Google Sheet
+  static Future<void> addItem(String userId, Item item) async {
+    final client = await _getAuthClient();
+    final sheetsApi = SheetsApi(client);
+
+    print("---------========Sheet API...........-----${sheetsApi}");
+    // Prepare row values in correct column order
+    final values = [
+      item.itemId,
+      item.itemName,
+      item.price.toString(),
+      item.unitOfMeasurement,
+      item.currentStock.toString(),
+      item.detailRequirement,
+      item.isActive ? "TRUE" : "FALSE",
+      userId,
+    ];
+
+    // Append row
+    await sheetsApi.spreadsheets.values.append(
+      ValueRange.fromJson({
+        "values": [values]
+      }),
+      spreadsheetId,
+      "$itemSheetName!A:H", // Adjust columns (A-H based on your schema)
+      valueInputOption: "RAW",
+    );
+
+    print("✅ Item added successfully to Google Sheet");
+  }
+
+  // Get items from Google Sheet with optional user filtering
+  static Future<List<Item>> getItems({String? userId}) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      print("---------========Sheets API Get Items...........-----${sheetsApi}");
+
+      // Get all data from the sheet
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:H", // Adjust range based on your columns
+      );
+
+      print("Response: ${response.values}");
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("No data found in sheet");
+        return <Item>[];
+      }
+
+      List<Item> items = [];
+
+      // Skip header row (index 0) if it exists
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // Ensure row has enough columns
+        if (row.length < 8) {
+          print("Skipping incomplete row ${i}: $row");
+          continue;
+        }
+
+        try {
+          // Parse row data according to your schema
+          final item = Item(
+            itemId: row[0]?.toString() ?? '',
+            itemName: row[1]?.toString() ?? '',
+            price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
+            unitOfMeasurement: row[3]?.toString() ?? '',
+            currentStock: int.tryParse(row[4]?.toString() ?? '0') ?? 0,
+            detailRequirement: row[5]?.toString() ?? '',
+            isActive: (row[6]?.toString().toLowerCase() == 'true'),
+            // Assuming userId is in column H (index 7)
+          );
+
+          // Filter by userId if provided
+          if (userId != null && userId.isNotEmpty) {
+            String rowUserId = row[7]?.toString() ?? '';
+            if (rowUserId == userId) {
+              items.add(item);
+            }
+          } else {
+            // No filter, add all items
+            items.add(item);
+          }
+
+        } catch (e) {
+          print("Error parsing row ${i}: $e");
+          print("Row data: $row");
+          continue;
+        }
+      }
+
+      print("✅ Retrieved ${items.length} items from Google Sheet");
+      return items;
+
+    } catch (e) {
+      print("Error in getItems: $e");
+      rethrow;
+    }
+  }
+
+  // Edit item using Google Sheets API (delete and re-add approach)
+  static Future<void> editItemAlternative3(String userId, Item item) async {
+    print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Step 1: Find and delete the existing item
+      print("Step 1: Finding item to delete...");
+
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:H",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("No data found in sheet");
+      }
+
+      int? targetRowIndex;
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isNotEmpty && row[0]?.toString() == item.itemId) {
+          targetRowIndex = i; // 0-based index for delete operation
+          break;
+        }
+      }
+
+      if (targetRowIndex == null) {
+        throw Exception("Item with ID ${item.itemId} not found");
+      }
+
+      print("Found item at row index: $targetRowIndex");
+
+      // Delete the row using batch update
+      final deleteRequests = [
+        Request()
+          ..deleteDimension = (DeleteDimensionRequest()
+            ..range = (DimensionRange()
+              ..sheetId = 0 // Adjust if your sheet has different ID
+              ..dimension = 'ROWS'
+              ..startIndex = targetRowIndex
+              ..endIndex = targetRowIndex + 1))
+      ];
+
+      final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
+        ..requests = deleteRequests;
+
+      print("Deleting row...");
+      await sheetsApi.spreadsheets.batchUpdate(
+        deleteBatchRequest,
+        spreadsheetId,
+      );
+
+      print("Delete successful");
+
+      // Step 2: Add the updated item (small delay for consistency)
+      await Future.delayed(Duration(seconds: 1));
+
+      print("Step 2: Adding updated item...");
+
+      // Prepare updated row values
+      final values = [
+        item.itemId,
+        item.itemName,
+        item.price.toString(),
+        item.unitOfMeasurement,
+        item.currentStock.toString(),
+        item.detailRequirement ?? "",
+        item.isActive ? "TRUE" : "FALSE",
+        userId,
+      ];
+
+      print("Adding values: $values");
+
+      // Append the updated row
+      await sheetsApi.spreadsheets.values.append(
+        ValueRange.fromJson({
+          "values": [values]
+        }),
+        spreadsheetId,
+        "$itemSheetName!A:H",
+        valueInputOption: "RAW",
+      );
+
+      print("Add successful - Item edited using delete and add approach");
+
+    } catch (e) {
+      print("Error in editItemAlternative3: $e");
+      rethrow;
+    }
+  }
+
+
+  ///Invoice
+  // Get all invoices from Google Sheet
+  static Future<List<Invoice>> getInvoices() async {
+    print("🔄 Fetching invoices from Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // First, get the header row to understand column positions
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceSheetName!1:1", // Get only the header row
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("No header row found in sheet");
+        return <Invoice>[];
+      }
+
+      final headers = headerResponse.values![0];
+      print("Sheet headers: $headers");
+
+      // Create a map of column names to indices
+      final columnIndices = {};
+      for (int i = 0; i < headers.length; i++) {
+        columnIndices[headers[i].toString().toLowerCase()] = i;
+      }
+      print("Column indices: $columnIndices");
+
+      // Get all data from the invoice sheet
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceSheetName!A:Z", // Get all columns
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("No invoice data found in sheet");
+        return <Invoice>[];
+      }
+
+      if (response.values!.length <= 1) {
+        print("Only header row found, no invoice data");
+        return <Invoice>[];
+      }
+
+      List<Invoice> invoices = [];
+
+      // Skip header row (index 0)
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // Skip empty rows
+        if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) {
+          continue;
+        }
+
+        try {
+          // Create a map using the header names as keys
+          Map<String, dynamic> rowData = {};
+          for (int j = 0; j < min(row.length, headers.length); j++) {
+            rowData[headers[j].toString()] = row[j];
+          }
+
+          // Convert to Invoice object
+          final invoice = Invoice.fromMap(rowData);
+          invoices.add(invoice);
+
+        } catch (e) {
+          print("Error parsing invoice row ${i}: $e");
+          print("Row data: $row");
+          continue;
+        }
+      }
+
+      print("✅ Retrieved ${invoices.length} invoices from Google Sheet");
+      return invoices;
+
+    } catch (e) {
+      print("❌ Error in getInvoices: $e");
+      rethrow; // Re-throw to let caller handle fallback
+    }
+  }
+
+// Add invoice to Google Sheet
+  static Future<void> addInvoice(dynamic invoiceData, String userId) async {
+    print("🔄 Adding invoice to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      print("Sheets API initialized for adding invoice");
+
+      // Determine which sheet to use based on your structure
+      String targetSheetName = "Invoice"; // Default sheet name
+      print("Using sheet: $targetSheetName");
+
+      // First, get the header row to understand column order
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$targetSheetName!1:1", // Get only the header row
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No header row found in sheet '$targetSheetName'");
+      }
+
+      final headers = headerResponse.values![0];
+      print("Sheet headers: $headers");
+
+      List<List<dynamic>> rowsToAdd = [];
+
+      if (invoiceData is Map<String, dynamic>) {
+        // Single invoice data
+        rowsToAdd.add(_prepareInvoiceRow(invoiceData, userId, headers));
+      } else if (invoiceData is List<Invoice>) {
+        // Multiple invoices
+        for (Invoice invoice in invoiceData) {
+          rowsToAdd.add(_prepareInvoiceRow(invoice.toMap(), userId, headers));
+        }
+      } else if (invoiceData is Invoice) {
+        // Single Invoice object
+        rowsToAdd.add(_prepareInvoiceRow(invoiceData.toMap(), userId, headers));
+      } else {
+        throw Exception("Invalid invoice data format: ${invoiceData.runtimeType}");
+      }
+
+      print("Prepared ${rowsToAdd.length} rows to add");
+
+      // Add all rows to the sheet
+      final valueRange = ValueRange.fromJson({
+        "values": rowsToAdd
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$targetSheetName!A:Z",
+        valueInputOption: "USER_ENTERED", // Better formatting
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ Invoice(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+      } else {
+        print("✅ Invoice(s) added successfully");
+      }
+
+    } catch (e) {
+      print("❌ Error adding invoice: $e");
+      throw Exception("Failed to add invoice: ${e.toString()}");
+    }
+  }
+
+  // Helper method to prepare invoice row data based on actual sheet headers
+  static List<dynamic> _prepareInvoiceRow(
+      Map<String, dynamic> invoiceData, String userId, List<dynamic> headers) {
+    final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+    String _formatDate(dynamic value) {
+      if (value == null || value.toString().isEmpty) return "";
+      try {
+        if (value is DateTime) {
+          return _dateFormatter.format(value);
+        } else {
+          return _dateFormatter.format(DateTime.parse(value.toString()));
+        }
+      } catch (e) {
+        return value.toString(); // fallback if already string
+      }
+    }
+
+    // Handle items serialization if present
+    if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+      invoiceData['items'] = jsonEncode(invoiceData['items']);
+    }
+
+    // Add userId
+    invoiceData['userId'] = userId;
+
+    // Force issueDate (instead of invoiceDate)
+    invoiceData['issueDate'] =
+        _formatDate(invoiceData['issueDate'] ?? DateTime.now());
+
+    // Force dueDate
+    if (invoiceData.containsKey('dueDate')) {
+      invoiceData['dueDate'] = _formatDate(invoiceData['dueDate']);
+    }
+
+    // Prepare row values in correct column order
+    List<dynamic> rowData = [];
+
+    for (var header in headers) {
+      String headerStr = header.toString().toLowerCase();
+
+      if (headerStr.contains('invoice') && headerStr.contains('id')) {
+        rowData.add(invoiceData['invoiceId'] ?? '');
+      } else if (headerStr.contains('customer') && headerStr.contains('name')) {
+        rowData.add(invoiceData['customerName'] ?? '');
+      } else if (headerStr.contains('customer') && headerStr.contains('email')) {
+        rowData.add(invoiceData['customerEmail'] ?? '');
+      } else if (headerStr.contains('customer') && headerStr.contains('phone')) {
+        rowData.add(invoiceData['customerPhone'] ?? '');
+      } else if (headerStr.contains('customer') && headerStr.contains('address')) {
+        rowData.add(invoiceData['customerAddress'] ?? '');
+      } else if (headerStr.contains('issue') && headerStr.contains('date')) {
+        rowData.add(invoiceData['issueDate']); // ✅ correct mapping
+      } else if (headerStr.contains('due') && headerStr.contains('date')) {
+        rowData.add(invoiceData['dueDate']); // ✅ correct mapping
+      } else if (headerStr.contains('total') && headerStr.contains('amount')) {
+        rowData.add(invoiceData['totalAmount']?.toString() ?? '0');
+      } else if (headerStr.contains('tax') && headerStr.contains('amount')) {
+        rowData.add(invoiceData['taxAmount']?.toString() ?? '0');
+      } else if (headerStr.contains('discount') && headerStr.contains('amount')) {
+        rowData.add(invoiceData['discountAmount']?.toString() ?? '0');
+      } else if (headerStr.contains('status')) {
+        rowData.add(invoiceData['status'] ?? 'draft');
+      } else if (headerStr.contains('items')) {
+        rowData.add(invoiceData['items'] ?? '[]');
+      } else if (headerStr.contains('notes')) {
+        rowData.add(invoiceData['notes'] ?? '');
+      } else if (headerStr.contains('payment') && headerStr.contains('method')) {
+        rowData.add(invoiceData['paymentMethod'] ?? '');
+      } else if (headerStr.contains('payment') && headerStr.contains('status')) {
+        rowData.add(invoiceData['paymentStatus'] ?? 'pending');
+      } else if (headerStr.contains('user') && headerStr.contains('id')) {
+        rowData.add(userId);
+      } else if (headerStr.contains('company') && headerStr.contains('id')) {
+        rowData.add(invoiceData['companyId'] ?? '');
+      } else {
+        rowData.add(invoiceData[header.toString()] ?? '');
+      }
+    }
+
+    print("Prepared row data: $rowData");
+    return rowData;
+  }
+
+
+  /// Add invoice item directly to Google Sheet (without AppSheet API)
+  static Future<void> addInvoiceItem(
+      Map<String, dynamic> itemData, String userId) async {
+    print("🔄 Adding invoice item to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // String targetSheetName = "InvoiceItems";
+      // print("Using sheet: $targetSheetName");
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceItemSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+      }
+
+      final headers = headerResponse.values![0];
+      print("InvoiceItems headers: $headers");
+
+      // Add userId if it's a column
+      if (headers.contains("userId")) {
+        itemData['userId'] = userId;
+      }
+
+      // ✅ Normalize keys (lowercase)
+      final normalizedItemData = {
+        for (var entry in itemData.entries)
+          entry.key.toString().trim().toLowerCase(): entry.value
+      };
+
+      // Prepare row in correct order
+      List<dynamic> rowData = [];
+      for (var header in headers) {
+        final key = header.toString().trim().toLowerCase();
+        rowData.add(normalizedItemData[key] ?? '');
+      }
+
+      print("Prepared row: $rowData");
+
+      final valueRange = ValueRange.fromJson({
+        "values": [rowData],
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$invoiceItemSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ Invoice item added successfully. Rows affected: ${response.updates!.updatedRows}");
+      } else {
+        print("✅ Invoice item added successfully.");
+      }
+    } catch (e) {
+      print("❌ Error adding invoice item: $e");
+      throw Exception("Failed to add invoice item: ${e.toString()}");
+    }
+  }
+
+
+  static Future<void> updateStockAfterInvoice(List<InvoiceItem> invoiceItems) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all stock rows once
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("Stock sheet is empty");
+      }
+
+      final headers = response.values![0];
+      final itemIdIndex = headers.indexOf("itemId");
+      final stockIndex = headers.indexOf("currentStock");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+        throw Exception("Missing required columns in Stock sheet");
+      }
+
+      for (var item in invoiceItems) {
+        int? rowToUpdate;
+        int currentStock = 0;
+
+        // Find row for this itemId + userId
+        for (int i = 1; i < response.values!.length; i++) {
+          final row = response.values![i];
+          if (row.length > itemIdIndex &&
+              row[itemIdIndex].toString() == item.itemId.toString() &&
+              row[userIdIndex].toString() == AppConstants.userId) {
+            rowToUpdate = i + 1; // rows are 1-based
+            if (row.length > stockIndex) {
+              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+            }
+            break;
+          }
+        }
+
+        if (rowToUpdate == null) {
+          print("⚠️ Item ${item.itemId} not found in stock sheet.");
+          continue;
+        }
+
+        final newStock = currentStock - item.quantity;
+        if (newStock < 0) {
+          print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+        }
+
+        final range =
+            "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+        final valueRange = ValueRange.fromJson({
+          "values": [
+            [newStock < 0 ? 0 : newStock] // prevent negative stock
+          ]
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          valueRange,
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Stock updated (Invoice): ${item.itemId} → $newStock (was $currentStock)");
+      }
+    } catch (e) {
+      print("❌ Error updating stock after invoice: $e");
+    }
+  }
+
+
+  ///Challan
+  static Future<void> addChallan(dynamic challanData, String userId) async {
+    print("🔄 Adding Challan to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No header row found in sheet '$challanSheetName'");
+      }
+
+      final headers = headerResponse.values![0];
+      print("Challan headers: $headers");
+
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+      String _formatDate(dynamic value) {
+        if (value == null || value.toString().isEmpty) return "";
+        try {
+          if (value is DateTime) {
+            return _dateFormatter.format(value);
+          } else {
+            return _dateFormatter.format(DateTime.parse(value.toString()));
+          }
+        } catch (e) {
+          return value.toString(); // fallback
+        }
+      }
+
+      // Normalize helper
+      Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+        return {
+          for (var entry in data.entries)
+            entry.key.toString().trim().toLowerCase(): entry.value
+        };
+      }
+
+      // Build rows
+      List<Map<String, dynamic>> rowsToSend = [];
+
+      if (challanData is Map<String, dynamic>) {
+        if (challanData.containsKey('items') && challanData['items'] is List) {
+          challanData['items'] = jsonEncode(challanData['items']);
+        }
+
+        // format challanDate
+        if (challanData.containsKey('challanDate')) {
+          challanData['challanDate'] = _formatDate(challanData['challanDate']);
+        }
+
+        rowsToSend.add({...challanData, "userId": userId});
+      } else if (challanData is List<Challan>) {
+        rowsToSend = challanData.map((chal) {
+          final map = chal.toMap();
+          if (map.containsKey('items') && map['items'] is List) {
+            map['items'] = jsonEncode(map['items']);
+          }
+          if (map.containsKey('challanDate')) {
+            map['challanDate'] = _formatDate(map['challanDate']);
+          }
+          return {...map, "userId": userId};
+        }).toList();
+      }
+
+      print("Prepared rows: ${jsonEncode(rowsToSend)}");
+
+      // Convert rows to ordered values matching headers
+      List<List<dynamic>> values = [];
+      for (var row in rowsToSend) {
+        final normalized = _normalize(row);
+        List<dynamic> rowData = [];
+        for (var header in headers) {
+          final key = header.toString().trim().toLowerCase();
+          rowData.add(normalized[key] ?? '');
+        }
+        values.add(rowData);
+      }
+
+      print("Prepared ${values.length} row(s) to add");
+
+      // Append rows to Google Sheet
+      final valueRange = ValueRange.fromJson({
+        "values": values,
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ Challan(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+      } else {
+        print("✅ Challan(s) added successfully.");
+      }
+    } catch (e) {
+      print("❌ Error adding Challan: $e");
+      throw Exception("Failed to add Challan: ${e.toString()}");
+    }
+  }
+
+  static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
+    print("🔄 Adding challan item to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Date formatter
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No header row found in sheet '$challanItemSheetName'");
+      }
+
+      final headers = headerResponse.values![0];
+      print("ChallanItems headers: $headers");
+
+      // Prepare row data based on exact header names
+      List<dynamic> rowData = [];
+
+      for (var header in headers) {
+        final headerName = header.toString();
+        final headerNameLower = headerName.toLowerCase();
+
+        if (headerNameLower.contains('userid')) {
+          // Add userId
+          rowData.add(userId);
+        }
+        else if (headerNameLower.contains('date')) {
+          // Handle date field
+          dynamic dateValue = challanData['challanDate'] ??
+              challanData['challainDate'] ??
+              challanData['date'] ??
+              DateTime.now();
+
+          try {
+            if (dateValue is DateTime) {
+              rowData.add(_dateFormatter.format(dateValue));
+            } else if (dateValue is String) {
+              rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+            } else {
+              rowData.add(_dateFormatter.format(DateTime.now()));
+            }
+          } catch (e) {
+            rowData.add(_dateFormatter.format(DateTime.now()));
+          }
+        }
+        else {
+          // Add other fields
+          var value = '';
+          for (var key in challanData.keys) {
+            if (key.toLowerCase() == headerNameLower) {
+              value = challanData[key]?.toString() ?? '';
+              break;
+            }
+          }
+          rowData.add(value);
+        }
+      }
+
+      print("Prepared challan item row: $rowData");
+
+      // Append row
+      final valueRange = ValueRange.fromJson({
+        "values": [rowData],
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ Challan item added successfully. Rows affected: ${response.updates!.updatedRows}");
+      } else {
+        print("✅ Challan item added successfully.");
+      }
+    } catch (e) {
+      print("❌ Error adding challan item: $e");
+      throw Exception("Failed to add challan item: ${e.toString()}");
+    }
+  }
+
+  static Future<void> updateStockAfterDispatch(List<ChallanItem> challanItems) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all stock rows once for efficiency
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:Z", // whole sheet
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("Stock sheet is empty");
+      }
+
+      final headers = response.values![0];
+      final itemIdIndex = headers.indexOf("itemId");
+      final stockIndex = headers.indexOf("currentStock"); // ✅ FIXED
+      final userIdIndex = headers.indexOf("userId");
+
+      if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+        throw Exception("Missing required columns in Stock sheet");
+      }
+
+      for (var item in challanItems) {
+        int? rowToUpdate;
+        int currentStock = 0;
+
+        // Find row for this itemId + userId
+        for (int i = 1; i < response.values!.length; i++) {
+          final row = response.values![i];
+          if (row.length > itemIdIndex &&
+              row[itemIdIndex].toString() == item.itemId.toString() &&
+              row[userIdIndex].toString() == AppConstants.userId) {
+            rowToUpdate = i + 1; // rows are 1-based
+            if (row.length > stockIndex) {
+              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+            }
+            break;
+          }
+        }
+
+        if (rowToUpdate == null) {
+          print("⚠️ Item ${item.itemId} not found in stock sheet.");
+          continue;
+        }
+
+        final newStock = currentStock - item.quantity;
+        if (newStock < 0) {
+          print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+        }
+
+        final range =
+            "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+        final valueRange = ValueRange.fromJson({
+          "values": [
+            [newStock < 0 ? 0 : newStock] // prevent negative stock
+          ]
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          valueRange,
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Stock updated: ${item.itemId} → $newStock (was $currentStock)");
+      }
+    } catch (e) {
+      print("❌ Error updating stock after challan: $e");
+    }
+  }
+
+
+  static Future<List<Challan>> getChallans() async {
+    print("🔄 Fetching challans from Google Sheets...");
+
+    try {
+      final client = await _getAuthClient(); // ✅ make sure you already implemented
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all challan rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z", // whole sheet
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No challans found in sheet.");
+        return <Challan>[];
+      }
+
+      // Extract headers
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      print("✅ Headers: $headers");
+
+      List<Challan> challans = [];
+
+      // Iterate rows
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // Map each header → value
+        Map<String, dynamic> challanMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          challanMap[headers[j]] = j < row.length ? row[j] : "";
+        }
+
+        try {
+          Challan challan = Challan.fromMap(challanMap); // ✅ use your model parser
+          challans.add(challan);
+          print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+        } catch (e) {
+          print("⚠️ Error parsing challan row $i: $e");
+          print("Row data: $challanMap");
+        }
+      }
+
+      print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+      return challans;
+    } catch (e) {
+      print("❌ Error in getChallans(): $e");
+      rethrow;
+    }
+  }
+
+  static Future<void> deleteItems(String userId, Item item) async {
+    print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Step 1: Fetch all rows to locate the row for this item
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("❌ Stock sheet is empty, cannot delete item.");
+      }
+
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      print("✅ Headers: $headers");
+
+      final itemIdIndex = headers.indexOf("itemId");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (itemIdIndex == -1 || userIdIndex == -1) {
+        throw Exception("❌ Required columns (itemId, userId) not found in sheet.");
+      }
+
+      int? rowToDelete;
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > itemIdIndex &&
+            row[itemIdIndex].toString() == item.itemId &&
+            row[userIdIndex].toString() == userId) {
+          rowToDelete = i + 1; // Google Sheets rows are 1-based
+          break;
+        }
+      }
+
+      if (rowToDelete == null) {
+        throw Exception("❌ Item ${item.itemId} not found for user $userId.");
+      }
+
+      print("🗑 Deleting item at row $rowToDelete...");
+
+      // Step 2: Clear the row (deletes data but row stays empty)
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$itemSheetName!A$rowToDelete:Z$rowToDelete",
+      );
+
+      print("✅ Item ${item.itemId} deleted from row $rowToDelete.");
+
+      // Step 3: Add new row (append updated item)
+      await Future.delayed(Duration(seconds: 1));
+
+      final newRow = [
+        item.itemId,
+        item.itemName,
+        item.price.toString(),
+        item.unitOfMeasurement,
+        item.currentStock.toString(),
+        item.detailRequirement ?? "",
+        item.isActive.toString(),
+        userId,
+      ];
+
+      final appendBody = ValueRange.fromJson({
+        "values": [newRow],
+      });
+
+      await sheetsApi.spreadsheets.values.append(
+        appendBody,
+        spreadsheetId,
+        itemSheetName,
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Item ${item.itemId} re-added successfully.");
+    } catch (e) {
+      print("❌ Error in deleteItems: $e");
+      rethrow;
+    }
+  }
+
+  static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all invoice item rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceItemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No invoice items found in sheet.");
+        return [];
+      }
+
+      // Extract headers
+      final headers = response.values![0]
+          .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+          .toList();
+
+      // Find the index of the invoiceId column (match your column name)
+      final invoiceIdIndex = headers.indexOf('invoiceid'); // adjust if your column name is different
+      if (invoiceIdIndex == -1) {
+        throw Exception("InvoiceId column not found in sheet headers");
+      }
+
+      List<InvoiceItem> invoiceItems = [];
+
+      // Iterate rows
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // Check if this row matches the invoiceId
+        if (row.length > invoiceIdIndex && row[invoiceIdIndex].toString().trim() == invoiceId) {
+          Map<String, dynamic> rowMap = {};
+          for (int j = 0; j < headers.length; j++) {
+            rowMap[headers[j]] = j < row.length ? row[j].toString().trim() : "";
+          }
+
+          try {
+            final item = InvoiceItem.fromJson(rowMap);
+            invoiceItems.add(item);
+          } catch (e) {
+            print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+          }
+        }
+      }
+
+      print("✅ Found ${invoiceItems.length} items for invoice $invoiceId");
+      return invoiceItems;
+    } catch (e) {
+      print("❌ Error fetching invoice items by invoiceId: $e");
+      return [];
+    }
+  }
+
+  ///its Working... on 18-09- 2:00PM
+  // static Future<List<ChallanItem>> getChallanItemsByChallanId(String challanId) async {
+  //   print("🔄 Fetching items for challan: $challanId");
+  //
+  //   try {
+  //     final client = await _getAuthClient();
+  //     final sheetsApi = SheetsApi(client);
+  //
+  //     final response = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$challanItemSheetName!A:Z",
+  //     );
+  //
+  //     if (response.values == null || response.values!.length <= 1) {
+  //       print("❌ No items found for challan $challanId");
+  //       return <ChallanItem>[];
+  //     }
+  //
+  //     final headers = response.values![0].map((h) => h.toString().trim()).toList();
+  //     print("✅ Item headers: $headers");
+  //
+  //     List<ChallanItem> items = [];
+  //     int foundCount = 0;
+  //
+  //     for (int i = 1; i < response.values!.length; i++) {
+  //       final row = response.values![i];
+  //
+  //       if (row.isEmpty) continue;
+  //
+  //       Map<String, dynamic> itemMap = {};
+  //       for (int j = 0; j < headers.length; j++) {
+  //         itemMap[headers[j]] = j < row.length ? row[j] : "";
+  //       }
+  //
+  //       // Debug: Print the row data
+  //       print("📋 Row $i: $itemMap");
+  //
+  //       // Filter items by challanId - make sure the field name matches
+  //       if (itemMap['challanId'] == challanId ||
+  //           itemMap['ChallanId'] == challanId ||
+  //           itemMap['CHALLANID'] == challanId) {
+  //
+  //         try {
+  //           ChallanItem item = ChallanItem.fromJson(itemMap);
+  //           items.add(item);
+  //           foundCount++;
+  //           print("✅ Added item: ${item.itemName} for challan $challanId");
+  //         } catch (e) {
+  //           print("❌ Error parsing challan item: $e");
+  //           print("❌ Item data: $itemMap");
+  //         }
+  //       }
+  //     }
+  //
+  //     print("✅ Found $foundCount items for challan $challanId");
+  //     return items;
+  //   } catch (e) {
+  //     print("❌ Error getting challan items: $e");
+  //     return [];
+  //   }
+  // }
+
+  /// ✅ Get headers (only once per app session, cached in memory)
+  static Future<List<String>> _getHeaders(SheetsApi sheetsApi) async {
+    if (_cachedHeaders != null) return _cachedHeaders!;
+
+    final response = await sheetsApi.spreadsheets.values.get(
+      spreadsheetId,
+      "$challanItemSheetName!A1:Z1",
+    );
+
+    _cachedHeaders = response.values?.first
+        .map((h) => h.toString().trim())
+        .toList() ??
+        [];
+
+    print("✅ Cached headers: $_cachedHeaders");
+    return _cachedHeaders!;
+  }
+
+  /// ✅ Optimized function: get items by challanId with caching
+  static Future<List<ChallanItem>> getChallanItemsByChallanId(
+      String challanId) async {
+    print("🔄 Fetching items for challan: $challanId");
+
+    // If already cached, return directly
+    if (_challanCache.containsKey(challanId)) {
+      print("⚡ Returning cached items for challan $challanId");
+      return _challanCache[challanId]!;
+    }
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final headers = await _getHeaders(sheetsApi);
+
+      // ✅ Fetch only data rows (skip headers)
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!A2:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("❌ No items found for challan $challanId");
+        return <ChallanItem>[];
+      }
+
+      List<ChallanItem> items = [];
+      int foundCount = 0;
+
+      for (int i = 0; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isEmpty) continue;
+
+        Map<String, dynamic> itemMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          itemMap[headers[j]] = j < row.length ? row[j] : "";
+        }
+
+        // Filter by challanId
+        final rowChallanId = itemMap['challanId'] ??
+            itemMap['ChallanId'] ??
+            itemMap['CHALLANID'];
+
+        if (rowChallanId?.toString() == challanId) {
+          try {
+            ChallanItem item = ChallanItem.fromJson(itemMap);
+            items.add(item);
+            foundCount++;
+            print("✅ Added item: ${item.itemName}");
+          } catch (e) {
+            print("❌ Error parsing challan item: $e");
+            print("❌ Item data: $itemMap");
+          }
+        }
+      }
+
+      print("✅ Found $foundCount items for challan $challanId");
+
+      // Cache result for next call
+      _challanCache[challanId] = items;
+
+      return items;
+    } catch (e) {
+      print("❌ Error getting challan items: $e");
+      return [];
+    }
+  }
+
+  static Future<List<Challan>> getChallansByDateRange({
+    required DateTime fromDate,
+    required DateTime toDate,
+    required String userId,
+  }) async {
+    print("🔄 Fetching challans by date range: ${DateFormat('dd/MM/yyyy').format(fromDate)} to ${DateFormat('dd/MM/yyyy').format(toDate)} for user: $userId");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all challan rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No challans found in sheet.");
+        return <Challan>[];
+      }
+
+      // Extract headers
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      print("✅ Headers: $headers");
+
+      // DEBUG: Show first 5 rows
+      print("=== DEBUG: FIRST 5 ROWS ===");
+      for (int i = 1; i < min(6, response.values!.length); i++) {
+        Map<String, dynamic> rowMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          rowMap[headers[j]] = j < response.values![i].length ? response.values![i][j] : "";
+        }
+        print("Row $i: $rowMap");
+      }
+
+      List<Challan> filteredChallans = [];
+
+      // Iterate rows (skip header row)
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isEmpty) continue; // Skip empty rows
+
+        Map<String, dynamic> challanMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          challanMap[headers[j]] = j < row.length ? row[j] : "";
+        }
+
+        try {
+          Challan challan = Challan.fromMap(challanMap);
+
+          // Parse challan date safely
+          DateTime? parsedChallanDate;
+          String rawDate = challanMap['challanDate']?.toString().trim() ?? "";
+
+          if (rawDate.isNotEmpty) {
+            parsedChallanDate = _parseChallanDate(rawDate);
+          }
+
+          // Filter by user ID and date range
+          if (parsedChallanDate != null &&
+              challan.userId == userId &&
+              !parsedChallanDate.isBefore(fromDate) &&
+              !parsedChallanDate.isAfter(toDate)) {
+            // Load items for this challan
+            challan.items = await getChallanItemsByChallanId(challan.challanId);
+            challan.challanDate = parsedChallanDate;
+
+            filteredChallans.add(challan);
+            print("✅ Added challan: ${challan.challanId} - Date: $parsedChallanDate - Items: ${challan.items?.length ?? 0}");
+          } else {
+            if (parsedChallanDate == null) {
+              print("⚠️ Skipping challan ${challan.challanId}: Invalid date format ($rawDate)");
+            } else if (challan.userId != userId) {
+              print("⚠️ Skipping challan ${challan.challanId}: User ID mismatch (${challan.userId} vs $userId)");
+            } else {
+              print("⚠️ Skipping challan ${challan.challanId}: Date $parsedChallanDate outside range");
+            }
+          }
+        } catch (e) {
+          print("⚠️ Error parsing challan row $i: $e");
+          print("Row data: $challanMap");
+        }
+      }
+
+      print("✅ Successfully found ${filteredChallans.length} challans in date range");
+
+      // Sort challans by date (newest first)
+      filteredChallans.sort((a, b) {
+        if (a.challanDate == null) return 1;
+        if (b.challanDate == null) return -1;
+        return b.challanDate!.compareTo(a.challanDate!);
+      });
+
+      return filteredChallans;
+    } catch (e) {
+      print("❌ Error in getChallansByDateRange(): $e");
+      rethrow;
+    }
+  }
+
+  /// 🔑 Helper function to parse multiple date formats
+  static DateTime? _parseChallanDate(String rawDate) {
+    try {
+      // Try ISO 8601 (yyyy-MM-dd or with time)
+      DateTime? parsed = DateTime.tryParse(rawDate);
+      if (parsed != null) return parsed;
+
+      // Try dd/MM/yyyy
+      parsed = DateFormat('dd/MM/yyyy').parseStrict(rawDate);
+      if (parsed != null) return parsed;
+    } catch (_) {}
+
+    try {
+      // Try dd/MM/yyyy HH:mm:ss
+      return DateFormat('dd/MM/yyyy HH:mm:ss').parseStrict(rawDate);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
+    print("🔄 Fetching challans for customer: $customerName");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // ✅ Batch fetch challans & items in one call
+      final batchResponse = await sheetsApi.spreadsheets.values.batchGet(
+        spreadsheetId,
+        ranges: [
+          "$challanSheetName!A:Z",
+          "$challanItemSheetName!A:Z", // make sure you have this constant
+        ],
+      );
+
+      if (batchResponse.valueRanges == null || batchResponse.valueRanges!.isEmpty) {
+        print("❌ No data returned from batchGet");
+        return [];
+      }
+
+      // --- Challans ---
+      final challansValues = batchResponse.valueRanges![0].values;
+      if (challansValues == null || challansValues.length <= 1) {
+        print("❌ No challans found in sheet");
+        return [];
+      }
+      final challanHeaders = challansValues[0].map((h) => h.toString().trim()).toList();
+      print("✅ Challan headers: $challanHeaders");
+
+      // --- Items ---
+      final itemsValues = batchResponse.valueRanges!.length > 1
+          ? batchResponse.valueRanges![1].values
+          : null;
+      List<Map<String, dynamic>> allItems = [];
+      if (itemsValues != null && itemsValues.length > 1) {
+        final itemHeaders = itemsValues[0].map((h) => h.toString().trim()).toList();
+        for (int i = 1; i < itemsValues.length; i++) {
+          Map<String, dynamic> itemMap = {};
+          for (int j = 0; j < itemHeaders.length; j++) {
+            itemMap[itemHeaders[j]] =
+            j < itemsValues[i].length ? itemsValues[i][j] : "";
+          }
+          allItems.add(itemMap);
+        }
+        print("📦 Total challan items loaded: ${allItems.length}");
+      }
+
+      List<Challan> customerChallans = [];
+
+      // --- Iterate challans ---
+      for (int i = 1; i < challansValues.length; i++) {
+        final row = challansValues[i];
+        if (row.isEmpty) continue;
+
+        Map<String, dynamic> challanMap = {};
+        for (int j = 0; j < challanHeaders.length; j++) {
+          challanMap[challanHeaders[j]] = j < row.length ? row[j] : "";
+        }
+
+        try {
+          Challan challan = Challan.fromMap(challanMap);
+
+          // Debug: Print challan details
+          print("📋 Challan ${challan.challanId}: Customer=${challan.customerName}, Looking for=$customerName");
+
+          // Filter by customer name (case insensitive)
+          if (challan.customerName.toLowerCase() == customerName.toLowerCase()) {
+            print("✅ Found matching challan: ${challan.challanId}");
+
+            // ✅ Filter items locally instead of extra API calls
+            final challanItems = allItems
+                .where((item) => item["challanId"].toString() == challan.challanId)
+                .map((map) => ChallanItem.fromJson(map))
+                .toList();
+
+            print("📦 Items loaded for ${challan.challanId}: ${challanItems.length}");
+
+            // ✅ Attach items using copyWith
+            Challan challanWithItems = challan.copyWith(items: challanItems);
+            customerChallans.add(challanWithItems);
+
+            print("✅ Challan ${challan.challanId} now has ${challanWithItems.items?.length ?? 0} items");
+          }
+        } catch (e) {
+          print("❌ Error parsing challan: $e");
+          print("❌ Challan data: $challanMap");
+        }
+      }
+
+      print("✅ Total challans found for $customerName: ${customerChallans.length}");
+      return customerChallans;
+    } catch (e) {
+      print("❌ Error getting challans by customer: $e");
+      return [];
+    }
+  }
+
+  static Future<List<ChallanItem>> getChallanItemsByChallanIdFromSheet(String challanId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all rows from the challan items sheet
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No challan items found.");
+        return [];
+      }
+
+      // Extract headers
+      final headers = response.values![0]
+          .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+          .toList();
+
+      List<ChallanItem> items = [];
+
+      // Iterate rows
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        Map<String, String> rowByHeader = {};
+
+        for (int j = 0; j < headers.length; j++) {
+          final key = headers[j];
+          final value = (j < row.length) ? row[j].toString() : "";
+          rowByHeader[key] = value;
+        }
+
+        // Filter by challanId
+        if (rowByHeader['challanid'] == challanId) {
+          try {
+            final item = ChallanItem.fromJson(rowByHeader);
+            items.add(item);
+          } catch (e) {
+            print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+          }
+        }
+      }
+
+      print("✅ Found ${items.length} items for challan $challanId");
+      return items;
+    } catch (e) {
+      print("❌ Error fetching items for challan $challanId: $e");
+      return [];
+    }
+  }
+
+
+}
+
