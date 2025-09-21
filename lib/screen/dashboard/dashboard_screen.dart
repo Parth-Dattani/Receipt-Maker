@@ -31,7 +31,7 @@ class DashboardScreen extends GetView<DashboardController> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings),
-            onPressed: controller.navigateToNewChallan,
+            onPressed: controller.navigateToChallanList,
           ),
           IconButton(
             icon: Icon(Icons.refresh),
@@ -390,10 +390,10 @@ class DashboardScreen extends GetView<DashboardController> {
                 )),
                 ListTile(
                   leading: Icon(Icons.analytics, color: Colors.purple),
-                  title: Text("Reports"),
+                  title: Text("challans"),
                   onTap: () {
                     Get.back();
-                    controller.navigateToItems();
+                    controller.navigateToChallanList();
                   },
                 ),
                 Divider(),
@@ -423,14 +423,14 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 Divider(),
 
-                ListTile(
-                  leading: Icon(Icons.settings, color: Colors.grey),
-                  title: Text("Settings"),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToNewChallan();
-                  },
-                ),
+                // ListTile(
+                //   leading: Icon(Icons.settings, color: Colors.grey),
+                //   title: Text("Settings"),
+                //   onTap: () {
+                //     Get.back();
+                //     controller.navigateToNewChallan();
+                //   },
+                // ),
                 ListTile(
                   leading: Icon(Icons.logout, color: Colors.red),
                   title: Text("Logout"),

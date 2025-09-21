@@ -110,7 +110,7 @@ class CustomerListController extends BaseController {
               ),
               SizedBox(height: 16),
               Text('Name: ${customer['name'] ?? 'N/A'}'),
-              Text('Mobile: ${customer['mobile'] ?? 'N/A'}'),
+              Text('Mobile: ${customer['mobile1'] ?? 'N/A'}'),
               Text('Email: ${customer['email'] ?? 'N/A'}'),
               Text('Address: ${customer['address'] ?? 'N/A'}'),
               SizedBox(height: 16),
@@ -144,7 +144,7 @@ class CustomerListController extends BaseController {
     // Alternative: Direct edit in dialog (simpler approach)
   void editCustomerDialog(Map<String, dynamic> customer) {
     final nameController = TextEditingController(text: customer['name'] ?? '');
-    final mobileController = TextEditingController(text: customer['mobile'] ?? '');
+    final mobileController = TextEditingController(text: customer['mobile1'] ?? '');
     final emailController = TextEditingController(text: customer['email'] ?? '');
     final addressController = TextEditingController(text: customer['address'] ?? '');
 
@@ -254,7 +254,7 @@ class CustomerListController extends BaseController {
 
       final updatedData = {
         'name': name,
-        'mobile': mobile,
+        'mobile1': mobile,
         'email': email,
         'address': address,
         'updatedAt': FieldValue.serverTimestamp(),

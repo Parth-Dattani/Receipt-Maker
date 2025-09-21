@@ -207,13 +207,13 @@ class CustomerListScreen extends GetView<CustomerListController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 4),
-            if (customer['mobile'] != null && customer['mobile'].isNotEmpty)
+            if (customer['mobile1'] != null && customer['mobile1'].isNotEmpty)
               Row(
                 children: [
                   Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
                   SizedBox(width: 4),
                   Text(
-                    customer['mobile'],
+                    customer['mobile1'],
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ],

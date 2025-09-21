@@ -81,4 +81,16 @@ List<GetPage> appPages = [
       page: () => InvoiceDetailsScreen(),
       binding: InvoiceListBinding()
   ),
+
+    GetPage(
+    name: ChallanListScreen.pageId,
+    page: () => ChallanListScreen(),
+    binding: ChallanListBinding(),
+    ),
+
+  GetPage(
+    name: ChallanDetailsScreen.pageId,
+    page: () => ChallanDetailsScreen(),
+    binding: ChallanDetailsBinding(),
+  ),
 ];

@@ -21,6 +21,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   // Login form controllers
   final TextEditingController loginUsernameController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
+  var isPasswordHidden = true.obs;
 
   // Registration form controllers
   final TextEditingController regUsernameController = TextEditingController();
@@ -29,12 +30,14 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   final TextEditingController regMobile2Controller = TextEditingController();
   final TextEditingController regAddressController = TextEditingController();
   final TextEditingController regCityController = TextEditingController();
-  final TextEditingController regStateController = TextEditingController();
-  final TextEditingController regCountryController = TextEditingController();
+  // final TextEditingController regStateController = TextEditingController();
+  // final TextEditingController regCountryController = TextEditingController();
   final TextEditingController regAltEmailController = TextEditingController();
 
   // Add AppSheet URL controller
   final TextEditingController appSheetUrlController = TextEditingController();
+  var selectedCountry = ''.obs;
+  var selectedState = ''.obs;
 
   @override
   void onInit() {
@@ -62,15 +65,66 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     regMobile2Controller.dispose();
     regAddressController.dispose();
     regCityController.dispose();
-    regStateController.dispose();
-    regCountryController.dispose();
+    // regStateController.dispose();
+    // regCountryController.dispose();
     regAltEmailController.dispose();
     super.onClose();
+  }
+
+  // Add these lists for dropdown data
+  final List<String> countries = ['USA', 'Canada', 'India', 'UK', 'Australia'];
+
+  final Map<String, List<String>> countryStates = {
+    'India': [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+      'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+      'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+      'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+      'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+      'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi',
+      'Jammu and Kashmir', 'Ladakh',
+    ],
+    'United States': [
+      'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+      'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+      'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+      'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
+      'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+      'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+      'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+      'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
+      'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+      'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming',
+    ],
+    'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+    'Canada': [
+      'Alberta', 'British Columbia', 'Manitoba', 'New Brunswick',
+      'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia',
+      'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec',
+      'Saskatchewan', 'Yukon',
+    ],
+    'Australia': [
+      'New South Wales', 'Victoria', 'Queensland', 'Western Australia',
+      'South Australia', 'Tasmania', 'Australian Capital Territory',
+      'Northern Territory',
+    ],
+  };
+
+  // Add this method to get states for selected country
+  List<String> getStatesForCountry() {
+    if (selectedCountry.value.isEmpty) {
+      return [];
+    }
+    return countryStates[selectedCountry.value] ?? [];
   }
 
   // Firebase instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _verificationId = "";
+
+  void togglePasswordVisibility() {
+    isPasswordHidden.value = !isPasswordHidden.value;
+  }
 
   // AppSheet connection method
   Future<void> connectAppSheet() async {
@@ -586,8 +640,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "mobile2": regMobile2Controller.text.trim(),
           "address": regAddressController.text.trim(),
           "city": regCityController.text.trim(),
-          "state": regStateController.text.trim(),
-          "country": regCountryController.text.trim(),
+          "state": selectedState.value,
+          "country": selectedCountry.value,
           "altEmail": regAltEmailController.text.trim(),
           "createdAt": FieldValue.serverTimestamp(),
           "appId":""
@@ -660,8 +714,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     String email = regEmailController.text.trim();
     String mobile1 = regMobile1Controller.text.trim();
     String city = regCityController.text.trim();
-    String state = regStateController.text.trim();
-    String country = regCountryController.text.trim();
+    String state = selectedState.value;
+    String country = selectedCountry.value;
 
     if (username.isEmpty) {
       showCustomSnackbar(
@@ -730,8 +784,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     regMobile2Controller.clear();
     regAddressController.clear();
     regCityController.clear();
-    regStateController.clear();
-    regCountryController.clear();
+    selectedState.value = "";
+    selectedCountry.value = "";
     regAltEmailController.clear();
   }
 

@@ -384,42 +384,42 @@ class CompanySelectionScreen extends GetView<CompanySelectionController> {
 
           const SizedBox(height: 12),
 
-          // Secondary Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.createNewCompany(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    side: const BorderSide(color: Colors.white),
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.add_business, size: 18),
-                  label: const Text("New Company"),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Get.back(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    side: const BorderSide(color: Colors.white),
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.cancel_outlined, size: 18),
-                  label: const Text("Cancel"),
-                ),
-              ),
-            ],
-          ),
+          /// Secondary Actions
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: OutlinedButton.icon(
+          //         onPressed: () => controller.createNewCompany(),
+          //         style: OutlinedButton.styleFrom(
+          //           padding: const EdgeInsets.symmetric(vertical: 12),
+          //           shape: RoundedRectangleBorder(
+          //             borderRadius: BorderRadius.circular(16),
+          //           ),
+          //           side: const BorderSide(color: Colors.white),
+          //           foregroundColor: Colors.white,
+          //         ),
+          //         icon: const Icon(Icons.add_business, size: 18),
+          //         label: const Text("New Company"),
+          //       ),
+          //     ),
+          //     const SizedBox(width: 12),
+          //     Expanded(
+          //       child: OutlinedButton.icon(
+          //         onPressed: () => Get.back(),
+          //         style: OutlinedButton.styleFrom(
+          //           padding: const EdgeInsets.symmetric(vertical: 12),
+          //           shape: RoundedRectangleBorder(
+          //             borderRadius: BorderRadius.circular(16),
+          //           ),
+          //           side: const BorderSide(color: Colors.white),
+          //           foregroundColor: Colors.white,
+          //         ),
+          //         icon: const Icon(Icons.cancel_outlined, size: 18),
+          //         label: const Text("Cancel"),
+          //       ),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );

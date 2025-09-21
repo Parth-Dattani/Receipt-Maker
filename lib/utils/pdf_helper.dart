@@ -1635,8 +1635,8 @@ class InvoiceHelper {
                       decoration: pw.BoxDecoration(color: PdfColors.blue50),
                       children: [
                         pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('#', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('DESCRIPTION', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
                         pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('CHALLAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
+                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('DESCRIPTION', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
                         pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('QTY', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.center)),
                         pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('RATE', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.right)),
                         pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('AMOUNT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.right)),
@@ -1658,14 +1658,14 @@ class InvoiceHelper {
 // invoiceItem type handling
                       try {
                         if (value is InvoiceItem) {
-                          itemName = (value.itemName ?? value.description ?? '').toString();
                           challanId = (value.challanId ?? '').toString();
+                          itemName = (value.itemName ?? value.description ?? '').toString();
                           qty = value.quantity;
                           rate = (value.rate ?? 0).toDouble();
                           amount = (value.totalPrice ?? value.amount ?? (qty * rate)).toDouble();
                         } else if (value is Invoice) {
-                          itemName = (value.itemName ?? '').toString();
                           challanId = (value.challanId ?? '').toString();
+                          itemName = (value.itemName ?? '').toString();
                           qty = value.qty ?? 0;
                           rate = (value.price ?? 0).toDouble();
                           amount = (value.totalAmount ?? (qty * rate)).toDouble();
@@ -1698,8 +1698,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(color: isEven ? PdfColors.white : PdfColors.grey50),
                         children: [
                           pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('${index + 1}', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(itemName, style: pw.TextStyle(fontSize: 10))),
                           pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(challanId.isNotEmpty ? challanId : '-', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
+                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(itemName, style: pw.TextStyle(fontSize: 10))),
                           pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('$qty', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
                           pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(rate.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
                           pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(amount.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
@@ -3481,6 +3481,399 @@ class InvoiceHelper {
   }
 
 
+  /// Generate PDF for Invoice OR Challan
+  static Future<File> generateDocument({
+    required bool isChallan,
+    Invoice? invoice,
+    Challan? challan,
+    List<InvoiceItem>? invoiceItems,
+    List<ChallanItem>? challanItems,
+    required Map<String, dynamic> companyData,
+  }) async {
+    final pdf = pw.Document();
+
+    // Load font
+    final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+    final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+
+    final theme = pw.ThemeData.withFont(
+      base: customFont,
+      bold: customFont,
+      italic: customFont,
+      boldItalic: customFont,
+    );
+
+    // Company details
+    String companyName = companyData["companyName"] ?? 'Your Company Name';
+    String companyAddress = companyData["address"] ?? '123 Business Street';
+    String companyCity = companyData["city"] ?? 'City';
+    String companyState = companyData["state"] ?? 'State';
+    String companyPin = companyData["pincode"] ?? 'PIN Code';
+    String companyPhone = companyData["phone"] ?? '+91 XXXXXXXXXX';
+    String companyEmail = companyData["userEmail"] ?? 'company@email.com';
+    String companyGst = companyData["gst"] ?? 'GSTIN: XXXXXXXXXXXXXX';
+    String companyBank = companyData["bankName"] ?? 'Bank Name';
+    String companyAccount = companyData["accountNumber"] ?? 'Account Number';
+    String companyIfsc = companyData["ifsc"] ?? 'IFSC Code';
+    String companyPan = companyData["pan"] ?? 'PAN Number';
+
+    // Title
+    final String docTitle = isChallan ? "CHALLAN" : "INVOICE";
+    final String docId = isChallan ? challan!.challanId : invoice!.invoiceId;
+    final DateTime docDate = isChallan
+        ? challan!.challanDate ?? DateTime.now()
+        : invoice!.issueDate ?? DateTime.now();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        theme: theme,
+        margin: const pw.EdgeInsets.all(25),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(20),
+                decoration: pw.BoxDecoration(
+                  gradient: pw.LinearGradient(
+                    colors: isChallan
+                        ? [PdfColors.indigo700, PdfColors.indigo900]
+                        : [PdfColors.blue700, PdfColors.blue900],
+                    begin: pw.Alignment.topLeft,
+                    end: pw.Alignment.bottomRight,
+                  ),
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    // Company Info
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(companyName.toUpperCase(),
+                            style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontSize: 18,
+                                fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 5),
+                        pw.Text(companyAddress,
+                            style: const pw.TextStyle(
+                                color: PdfColors.white, fontSize: 10)),
+                        pw.Text('$companyCity, $companyState - $companyPin',
+                            style: const pw.TextStyle(
+                                color: PdfColors.white, fontSize: 10)),
+                        pw.SizedBox(height: 3),
+                        pw.Text('📞 $companyPhone | 📧 $companyEmail',
+                            style: const pw.TextStyle(
+                                color: PdfColors.white, fontSize: 9)),
+                        pw.Text(companyGst,
+                            style: const pw.TextStyle(
+                                color: PdfColors.white, fontSize: 9)),
+                      ],
+                    ),
+                    // Badge
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 8),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.white,
+                        borderRadius: pw.BorderRadius.circular(20),
+                      ),
+                      child: pw.Column(
+                        children: [
+                          pw.Text(docTitle,
+                              style: pw.TextStyle(
+                                  color: isChallan
+                                      ? PdfColors.indigo800
+                                      : PdfColors.blue800,
+                                  fontSize: 16,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 3),
+                          pw.Text("#$docId",
+                              style: const pw.TextStyle(
+                                  color: PdfColors.grey700, fontSize: 10)),
+                          pw.Text(DateFormat('dd MMM yyyy').format(docDate),
+                              style: const pw.TextStyle(
+                                  color: PdfColors.grey600, fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // Customer Section
+              pw.Container(
+                padding: const pw.EdgeInsets.all(15),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey50,
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(isChallan ? "DELIVER TO:" : "BILL TO:",
+                        style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            color: isChallan
+                                ? PdfColors.indigo800
+                                : PdfColors.blue800,
+                            fontSize: 12)),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      isChallan
+                          ? challan!.customerName
+                          : invoice!.customerName,
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 12),
+                    ),
+                    if ((isChallan
+                        ? challan!.customerAddress
+                        : invoice!.customerAddress) !=
+                        null)
+                      pw.Text(
+                          isChallan
+                              ? challan!.customerAddress!
+                              : invoice!.customerAddress!,
+                          style: const pw.TextStyle(fontSize: 10)),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                        'Phone: ${isChallan ? challan!.customerMobile : invoice!.mobile}',
+                        style: const pw.TextStyle(fontSize: 9)),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // Items Table
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                ),
+                child: pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: const pw.BorderSide(
+                        color: PdfColors.grey200, width: 1),
+                    verticalInside: const pw.BorderSide(
+                        color: PdfColors.grey200, width: 1),
+                    left: pw.BorderSide.none,
+                    right: pw.BorderSide.none,
+                    top: pw.BorderSide.none,
+                    bottom: pw.BorderSide.none,
+                  ),
+                  columnWidths: isChallan
+                      ? {
+                    0: const pw.FlexColumnWidth(0.4),
+                    1: const pw.FlexColumnWidth(3),
+                    2: const pw.FlexColumnWidth(0.8),
+                  }
+                      : {
+                    0: pw.FlexColumnWidth(0.4),
+                    1: pw.FlexColumnWidth(2.5),
+                    2: pw.FlexColumnWidth(0.6),
+                    3: pw.FlexColumnWidth(1),
+                    4: pw.FlexColumnWidth(1),
+                  },
+                  children: [
+                    // Header Row
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: isChallan
+                            ? PdfColors.indigo50
+                            : PdfColors.blue50,
+                      ),
+                      children: [
+                        _tableHeader('#'),
+                        _tableHeader('DESCRIPTION'),
+                        _tableHeader('QTY', align: pw.TextAlign.center),
+                        if (!isChallan) _tableHeader('RATE', align: pw.TextAlign.right),
+                        if (!isChallan) _tableHeader('AMOUNT', align: pw.TextAlign.right),
+                      ],
+                    ),
+
+                    // Items
+                    ...(isChallan ? challanItems! : invoiceItems!)
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                      int index = entry.key;
+                      final item = entry.value;
+                      return pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: index % 2 == 0
+                              ? PdfColors.grey50
+                              : PdfColors.white,
+                        ),
+                        children: [
+                          _tableCell('${index + 1}',
+                              align: pw.TextAlign.center),
+                          _tableCell(isChallan
+                              ? (item as ChallanItem).itemName ?? ''
+                              : (item as InvoiceItem).itemName ?? ''),
+                          _tableCell(
+                              '${isChallan ? (item as ChallanItem).quantity : (item as InvoiceItem).quantity}',
+                              align: pw.TextAlign.center),
+                          if (!isChallan)
+                            _tableCell(
+                                '₹${(item as InvoiceItem).rate?.toStringAsFixed(2) ?? '0.00'}',
+                                align: pw.TextAlign.right),
+                          if (!isChallan)
+                            _tableCell(
+                                '₹${((item as InvoiceItem).rate ?? 0) * (item.quantity ?? 1)}',
+                                align: pw.TextAlign.right),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 20),
+
+              if(isChallan)
+               pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Notes Section
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Container(
+                      padding: pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'NOTES',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blue800,
+                              fontSize: 11,
+                            ),
+                          ),
+                          pw.SizedBox(height: 8),
+                          pw.Text(
+                            (invoice!.notes! ?? '').isNotEmpty ? invoice.notes! : 'Thank you for your business!',
+                            style: pw.TextStyle(fontSize: 10),
+                          ),
+                          pw.SizedBox(height: 15),
+                          pw.Text(
+                            'BANK DETAILS',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blue800,
+                              fontSize: 11,
+                            ),
+                          ),
+                          pw.SizedBox(height: 5),
+                          pw.Text('Bank: $companyBank!', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('A/C: $companyAccount!', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('IFSC: $companyIfsc', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('PAN: $companyPan', style: pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  pw.SizedBox(width: 20),
+
+                  // Totals
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Container(
+                      padding: pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.blue50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.blue200, width: 1),
+                      ),
+                      child: pw.Column(
+                        children: [
+                          //_buildTotalRow('Subtotal', 'invoice.subtotal' ),
+                          if ((invoice!.taxAmount! ?? 0) > 0)
+                            _buildTotalRow('Tax (${invoice!.taxRate?.toStringAsFixed(1) ?? '0.0'}%)', invoice.taxAmount ?? 0),
+                          if ((invoice.discountAmount ?? 0) > 0)
+                            _buildTotalRow('Discount', -(invoice.discountAmount ?? 0), isDiscount: true),
+                          pw.Divider(color: PdfColors.blue300, height: 20),
+                          _buildTotalRow(
+                            'TOTAL AMOUNT ',
+                            invoice.totalAmount!,
+                            isTotal: true,
+                            isBold: true,
+                          ),
+                          pw.SizedBox(height: 15),
+                          pw.Container(
+                            padding: pw.EdgeInsets.all(8),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.blue100,
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                            child: pw.Text(
+                              'Amount in Words:\n${_numberToWords(invoice.totalAmount!)}',
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                color: PdfColors.blue800,
+                              ),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // Footer
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  pw.Column(children: [
+                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                    pw.SizedBox(height: 5),
+                    pw.Text("Customer Signature",
+                        style: const pw.TextStyle(
+                            fontSize: 9, color: PdfColors.grey600)),
+                  ]),
+                  pw.Column(children: [
+                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                    pw.SizedBox(height: 5),
+                    pw.Text("Authorized Signature",
+                        style: const pw.TextStyle(
+                            fontSize: 9, color: PdfColors.grey600)),
+                  ]),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Save File
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/${isChallan ? "challan" : "invoice"}_$docId.pdf';
+    final file = File(path);
+    await file.writeAsBytes(await pdf.save());
+    return file;
+  }
+
 
 
   static Future<File> generate(Invoice invoice, List<InvoiceItem> invoiceItems, Map<String, dynamic> companyData) async {
@@ -4087,6 +4480,338 @@ class InvoiceHelper {
     await file.writeAsBytes(await pdf.save());
    /// await Share.shareXFiles([XFile(path)], text: 'Invoice - ${invoice.invoiceId}');
     return file;
+  }
+
+  static Future<File> generateChallan(
+      Challan challan, List<ChallanItem> challanItems, Map<String, dynamic> companyData) async {
+    final pdf = pw.Document();
+
+    // Load custom font (reuse same)
+    final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+    final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+
+    final theme = pw.ThemeData.withFont(
+      base: customFont,
+      bold: customFont,
+      italic: customFont,
+      boldItalic: customFont,
+    );
+
+    String companyName = companyData["companyName"] ?? 'Your Company Name';
+    String companyAddress = companyData["address"] ?? '123 Business Street';
+    String companyCity = companyData["city"] ?? 'City';
+    String companyState = companyData["state"] ?? 'State';
+    String companyPin = companyData["pincode"] ?? 'PIN Code';
+    String companyPhone = companyData["phone"] ?? '+91 XXXXXXXXXX';
+    String companyEmail = companyData["userEmail"] ?? 'company@email.com';
+    String companyGst = companyData["gst"] ?? 'GSTIN: XXXXXXXXXXXXXX';
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        theme: theme,
+        margin: pw.EdgeInsets.all(25),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // 🔵 Header
+              pw.Container(
+                width: double.infinity,
+                padding: pw.EdgeInsets.all(20),
+                decoration: pw.BoxDecoration(
+                  gradient: pw.LinearGradient(
+                    colors: [PdfColors.blue700, PdfColors.blue900],
+                    begin: pw.Alignment.topLeft,
+                    end: pw.Alignment.bottomRight,
+                  ),
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Company Info
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(companyName.toUpperCase(),
+                            style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontSize: 18,
+                                fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 5),
+                        pw.Text(companyAddress,
+                            style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                        pw.Text('$companyCity, $companyState - $companyPin',
+                            style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                        pw.SizedBox(height: 3),
+                        pw.Text('📞 $companyPhone | 📧 $companyEmail',
+                            style: pw.TextStyle(color: PdfColors.white, fontSize: 9)),
+                        pw.Text(companyGst,
+                            style: pw.TextStyle(color: PdfColors.white, fontSize: 9)),
+                      ],
+                    ),
+
+                    // 🔵 Challan Badge
+                    pw.Container(
+                      padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.white,
+                        borderRadius: pw.BorderRadius.circular(20),
+                      ),
+                      child: pw.Column(
+                        children: [
+                          pw.Text("CHALLAN",
+                              style: pw.TextStyle(
+                                  color: PdfColors.blue800,
+                                  fontSize: 16,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 3),
+                          pw.Text('#${challan.challanId}',
+                              style: pw.TextStyle(color: PdfColors.grey700, fontSize: 10)),
+                          pw.Text(
+                              DateFormat('dd MMM yyyy')
+                                  .format(challan.challanDate ?? DateTime.now()),
+                              style: pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // 🔵 Customer Info
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // From (Company)
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text("FROM:",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColors.blue800,
+                                  fontSize: 12)),
+                          pw.SizedBox(height: 8),
+                          pw.Text(companyName,
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                          pw.Text(companyAddress, style: pw.TextStyle(fontSize: 10)),
+                          pw.Text('$companyCity, $companyState - $companyPin',
+                              style: pw.TextStyle(fontSize: 10)),
+                          pw.SizedBox(height: 3),
+                          pw.Text('Phone: $companyPhone', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('Email: $companyEmail', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text('GST: $companyGst', style: pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  pw.SizedBox(width: 15),
+
+                  // To (Customer)
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text("TO:",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColors.blue800,
+                                  fontSize: 12)),
+                          pw.SizedBox(height: 8),
+                          pw.Text(challan.customerName,
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                          if ((challan.customerAddress ?? '').isNotEmpty)
+                            pw.Text(challan.customerAddress!,
+                                style: pw.TextStyle(fontSize: 10)),
+                          pw.SizedBox(height: 3),
+                          pw.Text('Phone: ${challan.customerMobile}',
+                              style: pw.TextStyle(fontSize: 9)),
+                          if ((challan.customerEmail ?? '').isNotEmpty)
+                            pw.Text('Email: ${challan.customerEmail}',
+                                style: pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // 🔵 Items Table
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                ),
+                child: pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+                    verticalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+                    left: pw.BorderSide.none,
+                    right: pw.BorderSide.none,
+                    top: pw.BorderSide.none,
+                    bottom: pw.BorderSide.none,
+                  ),
+                  columnWidths: {
+                    0: pw.FlexColumnWidth(0.4),
+                    1: pw.FlexColumnWidth(2.5),
+                    2: pw.FlexColumnWidth(0.6),
+                    3: pw.FlexColumnWidth(1),
+                    4: pw.FlexColumnWidth(1),
+                  },
+                  children: [
+                    // Header Row
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.blue50,
+                        borderRadius: pw.BorderRadius.only(
+                          topLeft: pw.Radius.circular(8),
+                          topRight: pw.Radius.circular(8),
+                        ),
+                      ),
+                      children: [
+                        _tableHeader('#'),
+                        _tableHeader('DESCRIPTION'),
+                        _tableHeader('QTY'),
+                        _tableHeader('RATE', align: pw.TextAlign.right),
+                        _tableHeader('AMOUNT', align: pw.TextAlign.right),
+                      ],
+                    ),
+
+                    // Items Rows
+                    ...challanItems.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      ChallanItem item = entry.value;
+
+                      return pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: index % 2 == 0 ? PdfColors.grey50 : PdfColors.white,
+                        ),
+                        children: [
+                          _tableCell('${index + 1}', align: pw.TextAlign.center),
+                          _tableCell(item.itemName ?? 'Item ${index + 1}'),
+                          _tableCell('${item.quantity ?? 1}',
+                              align: pw.TextAlign.center),
+                          _tableCell('₹${(item.price ?? 0.0).toStringAsFixed(2)}',
+                              align: pw.TextAlign.right),
+                          _tableCell(
+                              '₹${((item.price ?? 0.0) * (item.quantity ?? 1)).toStringAsFixed(2)}',
+                              align: pw.TextAlign.right),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 20),
+
+              // 🔵 Totals Section
+              pw.Container(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    _buildTotalRow('Subtotal', challan.subtotal ?? 0),
+                    _buildTotalRow('Tax (${challan.taxRate?.toStringAsFixed(1) ?? '0'}%)',
+                        challan.taxAmount ?? 0),
+                    pw.Divider(),
+                    _buildTotalRow('Total', challan.subtotal ?? 0,
+                        isBold: true, isTotal: true),
+                    pw.SizedBox(height: 10),
+                    pw.Text(
+                      "Amount in words: ${_numberToWords(challan.subtotal ?? 0)} only",
+                      style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                    ),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 25),
+
+              // 🔵 Footer
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  pw.Column(children: [
+                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                    pw.SizedBox(height: 5),
+                    pw.Text('Customer Signature',
+                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  ]),
+                  pw.Column(children: [
+                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                    pw.SizedBox(height: 5),
+                    pw.Text('Authorized Signature',
+                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  ]),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Save File
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/challan_${challan.challanId}.pdf';
+    final file = File(path);
+
+    await file.writeAsBytes(await pdf.save());
+    return file;
+  }
+
+
+
+
+  static pw.Widget _tableHeader(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(12),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.indigo800,
+          fontSize: 11,
+        ),
+        textAlign: align,
+      ),
+    );
+  }
+
+  static pw.Widget _tableCell(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(10),
+      child: pw.Text(
+        text,
+        style: const pw.TextStyle(fontSize: 10),
+        textAlign: align,
+      ),
+    );
   }
 
 

@@ -102,7 +102,7 @@ class SplashController extends BaseController{
   // }
   //
   ///
-  void goToNext() async {
+  void goToNext2009() async {
     await Future.delayed(const Duration(seconds: 3));
 
     final user = FirebaseAuth.instance.currentUser;
@@ -173,15 +173,15 @@ class SplashController extends BaseController{
 
       if (userDoc.exists) {
         final userData = userDoc.data()!;
-        final hasAppId = userData.containsKey('appId') &&
-            userData['appId'] != null;
-        final hasAccessKey = userData.containsKey('accessKey') &&
-            userData['accessKey'] != null;
+        // final hasAppId = userData.containsKey('appId') &&
+        //     userData['appId'] != null;
+        // final hasAccessKey = userData.containsKey('accessKey') &&
+        //     userData['accessKey'] != null;
         final hasSpreadsheetId = userData.containsKey('spreadsheetId') &&
             userData['spreadsheetId'] != null;
 
-        print("User has AppSheet App ID: $hasAppId");
-        print("User has AppSheet Access Key: $hasAccessKey");
+        // print("User has AppSheet App ID: $hasAppId");
+        // print("User has AppSheet Access Key: $hasAccessKey");
         print("User has AppSheet SpreadsheetId  Key: $hasSpreadsheetId");
 
         if (hasSpreadsheetId) {
@@ -218,6 +218,82 @@ class SplashController extends BaseController{
       Get.offAllNamed(CompanyRegistrationScreen.pageId);
     }
   }
+
+  void goToNext() async {
+    await Future.delayed(const Duration(seconds: 3));
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    // ✅ Step 1: User not logged in → go to Auth screen
+    if (user == null) {
+      print("No user logged in, going to auth screen");
+      Get.offAllNamed(AuthScreen.pageId);
+      return;
+    }
+
+    print("Logged-in User: ${user.uid} | Email: ${user.email}");
+    AppConstants.userId = user.uid;
+
+    try {
+      // ✅ Step 2: Check if company exists
+      final companies = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .collection("companies")
+          .limit(1)
+          .get();
+
+      if (companies.docs.isEmpty) {
+        print("No company found, going to company registration");
+        Get.offAllNamed(CompanyRegistrationScreen.pageId);
+        return;
+      }
+
+      final companyId = companies.docs.first.id;
+      await sharedPreferencesHelper.storePrefData("CompanyId", companyId);
+      print("Company found → ID: $companyId");
+
+      /// Load company settings (like challan flag)
+      await loadCompanySettings(companyId);
+
+      /// ✅ Step 3: Check if user has AppSheet credentials
+      final userDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        print("User document missing → go to ConnectAppSheetScreen");
+        //Get.offAll(() => ConnectAppSheetScreen());
+        return;
+      }
+
+      final userData = userDoc.data() ?? {};
+      final hasSpreadsheetId = userData['spreadsheetId'] != null;
+
+      if (hasSpreadsheetId) {
+        // Save AppSheet credentials in local storage
+        // await sharedPreferencesHelper.storePrefData("appSheetAppId", userData['appId']);
+        // await sharedPreferencesHelper.storePrefData("appSheetAccessKey", userData['accessKey']);
+        await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
+
+        // AppConstants.appId = userData['appId'].toString();
+        // AppConstants.accessKey = userData['accessKey'].toString();
+        AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+
+        print("✅ Company + AppSheet credentials found → going to Dashboard");
+        print("SperdSheetID----: ${AppConstants.spreadsheetId}");
+        Get.offAllNamed(DashboardScreen.pageId);
+      } else {
+        print("Company exists but no AppSheet credentials → redirecting to ConnectAppSheetScreen");
+       // Get.offAll(() => ConnectAppSheetScreen());
+      }
+    } catch (e) {
+      print("Error checking company or user data: $e");
+      Get.offAllNamed(CompanyRegistrationScreen.pageId);
+    }
+  }
+
 
   // Future<void> loadCompanySettings(String companyId) async {
   //   print("-------------cmpyID:-------${companyId}");

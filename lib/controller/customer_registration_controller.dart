@@ -19,13 +19,16 @@ class CustomerRegistrationController extends GetxController {
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final cityController = TextEditingController();
-  final stateController = TextEditingController();
-  final countryController = TextEditingController();
+  // final stateController = TextEditingController();
+  // final countryController = TextEditingController();
   final pincodeController = TextEditingController();
   final gstController = TextEditingController();
   final panController = TextEditingController();
   final mobile1Controller = TextEditingController();
   final mobile2Controller = TextEditingController();
+  var selectedCountry = ''.obs;
+  var selectedState = ''.obs;
+
 
   // New Controllers
   final businessNameController = TextEditingController();
@@ -52,6 +55,50 @@ class CustomerRegistrationController extends GetxController {
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final List<String> countries = ['USA', 'Canada', 'India', 'UK', 'Australia'];
+
+  final Map<String, List<String>> countryStates = {
+    'India': [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+      'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+      'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+      'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+      'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+      'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi',
+      'Jammu and Kashmir', 'Ladakh',
+    ],
+    'United States': [
+      'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+      'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+      'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+      'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
+      'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+      'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+      'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+      'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
+      'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+      'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming',
+    ],
+    'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+    'Canada': [
+      'Alberta', 'British Columbia', 'Manitoba', 'New Brunswick',
+      'Newfoundland and Labrador', 'Northwest Territories', 'Nova Scotia',
+      'Nunavut', 'Ontario', 'Prince Edward Island', 'Quebec',
+      'Saskatchewan', 'Yukon',
+    ],
+    'Australia': [
+      'New South Wales', 'Victoria', 'Queensland', 'Western Australia',
+      'South Australia', 'Tasmania', 'Australian Capital Territory',
+      'Northern Territory',
+    ],
+  };
+
+  List<String> getStatesForCountry() {
+    if (selectedCountry.value.isEmpty) {
+      return [];
+    }
+    return countryStates[selectedCountry.value] ?? [];
+  }
 
   @override
   void onInit() {
@@ -133,8 +180,8 @@ class CustomerRegistrationController extends GetxController {
         if (nameController.text.isNotEmpty) filledFields++;
         if (addressController.text.isNotEmpty) filledFields++;
         if (cityController.text.isNotEmpty) filledFields++;
-        if (stateController.text.isNotEmpty) filledFields++;
-        if (countryController.text.isNotEmpty) filledFields++;
+        if (selectedState.isNotEmpty) filledFields++;
+        if (selectedCountry.isNotEmpty) filledFields++;
         if (pincodeController.text.isNotEmpty) filledFields++;
         if (mobile1Controller.text.isNotEmpty) filledFields++;
 
@@ -279,8 +326,8 @@ class CustomerRegistrationController extends GetxController {
             "name": nameController.text.trim(),
             "address": addressController.text.trim(),
             "city": cityController.text.trim(),
-            "state": stateController.text.trim(),
-            "country": countryController.text.trim(),
+            "state": selectedState.value,
+            "country": selectedCountry.value,
             "pincode": pincodeController.text.trim(),
             "gst": gstController.text.trim().toUpperCase(),
             "pan": panController.text.trim().toUpperCase(),
@@ -343,8 +390,8 @@ class CustomerRegistrationController extends GetxController {
             "name": nameController.text.trim(),
             "address": addressController.text.trim(),
             "city": cityController.text.trim(),
-            "state": stateController.text.trim(),
-            "country": countryController.text.trim(),
+            "state": selectedState.value,
+            "country": selectedCountry.value,
             "pincode": pincodeController.text.trim(),
             "gst": gstController.text.trim(),
             "pan": panController.text.trim(),
@@ -386,8 +433,8 @@ class CustomerRegistrationController extends GetxController {
         nameController.clear();
         addressController.clear();
         cityController.clear();
-        stateController.clear();
-        countryController.clear();
+        selectedState.value = "";
+        selectedCountry.value = "";
         pincodeController.clear();
         gstController.clear();
         panController.clear();
@@ -407,8 +454,8 @@ class CustomerRegistrationController extends GetxController {
         nameController.dispose();
         addressController.dispose();
         cityController.dispose();
-        stateController.dispose();
-        countryController.dispose();
+        // stateController.dispose();
+        // countryController.dispose();
         pincodeController.dispose();
         gstController.dispose();
         panController.dispose();

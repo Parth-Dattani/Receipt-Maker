@@ -418,96 +418,6 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
     );
   }
 
-
-  // // Add shimmer loading effect
-  // Widget _buildShimmerLoading() {
-  //   return ListView.builder(
-  //     padding: EdgeInsets.only(bottom: 80),
-  //     itemCount: 6, // Show 6 shimmer items
-  //     itemBuilder: (context, index) {
-  //       return _buildShimmerInvoiceListItem();
-  //     },
-  //   );
-  // }
-  //
-  // // Shimmer effect for invoice list items
-  // Widget _buildShimmerInvoiceListItem() {
-  //   return Card(
-  //     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-  //     elevation: 2,
-  //     child: ListTile(
-  //       leading: Shimmer.fromColors(
-  //         baseColor: Colors.grey.shade300,
-  //         highlightColor: Colors.grey.shade100,
-  //         child: CircleAvatar(
-  //           backgroundColor: Colors.grey,
-  //           child: Icon(
-  //             Icons.receipt,
-  //             color: Colors.white,
-  //             size: 20,
-  //           ),
-  //         ),
-  //       ),
-  //       title: Shimmer.fromColors(
-  //         baseColor: Colors.grey.shade300,
-  //         highlightColor: Colors.grey.shade100,
-  //         child: Container(
-  //           width: 100,
-  //           height: 16,
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey,
-  //             borderRadius: BorderRadius.circular(8),
-  //           ),
-  //         ),
-  //       ),
-  //       subtitle: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           SizedBox(height: 8),
-  //           Shimmer.fromColors(
-  //             baseColor: Colors.grey.shade300,
-  //             highlightColor: Colors.grey.shade100,
-  //             child: Container(
-  //               width: 150,
-  //               height: 14,
-  //               decoration: BoxDecoration(
-  //                 color: Colors.grey,
-  //                 borderRadius: BorderRadius.circular(6),
-  //               ),
-  //             ),
-  //           ),
-  //           SizedBox(height: 8),
-  //           Shimmer.fromColors(
-  //             baseColor: Colors.grey.shade300,
-  //             highlightColor: Colors.grey.shade100,
-  //             child: Container(
-  //               width: 200,
-  //               height: 12,
-  //               decoration: BoxDecoration(
-  //                 color: Colors.grey,
-  //                 borderRadius: BorderRadius.circular(6),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       trailing: Shimmer.fromColors(
-  //         baseColor: Colors.grey.shade300,
-  //         highlightColor: Colors.grey.shade100,
-  //         child: Container(
-  //           width: 30,
-  //           height: 30,
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey,
-  //             shape: BoxShape.circle,
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Add shimmer effect for statistics section during loading
   Widget _buildStatisticsSection() {
     return Obx(() => Container(
       padding: EdgeInsets.all(16),
@@ -549,47 +459,6 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
     );
   }
 
-  // // Shimmer effect for statistics
-  // Widget _buildShimmerStatistics() {
-  //   return Row(
-  //     mainAxisAlignment: MainAxisAlignment.spaceAround,
-  //     children: List.generate(4, (index) => _buildShimmerStatItem()),
-  //   );
-  // }
-  //
-  // Widget _buildShimmerStatItem() {
-  //   return Column(
-  //     children: [
-  //       Shimmer.fromColors(
-  //         baseColor: Colors.grey.shade300,
-  //         highlightColor: Colors.grey.shade100,
-  //         child: Container(
-  //           width: 40,
-  //           height: 16,
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey,
-  //             borderRadius: BorderRadius.circular(8),
-  //           ),
-  //         ),
-  //       ),
-  //       SizedBox(height: 4),
-  //       Shimmer.fromColors(
-  //         baseColor: Colors.grey.shade300,
-  //         highlightColor: Colors.grey.shade100,
-  //         child: Container(
-  //           width: 30,
-  //           height: 12,
-  //           decoration: BoxDecoration(
-  //             color: Colors.grey,
-  //             borderRadius: BorderRadius.circular(6),
-  //           ),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
-
-  // Rest of your existing code remains the same...
   Widget _buildSearchFilterSection() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -816,26 +685,26 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                         ],
                       ),
                     ),
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 20, color: Colors.green.shade700),
-                          SizedBox(width: 12),
-                          Text('Edit', style: TextStyle(color: Colors.green.shade700)),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 20, color: Colors.red.shade700),
-                          SizedBox(width: 12),
-                          Text('Delete', style: TextStyle(color: Colors.red.shade700)),
-                        ],
-                      ),
-                    ),
+                    // PopupMenuItem(
+                    //   value: 'edit',
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(Icons.edit, size: 20, color: Colors.green.shade700),
+                    //       SizedBox(width: 12),
+                    //       Text('Edit', style: TextStyle(color: Colors.green.shade700)),
+                    //     ],
+                    //   ),
+                    // ),
+                    // PopupMenuItem(
+                    //   value: 'delete',
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(Icons.delete, size: 20, color: Colors.red.shade700),
+                    //       SizedBox(width: 12),
+                    //       Text('Delete', style: TextStyle(color: Colors.red.shade700)),
+                    //     ],
+                    //   ),
+                    // ),
                   ],
                   onSelected: (value) {
                     switch (value) {
@@ -845,12 +714,12 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                       case 'export_pdf':
                         controller.exportInvoiceAsPdf(invoice);
                         break;
-                      case 'edit':
-                        controller.editInvoice(invoice);
-                        break;
-                      case 'delete':
-                        controller.deleteInvoice(invoice);
-                        break;
+                      // case 'edit':
+                      //   controller.editInvoice(invoice);
+                      //   break;
+                      // case 'delete':
+                      //   controller.deleteInvoice(invoice);
+                      //   break;
                     }
                   },
                 ),

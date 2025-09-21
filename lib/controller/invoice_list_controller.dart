@@ -282,7 +282,10 @@ class InvoiceListController extends BaseController {
 
 
       // Generate PDF with the complete invoice data including items
-      final pdfFile = await InvoiceHelper.generate(invoice, invoiceItems, companyData.value);
+      final pdfFile = await InvoiceHelper.generate(
+          invoice,
+           invoiceItems,
+           companyData.value);
 
       // Open the PDF file
       ///await OpenFile.open(pdfFile.path);
@@ -311,8 +314,6 @@ class InvoiceListController extends BaseController {
       isLoading.value = false;
     }
   }
-
-
 
 
   double get totalRevenue {

@@ -279,36 +279,6 @@ class ItemController extends GetxController {
     // });
   }
 
-  // Future<void> fetchItems2i() async {
-  //   try {
-  //     isLoading.value = true;
-  //     final items = await RemoteService.getItems();
-  //     print("Fetched items: ${items.length}");
-  //
-  //     /// Debug each item
-  //     for (var item in items) {
-  //       print("Item: ${item.itemName}, ID: ${item.itemId}, Price: ${item.price}");
-  //     }
-  //
-  //
-  //     itemList.assignAll(items);
-  //     print("itemLListLengt------:${items.length}");
-  //   } catch (e) {
-  //     print("-----Error on fetchItems() in Controller,,,, ${e.toString()}");
-  //
-  //     print("Stack trace: ${e is Error ? (e as Error).stackTrace : ''}");
-  //
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Failed to load items: $e",
-  //       baseColor: Colors.red.shade700,
-  //       icon: Icons.error_outline,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
-
 
 /// Updated controller method
   Future<void> fetchItems2() async {
@@ -376,46 +346,6 @@ class ItemController extends GetxController {
     print("getCurrentUserId() returning: '$userId'");
     return userId;
   }
-
-  // Future<void> fetchItems() async {
-  //   print("=== CONTROLLER: Starting fetchItems ===");
-  //   print("AppConstants.userId: ${AppConstants.userId}");
-  //
-  //   try {
-  //     isLoading.value = true;
-  //
-  //     // Clear existing items first
-  //     itemList.clear();
-  //
-  //     print("Calling RemoteService.getUserItems...");
-  //     final items = await RemoteService.getUserItems(AppConstants.userId);
-  //
-  //     print("=== CONTROLLER: Received ${items.length} items ===");
-  //     for (int i = 0; i < items.length; i++) {
-  //       print("Item $i: ${items[i].toMap()}");
-  //     }
-  //
-  //     itemList.assignAll(items);
-  //     print("=== CONTROLLER: itemList length after assignAll: ${itemList.length} ===");
-  //
-  //     // Trigger UI update
-  //     update();
-  //
-  //   } catch (e) {
-  //     print("=== CONTROLLER ERROR: ${e.toString()} ===");
-  //     print("Stack trace: ${e.toString()}");
-  //
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Failed to load items: $e",
-  //       baseColor: Colors.red.shade700,
-  //       icon: Icons.error_outline,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //     print("=== CONTROLLER: fetchItems completed ===");
-  //   }
-  // }
 
   void generateInvoiceIdIfNeeded() {
     if (currentInvoiceId.value.isEmpty) {
@@ -545,80 +475,6 @@ class ItemController extends GetxController {
     }
   }
 
-  // Future<bool> saveInvoice(List<Invoice> invoices, String userName, String phone) async {
-  //   if (invoices.isEmpty) {
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Cart is empty",
-  //       baseColor: Colors.red.shade700,
-  //       icon: Icons.error_outline,
-  //     );
-  //     return false;
-  //   }
-  //   isSavingInvoice.value = true;
-  //   try {
-  //     final String invoiceId = currentInvoiceId.value;
-  //
-  //     final invoicesWithUser = invoices.map((e) => Invoice(
-  //       invoiceId: invoiceId,
-  //       itemId: e.itemId,
-  //       itemName: e.itemName,
-  //       qty: e.qty,
-  //       price: e.price,
-  //       mobile: phone,
-  //       customerName: userName,
-  //     )).toList();
-  //
-  //     print("Sending invoice data: ${invoicesWithUser.map((e) => e.toMap()).toList()}");
-  //     await GoogleSheetService.addInvoice(invoicesWithUser, AppConstants.userId);
-  //
-  //     // Update stock after successful invoice
-  //     await _updateStockAfterSale(invoices);
-  //
-  //     showCustomSnackbar(
-  //       title: "Success",
-  //       message: "Invoice saved successfully!",
-  //       baseColor: AppColors.darkGreenColor,
-  //       icon: Icons.check_circle_outline,
-  //     );
-  //     clearCart();
-  //     return true;
-  //   } catch (e) {
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Failed to save invoice: $e",
-  //       baseColor: Colors.red.shade700,
-  //       icon: Icons.error_outline,
-  //     );
-  //     print("Save invoice error: $e");
-  //     return false;
-  //   } finally {
-  //     isSavingInvoice.value = false;
-  //   }
-  // }
-
-  // Future<void> _updateStockAfterSale(List<Invoice> soldItems) async {
-  //   for (final soldItem in soldItems) {
-  //     final itemIndex = itemList.indexWhere((item) => item.itemId == soldItem.itemId);
-  //     if (itemIndex != -1) {
-  //       final item = itemList[itemIndex];
-  //       if (item.currentStock != -1) { // Don't update unlimited stock items
-  //         final newStock = item.currentStock - soldItem.qty!;
-  //         itemList[itemIndex] = item.copyWith(currentStock: newStock);
-  //
-  //         // Update in database
-  //         try {
-  //           await RemoteService.updateItemStock(item.itemId, newStock);
-  //         } catch (e) {
-  //           print("Failed to update stock for ${item.itemName}: $e");
-  //         }
-  //       }
-  //     }
-  //   }
-  //   itemList.refresh();
-  // }
-  //
-
   Future<void> editItem({
     required String itemId,
     required String newName,
@@ -693,25 +549,22 @@ class ItemController extends GetxController {
     }
   }
 
-  Future<void> deleteItem({
-    required String itemId,
-  }) async {
-    print("=== DELETE ITEM DEBUG ===");
-    print("ItemId: $itemId");
 
+  Future<void> updateItemStatus({
+    required String itemId,
+    required bool isActive,
+  }) async {
     try {
       isLoading.value = true;
 
-      // Find the current item to ensure we have the right one
       final currentIndex = itemList.indexWhere((item) => item.itemId == itemId);
       if (currentIndex == -1) {
         throw Exception("Item not found in local list");
       }
 
       final currentItem = itemList[currentIndex];
-      print("Found current item: ${currentItem.itemName}");
 
-      // Create updated item with isActive = false (soft delete)
+      // Create updated item with new status
       final updatedItem = Item(
         itemId: currentItem.itemId,
         itemName: currentItem.itemName,
@@ -719,137 +572,38 @@ class ItemController extends GetxController {
         unitOfMeasurement: currentItem.unitOfMeasurement,
         currentStock: currentItem.currentStock,
         detailRequirement: currentItem.detailRequirement,
-        isActive: false, // This is the key change - set to false for soft delete
+        isActive: isActive,
       );
 
-      print("Created updated item for soft delete: ${updatedItem.toMap()}");
-
-      // Call API to update (same as edit, just setting isActive = false)
+      // Update in Google Sheet (reuses your existing service)
       await GoogleSheetService.editItemAlternative3(AppConstants.userId, updatedItem);
-      print("API call successful - item marked as inactive");
 
-      // Remove from local list (since it's now inactive)
-      itemList.removeAt(currentIndex);
-      print("Removed item from local list at index $currentIndex");
-
-      // Force UI refresh
+      // Update in local list
+      itemList[currentIndex] = updatedItem;
       itemList.refresh();
-      print("Refreshed itemList");
 
       showCustomSnackbar(
         title: "Success",
-        message: "Item deleted successfully",
+        message: isActive
+            ? "Item restored successfully"
+            : "Item deleted successfully",
         baseColor: Colors.green,
         icon: Icons.check_circle,
       );
-      isLoading.value = false;
-
-      print("=== DELETE ITEM SUCCESS ===");
     } catch (e) {
-      print("=== DELETE ITEM ERROR ===");
-      print("Error details: $e");
-      print("Error type: ${e.runtimeType}");
-
       showCustomSnackbar(
         title: "Error",
-        message: "Failed to delete item: ${e.toString()}",
+        message: "Failed to update item: $e",
         baseColor: Colors.red,
         icon: Icons.error_outline,
       );
-      isLoading.value = false;
       rethrow;
     } finally {
       isLoading.value = false;
     }
   }
 
-  // // Method to restore a soft-deleted item (set isActive = true)
-  // Future<void> restoreItem({
-  //   required String itemId,
-  // }) async {
-  //   print("=== RESTORE ITEM DEBUG ===");
-  //   print("ItemId: $itemId");
-  //
-  //   try {
-  //     isLoading.value = true;
-  //
-  //     // You might need to fetch the item from the server first since it's not in local list
-  //     // Or maintain a separate list of deleted items
-  //
-  //     // For now, assuming you have the item data available
-  //     // You'll need to modify this based on how you want to handle deleted items
-  //
-  //     print("Attempting to restore item with ID: $itemId");
-  //
-  //     // Create a method to fetch deleted item data
-  //     final itemToRestore = await _fetchDeletedItem(itemId);
-  //
-  //     if (itemToRestore == null) {
-  //       throw Exception("Deleted item not found");
-  //     }
-  //
-  //     // Create updated item with isActive = true (restore)
-  //     final restoredItem = Item(
-  //       itemId: itemToRestore.itemId,
-  //       itemName: itemToRestore.itemName,
-  //       price: itemToRestore.price,
-  //       unitOfMeasurement: itemToRestore.unitOfMeasurement,
-  //       currentStock: itemToRestore.currentStock,
-  //       detailRequirement: itemToRestore.detailRequirement,
-  //       isActive: true, // Restore the item
-  //     );
-  //
-  //     print("Created restored item: ${restoredItem.toMap()}");
-  //
-  //     // Call API to update (set isActive = true)
-  //     await RemoteService.editItemAlternative3(AppConstants.userId, restoredItem);
-  //     print("API call successful - item restored");
-  //
-  //     // Add back to local list
-  //     itemList.add(restoredItem);
-  //     print("Added restored item back to local list");
-  //
-  //     // Force UI refresh
-  //     itemList.refresh();
-  //     print("Refreshed itemList");
-  //
-  //     showCustomSnackbar(
-  //       title: "Success",
-  //       message: "Item restored successfully",
-  //       baseColor: Colors.green,
-  //       icon: Icons.check_circle,
-  //     );
-  //
-  //     print("=== RESTORE ITEM SUCCESS ===");
-  //   } catch (e) {
-  //     print("=== RESTORE ITEM ERROR ===");
-  //     print("Error details: $e");
-  //     print("Error type: ${e.runtimeType}");
-  //
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Failed to restore item: ${e.toString()}",
-  //       baseColor: Colors.red,
-  //       icon: Icons.error_outline,
-  //     );
-  //
-  //     rethrow;
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
 
-/// Helper method to fetch deleted item data
-//   Future<Item?> _fetchDeletedItem(String itemId) async {
-//     try {
-//       // Fetch deleted items from server where isActive = false
-//       final deletedItems = await RemoteService.getDeletedItems(AppConstants.userId);
-//       return deletedItems.firstWhere((item) => item.itemId == itemId);
-//     } catch (e) {
-//       print("Error fetching deleted item: $e");
-//       return null;
-//     }
-//   }
 
   void toggleShowInactive() {
     showInactiveItems.value = !showInactiveItems.value;

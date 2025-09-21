@@ -377,7 +377,7 @@ class InvoiceItem {
   // Use the totalPrice from API instead of calculating
   double get amount => quantity * rate;
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap2() {
     return {
       'description': description,
       'quantity': quantity,
@@ -385,6 +385,16 @@ class InvoiceItem {
       'itemId': itemId,
       'itemName': itemName,
       'totalPrice': totalPrice,
+    };
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      "itemId": itemId ?? "",
+      "itemName": itemName,
+      "quantity": quantity,
+      "rate": rate,
+      "totalPrice": totalPrice,
     };
   }
 

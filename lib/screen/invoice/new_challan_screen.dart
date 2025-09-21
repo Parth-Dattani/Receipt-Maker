@@ -53,85 +53,87 @@ class NewChallanScreen extends GetView<NewChallanController> {
         //   )),
         // ],
       ),
-      body: Stack(
-        children: [
-          Form(
-            key: controller.formKey,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Challan Details Section
-                  _buildChallanDetailsCard(),
-
-                  SizedBox(height: 16),
-
-                  // Customer Section
-                  _buildCustomerSection(),
-
-                  SizedBox(height: 16),
-
-                  // Items Section
-                  _buildItemsSection(),
-
-                  SizedBox(height: 16),
-
-                  // Calculations Section
-                  _buildCalculationsSection(),
-
-                  SizedBox(height: 16),
-
-                  // Notes Section
-                  _buildNotesSection(),
-
-                  SizedBox(height: 32),
-
-                  // Action Buttons
-                  _buildActionButtons(),
-                ],
-              ),
-            ),
-          ),
-          Obx(() => controller.isLoading.value
-              ? Container(
-            color: Colors.black.withOpacity(0.3),
-            child: Center(
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Form(
+              key: controller.formKey,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Loading...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
+                    // Challan Details Section
+                    _buildChallanDetailsCard(),
+
+                    SizedBox(height: 16),
+
+                    // Customer Section
+                    _buildCustomerSection(),
+
+                    SizedBox(height: 16),
+
+                    // Items Section
+                    _buildItemsSection(),
+
+                    SizedBox(height: 16),
+
+                    // Calculations Section
+                    _buildCalculationsSection(),
+
+                    SizedBox(height: 16),
+
+                    // Notes Section
+                    _buildNotesSection(),
+
+                    SizedBox(height: 32),
+
+                    // Action Buttons
+                    _buildActionButtons(),
                   ],
                 ),
               ),
             ),
-          )
-              : SizedBox.shrink()),
-        ],
+            Obx(() => controller.isLoading.value
+                ? Container(
+              color: Colors.black.withOpacity(0.3),
+              child: Center(
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade700),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Loading...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+                : SizedBox.shrink()),
+          ],
+        ),
       ),
     );
   }
@@ -403,6 +405,17 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     ),
                   ),
                   Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Price (₹)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade800,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                  ),
+                  Expanded(
                     flex: 1,
                     child: Text(
                       'Qty',
@@ -410,7 +423,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                         fontWeight: FontWeight.bold,
                         color: Colors.green.shade800,
                       ),
-                      textAlign: TextAlign.center,
+                      textAlign: TextAlign.start,
                     ),
                   ),
                   // Expanded(
@@ -424,18 +437,18 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   //     textAlign: TextAlign.center,
                   //   ),
                   // ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Amount',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green.shade800,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(width: 40), // Space for delete button
+                  // Expanded(
+                  //   flex: 2,
+                  //   child: Text(
+                  //     'Amount',
+                  //     style: TextStyle(
+                  //       fontWeight: FontWeight.bold,
+                  //       color: Colors.green.shade800,
+                  //     ),
+                  //     textAlign: TextAlign.center,
+                  //   ),
+                  // ),
+                  // SizedBox(width: 40), // Space for delete button
                 ],
               ),
             ),
@@ -508,6 +521,8 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                   SizedBox(height: 8),
                                   if (controller.itemList.isNotEmpty)
                                     Container(
+                                      height: 40,
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
                                       decoration: BoxDecoration(
                                         border: Border.all(color: Colors.grey.shade300),
                                         borderRadius: BorderRadius.circular(6),
@@ -540,7 +555,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                               child: Padding(
                                                 padding: EdgeInsets.symmetric(horizontal: 8),
                                                 child: Text(
-                                                  '${item.itemName} - ₹${item.price.toStringAsFixed(2)}',
+                                                  '${item.itemName}}',
                                                   style: TextStyle(fontSize: 14),
                                                 ),
                                               ),
@@ -574,7 +589,47 @@ class NewChallanScreen extends GetView<NewChallanController> {
 
                             SizedBox(width: 12),
 
-                            // Quantity
+                            /// Price
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Price ',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Container(
+                                    height: 40,
+                                    child: TextFormField(
+                                      controller: controller.getPriceController(index, initialValue: item.price),
+                                      textAlign: TextAlign.center,
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                      ),
+                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                      onChanged: (value) {
+                                        double? price = double.tryParse(value);
+                                        if (price != null && price >= 0) {
+                                          controller.updateItem(index, price: price);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(width: 12),
+
+                            /// Quantity
                             Expanded(
                               flex: 1,
                               child: Column(
@@ -612,93 +667,16 @@ class NewChallanScreen extends GetView<NewChallanController> {
                               ),
                             ),
 
-                            SizedBox(width: 12),
-
-                            /// Price
-                            // Expanded(
-                            //   flex: 2,
-                            //   child: Column(
-                            //     crossAxisAlignment: CrossAxisAlignment.start,
-                            //     children: [
-                            //       Text(
-                            //         'Price (₹)',
-                            //         style: TextStyle(
-                            //           fontSize: 12,
-                            //           color: Colors.grey.shade600,
-                            //         ),
-                            //       ),
-                            //       SizedBox(height: 4),
-                            //       Container(
-                            //         height: 40,
-                            //         child: TextFormField(
-                            //           initialValue: item.price > 0 ? item.price.toStringAsFixed(2) : '',
-                            //           textAlign: TextAlign.center,
-                            //           decoration: InputDecoration(
-                            //             contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            //             border: OutlineInputBorder(
-                            //               borderRadius: BorderRadius.circular(6),
-                            //             ),
-                            //           ),
-                            //           keyboardType: TextInputType.numberWithOptions(decimal: true),
-                            //           onChanged: (value) {
-                            //             double? price = double.tryParse(value);
-                            //             if (price != null && price >= 0) {
-                            //               controller.updateItem(index, price: price);
-                            //             }
-                            //           },
-                            //         ),
-                            //       ),
-                            //     ],
-                            //   ),
-                            // ),
-
-                            SizedBox(width: 12),
-
-                            // Amount
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Amount',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Container(
-                                    height: 40,
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: Colors.grey.shade300),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '₹${item.amount.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green.shade700,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Delete button
                             if (controller.challanItems.length > 1)
-                              Padding(
-                                padding: EdgeInsets.only(top: 20),
-                                child: IconButton(
-                                  onPressed: () => controller.removeItem(index),
-                                  icon: Icon(Icons.delete, color: Colors.red, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
+                              SizedBox(  width: 20,
+                                child: Padding(
+                                  padding: EdgeInsets.only(top: 20, left: 5),
+                                  child: IconButton(
+                                    onPressed: () => controller.removeItem(index),
+                                    icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                  ),
                                 ),
                               ),
                           ],
@@ -782,27 +760,20 @@ class NewChallanScreen extends GetView<NewChallanController> {
               ),
             ),
             SizedBox(height: 16),
+            Obx(() => Column(
+              children: [
+                _buildTotalRow('Subtotal', controller.subtotal.value),
+                if (controller.taxRate.value > 0)
+                  _buildTotalRow('Tax (${controller.taxRate.value}%)', controller.taxAmount.value),
+                Divider(),
+                _buildTotalRow('Total Amount', controller.subtotal.value + controller.taxAmount.value, isTotal: true),
+              ],
+            )),
+            SizedBox(height: 20),
+            Divider(),
+            Text("Payment Staus"),
             Row(
               children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: 'Tax Rate (%)',
-                      prefixIcon: Icon(Icons.percent),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (value) {
-                      double? rate = double.tryParse(value);
-                      if (rate != null && rate >= 0) {
-                        controller.updateTaxRate(rate);
-                      }
-                    },
-                  ),
-                ),
-                SizedBox(width: 16),
                 Expanded(
                   child: Obx(() => Container(
                     padding: EdgeInsets.symmetric(horizontal: 12),
@@ -829,17 +800,6 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            Divider(),
-            Obx(() => Column(
-              children: [
-                _buildTotalRow('Subtotal', controller.subtotal.value),
-                if (controller.taxRate.value > 0)
-                  _buildTotalRow('Tax (${controller.taxRate.value}%)', controller.taxAmount.value),
-                Divider(),
-                _buildTotalRow('Total Amount', controller.subtotal.value + controller.taxAmount.value, isTotal: true),
-              ],
-            )),
           ],
         ),
       ),

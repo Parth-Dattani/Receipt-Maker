@@ -58,11 +58,11 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                         const SizedBox(height: 25),
 
                         /// Profile Image Section
-                       _buildProfileImageSection(),
+                       // _buildProfileImageSection(),
+                       //
+                       //  const SizedBox(height: 20),
 
-                        const SizedBox(height: 20),
-
-                        // Personal Info Section
+                        /// Personal Info Section
                         _buildSectionCard(
                           title: "Personal Information",
                           icon: Icons.person,
@@ -82,34 +82,114 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                               isRequired: true,
                               maxLines: 3,
                             ),
+                            // Row(
+                            //   children: [
+                            //
+                            //     Obx(() => _customDropdown(
+                            //       label: "Country *",
+                            //       prefixIcon: Icons.flag,
+                            //       value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
+                            //       items: controller.countries.map((country) {
+                            //         return DropdownMenuItem<String>(
+                            //           value: country,
+                            //           child: Text(country),
+                            //         );
+                            //       }).toList(),
+                            //       onChanged: (value) {
+                            //         controller.selectedCountry.value = value ?? '';
+                            //         controller.selectedState.value = ''; // Reset state when country changes
+                            //       },
+                            //       isRequired: true,
+                            //       hint: "Select Country",
+                            //     )),
+                            //     const SizedBox(width: 12),
+                            //
+                            //     Obx(() {
+                            //       if (controller.selectedCountry.value.isNotEmpty) {
+                            //         return _customDropdown(
+                            //           label: "State *",
+                            //           prefixIcon: Icons.map,
+                            //           value: controller.selectedState.value.isEmpty
+                            //               ? null
+                            //               : controller.selectedState.value,
+                            //           items: controller.getStatesForCountry().map((state) {
+                            //             return DropdownMenuItem<String>(
+                            //               value: state,
+                            //               child: Text(state),
+                            //             );
+                            //           }).toList(),
+                            //           onChanged: (value) {
+                            //             controller.selectedState.value = value ?? '';
+                            //           },
+                            //           isRequired: true,
+                            //           hint: "Select State",
+                            //         );
+                            //       } else {
+                            //         return Container(); // Hide state dropdown when no country is selected
+                            //       }
+                            //     }),
+                            //   ],
+                            // ),
                             Row(
                               children: [
+                                // Country Dropdown
+                                Expanded(
+                                  child: Obx(() => _customDropdown(
+                                    label: "Country *",
+                                    prefixIcon: Icons.flag,
+                                    value: controller.selectedCountry.value.isEmpty
+                                        ? null
+                                        : controller.selectedCountry.value,
+                                    items: controller.countries.map((country) {
+                                      return DropdownMenuItem<String>(
+                                        value: country,
+                                        child: Text(country),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      controller.selectedCountry.value = value ?? '';
+                                      controller.selectedState.value = ''; // Reset state when country changes
+                                    },
+                                    isRequired: true,
+                                    hint: "Select Country",
+                                  )),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // State Dropdown (always visible, disabled until country selected)
+                                Expanded(
+                                  child: Obx(() => _customDropdown(
+                                    label: "State *",
+                                    prefixIcon: Icons.map,
+                                    value: controller.selectedState.value.isEmpty
+                                        ? null
+                                        : controller.selectedState.value,
+                                    items: controller
+                                        .getStatesForCountry()
+                                        .map((state) => DropdownMenuItem<String>(
+                                      value: state,
+                                      child: Text(state),
+                                    ))
+                                        .toList(),
+                                    onChanged: controller.selectedCountry.value.isEmpty
+                                        ? null // 👈 disables the dropdown
+                                        : (value) => controller.selectedState.value = value ?? '',
+                                    isRequired: true,
+                                    hint: "Select State",
+                                  )),
+                                ),
+                              ],
+                            ),
+
+
+                            Row(
+                              children: [
+
                                 Expanded(
                                   child: _buildTextField(
                                     controller.cityController,
                                     "City*",
                                     Icons.location_city_outlined,
-                                    isRequired: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller.stateController,
-                                    "State*",
-                                    Icons.map_outlined,
-                                    isRequired: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    controller.countryController,
-                                    "Country*",
-                                    Icons.public_outlined,
                                     isRequired: true,
                                   ),
                                 ),
@@ -580,6 +660,60 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     );
   }
 
+  Widget _customDropdown({
+    required String label,
+    required IconData prefixIcon,
+    required List<DropdownMenuItem<String>> items,
+    String? value,
+    required void Function(String?)? onChanged, // 👈 nullable now
+    bool isRequired = false,
+    String? hint,
+    String section = "",
+  }) {
+    final isDisabled = onChanged == null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        items: items,
+        isExpanded: true,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6A11CB).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              prefixIcon,
+              color: isDisabled ? Colors.grey : const Color(0xFF6A11CB),
+              size: 20,
+            ),
+          ),
+          labelText: label,
+          hintText: hint,
+          filled: true,
+          fillColor: isDisabled ? Colors.grey.shade200 : Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        validator: (value) {
+          if (isRequired && (value == null || value.isEmpty)) {
+            if (section == "personal") controller.personalInfoExpanded.value = true;
+            return "This field is required";
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+
   Widget _buildActionButtons() {
     return Column(
       children: [
@@ -628,22 +762,22 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         // Secondary Actions
         Row(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: controller.saveAsDraft,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  side: const BorderSide(color: Colors.white),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.save_outlined, size: 18),
-                label: const Text("Save Draft"),
-              ),
-            ),
-            const SizedBox(width: 12),
+            // Expanded(
+            //   child: OutlinedButton.icon(
+            //     onPressed: controller.saveAsDraft,
+            //     style: OutlinedButton.styleFrom(
+            //       padding: const EdgeInsets.symmetric(vertical: 12),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(16),
+            //       ),
+            //       side: const BorderSide(color: Colors.white),
+            //       foregroundColor: Colors.white,
+            //     ),
+            //     icon: const Icon(Icons.save_outlined, size: 18),
+            //     label: const Text("Save Draft"),
+            //   ),
+            // ),
+            // const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: controller.clearForm,

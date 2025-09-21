@@ -52,15 +52,26 @@ class NewChallanController extends BaseController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  var priceControllers = <TextEditingController>[].obs;
+
   @override
   void onInit() {
     super.onInit();
-    //RemoteService.printAppSheetConfig();
-    loadChallans();
+    // ✅ Generate challan ID first (only depends on challans)
     initializeChallan();
-    loadCompanyData();
-    loadCustomers();
-    fetchItems();
+
+    // ✅ Load other data in parallel (non-blocking for challan ID)
+    Future.microtask(() {
+      loadCompanyData();
+      loadCustomers();
+      fetchItems();
+    });
+
+    //loadChallans();
+    //initializeChallan();
+    // loadCompanyData();
+    // loadCustomers();
+    // fetchItems();
   }
 
   @override
@@ -135,16 +146,53 @@ class NewChallanController extends BaseController {
   void initializeChallan() async {
     print("🆕 INITIALIZING CHALLAN - Starting...");
 
-    await loadChallans();
+    final lastChallan = await getLastChallan();
+    String newId = generateChallanIdFromLast(lastChallan);
+    /// Only load challans here (not other data)
+    //await loadChallans();
 
-    String newChallanId = generateChallanId();
-    print("🆔 FINAL GENERATED CHALLAN ID: $newChallanId");
+    // String newChallanId = generateChallanId();
+    // print("🆔 FINAL GENERATED CHALLAN ID: $newChallanId");
 
-    challanNumberController.text = newChallanId;
+    challanNumberController.text = newId;
     challanDateController.text = _formatDate(challanDate.value);
 
     addNewItem();
     print("✅ CHALLAN INITIALIZATION COMPLETE");
+  }
+
+  /// 🟢 Always keep priceControllers in sync with challanItems
+  TextEditingController getPriceController(int index, {double? initialValue}) {
+    while (priceControllers.length < challanItems.length) {
+      final itemIndex = priceControllers.length;
+      final item = challanItems[itemIndex];
+      priceControllers.add(
+        TextEditingController(text: item.price.toInt().toString()), // ✅ int only
+      );
+    }
+
+    while (priceControllers.length > challanItems.length) {
+      priceControllers.removeLast().dispose();
+    }
+
+    if (initialValue != null &&
+        priceControllers[index].text != initialValue.toInt().toString()) {
+      priceControllers[index].text = initialValue.toInt().toString();
+    }
+
+    return priceControllers[index];
+  }
+
+
+  String generateChallanIdFromLast(Challan? lastChallan) {
+    if (lastChallan == null || lastChallan.challanId == null) return "CH001";
+
+    RegExp regex = RegExp(r'^CH(\d+)$', caseSensitive: false);
+    final match = regex.firstMatch(lastChallan.challanId!);
+    if (match == null) return "CH001";
+
+    int number = int.tryParse(match.group(1) ?? "0") ?? 0;
+    return "CH${(number + 1).toString().padLeft(3, '0')}";
   }
 
   String generateChallanId() {
@@ -193,6 +241,15 @@ class NewChallanController extends BaseController {
     print("🎯 Generated new ID: $newId");
 
     return newId;
+  }
+
+  Future<Challan?> getLastChallan() async {
+    List<Challan> challans = await GoogleSheetService.getChallansList();
+    if (challans.isEmpty) return null;
+
+    challans.sort((a, b) => (a.challanId ?? '').compareTo(b.challanId ?? ''));
+   print("----lastttt: ${challans.last}");
+    return challans.last;
   }
 
   // Add this method to fetch company data
@@ -502,7 +559,6 @@ customerId: ''
          // '_RowNumber': '',
           'challanId': challanNumberController.text, // Use challan ID as reference
           'customerId': selectedCustomerId.value.toString(),
-
           'itemId': item.itemId,
           'itemName': item.description,
           'description': item.description,

@@ -2099,6 +2099,7 @@ class GoogleSheetService {
         "$invoiceSheetName!1:1", // Get only the header row
       );
 
+      print("----Header Response: -------${spreadsheetId}");
       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
         print("No header row found in sheet");
         return <Invoice>[];
@@ -2321,6 +2322,242 @@ class GoogleSheetService {
     print("Prepared row data: $rowData");
     return rowData;
   }
+
+
+  static Future<void> updateInvoice(
+      Map<String, dynamic> invoiceData, String userId) async {
+    print("🔄 Updating invoice in Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+      const targetSheetName = "Invoice";
+
+      // 1. Get headers
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$targetSheetName!1:1",
+      );
+      final headers = headerResponse.values![0];
+
+      // 2. Find row number
+      final allRows = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$targetSheetName!A:Z",
+      );
+
+      int rowIndex = -1;
+      List<dynamic>? oldRow;
+
+      for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+        final row = allRows.values![i];
+        if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
+          rowIndex = i + 1;
+          oldRow = row;
+          break;
+        }
+      }
+
+      if (rowIndex == -1) {
+        throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
+      }
+
+      // 3. Merge values
+      final mergedRow = _prepareInvoiceUpdateRow(
+        invoiceData,
+        userId,
+        headers,
+        oldRow ?? [],
+      );
+
+      // 4. Update row
+      final valueRange = ValueRange.fromJson({
+        "values": [mergedRow],
+      });
+
+      await sheetsApi.spreadsheets.values.update(
+        valueRange,
+        spreadsheetId,
+        "$targetSheetName!A$rowIndex:Z$rowIndex",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Invoice updated at row $rowIndex");
+    } catch (e, st) {
+      print("❌ Error updating invoice: $e\n$st");
+      throw Exception("Failed to update invoice: ${e.toString()}");
+    }
+  }
+
+  static List<dynamic> _prepareInvoiceUpdateRow(
+      Map<String, dynamic> invoiceData,
+      String userId,
+      List<dynamic> headers,
+      List<dynamic> sheetRow) {
+    final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+    String _formatDate(dynamic value) {
+      if (value == null || value.toString().isEmpty) return "";
+      try {
+        if (value is DateTime) return _dateFormatter.format(value);
+        return _dateFormatter.format(DateTime.parse(value.toString()));
+      } catch (e) {
+        return value.toString();
+      }
+    }
+
+    List<dynamic> rowData = [];
+
+    for (int j = 0; j < headers.length; j++) {
+      String headerStr = headers[j].toString().toLowerCase();
+      final newVal = invoiceData[headers[j].toString()]?.toString();
+
+      if (headerStr.contains('issuedate')) {
+        rowData.add(newVal?.isNotEmpty == true
+            ? _formatDate(newVal)
+            : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+      } else if (headerStr.contains('duedate')) {
+        rowData.add(newVal?.isNotEmpty == true
+            ? _formatDate(newVal)
+            : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+      } else if (headerStr.contains('totalamount') ||
+          headerStr.contains('subtotal') ||
+          headerStr.contains('taxamount') ||
+          headerStr.contains('discountamount')) {
+        // ✅ Always overwrite with recalculated values
+        rowData.add(newVal ?? "0");
+      } else if (newVal != null && newVal.isNotEmpty) {
+        rowData.add(newVal);
+      } else if (j < sheetRow.length) {
+        rowData.add(sheetRow[j]?.toString() ?? "");
+      } else {
+        rowData.add("");
+      }
+    }
+
+    return rowData;
+  }
+
+
+  static Future<void> updateInvoiceItems(
+      String invoiceId, List<Map<String, dynamic>> items, String userId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+      const String itemSheet = "InvoiceItems";
+
+      // 🔹 Get headers
+      final headerRes = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheet!1:1",
+      );
+      final headers = headerRes.values![0];
+
+      // 🔹 Load all rows
+      final allRows = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        itemSheet,
+      );
+
+      final values = allRows.values ?? [];
+      final rowsToUpdate = <int>[];
+
+      // 🔹 Find row indexes for this invoiceId
+      for (int i = 1; i < values.length; i++) {
+        if (values[i].isNotEmpty &&
+            values[i][0].toString().trim() == invoiceId) {
+          rowsToUpdate.add(i + 1); // sheet row index (1-based)
+        }
+      }
+
+      // 🔹 Overwrite existing rows but PRESERVE unchanged values
+      for (int i = 0; i < rowsToUpdate.length; i++) {
+        final sheetRow = values[rowsToUpdate[i] - 1]; // current values in sheet
+
+        if (i < items.length) {
+          final item = items[i];
+          item['invoiceId'] = invoiceId;
+          item['userId'] = userId;
+
+          // merge old values with new ones
+          final rowValues = <String>[];
+          for (int j = 0; j < headers.length; j++) {
+            final key = headers[j].toString().trim();
+            final newVal = item[key]?.toString();
+
+            if (newVal != null && newVal.isNotEmpty) {
+              rowValues.add(newVal); // use new value
+            } else if (j < sheetRow.length) {
+              rowValues.add(sheetRow[j]?.toString() ?? ""); // preserve old value
+            } else {
+              rowValues.add(""); // blank if truly new column
+            }
+          }
+
+          final range =
+              "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+
+          await sheetsApi.spreadsheets.values.update(
+            ValueRange(values: [rowValues]),
+            spreadsheetId,
+            range,
+            valueInputOption: "USER_ENTERED",
+          );
+        } else {
+          // Extra old rows -> clear them
+          final range =
+              "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+          await sheetsApi.spreadsheets.values.clear(
+            ClearValuesRequest(),
+            spreadsheetId,
+            range,
+          );
+        }
+      }
+
+      // 🔹 If new items > old rows → append extra ones
+      if (items.length > rowsToUpdate.length) {
+        for (int i = rowsToUpdate.length; i < items.length; i++) {
+          final item = items[i];
+          item['invoiceId'] = invoiceId;
+          item['userId'] = userId;
+
+          final rowValues = headers.map((h) {
+            final key = h.toString().trim();
+            return item[key]?.toString() ?? "";
+          }).toList();
+
+          await sheetsApi.spreadsheets.values.append(
+            ValueRange(values: [rowValues]),
+            spreadsheetId,
+            itemSheet,
+            valueInputOption: "USER_ENTERED",
+          );
+        }
+      }
+
+      print("✅ InvoiceItems updated (preserve unchanged values) for $invoiceId");
+    } catch (e, st) {
+      print("❌ Error in updateInvoiceItems: $e\n$st");
+      rethrow;
+    }
+  }
+
+
+
+// 🔹 Helper to convert column index → Excel letter
+  static String _columnLetter(int colIndex) {
+    var dividend = colIndex;
+    var columnName = '';
+    while (dividend > 0) {
+      var modulo = (dividend - 1) % 26;
+      columnName = String.fromCharCode(65 + modulo) + columnName;
+      dividend = ((dividend - modulo) ~/ 26);
+    }
+    return columnName;
+  }
+
+
 
 
   /// Add invoice item directly to Google Sheet (without AppSheet API)
@@ -2774,11 +3011,67 @@ class GoogleSheetService {
         // Map each header → value
         Map<String, dynamic> challanMap = {};
         for (int j = 0; j < headers.length; j++) {
-          challanMap[headers[j]] = j < row.length ? row[j] : "";
-        }
 
         try {
           Challan challan = Challan.fromMap(challanMap); // ✅ use your model parser
+          challans.add(challan);
+          print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+        } catch (e) {
+          print("⚠️ Error parsing challan row $i: $e");
+          print("Row data: $challanMap");
+        }
+      }}
+
+      print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+      return challans;
+    } catch (e) {
+      print("❌ Error in getChallans(): $e");
+      rethrow;
+    }
+  }
+
+  static Future<List<Challan>> getChallansList() async {
+    print("🔄 Fetching challans from Google Sheets...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all challan rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z", // adjust range if needed
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No challans found in sheet.");
+        return <Challan>[];
+      }
+
+      // Extract headers from first row
+      final headers =
+      response.values![0].map((h) => h.toString().trim()).toList();
+      print("✅ Headers: $headers");
+
+      List<Challan> challans = [];
+
+      // Iterate rows (skip header)
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // ✅ Skip completely empty rows
+        if (row.isEmpty || row[0].toString().trim().isEmpty) {
+          continue;
+        }
+
+        // ✅ Build map header → value
+        Map<String, dynamic> challanMap = {};
+        for (int j = 0; j < headers.length && j < row.length; j++) {
+          challanMap[headers[j]] = row[j].toString();
+        }
+
+        try {
+          Challan challan = Challan.fromMap(challanMap);
           challans.add(challan);
           print("Processed challan: ${challan.challanId} - ${challan.customerName}");
         } catch (e) {
@@ -2794,6 +3087,7 @@ class GoogleSheetService {
       rethrow;
     }
   }
+
 
   static Future<void> deleteItems(String userId, Item item) async {
     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");

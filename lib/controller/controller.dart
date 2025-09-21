@@ -13,3 +13,6 @@ export 'new_invoice_controller.dart';
 export 'invoice_list_controller.dart';
 export 'new_challan_controller.dart';
 export 'invoice_details_controller.dart';
+export 'challan_list_controller.dart';
+export 'challan_details_controller.dart';
+

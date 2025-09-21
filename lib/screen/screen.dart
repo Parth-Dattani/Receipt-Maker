@@ -11,3 +11,5 @@ export 'invoice/new_invoice_screen.dart';
 export 'invoice/invoice_list_screen.dart';
 export 'invoice/new_challan_screen.dart';
 export 'invoice/invoice_detail_screen.dart';
+export 'challan/challan_list_screen.dart';
+export 'challan/challan_details_screen.dart';

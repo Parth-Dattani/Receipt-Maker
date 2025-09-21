@@ -1336,6 +1336,14 @@ class DashboardController extends BaseController {
     Get.toNamed(ItemScreen.pageId);
   }
 
+  void navigateToChallanList() {
+    if (!Get.isRegistered<ChallanListController>()) {
+      Get.put(ChallanListController());
+    }
+    Get.to(() => ChallanListScreen());
+  }
+
+
   void navigateToNewChallan() {
     Get.lazyPut<NewChallanController>(() => NewChallanController());
 

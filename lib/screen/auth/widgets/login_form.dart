@@ -31,13 +31,21 @@ class LoginForm extends GetView<AuthController> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: controller.loginPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    prefixIcon: const Icon(Icons.lock),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                Obx(
+                  ()=> TextFormField(
+                    controller: controller.loginPasswordController,
+                    obscureText: controller.isPasswordHidden.value,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          controller.isPasswordHidden.value ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: controller.togglePasswordVisibility,
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
