@@ -375,7 +375,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 ),
                 Spacer(),
                 Obx(() => Text(
-                  'Total Items: ${controller.totalItems.value}',
+                  'Total: ₹${controller.totalAmount.value}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.green.shade700,
@@ -555,7 +555,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                               child: Padding(
                                                 padding: EdgeInsets.symmetric(horizontal: 8),
                                                 child: Text(
-                                                  '${item.itemName}}',
+                                                  '${item.itemName}',
                                                   style: TextStyle(fontSize: 14),
                                                 ),
                                               ),
@@ -627,6 +627,41 @@ class NewChallanScreen extends GetView<NewChallanController> {
                               ),
                             ),
 
+                            /// GSt
+                            // Expanded(
+                            //   flex: 1,
+                            //   child: Column(
+                            //     crossAxisAlignment: CrossAxisAlignment.start,
+                            //     children: [
+                            //       Text(
+                            //         'GSt% ',
+                            //         style: TextStyle(
+                            //           fontSize: 12,
+                            //           color: Colors.grey.shade600,
+                            //         ),
+                            //       ),
+                            //       SizedBox(height: 4),
+                            //       Container(
+                            //         height: 40,
+                            //         padding: EdgeInsets.all(4),
+                            //         decoration: BoxDecoration(
+                            //           color: Colors.grey.shade100,
+                            //           borderRadius: BorderRadius.circular(6),
+                            //           border: Border.all(color: Colors.grey.shade300),
+                            //         ),
+                            //         child: Center(
+                            //           child: Text(
+                            //             '${item.gst.toInt()}', // 👈 show price here
+                            //             style: TextStyle(
+                            //               fontWeight: FontWeight.bold,
+                            //               color: Colors.green.shade700,
+                            //             ),
+                            //           ),
+                            //         ),
+                            //       ),
+                            //     ],
+                            //   ),
+                            // ),
                             SizedBox(width: 12),
 
                             /// Quantity
@@ -764,9 +799,10 @@ class NewChallanScreen extends GetView<NewChallanController> {
               children: [
                 _buildTotalRow('Subtotal', controller.subtotal.value),
                 if (controller.taxRate.value > 0)
-                  _buildTotalRow('Tax (${controller.taxRate.value}%)', controller.taxAmount.value),
+                  _buildTotalRow('Tax: (${controller.taxRate.value}%)', controller.taxAmount.value),
+                _buildTotalRow('Gst', controller.gstAmount.value),
                 Divider(),
-                _buildTotalRow('Total Amount', controller.subtotal.value + controller.taxAmount.value, isTotal: true),
+                _buildTotalRow('Total Amount', controller.totalAmount.value + controller.taxAmount.value, isTotal: true),
               ],
             )),
             SizedBox(height: 20),
@@ -882,20 +918,6 @@ class NewChallanScreen extends GetView<NewChallanController> {
           ),
         ),
         SizedBox(width: 8),
-
-        /// Save Draft button
-        // Expanded(
-        //   flex: 3,
-        //   child: ElevatedButton(
-        //     onPressed: controller.isLoading.value ? null : () => controller.saveChallan(isDraft: true),
-        //     style: ElevatedButton.styleFrom(
-        //       backgroundColor: Colors.grey.shade600,
-        //       padding: EdgeInsets.symmetric(vertical: 12),
-        //     ),
-        //     child: Text('Save Draft'),
-        //   ),
-        // ),
-        // SizedBox(width: 8),
 
         /// Main action button
         Expanded(

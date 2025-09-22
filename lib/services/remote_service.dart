@@ -1896,6 +1896,7 @@ class GoogleSheetService {
       item.itemId,
       item.itemName,
       item.price.toString(),
+      item.gstPercent.toString(),
       item.unitOfMeasurement,
       item.currentStock.toString(),
       item.detailRequirement,
@@ -1909,7 +1910,7 @@ class GoogleSheetService {
         "values": [values]
       }),
       spreadsheetId,
-      "$itemSheetName!A:H", // Adjust columns (A-H based on your schema)
+      "$itemSheetName!A:I", // Adjust columns (A-H based on your schema)
       valueInputOption: "RAW",
     );
 
@@ -1927,7 +1928,7 @@ class GoogleSheetService {
       // Get all data from the sheet
       final response = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$itemSheetName!A:H", // Adjust range based on your columns
+        "$itemSheetName!A:I", // Adjust range based on your columns
       );
 
       print("Response: ${response.values}");
@@ -1944,7 +1945,7 @@ class GoogleSheetService {
         final row = response.values![i];
 
         // Ensure row has enough columns
-        if (row.length < 8) {
+        if (row.length < 9) {
           print("Skipping incomplete row ${i}: $row");
           continue;
         }
@@ -1955,16 +1956,17 @@ class GoogleSheetService {
             itemId: row[0]?.toString() ?? '',
             itemName: row[1]?.toString() ?? '',
             price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
-            unitOfMeasurement: row[3]?.toString() ?? '',
-            currentStock: int.tryParse(row[4]?.toString() ?? '0') ?? 0,
-            detailRequirement: row[5]?.toString() ?? '',
-            isActive: (row[6]?.toString().toLowerCase() == 'true'),
-            // Assuming userId is in column H (index 7)
+            gstPercent : double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
+            unitOfMeasurement: row[4]?.toString() ?? '',
+            currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
+            detailRequirement: row[6]?.toString() ?? '',
+            isActive: (row[7]?.toString().toLowerCase() == 'true'),
+            // Assuming userId is in column I (index 8)
           );
 
           // Filter by userId if provided
           if (userId != null && userId.isNotEmpty) {
-            String rowUserId = row[7]?.toString() ?? '';
+            String rowUserId = row[8]?.toString() ?? '';
             if (rowUserId == userId) {
               items.add(item);
             }
@@ -1997,12 +1999,18 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
+
+    // Get sheet metadata to find the correct sheetId (safer than hardcoding 0)
+    final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+    final sheet = spreadsheet.sheets!
+        .firstWhere((s) => s.properties?.title == itemSheetName);
+    final sheetId = sheet.properties!.sheetId!;
       // Step 1: Find and delete the existing item
       print("Step 1: Finding item to delete...");
 
       final response = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$itemSheetName!A:H",
+        "$itemSheetName!A:I",
       );
 
       if (response.values == null || response.values!.isEmpty) {
@@ -2029,7 +2037,7 @@ class GoogleSheetService {
         Request()
           ..deleteDimension = (DeleteDimensionRequest()
             ..range = (DimensionRange()
-              ..sheetId = 0 // Adjust if your sheet has different ID
+              ..sheetId = sheetId // Adjust if your sheet has different ID
               ..dimension = 'ROWS'
               ..startIndex = targetRowIndex
               ..endIndex = targetRowIndex + 1))
@@ -2056,9 +2064,10 @@ class GoogleSheetService {
         item.itemId,
         item.itemName,
         item.price.toString(),
+        item.gstPercent.toString(),
         item.unitOfMeasurement,
         item.currentStock.toString(),
-        item.detailRequirement ?? "",
+        item.detailRequirement,
         item.isActive ? "TRUE" : "FALSE",
         userId,
       ];

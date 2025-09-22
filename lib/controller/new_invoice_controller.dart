@@ -103,6 +103,7 @@ class NewInvoiceController extends GetxController {
   final challanPageSize = 20;
   var hasMoreChallans = true;
   var priceControllers = <TextEditingController>[].obs;
+  var gstAmount = 0.0.obs;
 
 
   @override
@@ -714,32 +715,6 @@ class NewInvoiceController extends GetxController {
     return "${invoiceType.value.prefix}${(maxId + 1).toString().padLeft(3, '0')}";
   }
 
-  Future<void> loadItems() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-      if (companyId.isEmpty) return;
-
-      final itemsSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("items")
-          .get();
-
-      items.clear();
-      for (var doc in itemsSnapshot.docs) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        items.add(data);
-      }
-    } catch (e) {
-      print("Error loading items: $e");
-    }
-  }
 
   void selectCustomer(Map<String, dynamic>? customer) {
     if (customer == null) {
@@ -781,6 +756,7 @@ class NewInvoiceController extends GetxController {
         description: '',
         quantity: 1,
         rate: 0.0,
+        gst: 0.0,
         itemId: '',
         itemName: '',
         totalPrice: 0.0
@@ -798,6 +774,7 @@ class NewInvoiceController extends GetxController {
           description: description ?? item.description,
           quantity: quantity ?? item.quantity,
           rate: newRate.toDouble(),
+          gst: item.gst,
           itemId: itemId ?? item.itemId,
           totalPrice: item.totalPrice,
           itemName: description ?? item.itemName
@@ -812,6 +789,7 @@ class NewInvoiceController extends GetxController {
           description: item.itemName,
           quantity: invoiceItems[index].quantity,
           rate: item.price.toDouble(),
+          gst: item.gstPercent.toDouble(),
           itemId: item.itemId,
           itemName: item.itemName,
           totalPrice: item.price
@@ -829,22 +807,23 @@ class NewInvoiceController extends GetxController {
 
   void calculateTotals() {
     // Use fold for better performance with large lists
-    final sub = invoiceItems.fold(0.0, (sum, item) => sum + (item.quantity * item.rate));
+    double sub = 0.0;
+    double gst = 0.0;
+
+    for (var item in invoiceItems) {
+      final itemTotal = item.quantity * item.rate;
+      sub += itemTotal;
+
+      // Calculate GST for this item and add to total GST
+      final gstForItem = itemTotal * (item.gst / 100);
+      gst += gstForItem;
+    }
+
     subtotal.value = sub;
-
-    final discountValue = discountType.value == 'percentage'
-        ? subtotal.value * (discountAmount.value / 100)
-        : discountAmount.value;
-
-    final afterDiscount = subtotal.value - discountValue;
-    taxAmount.value = afterDiscount * (taxRate.value / 100);
-    totalAmount.value = afterDiscount + taxAmount.value;
+    gstAmount.value = gst;
+    totalAmount.value = sub + gst;
   }
 
-  void updateTaxRate(double rate) {
-    taxRate.value = rate;
-    calculateTotals();
-  }
 
   void updatePaymentStatus(String status) {
     paymentStatus.value = status;
@@ -924,6 +903,7 @@ class NewInvoiceController extends GetxController {
           'description': item.description,
           'quantity': item.quantity,
           'price': item.rate,
+          'gst': item.gst.toString(),
           'totalPrice': item.amount,
         };
 
@@ -943,6 +923,7 @@ class NewInvoiceController extends GetxController {
           itemName: item.description,
           qty: item.quantity,
           price: item.rate.toDouble(),
+          gst: item.gst,
           mobile: customerMobileController.text.trim(),
           customerId: selectedCustomerId.value,
           customerName: customerNameController.text.trim(),
@@ -977,7 +958,7 @@ class NewInvoiceController extends GetxController {
         } catch (_) { return false; }
       });
 
-      print("----------===============----------IS Challan----$hasChallan");
+      print("----------======IS Challan=======---------$hasChallan");
       if (hasChallan) {
         // pass invoiceItems (the actual list that contains challanId)
         await InvoiceHelper.generateAndShareInvoiceFromChallan(
@@ -996,6 +977,7 @@ class NewInvoiceController extends GetxController {
           notesController.text,
           companyData.value,
           invoiceType.value,
+          gstAmount.value,
         );
       }
       else {
@@ -1015,6 +997,7 @@ class NewInvoiceController extends GetxController {
           notesController.text,
           companyData.value,
           invoiceType.value,
+          gstAmount.value,
         );
       }
 
@@ -1025,10 +1008,6 @@ class NewInvoiceController extends GetxController {
         icon: Icons.check_circle_outline,
       );
 
-
-      if (!isDraft) {
-        clearForm();
-      }
 
       Get.back();
       return true;

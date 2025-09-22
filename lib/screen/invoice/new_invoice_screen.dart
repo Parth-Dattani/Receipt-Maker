@@ -892,7 +892,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             //   ],
             // ),
 
-           const SizedBox(height: 16),
+
 
             /// Totals Section
             Obx(
@@ -913,6 +913,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       'Tax (${controller.taxRate.value}%)',
                       controller.taxAmount.value,
                     ),
+                  _buildTotalRow('Gst', controller.gstAmount.value),
                   const Divider(),
                   _buildTotalRow(
                     'Total Amount',

@@ -14,6 +14,7 @@ class Challan {
   final String? itemName;
   final int? qty;
   final double? price;
+  final double? gst;
   final double subtotal;
   final double taxRate;
   final double taxAmount;
@@ -35,6 +36,7 @@ class Challan {
      this.itemName,
      this.qty,
      this.price,
+    this.gst = 0.0,
     required this.subtotal,
     this.taxRate = 0.0,
     this.taxAmount = 0.0,
@@ -59,6 +61,7 @@ class Challan {
       'itemName': itemName,
       'qty': qty,
       'price': price,
+      'gst':gst,
       'subtotal': subtotal,
       'taxRate': taxRate,
       'taxAmount': taxAmount,
@@ -97,6 +100,7 @@ class Challan {
       itemName: map['itemName'] ?? '',
       qty: map['qty'] != null ? int.parse(map['qty'].toString()) : 0,
       price: map['price'] != null ? double.parse(map['price'].toString()) : 0.0,
+      gst: map['gst'] != null ? double.parse(map['gst'].toString()) : 0.0,
       subtotal: map['subtotal'] != null ? double.parse(map['subtotal'].toString()) : 0.0,
       taxRate: map['taxRate'] != null ? double.parse(map['taxRate'].toString()) : 0.0,
       taxAmount: map['taxAmount'] != null ? double.parse(map['taxAmount'].toString()) : 0.0,
@@ -140,6 +144,7 @@ class Challan {
       itemName: json['itemName']?.toString() ?? '',
       qty: json['qty'] != null ? int.tryParse(json['qty'].toString()) ?? 0 : 0,
       price: json['price'] != null ? double.tryParse(json['price'].toString()) ?? 0.0 : 0.0,
+      gst: json['gst'] != null ? double.tryParse(json['gst'].toString()) ?? 0.0 : 0.0,
       subtotal: json['subtotal'] != null ? double.tryParse(json['subtotal'].toString()) ?? 0.0 : 0.0,
       taxRate: json['taxRate'] != null ? double.tryParse(json['taxRate'].toString()) ?? 0.0 : 0.0,
       taxAmount: json['taxAmount'] != null ? double.tryParse(json['taxAmount'].toString()) ?? 0.0 : 0.0,
@@ -201,6 +206,7 @@ class ChallanItem {
   final String description;
   final int quantity;
   final double price;
+  double gst;
   final String itemId;
   final String customerId;
   final String itemName;
@@ -212,6 +218,7 @@ class ChallanItem {
     required this.description,
     required this.quantity,
     required this.price,
+    this.gst = 0.0,
     required this.itemId,
     required this.customerId,
     required this.itemName,
@@ -222,11 +229,14 @@ class ChallanItem {
 
   double get amount => quantity * price;
 
+  double get amountWithGst => quantity * price * (1 + gst / 100);
+
   Map<String, dynamic> toMap() {
     return {
       'description': description,
       'quantity': quantity,
       'price': price,
+      'gst':gst,
       'itemId': itemId,
       'customerId': customerId,
       'itemName': itemName,
@@ -255,6 +265,7 @@ class ChallanItem {
     String? description,
     int? quantity,
     double? price,
+    double? gst,
     String? customerId,
     String? itemId,
     String? itemName,
@@ -265,6 +276,7 @@ class ChallanItem {
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
+      gst: gst ?? this.gst,
       customerId: customerId ?? this.itemId,
       itemId: itemId ?? this.itemId,
       itemName: itemName ?? this.itemName,

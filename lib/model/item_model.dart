@@ -4,6 +4,7 @@ class Item {
   final String itemId;
   final String itemName;
   final double price;
+  final double gstPercent;
 
   final String unitOfMeasurement;
   final int currentStock;
@@ -15,6 +16,7 @@ class Item {
     required this.itemId,
     required this.itemName,
     required this.price,
+    this.gstPercent = 0.0,
 
     this.unitOfMeasurement = 'pcs',
     this.currentStock = 0,
@@ -28,6 +30,7 @@ class Item {
       'itemId': itemId,
       'itemName': itemName,
       'price': price,
+      'gst': gstPercent,
 
       'unitOfMeasurement': unitOfMeasurement,
       'currentStock': currentStock,
@@ -42,6 +45,7 @@ class Item {
       itemId: map['itemId']?.toString() ?? '',
       itemName: map['itemName']?.toString() ?? '',
       price: double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
+      gstPercent: double.tryParse(map['gst']?.toString() ?? '0') ?? 0.0,
 
       unitOfMeasurement: map['unitOfMeasurement']?.toString() ?? 'pcs',
       currentStock: int.tryParse(map['currentStock']?.toString() ?? '0') ?? 0,
@@ -88,6 +92,7 @@ class Item {
     String? itemId,
     String? itemName,
     double? price,
+    double? gst,
     String? unitOfMeasurement,
     int? currentStock,
     String? detailRequirement,
@@ -97,6 +102,7 @@ class Item {
       itemId: itemId ?? this.itemId,
       itemName: itemName ?? this.itemName,
       price: price ?? this.price,
+      gstPercent: gst ?? this.gstPercent,
       unitOfMeasurement: unitOfMeasurement ?? this.unitOfMeasurement,
       currentStock: currentStock ?? this.currentStock,
       detailRequirement: detailRequirement ?? this.detailRequirement,
@@ -164,6 +170,7 @@ class Invoice {
   final String? itemName;
   final int? qty;
   final double? price;
+  final double? gst;
   final String mobile;
   final String customerId;
   final String customerName;
@@ -189,6 +196,7 @@ class Invoice {
      this.itemName,
      this.qty,
      this.price,
+    this.gst = 0.0,
     required this.mobile,
     required this.customerName,
     this.customerId = '',
@@ -216,6 +224,7 @@ class Invoice {
       'itemName': itemName,
       'qty': qty,
       'price': price,
+      'gst':gst,
       'mobile': mobile,
       'customerId': customerId,
       'customerName': customerName,
@@ -263,6 +272,7 @@ class Invoice {
       price: (map['price'] ?? map['Price'] ?? 0.0) is double
           ? map['price'] ?? map['Price'] ?? 0.0
           : double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
+      gst: map['gst'] != null ? double.parse(map['gst'].toString()) : 0.0,
       mobile: map['mobile'] ?? map['Mobile'] ?? map['phone'] ?? '',
       customerId: map['customerId'] ?? '',
       customerName: map['customerName'] ?? map['CustomerName'] ?? map['customer'] ?? '',
@@ -359,6 +369,7 @@ class InvoiceItem {
   final String description;
   final int quantity;
   final double rate;
+  double gst;
   final String itemId;
   final String itemName;
   final double totalPrice;
@@ -368,6 +379,7 @@ class InvoiceItem {
     required this.description,
     required this.quantity,
     required this.rate,
+    this.gst = 0.0,
     required this.itemId,
     required this.itemName,
     required this.totalPrice,
@@ -377,16 +389,6 @@ class InvoiceItem {
   // Use the totalPrice from API instead of calculating
   double get amount => quantity * rate;
 
-  Map<String, dynamic> toMap2() {
-    return {
-      'description': description,
-      'quantity': quantity,
-      'rate': rate,
-      'itemId': itemId,
-      'itemName': itemName,
-      'totalPrice': totalPrice,
-    };
-  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -394,6 +396,7 @@ class InvoiceItem {
       "itemName": itemName,
       "quantity": quantity,
       "rate": rate,
+      'gst':gst,
       "totalPrice": totalPrice,
     };
   }

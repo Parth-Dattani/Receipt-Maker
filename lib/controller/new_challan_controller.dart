@@ -53,6 +53,7 @@ class NewChallanController extends BaseController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   var priceControllers = <TextEditingController>[].obs;
+  var gstAmount = 0.0.obs;
 
   @override
   void onInit() {
@@ -182,6 +183,7 @@ class NewChallanController extends BaseController {
 
     return priceControllers[index];
   }
+
 
 
   String generateChallanIdFromLast(Challan? lastChallan) {
@@ -374,33 +376,6 @@ class NewChallanController extends BaseController {
   }
 
 
-  Future<void> loadItems() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-      if (companyId.isEmpty) return;
-
-      final itemsSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("items")
-          .get();
-
-      items.clear();
-      for (var doc in itemsSnapshot.docs) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        items.add(data);
-      }
-    } catch (e) {
-      print("Error loading items: $e");
-    }
-  }
-
   void selectCustomer(Map<String, dynamic>? customer) {
     if (customer == null) {
       selectedCustomer.value = null;
@@ -441,6 +416,7 @@ class NewChallanController extends BaseController {
       description: '',
       quantity: 1,
       price: 0.0,
+      gst: 0.0,
       itemId: '',
       totalPrice: 0.0,
       itemName: '',
@@ -457,6 +433,7 @@ customerId: ''
         description: description ?? item.description,
         quantity: quantity ?? item.quantity,
         price: price ?? item.price,
+        gst: item.gst,
         itemId: itemId ?? item.itemId,
         itemName: description ?? item.itemName,
         totalPrice: item.totalPrice,
@@ -472,6 +449,7 @@ customerId: ''
         description: item.itemName,
         quantity: challanItems[index].quantity,
         price: item.price.toDouble(),
+        gst: item.gstPercent.toDouble(),
         itemId: item.itemId,
           itemName: item.itemName,
           totalPrice: item.price
@@ -487,10 +465,6 @@ customerId: ''
     }
   }
 
-  void updateTaxRate(double rate) {
-    taxRate.value = rate;
-    calculateTotals();
-  }
 
   void updatePaymentStatus(String status) {
     paymentStatus.value = status;
@@ -564,6 +538,7 @@ customerId: ''
           'description': item.description,
           'quantity': item.quantity.toString(),
           'price': item.price.toString(),
+          'gst': item.gst.toString(),
           'totalPrice': (item.quantity * item.price).toString(),
         };
 
@@ -583,6 +558,7 @@ customerId: ''
             itemName: item.description,   // ✅ correctly mapped
             qty: item.quantity,
             price: item.price.toDouble(),  // ✅ correctly mapped
+          gst: item.gst,
           customerMobile: customerMobileController.text.trim(),
           customerId: selectedCustomerId.value,
           customerName: customerNameController.text.trim(),
@@ -613,6 +589,7 @@ customerId: ''
         paymentStatus.value,
         notesController.text,
         companyData.value,
+        gstAmount.value,
       );
 
       showCustomSnackbar(
@@ -622,9 +599,6 @@ customerId: ''
         icon: Icons.check_circle_outline,
       );
 
-      if (!isDraft) {
-        clearForm();
-      }
 
       Get.back();
       return true;
@@ -643,24 +617,45 @@ customerId: ''
     }
   }
 
+  // void calculateTotals() {
+  //   double sub = 0.0;
+  //   double gst = 0.0;
+  //
+  //   for (var item in challanItems) {
+  //     sub += item.quantity * item.price;
+  //   }
+  //   subtotal.value = sub;
+  //
+  //   double discountValue = 0.0;
+  //   if (discountType.value == 'percentage') {
+  //     discountValue = subtotal.value * (discountAmount.value / 100);
+  //   } else {
+  //     discountValue = discountAmount.value;
+  //   }
+  //
+  //   double afterDiscount = subtotal.value - discountValue;
+  //   taxAmount.value = afterDiscount * (taxRate.value / 100);
+  //   totalAmount.value = afterDiscount + taxAmount.value;
+  // }
+
+  ///with GSt
   void calculateTotals() {
     double sub = 0.0;
+    double gst = 0.0;
+
     for (var item in challanItems) {
-      sub += item.quantity * item.price;
+      final itemTotal = item.price * item.quantity;
+      sub += itemTotal;
+
+      final gstForItem = itemTotal * (item.gst / 100);
+      gst += gstForItem;
     }
+
     subtotal.value = sub;
-
-    double discountValue = 0.0;
-    if (discountType.value == 'percentage') {
-      discountValue = subtotal.value * (discountAmount.value / 100);
-    } else {
-      discountValue = discountAmount.value;
-    }
-
-    double afterDiscount = subtotal.value - discountValue;
-    taxAmount.value = afterDiscount * (taxRate.value / 100);
-    totalAmount.value = afterDiscount + taxAmount.value;
+    gstAmount.value = gst;
+    totalAmount.value = sub + gst;
   }
+
 
   void clearForm() {
     formKey.currentState?.reset();
