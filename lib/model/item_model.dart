@@ -112,325 +112,294 @@ class Item {
 
 }
 
+
+
+/// it s Workig til 23-09 1:16 PM
 // class Invoice {
-//   final String? invoiceId;
-//   final String itemId;
-//   final int qty;
-//   final double price;
+//   final String invoiceId;
+//   final String? itemId;
+//   final String? itemName;
+//   final int? qty;
+//   final double? price;
+//   final double? gst;
 //   final String mobile;
+//   final String customerId;
 //   final String customerName;
-//   final String itemName;
-//   //final DateTime date;
+//   final String? customerEmail;
+//   final String? customerAddress;
+//   final DateTime? issueDate;
+//   final DateTime? dueDate;
+//   final double? subtotal;
+//  // final double? gstRate;
+//   final double? gstAmount;
+//   final double? discountAmount;
+//   //final String? discountType;
+//   final double? totalAmount;
+//   final String? notes;
+//   final String? status;
+//   final List<InvoiceItem>? items;
+//   final String? userId;
+//   final String? challanId;
 //
 //   Invoice({
-//      this.invoiceId,
-//     required this.itemId,
-//     required this.qty,
-//     required this.price,
+//     required this.invoiceId,
+//      this.itemId,
+//      this.itemName,
+//      this.qty,
+//      this.price,
+//     this.gst = 0.0,
 //     required this.mobile,
 //     required this.customerName,
-//     required this.itemName,
-//     //required this.date,
+//     this.customerId = '',
+//     this.customerEmail,
+//     this.customerAddress,
+//     this.issueDate,
+//     this.dueDate,
+//     this.subtotal,
+//    // this.gstRate,
+//     this.gstAmount = 0.0,
+//     this.discountAmount,
+//     //this.discountType,
+//     this.totalAmount,
+//     this.notes,
+//     this.status,
+//     this.items,
+//     this.userId,
+//     this.challanId,
 //   });
 //
 //   Map<String, dynamic> toMap() {
 //     return {
 //       'invoiceId': invoiceId,
 //       'itemId': itemId,
+//       'itemName': itemName,
 //       'qty': qty,
 //       'price': price,
+//       'gstRate': gst,
+//       'gstAmount': gstAmount,
 //       'mobile': mobile,
+//       'customerId': customerId,
 //       'customerName': customerName,
-//       'itemName': itemName,
-//       //'date': date.toIso8601String(),
-//       'total': qty * price,
+//       'customerEmail': customerEmail,
+//       'customerAddress': customerAddress,
+//       'issueDate': issueDate?.toIso8601String(),
+//       'dueDate': dueDate?.toIso8601String(),
+//       'subtotal': subtotal,
+//       'discountAmount': discountAmount,
+//       //'discountType': discountType,
+//       'totalAmount': totalAmount,
+//       'notes': notes,
+//       'status': status,
+//       ///'items': json.encode(items?.map((item) => item.toMap()).toList()),
+//
 //     };
+//   }
+//
+//   // Convert invoice items to a separate map for the items table
+//   List<Map<String, dynamic>> itemsToMap() {
+//     if (items == null) return [];
+//
+//     return items!.map((item) {
+//       return {
+//         'invoiceId': invoiceId, // Foreign key reference
+//         'itemId': item.itemId,
+//         'description': item.description,
+//         'quantity': item.quantity,
+//         'rate': item.rate,
+//         'totalPrice': item.totalPrice,
+//         'gstRate': item.gstRate,
+//         'gstAmount': item.gstAmount,
+//         'amountWithGst': item.amountWithGst,
+//         'challanId': item.challanId,
+//       };
+//     }).toList();
 //   }
 //
 //   factory Invoice.fromMap(Map<String, dynamic> map) {
 //     return Invoice(
-//       invoiceId: map['invoiceId']?.toString() ?? '',
+//       invoiceId: map['invoiceId'] ?? map['InvoiceId'] ?? '',
+//       itemId: map['itemId'] ?? map['ItemId'] ?? '',
+//       itemName: map['itemName'] ?? map['ItemName'] ?? '',
+//       qty: (map['qty'] ?? map['Qty'] ?? map['quantity'] ?? 0) is int
+//           ? map['qty'] ?? map['Qty'] ?? map['quantity'] ?? 0
+//           : int.tryParse(map['qty']?.toString() ?? '0') ?? 0,
+//       price: (map['price'] ?? map['Price'] ?? 0.0) is double
+//           ? map['price'] ?? map['Price'] ?? 0.0
+//           : double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
+//       gst: map['gst'] != null ? double.parse(map['gst'].toString()) : 0.0,
+//       mobile: map['mobile'] ?? map['Mobile'] ?? map['phone'] ?? '',
+//       customerId: map['customerId'] ?? '',
+//       customerName: map['customerName'] ?? map['CustomerName'] ?? map['customer'] ?? '',
+//       customerEmail: map['customerEmail'] ?? map['CustomerEmail'] ?? map['email'] ?? '',
+//       customerAddress: map['customerAddress'] ?? map['CustomerAddress'] ?? map['address'] ?? '',
+//       issueDate: map['issueDate'] != null
+//           ? DateTime.tryParse(map['issueDate'])
+//           : map['IssueDate'] != null
+//           ? DateTime.tryParse(map['IssueDate'])
+//           : null,
+//       dueDate: map['dueDate'] != null
+//           ? DateTime.tryParse(map['dueDate'])
+//           : map['DueDate'] != null
+//           ? DateTime.tryParse(map['DueDate'])
+//           : null,
+//       subtotal: (map['subtotal'] ?? map['Subtotal'] ?? 0.0) is double
+//           ? map['subtotal'] ?? map['Subtotal'] ?? 0.0
+//           : double.tryParse(map['subtotal']?.toString() ?? '0') ?? 0.0,
+//       gst: (map['gst'] ?? map['gst'] ?? 0.0) is double
+//           ? map['gst'] ?? map['gst'] ?? 0.0
+//           : double.tryParse(map['gst']?.toString() ?? '0') ?? 0.0,
+//       gstAmount: (map['gstAmount'] ?? map['gstAmount'] ?? 0.0) is double
+//           ? map['gstAmount'] ?? map['gstAmount'] ?? 0.0
+//           : double.tryParse(map['taxAmount']?.toString() ?? '0') ?? 0.0,
+//       discountAmount: (map['discountAmount'] ?? map['DiscountAmount'] ?? 0.0) is double
+//           ? map['discountAmount'] ?? map['DiscountAmount'] ?? 0.0
+//           : double.tryParse(map['discountAmount']?.toString() ?? '0') ?? 0.0,
+//       //discountType: map['discountType'] ?? map['DiscountType'] ?? 'amount',
+//       totalAmount: (map['totalAmount'] ?? map['TotalAmount'] ?? 0.0) is double
+//           ? map['totalAmount'] ?? map['TotalAmount'] ?? 0.0
+//           : double.tryParse(map['totalAmount']?.toString() ?? '0') ?? 0.0,
+//       notes: map['notes'] ?? map['Notes'] ?? '',
+//       status: map['status'] ?? map['Status'] ?? 'issued',
+//       items: [],
+//       userId: map['userId'] ?? '',
+//     );
+//   }
+//
+//   // Helper method to create a copy of the invoice with updated values
+//   Invoice copyWith({
+//     String? invoiceId,
+//     String? itemId,
+//     String? itemName,
+//     int? qty,
+//     double? price,
+//     String? mobile,
+//     String? customerName,
+//     String? customerEmail,
+//     String? customerAddress,
+//     DateTime? issueDate,
+//     DateTime? dueDate,
+//     double? subtotal,
+//     double? gst,
+//     double? gstAmount,
+//     double? discountAmount,
+//     //String? discountType,
+//     double? totalAmount,
+//     String? notes,
+//     String? status,
+//     List<InvoiceItem>? items,
+//   }) {
+//     return Invoice(
+//       invoiceId: invoiceId ?? this.invoiceId,
+//       itemId: itemId ?? this.itemId,
+//       itemName: itemName ?? this.itemName,
+//       qty: qty ?? this.qty,
+//       price: price ?? this.price,
+//       mobile: mobile ?? this.mobile,
+//       customerName: customerName ?? this.customerName,
+//       customerEmail: customerEmail ?? this.customerEmail,
+//       customerAddress: customerAddress ?? this.customerAddress,
+//       issueDate: issueDate ?? this.issueDate,
+//       dueDate: dueDate ?? this.dueDate,
+//       subtotal: subtotal ?? this.subtotal,
+//       gst: gst ?? this.gst,
+//       gstAmount: gstAmount ?? this.gstAmount,
+//       discountAmount: discountAmount ?? this.discountAmount,
+//       //discountType: discountType ?? this.discountType,
+//       totalAmount: totalAmount ?? this.totalAmount,
+//       notes: notes ?? this.notes,
+//       status: status ?? this.status,
+//       items: items,
+//     );
+//   }
+//
+//   @override
+//   String toString() {
+//     return 'Invoice(invoiceId: $invoiceId, itemId: $itemId, itemName: $itemName, qty: $qty, price: $price, mobile: $mobile, customerName: $customerName)';
+//   }
+// }
+//
+//
+// class InvoiceItem {
+//   final String description;
+//   final int quantity;
+//   final double rate;
+//   double? gstRate;      // %
+//
+//   final String itemId;
+//   final String itemName;
+//   //final double totalPrice;
+//   final String? challanId;
+//
+//   InvoiceItem({
+//     required this.description,
+//     required this.quantity,
+//     required this.rate,
+//     this.gstRate = 0.0,
+//     required this.itemId,
+//     required this.itemName,
+//     //required this.totalPrice,
+//     this.challanId,
+//   });
+//
+//   // Use the totalPrice from API instead of calculating
+//   double get totalPrice => quantity * rate;
+//   double get gstAmount => (totalPrice * gstRate!) / 100;
+//   double get amountWithGst => totalPrice + gstAmount;
+//
+//
+//   Map<String, dynamic> toMap() {
+//     return {
+//       "itemId": itemId ?? "",
+//       "itemName": itemName,
+//       "quantity": quantity,
+//       "rate": rate,
+//       "gstRate": gstRate,
+//       "gstAmount": gstAmount,
+//       "amountWithGst": amountWithGst,
+//       "totalPrice": totalPrice,
+//     };
+//   }
+//
+//   factory InvoiceItem.fromJson(Map<String, dynamic> map) {
+//     double qty = double.tryParse(map['quantity']?.toString() ?? '0') ?? 0;
+//     double price = double.tryParse(map['price']?.toString() ?? '0') ?? 0;
+//     double gstRate = double.tryParse(map['gstRate']?.toString() ?? '0') ?? 0;
+//
+//     double lineTotal = qty * price;
+//     double gstAmount = lineTotal * (gstRate / 100);
+//     double amountWithGst = lineTotal + gstAmount;
+//     return InvoiceItem(
+//       description: map['description']?.toString() ?? '',
+//       quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
+//       rate: double.tryParse(map['price']?.toString() ?? '0.0') ?? 0.0,
 //       itemId: map['itemId']?.toString() ?? '',
-//       qty: int.tryParse(map['qty']?.toString() ?? '0') ?? 0,
-//       price: double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
-//       mobile: map['mobile']?.toString() ?? '',
-//       customerName: map['customerName']?.toString() ?? '',
 //       itemName: map['itemName']?.toString() ?? '',
-//       //date: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+//       //totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ?? 0.0,
+//       gstRate: gstRate,
+//
+//     );
+//   }
+//
+//   factory InvoiceItem.fromMap(Map<String, dynamic> map) => InvoiceItem.fromJson(map);
+//
+//   InvoiceItem copyWith({
+//     String? description,
+//     int? quantity,
+//     double? rate,
+//     String? itemId,
+//     String? itemName,
+//     double? gstRate,
+//     String? challanId,
+//   }) {
+//     return InvoiceItem(
+//       description: description ?? this.description,
+//       quantity: quantity ?? this.quantity,
+//       rate: rate ?? this.rate,
+//       itemId: itemId ?? this.itemId,
+//       itemName: itemName ?? this.itemName,
+//       gstRate: gstRate ?? this.gstRate,
+//       challanId: challanId ?? this.challanId,
 //     );
 //   }
 // }
-
-
-
-///
-class Invoice {
-  final String invoiceId;
-  final String? itemId;
-  final String? itemName;
-  final int? qty;
-  final double? price;
-  final double? gst;
-  final String mobile;
-  final String customerId;
-  final String customerName;
-  final String? customerEmail;
-  final String? customerAddress;
-  final DateTime? issueDate;
-  final DateTime? dueDate;
-  final double? subtotal;
-  final double? taxRate;
-  final double? taxAmount;
-  final double? discountAmount;
-  //final String? discountType;
-  final double? totalAmount;
-  final String? notes;
-  final String? status;
-  final List<InvoiceItem>? items;
-  final String? userId;
-  final String? challanId;
-
-  Invoice({
-    required this.invoiceId,
-     this.itemId,
-     this.itemName,
-     this.qty,
-     this.price,
-    this.gst = 0.0,
-    required this.mobile,
-    required this.customerName,
-    this.customerId = '',
-    this.customerEmail,
-    this.customerAddress,
-    this.issueDate,
-    this.dueDate,
-    this.subtotal,
-    this.taxRate,
-    this.taxAmount,
-    this.discountAmount,
-    //this.discountType,
-    this.totalAmount,
-    this.notes,
-    this.status,
-    this.items,
-    this.userId,
-    this.challanId,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'invoiceId': invoiceId,
-      'itemId': itemId,
-      'itemName': itemName,
-      'qty': qty,
-      'price': price,
-      'gst':gst,
-      'mobile': mobile,
-      'customerId': customerId,
-      'customerName': customerName,
-      'customerEmail': customerEmail,
-      'customerAddress': customerAddress,
-      'issueDate': issueDate?.toIso8601String(),
-      'dueDate': dueDate?.toIso8601String(),
-      'subtotal': subtotal,
-      'taxRate': taxRate,
-      'taxAmount': taxAmount,
-      'discountAmount': discountAmount,
-      //'discountType': discountType,
-      'totalAmount': totalAmount,
-      'notes': notes,
-      'status': status,
-      ///'items': json.encode(items?.map((item) => item.toMap()).toList()),
-
-    };
-  }
-
-  // Convert invoice items to a separate map for the items table
-  List<Map<String, dynamic>> itemsToMap() {
-    if (items == null) return [];
-
-    return items!.map((item) {
-      return {
-        'invoiceId': invoiceId, // Foreign key reference
-        'itemId': item.itemId,
-        'description': item.description,
-        'quantity': item.quantity,
-        'rate': item.rate,
-        'amount': item.amount,
-      };
-    }).toList();
-  }
-
-  factory Invoice.fromMap(Map<String, dynamic> map) {
-    return Invoice(
-      invoiceId: map['invoiceId'] ?? map['InvoiceId'] ?? '',
-      itemId: map['itemId'] ?? map['ItemId'] ?? '',
-      itemName: map['itemName'] ?? map['ItemName'] ?? '',
-      qty: (map['qty'] ?? map['Qty'] ?? map['quantity'] ?? 0) is int
-          ? map['qty'] ?? map['Qty'] ?? map['quantity'] ?? 0
-          : int.tryParse(map['qty']?.toString() ?? '0') ?? 0,
-      price: (map['price'] ?? map['Price'] ?? 0.0) is double
-          ? map['price'] ?? map['Price'] ?? 0.0
-          : double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
-      gst: map['gst'] != null ? double.parse(map['gst'].toString()) : 0.0,
-      mobile: map['mobile'] ?? map['Mobile'] ?? map['phone'] ?? '',
-      customerId: map['customerId'] ?? '',
-      customerName: map['customerName'] ?? map['CustomerName'] ?? map['customer'] ?? '',
-      customerEmail: map['customerEmail'] ?? map['CustomerEmail'] ?? map['email'] ?? '',
-      customerAddress: map['customerAddress'] ?? map['CustomerAddress'] ?? map['address'] ?? '',
-      issueDate: map['issueDate'] != null
-          ? DateTime.tryParse(map['issueDate'])
-          : map['IssueDate'] != null
-          ? DateTime.tryParse(map['IssueDate'])
-          : null,
-      dueDate: map['dueDate'] != null
-          ? DateTime.tryParse(map['dueDate'])
-          : map['DueDate'] != null
-          ? DateTime.tryParse(map['DueDate'])
-          : null,
-      subtotal: (map['subtotal'] ?? map['Subtotal'] ?? 0.0) is double
-          ? map['subtotal'] ?? map['Subtotal'] ?? 0.0
-          : double.tryParse(map['subtotal']?.toString() ?? '0') ?? 0.0,
-      taxRate: (map['taxRate'] ?? map['TaxRate'] ?? 0.0) is double
-          ? map['taxRate'] ?? map['TaxRate'] ?? 0.0
-          : double.tryParse(map['taxRate']?.toString() ?? '0') ?? 0.0,
-      taxAmount: (map['taxAmount'] ?? map['TaxAmount'] ?? 0.0) is double
-          ? map['taxAmount'] ?? map['TaxAmount'] ?? 0.0
-          : double.tryParse(map['taxAmount']?.toString() ?? '0') ?? 0.0,
-      discountAmount: (map['discountAmount'] ?? map['DiscountAmount'] ?? 0.0) is double
-          ? map['discountAmount'] ?? map['DiscountAmount'] ?? 0.0
-          : double.tryParse(map['discountAmount']?.toString() ?? '0') ?? 0.0,
-      //discountType: map['discountType'] ?? map['DiscountType'] ?? 'amount',
-      totalAmount: (map['totalAmount'] ?? map['TotalAmount'] ?? 0.0) is double
-          ? map['totalAmount'] ?? map['TotalAmount'] ?? 0.0
-          : double.tryParse(map['totalAmount']?.toString() ?? '0') ?? 0.0,
-      notes: map['notes'] ?? map['Notes'] ?? '',
-      status: map['status'] ?? map['Status'] ?? 'issued',
-      items: [],
-      userId: map['userId'] ?? '',
-    );
-  }
-
-  // Helper method to create a copy of the invoice with updated values
-  Invoice copyWith({
-    String? invoiceId,
-    String? itemId,
-    String? itemName,
-    int? qty,
-    double? price,
-    String? mobile,
-    String? customerName,
-    String? customerEmail,
-    String? customerAddress,
-    DateTime? issueDate,
-    DateTime? dueDate,
-    double? subtotal,
-    double? taxRate,
-    double? taxAmount,
-    double? discountAmount,
-    //String? discountType,
-    double? totalAmount,
-    String? notes,
-    String? status,
-    List<InvoiceItem>? items,
-  }) {
-    return Invoice(
-      invoiceId: invoiceId ?? this.invoiceId,
-      itemId: itemId ?? this.itemId,
-      itemName: itemName ?? this.itemName,
-      qty: qty ?? this.qty,
-      price: price ?? this.price,
-      mobile: mobile ?? this.mobile,
-      customerName: customerName ?? this.customerName,
-      customerEmail: customerEmail ?? this.customerEmail,
-      customerAddress: customerAddress ?? this.customerAddress,
-      issueDate: issueDate ?? this.issueDate,
-      dueDate: dueDate ?? this.dueDate,
-      subtotal: subtotal ?? this.subtotal,
-      taxRate: taxRate ?? this.taxRate,
-      taxAmount: taxAmount ?? this.taxAmount,
-      discountAmount: discountAmount ?? this.discountAmount,
-      //discountType: discountType ?? this.discountType,
-      totalAmount: totalAmount ?? this.totalAmount,
-      notes: notes ?? this.notes,
-      status: status ?? this.status,
-      items: items,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'Invoice(invoiceId: $invoiceId, itemId: $itemId, itemName: $itemName, qty: $qty, price: $price, mobile: $mobile, customerName: $customerName)';
-  }
-}
-
-
-class InvoiceItem {
-  final String description;
-  final int quantity;
-  final double rate;
-  double gst;
-  final String itemId;
-  final String itemName;
-  final double totalPrice;
-  final String? challanId;
-
-  InvoiceItem({
-    required this.description,
-    required this.quantity,
-    required this.rate,
-    this.gst = 0.0,
-    required this.itemId,
-    required this.itemName,
-    required this.totalPrice,
-    this.challanId,
-  });
-
-  // Use the totalPrice from API instead of calculating
-  double get amount => quantity * rate;
-
-
-  Map<String, dynamic> toMap() {
-    return {
-      "itemId": itemId ?? "",
-      "itemName": itemName,
-      "quantity": quantity,
-      "rate": rate,
-      'gst':gst,
-      "totalPrice": totalPrice,
-    };
-  }
-
-  factory InvoiceItem.fromJson(Map<String, dynamic> map) {
-    return InvoiceItem(
-      description: map['description']?.toString() ?? '',
-      quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
-      rate: double.tryParse(map['price']?.toString() ?? '0.0') ?? 0.0,
-      itemId: map['itemId']?.toString() ?? '',
-      itemName: map['itemName']?.toString() ?? '',
-      totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ?? 0.0,
-    );
-  }
-
-  factory InvoiceItem.fromMap(Map<String, dynamic> map) => InvoiceItem.fromJson(map);
-
-  InvoiceItem copyWith({
-    String? description,
-    int? quantity,
-    double? rate,
-    String? itemId,
-    String? itemName,
-    double? totalPrice,
-    String? challanId,
-  }) {
-    return InvoiceItem(
-      description: description ?? this.description,
-      quantity: quantity ?? this.quantity,
-      rate: rate ?? this.rate,
-      itemId: itemId ?? this.itemId,
-      itemName: itemName ?? this.itemName,
-      totalPrice: totalPrice ?? this.totalPrice,
-      challanId: challanId ?? this.challanId,
-    );
-  }
-}
+//

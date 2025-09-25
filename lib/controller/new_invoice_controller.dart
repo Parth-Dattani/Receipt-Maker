@@ -129,8 +129,8 @@ class NewInvoiceController extends GetxController {
 
     try {
       await loadInvoices();
+      _initializeLastInvoiceId();
       initializeInvoice();
-      await loadCompanyData();
       _isEssentialDataLoaded = true;
     } finally {
       _initializationLock = false;
@@ -142,6 +142,7 @@ class NewInvoiceController extends GetxController {
     if (_isSecondaryDataLoaded) return;
 
     try {
+      await loadCompanyData();
       await loadCustomers();
       await fetchItems2();
       _isSecondaryDataLoaded = true;
@@ -264,6 +265,26 @@ class NewInvoiceController extends GetxController {
 
     return data;
   }
+
+  void _initializeLastInvoiceId() {
+    final sameTypeInvoices = invoiceList.where((inv) =>
+    inv.invoiceId != null &&
+        inv.invoiceId!.startsWith(invoiceType.value.prefix)
+    ).toList();
+
+    if (sameTypeInvoices.isNotEmpty) {
+      final maxId = sameTypeInvoices.map((inv) {
+        return int.tryParse(inv.invoiceId!.replaceAll(invoiceType.value.prefix, '')) ?? 0;
+      }).reduce((a, b) => a > b ? a : b);
+
+      _lastInvoiceId = maxId;
+    } else {
+      _lastInvoiceId = 0;
+    }
+
+    print("📌 Last invoice ID initialized to $_lastInvoiceId");
+  }
+
 
   Future<void> loadChallansForInvoice({bool loadMore = false}) async {
     if (!loadMore) {
@@ -397,8 +418,9 @@ class NewInvoiceController extends GetxController {
       quantity: challanItem.quantity,
       rate: challanItem.price,
       itemName: challanItem.itemName,
-      totalPrice: challanItem.totalPrice,
+      ////totalPrice: challanItem.totalPrice,
       challanId: challanItem.challanId,
+        gstRate: challanItem.gstRate
     ))
         .toList();
 
@@ -695,24 +717,25 @@ class NewInvoiceController extends GetxController {
   }
 
   String generateInvoiceId() {
-    final sameTypeInvoices = invoiceList.where((inv) =>
-    inv.invoiceId != null &&
-        inv.invoiceId!.startsWith(invoiceType.value.prefix)
-    ).toList();
+    _lastInvoiceId++;
+    // final sameTypeInvoices = invoiceList.where((inv) =>
+    // inv.invoiceId != null &&
+    //     inv.invoiceId!.startsWith(invoiceType.value.prefix)
+    // ).toList();
+    //
+    // if (sameTypeInvoices.isEmpty) {
+    //   return "${invoiceType.value.prefix}001";
+    // }
+    //
+    // final maxId = sameTypeInvoices.map((inv) {
+    //   try {
+    //     return int.parse(inv.invoiceId!.replaceAll(invoiceType.value.prefix, ''));
+    //   } catch (e) {
+    //     return 0;
+    //   }
+    // }).reduce((max, current) => current > max ? current : max);
 
-    if (sameTypeInvoices.isEmpty) {
-      return "${invoiceType.value.prefix}001";
-    }
-
-    final maxId = sameTypeInvoices.map((inv) {
-      try {
-        return int.parse(inv.invoiceId!.replaceAll(invoiceType.value.prefix, ''));
-      } catch (e) {
-        return 0;
-      }
-    }).reduce((max, current) => current > max ? current : max);
-
-    return "${invoiceType.value.prefix}${(maxId + 1).toString().padLeft(3, '0')}";
+    return "${invoiceType.value.prefix}${(_lastInvoiceId).toString().padLeft(3, '0')}";
   }
 
 
@@ -756,7 +779,7 @@ class NewInvoiceController extends GetxController {
         description: '',
         quantity: 1,
         rate: 0.0,
-        gst: 0.0,
+        gstRate: 0.0,
         itemId: '',
         itemName: '',
         totalPrice: 0.0
@@ -774,9 +797,9 @@ class NewInvoiceController extends GetxController {
           description: description ?? item.description,
           quantity: quantity ?? item.quantity,
           rate: newRate.toDouble(),
-          gst: item.gst,
+          gstRate: item.gstRate,
           itemId: itemId ?? item.itemId,
-          totalPrice: item.totalPrice,
+          //totalPrice: item.totalPrice,
           itemName: description ?? item.itemName
       );
       calculateTotals();
@@ -789,10 +812,10 @@ class NewInvoiceController extends GetxController {
           description: item.itemName,
           quantity: invoiceItems[index].quantity,
           rate: item.price.toDouble(),
-          gst: item.gstPercent.toDouble(),
+          gstRate: item.gstPercent.toDouble(),
           itemId: item.itemId,
           itemName: item.itemName,
-          totalPrice: item.price
+          //totalPrice: item.price
       );
       calculateTotals();
     }
@@ -810,18 +833,37 @@ class NewInvoiceController extends GetxController {
     double sub = 0.0;
     double gst = 0.0;
 
-    for (var item in invoiceItems) {
-      final itemTotal = item.quantity * item.rate;
-      sub += itemTotal;
+    for (var i = 0; i < invoiceItems.length; i++) {
+      final item = invoiceItems[i];
+      final itemTotal = item.rate * item.quantity;
 
-      // Calculate GST for this item and add to total GST
-      final gstForItem = itemTotal * (item.gst / 100);
+      double gstForItem = 0.0;
+      double withGst = itemTotal;
+
+      if (AppConstants.withGST.value) {
+        gstForItem = itemTotal * (item.gstRate / 100);
+        withGst += itemTotal +  gstForItem;
+      }
+
+      invoiceItems[i] = item.copyWith(
+        totalPrice: itemTotal,
+        gstAmount: gstForItem,
+        amountWithGst: withGst
+      );
+      sub += itemTotal;
       gst += gstForItem;
     }
 
     subtotal.value = sub;
-    gstAmount.value = gst;
-    totalAmount.value = sub + gst;
+
+    if (AppConstants.withGST.value) {
+      gstAmount.value = gst;
+      totalAmount.value = sub + gst;
+    } else {
+      gstAmount.value = 0.0;
+      totalAmount.value = sub;
+    }
+
   }
 
 
@@ -866,6 +908,8 @@ class NewInvoiceController extends GetxController {
       }
 
       isLoading.value = true;
+      // Calculate totals first
+      calculateTotals();
 
       // Get customer ID logic (keep your existing logic)
       String finalCustomerId = selectedCustomerId.value;
@@ -880,8 +924,8 @@ class NewInvoiceController extends GetxController {
         'issueDate': DateTime.now().toIso8601String(),
         'dueDate': dueDate.value.toIso8601String(),
         'subtotal': subtotal.value,
-        'taxRate': taxRate.value,
-        'taxAmount': taxAmount.value,
+        'gstRate': invoiceItems.isNotEmpty ? invoiceItems.first.gstRate : 0.0,
+        'gstAmount': gstAmount.value,
         'discountAmount': discountAmount.value,
         'totalAmount': totalAmount.value,
         'notes': notesController.text,
@@ -903,8 +947,10 @@ class NewInvoiceController extends GetxController {
           'description': item.description,
           'quantity': item.quantity,
           'price': item.rate,
-          'gst': item.gst.toString(),
-          'totalPrice': item.amount,
+          'gstRate': item.gstRate,
+          'gstAmount': item.gstAmount,
+          'amountWithGst': item.amountWithGst,
+          'totalPrice': item.totalPrice,
         };
 
         print("Saving invoice item: ${jsonEncode(invoiceItemData)}");
@@ -923,7 +969,6 @@ class NewInvoiceController extends GetxController {
           itemName: item.description,
           qty: item.quantity,
           price: item.rate.toDouble(),
-          gst: item.gst,
           mobile: customerMobileController.text.trim(),
           customerId: selectedCustomerId.value,
           customerName: customerNameController.text.trim(),
@@ -932,8 +977,9 @@ class NewInvoiceController extends GetxController {
           issueDate: DateTime.now(),
           dueDate: dueDate.value,
           subtotal: subtotal.value,
-          taxRate: taxRate.value,
-          taxAmount: taxAmount.value,
+          gst: item.gstRate,
+          gstRate: item.gstRate,
+          gstAmount: gstAmount.value,
           discountAmount: discountAmount.value,
           totalAmount: totalAmount.value,
           notes: notesController.text,
@@ -989,11 +1035,11 @@ class NewInvoiceController extends GetxController {
           customerEmailController.text.trim(),
           customerAddressController.text.trim(),
           subtotal.value,
-          taxAmount.value,
+          //taxAmount.value,
           discountAmount.value,
           totalAmount.value,
-          taxRate.value,
-          discountType.value,
+         // taxRate.value,
+          //discountType.value,
           notesController.text,
           companyData.value,
           invoiceType.value,
@@ -1003,11 +1049,11 @@ class NewInvoiceController extends GetxController {
 
       showCustomSnackbar(
         title: "Success",
-        message: "Invoice ${isDraft ? 'saved as draft' : 'created'} successfully!",
+        message: "Invoice 'created' successfully!",
         baseColor: AppColors.darkGreenColor,
         icon: Icons.check_circle_outline,
       );
-
+      clearForm();
 
       Get.back();
       return true;

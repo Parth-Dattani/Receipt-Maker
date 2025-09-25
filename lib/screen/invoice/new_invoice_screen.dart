@@ -46,7 +46,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     _buildChallanToInvoiceSection(),
                     // Invoice Details Section
                     _buildInvoiceDetailsCard(),
-        
+
                     SizedBox(height: 16),
         
                     // Customer Section
@@ -913,8 +913,11 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       'Tax (${controller.taxRate.value}%)',
                       controller.taxAmount.value,
                     ),
-                  _buildTotalRow('Gst', controller.gstAmount.value),
-                  const Divider(),
+    if (AppConstants.withGST.value) ...[
+                  _buildTotalRow('CGST', controller.gstAmount.value / 2),
+                  _buildTotalRow('SGST', controller.gstAmount.value / 2),
+                 ],
+                   Divider(),
                   _buildTotalRow(
                     'Total Amount',
                     controller.totalAmount.value,

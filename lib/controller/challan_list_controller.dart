@@ -1,4 +1,6 @@
 
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/utils/pdf_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -197,7 +199,7 @@ class ChallanListController extends BaseController {
     }
   }
 
-  /// 🔹 Export challan as PDF
+  /// 🔹 Export challan as PDF --- Challan
   Future<void> exportChallanAsPdf(Challan challan) async {
     try {
       // Show loading indicator
@@ -208,6 +210,8 @@ class ChallanListController extends BaseController {
       List<ChallanItem> fetchedChallanItems =
       await GoogleSheetService.getChallanItemsByChallanId(challan.challanId);
 
+      print("Fettttttt----ITem======= :${fetchedChallanItems[0].gstAmount}");
+      
       // ✅ Fix: Fallback itemName -> description if blank
       final cleanedItems = fetchedChallanItems.map((item) {
         final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
@@ -221,19 +225,47 @@ class ChallanListController extends BaseController {
           quantity: item.quantity,
           price: item.price,
           customerId: '', totalPrice: item.totalPrice,
+          gstRate: item.gstRate,
+          gstAmount: item.gstAmount,
+          amountWithGst: item.amountWithGst,
+          challanDate: item.challanDate,
         );
       }).toList();
 
       print("Found ${cleanedItems.length} items for challan ${challan.challanId}");
       for (var item in cleanedItems) {
-        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, price: ${item.price}");
+        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, price: ${item.price}-----GSt: ${item.gstAmount}---tot: ${item.totalPrice}");
       }
 
+      print("--------=================-----------");
+      print(cleanedItems, );
+      // ✅ Calculate totals
+      final subtotal = cleanedItems.fold<double>(0, (s, it) {
+        final qty = (it.quantity ?? 0).toDouble();
+        final rate = it.price ?? 0.0;
+        return s + (qty * rate);
+      });
+
+      final gstTotal = cleanedItems.fold<double>(0, (s, it) {
+        final qty = (it.quantity ?? 0).toDouble();
+        final rate = it.price ?? 0.0;
+        final base = qty * rate;
+        return s + ((base * (it.gstRate ?? 0)) / 100);
+      });
+
+
+      final grandTotal = subtotal + gstTotal ;
+
+
       // Generate PDF with the complete challan data including items
-      final pdfFile = await InvoiceHelper.generateChallan(
-          challan,
-          cleanedItems,
-          companyData.value
+      final pdfFile = await InvoiceHelper.generateDocument(
+          isChallan:  true,
+          challan:  challan,
+          challanItems: cleanedItems,
+          companyData : companyData.value,
+       /* subtotal:subtotal,
+        gstAmount: gstTotal,
+        total: grandTotal,*/
       );
 
       // Share or open the file

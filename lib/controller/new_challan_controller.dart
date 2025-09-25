@@ -40,8 +40,6 @@ class NewChallanController extends BaseController {
 
   // Calculation observables
   var subtotal = 0.0.obs;
-  var taxRate = 0.0.obs;
-  var taxAmount = 0.0.obs;
   var paymentStatus = 'Pending'.obs;
   var totalAmount = 0.0.obs;
   var discountType = 'amount'.obs;
@@ -416,7 +414,7 @@ class NewChallanController extends BaseController {
       description: '',
       quantity: 1,
       price: 0.0,
-      gst: 0.0,
+      gstRate: 0.0,
       itemId: '',
       totalPrice: 0.0,
       itemName: '',
@@ -433,7 +431,7 @@ customerId: ''
         description: description ?? item.description,
         quantity: quantity ?? item.quantity,
         price: price ?? item.price,
-        gst: item.gst,
+        gstRate: item.gstRate,
         itemId: itemId ?? item.itemId,
         itemName: description ?? item.itemName,
         totalPrice: item.totalPrice,
@@ -449,7 +447,7 @@ customerId: ''
         description: item.itemName,
         quantity: challanItems[index].quantity,
         price: item.price.toDouble(),
-        gst: item.gstPercent.toDouble(),
+        gstRate: item.gstPercent.toDouble(),
         itemId: item.itemId,
           itemName: item.itemName,
           totalPrice: item.price
@@ -515,13 +513,14 @@ customerId: ''
         'customerEmail': customerEmailController.text.trim(),
         'customerAddress': customerAddressController.text.trim(),
         'subtotal': subtotal.value,
-        'taxRate': taxRate.value,
-        'taxAmount': taxAmount.value,
+        'gstRate': challanItems.isNotEmpty ? challanItems.first.gstRate : 0.0, // ✅ rate
+        'gstAmount': gstAmount.value, // ✅ calculated amount
         'totalAmount': totalAmount.value,
         'paymentStatus': paymentStatus.value,
         'notes': notesController.text,
         'status': isDraft ? 'draft' : 'completed',
         'userId': AppConstants.userId,
+
       };
 
       print("Saving main challan record: ${jsonEncode(challanData)}");
@@ -538,7 +537,9 @@ customerId: ''
           'description': item.description,
           'quantity': item.quantity.toString(),
           'price': item.price.toString(),
-          'gst': item.gst.toString(),
+          'gstRate': item.gstRate.toString(),
+          'gstAmount': item.gstAmount.toString(),
+          'amountWithGst': item.amountWithGst.toString(),
           'totalPrice': (item.quantity * item.price).toString(),
         };
 
@@ -558,15 +559,15 @@ customerId: ''
             itemName: item.description,   // ✅ correctly mapped
             qty: item.quantity,
             price: item.price.toDouble(),  // ✅ correctly mapped
-          gst: item.gst,
+          gst: item.gstRate,
           customerMobile: customerMobileController.text.trim(),
           customerId: selectedCustomerId.value,
           customerName: customerNameController.text.trim(),
           customerEmail: customerEmailController.text.trim(),
           customerAddress: customerAddressController.text.trim(),
           subtotal: subtotal.value,
-          taxRate: taxRate.value,
-          taxAmount: taxAmount.value,
+          totalAmount: totalAmount.value,
+          gstAmount: gstAmount.value,
           notes: notesController.text,
           status: paymentStatus.value,
         );
@@ -583,9 +584,9 @@ customerId: ''
         customerEmailController.text.trim(),
         customerAddressController.text.trim(),
         subtotal.value,
-        taxAmount.value,
+        //taxAmount.value,
         totalAmount.value,
-        taxRate.value,
+        //taxRate.value,
         paymentStatus.value,
         notesController.text,
         companyData.value,
@@ -594,10 +595,11 @@ customerId: ''
 
       showCustomSnackbar(
         title: "Success",
-        message: "Challan ${isDraft ? 'saved as draft' : 'created'} successfully!",
+        message: "Challan created successfully!",
         baseColor: AppColors.darkGreenColor,
         icon: Icons.check_circle_outline,
       );
+      clearForm();
 
 
       Get.back();
@@ -643,18 +645,41 @@ customerId: ''
     double sub = 0.0;
     double gst = 0.0;
 
-    for (var item in challanItems) {
+    for (var i = 0; i < challanItems.length; i++) {
+      final item = challanItems[i];
       final itemTotal = item.price * item.quantity;
-      sub += itemTotal;
 
-      final gstForItem = itemTotal * (item.gst / 100);
+      double gstForItem = 0.0;
+      double withGst = itemTotal;
+
+      if (AppConstants.withGST.value) {
+        gstForItem = itemTotal * (item.gstRate / 100);
+        withGst = itemTotal + gstForItem;
+      }
+
+      // ✅ Always update challan item properly
+      challanItems[i] = item.copyWith(
+        totalPrice: itemTotal,
+        gstAmount: gstForItem,
+        amountWithGst: withGst,
+      );
+
+      sub += itemTotal;
       gst += gstForItem;
     }
 
     subtotal.value = sub;
-    gstAmount.value = gst;
-    totalAmount.value = sub + gst;
+
+    if (AppConstants.withGST.value) {
+      gstAmount.value = gst;
+      totalAmount.value = sub + gst;
+    } else {
+      gstAmount.value = 0.0;
+      totalAmount.value = sub;
+    }
   }
+
+
 
 
   void clearForm() {
@@ -662,8 +687,6 @@ customerId: ''
     challanItems.clear();
     clearCustomerSelection();
     notesController.clear();
-    taxRate.value = 0.0;
-    taxAmount.value = 0.0;
     paymentStatus.value = 'Pending';
     calculateTotals();
 

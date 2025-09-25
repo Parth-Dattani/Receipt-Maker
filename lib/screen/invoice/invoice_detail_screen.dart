@@ -940,17 +940,21 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Payment Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+            Text('Payment Summary',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700)),
             const SizedBox(height: 12),
-            // Direct manual calculation in Obx
+
             Obx(() {
               double subtotal = 0.0;
 
               if (controller.isEditMode.value) {
-                // Edit mode: use calculated total from editable items
+                // Edit mode → use calculated
                 subtotal = controller.calculatedTotal;
               } else {
-                // View mode: Manual calculation qty * rate
+                // View mode → calculate qty * rate
                 for (var item in controller.invoiceItems) {
                   final qty = (item.quantity ?? 0).toDouble();
                   final rate = item.rate ?? 0.0;
@@ -958,22 +962,31 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                 }
               }
 
-              final double tax = invoice.taxAmount ?? 0.0;
+              // GST amount from invoice (already stored in sheet)
+              final double gstAmount = invoice.gstAmount ?? 0.0;
               final double discount = invoice.discountAmount ?? 0.0;
-              final double total = subtotal + tax - discount;
+              final double total = subtotal + gstAmount - discount;
 
               return Column(
                 children: [
-                  _buildInfoRow('Subtotal:', '₹${subtotal.toStringAsFixed(2)}'),
-                  _buildInfoRow('Tax:', '₹${tax.toStringAsFixed(2)}'),
-                  _buildInfoRow('Discount:', '-₹${discount.toStringAsFixed(2)}'),
+                  _buildInfoRow('Subtotal:', '${subtotal.toStringAsFixed(2)}'),
+                  _buildInfoRow('GST:',
+                      '${gstAmount.toStringAsFixed(2)}'),
+                  _buildInfoRow('Discount:',
+                      '-${discount.toStringAsFixed(2)}'),
                   const Divider(thickness: 2),
                   Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Total Amount:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('₹${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700))
-                      ]
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Amount:',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('₹${total.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700))
+                    ],
                   ),
                 ],
               );
@@ -983,6 +996,7 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
       ),
     );
   }
+
 
 
 

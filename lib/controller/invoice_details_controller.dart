@@ -532,15 +532,14 @@ class InvoiceDetailsController extends GetxController {
           description: itemName,
           quantity: qty,
           rate: rate,
-          totalPrice: qty * rate,
         ));
       }
 
       // 2️⃣ Recalculate totals
       final subtotal = updatedItems.fold<double>(0, (s, it) => s + (it.totalPrice ?? 0));
-      final tax = updatedInvoice.taxAmount ?? 0;
+      final gstAmount = updatedItems.fold<double>(0, (s, it) => s + calculateItemGst(it));
       final discount = updatedInvoice.discountAmount ?? 0;
-      final total = subtotal + tax - discount;
+      final total = subtotal + gstAmount - discount;
 
       // 3️⃣ Prepare invoice data map
       final invoiceData = {
@@ -552,7 +551,7 @@ class InvoiceDetailsController extends GetxController {
         'issueDate': updatedInvoice.issueDate?.toIso8601String(),
         'dueDate': updatedInvoice.dueDate?.toIso8601String(),
         'subtotal': subtotal.toStringAsFixed(2),
-        'taxAmount': tax.toStringAsFixed(2),
+        'gstAmount': gstAmount.toStringAsFixed(2),   //
         'discountAmount': discount.toStringAsFixed(2),
         'totalAmount': total.toStringAsFixed(2),
         'status': selectedStatus.value,
@@ -581,6 +580,31 @@ class InvoiceDetailsController extends GetxController {
     }
   }
 
+// 🔹 Calculate GST per item (based on gstRate and rate*qty)
+  double calculateItemGst(InvoiceItem item) {
+    final qty = (item.quantity ?? 0).toDouble();
+    final rate = item.rate ?? 0.0;
+    final base = qty * rate;
+    final gstRate = (item.gstRate ?? 0).toDouble();
+    return (base * gstRate) / 100;
+  }
+
+
+
+// 🔹 Total GST amount for all items
+  double get totalGstAmount {
+    double gst = 0.0;
+    for (var item in invoiceItems) {
+      gst += calculateItemGst(item);
+    }
+    return gst;
+  }
+
+// 🔹 Final total (subtotal + GST – discount)
+  double get grandTotal {
+    final discount = invoice.value?.discountAmount ?? 0.0;
+    return itemsSubtotal + totalGstAmount - discount;
+  }
 
 
 

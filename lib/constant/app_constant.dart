@@ -9,6 +9,7 @@ class AppConstants{
    static String spreadsheetId = "";
    static String accessKey = "";
    static final isChallan = false.obs;
+   static final withGST = false.obs;
 
 
 }

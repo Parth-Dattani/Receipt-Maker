@@ -348,8 +348,16 @@ class SplashController extends BaseController{
             await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
             AppConstants.isChallan.value = isChallanEnabled;
             print("IsssChallN-------------${isChallanEnabled}");
+
+
+            // ✅ Get GST setting
+            final isGstEnabled = data['isGstEnabled'] ?? false;
+            await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
+            AppConstants.withGST.value = isGstEnabled;
+            print("IsssGST-------------$isGstEnabled");
           }
-          print("IsssChallN-------ccc------${AppConstants.isChallan.value}");
+          print("Final Challan Value ------ ${AppConstants.isChallan.value}");
+          print("Final GST Value ---------- ${AppConstants.withGST.value}");
         }
       }
     } catch (e) {

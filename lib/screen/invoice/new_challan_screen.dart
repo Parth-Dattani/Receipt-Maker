@@ -798,11 +798,17 @@ class NewChallanScreen extends GetView<NewChallanController> {
             Obx(() => Column(
               children: [
                 _buildTotalRow('Subtotal', controller.subtotal.value),
-                if (controller.taxRate.value > 0)
-                  _buildTotalRow('Tax: (${controller.taxRate.value}%)', controller.taxAmount.value),
-                _buildTotalRow('Gst', controller.gstAmount.value),
+                // if (controller.taxRate.value > 0)
+                //   _buildTotalRow('Tax: (${controller.taxRate.value}%)', controller.taxAmount.value),
+                /// ✅ Show GST only when enabled
+                if (AppConstants.withGST.value) ...[
+                  _buildTotalRow('CGST', controller.gstAmount.value / 2),
+                  _buildTotalRow('SGST', controller.gstAmount.value / 2),
+                ],
+                // _buildTotalRow('CGST', controller.gstAmount.value/2),
+                // _buildTotalRow('SGST', controller.gstAmount.value/2),
                 Divider(),
-                _buildTotalRow('Total Amount', controller.totalAmount.value + controller.taxAmount.value, isTotal: true),
+                _buildTotalRow('Total Amount', controller.totalAmount.value , isTotal: true),
               ],
             )),
             SizedBox(height: 20),

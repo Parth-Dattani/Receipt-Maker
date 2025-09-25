@@ -401,6 +401,45 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     ),
                   ),
 
+                  // --- GST Section Option ---
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _sectionTitle("GST", Icons.receipt_long),
+                          Obx(() => SwitchListTile(
+                            value: controller.isGstEnabled.value,
+                            onChanged: (value) {
+                              controller.isGstEnabled.value = value;
+                            },
+                            activeColor: Colors.white,
+                            activeTrackColor: Colors.teal,
+                            inactiveThumbColor: Colors.grey,
+                            title: const Text(
+                              "Enable GST",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              "Enable this if invoices should include GST calculation",
+                              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                            ),
+                            secondary: const Icon(Icons.receipt_long, color: Colors.teal),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ),
+
+
                   const SizedBox(height: 25),
 
                   // --- Register Button ---

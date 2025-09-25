@@ -1871,6 +1871,7 @@ class GoogleSheetService {
 
   static List<String>? _cachedHeaders;
   static final Map<String, List<ChallanItem>> _challanCache = {};
+  static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
 
 
   /// Load credentials from assets/credentials.json
@@ -2570,16 +2571,79 @@ class GoogleSheetService {
 
 
   /// Add invoice item directly to Google Sheet (without AppSheet API)
-  static Future<void> addInvoiceItem(
-      Map<String, dynamic> itemData, String userId) async {
+  // static Future<void> addInvoiceItem(
+  //     Map<String, dynamic> itemData, String userId) async {
+  //   print("🔄 Adding invoice item to Google Sheet...");
+  //
+  //   try {
+  //     final client = await _getAuthClient();
+  //     final sheetsApi = SheetsApi(client);
+  //
+  //     // String targetSheetName = "InvoiceItems";
+  //     // print("Using sheet: $targetSheetName");
+  //
+  //     // Get header row
+  //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$invoiceItemSheetName!1:1",
+  //     );
+  //
+  //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+  //       throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+  //     }
+  //
+  //     final headers = headerResponse.values![0];
+  //     print("InvoiceItems headers: $headers");
+  //
+  //     // Add userId if it's a column
+  //     if (headers.contains("userId")) {
+  //       itemData['userId'] = userId;
+  //     }
+  //
+  //     // ✅ Normalize keys (lowercase)
+  //     final normalizedItemData = {
+  //       for (var entry in itemData.entries)
+  //         entry.key.toString().trim().toLowerCase(): entry.value
+  //     };
+  //
+  //     // Prepare row in correct order
+  //     List<dynamic> rowData = [];
+  //     for (var header in headers) {
+  //       final key = header.toString().trim().toLowerCase();
+  //       rowData.add(normalizedItemData[key] ?? '');
+  //     }
+  //
+  //     print("Prepared row: $rowData");
+  //
+  //     final valueRange = ValueRange.fromJson({
+  //       "values": [rowData],
+  //     });
+  //
+  //     final response = await sheetsApi.spreadsheets.values.append(
+  //       valueRange,
+  //       spreadsheetId,
+  //       "$invoiceItemSheetName!A:Z",
+  //       valueInputOption: "USER_ENTERED",
+  //     );
+  //
+  //     if (response.updates?.updatedRows != null) {
+  //       print("✅ Invoice item added successfully. Rows affected: ${response.updates!.updatedRows}");
+  //     } else {
+  //       print("✅ Invoice item added successfully.");
+  //     }
+  //   } catch (e) {
+  //     print("❌ Error adding invoice item: $e");
+  //     throw Exception("Failed to add invoice item: ${e.toString()}");
+  //   }
+  // }
+
+  // ✅ FIXED - Use the same approach as challan (preserve original case)
+  static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
     print("🔄 Adding invoice item to Google Sheet...");
 
     try {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
-
-      // String targetSheetName = "InvoiceItems";
-      // print("Using sheet: $targetSheetName");
 
       // Get header row
       final headerResponse = await sheetsApi.spreadsheets.values.get(
@@ -2594,26 +2658,46 @@ class GoogleSheetService {
       final headers = headerResponse.values![0];
       print("InvoiceItems headers: $headers");
 
-      // Add userId if it's a column
-      if (headers.contains("userId")) {
-        itemData['userId'] = userId;
-      }
-
-      // ✅ Normalize keys (lowercase)
-      final normalizedItemData = {
-        for (var entry in itemData.entries)
-          entry.key.toString().trim().toLowerCase(): entry.value
-      };
-
-      // Prepare row in correct order
+      // ✅ Prepare row data based on exact header names (same as challan method)
       List<dynamic> rowData = [];
+
       for (var header in headers) {
-        final key = header.toString().trim().toLowerCase();
-        rowData.add(normalizedItemData[key] ?? '');
+        final headerName = header.toString();
+        final headerNameLower = headerName.toLowerCase();
+
+        if (headerNameLower.contains('userid')) {
+          // Add userId
+          rowData.add(userId);
+        }
+        else {
+          // ✅ Add other fields - look for exact match first, then case-insensitive
+          var value = '';
+
+          // First try exact match
+          if (itemData.containsKey(headerName)) {
+            value = itemData[headerName]?.toString() ?? '';
+          } else {
+            // Then try case-insensitive match
+            for (var key in itemData.keys) {
+              if (key.toString().toLowerCase() == headerNameLower) {
+                value = itemData[key]?.toString() ?? '';
+                break;
+              }
+            }
+          }
+          rowData.add(value);
+        }
       }
 
-      print("Prepared row: $rowData");
+      print("Prepared invoice item row: $rowData");
 
+      // ✅ Debug: Print the mapping to verify GST data
+      print("=== INVOICE ITEM MAPPING DEBUG ===");
+      for (int i = 0; i < headers.length && i < rowData.length; i++) {
+        print("${headers[i]}: ${rowData[i]}");
+      }
+
+      // Append row
       final valueRange = ValueRange.fromJson({
         "values": [rowData],
       });
@@ -2635,7 +2719,6 @@ class GoogleSheetService {
       throw Exception("Failed to add invoice item: ${e.toString()}");
     }
   }
-
 
   static Future<void> updateStockAfterInvoice(List<InvoiceItem> invoiceItems) async {
     try {
@@ -3184,143 +3267,161 @@ class GoogleSheetService {
     }
   }
 
-  static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
-    try {
-      final client = await _getAuthClient();
-      final sheetsApi = SheetsApi(client);
-
-      // Fetch all invoice item rows
-      final response = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        "$invoiceItemSheetName!A:Z",
-      );
-
-      if (response.values == null || response.values!.length <= 1) {
-        print("❌ No invoice items found in sheet.");
-        return [];
-      }
-
-      // Extract headers
-      final headers = response.values![0]
-          .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
-          .toList();
-
-      // Find the index of the invoiceId column (match your column name)
-      final invoiceIdIndex = headers.indexOf('invoiceid'); // adjust if your column name is different
-      if (invoiceIdIndex == -1) {
-        throw Exception("InvoiceId column not found in sheet headers");
-      }
-
-      List<InvoiceItem> invoiceItems = [];
-
-      // Iterate rows
-      for (int i = 1; i < response.values!.length; i++) {
-        final row = response.values![i];
-
-        // Check if this row matches the invoiceId
-        if (row.length > invoiceIdIndex && row[invoiceIdIndex].toString().trim() == invoiceId) {
-          Map<String, dynamic> rowMap = {};
-          for (int j = 0; j < headers.length; j++) {
-            rowMap[headers[j]] = j < row.length ? row[j].toString().trim() : "";
-          }
-
-          try {
-            final item = InvoiceItem.fromJson(rowMap);
-            invoiceItems.add(item);
-          } catch (e) {
-            print("⚠️ Skipping row ${i + 1} due to parse error: $e");
-          }
-        }
-      }
-
-      print("✅ Found ${invoiceItems.length} items for invoice $invoiceId");
-      return invoiceItems;
-    } catch (e) {
-      print("❌ Error fetching invoice items by invoiceId: $e");
-      return [];
-    }
-  }
-
-  ///its Working... on 18-09- 2:00PM
-  // static Future<List<ChallanItem>> getChallanItemsByChallanId(String challanId) async {
-  //   print("🔄 Fetching items for challan: $challanId");
-  //
+  // static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
   //   try {
   //     final client = await _getAuthClient();
   //     final sheetsApi = SheetsApi(client);
   //
+  //     // Fetch all invoice item rows
   //     final response = await sheetsApi.spreadsheets.values.get(
   //       spreadsheetId,
-  //       "$challanItemSheetName!A:Z",
+  //       "$invoiceItemSheetName!A:Z",
   //     );
   //
   //     if (response.values == null || response.values!.length <= 1) {
-  //       print("❌ No items found for challan $challanId");
-  //       return <ChallanItem>[];
+  //       print("❌ No invoice items found in sheet.");
+  //       return [];
   //     }
   //
-  //     final headers = response.values![0].map((h) => h.toString().trim()).toList();
-  //     print("✅ Item headers: $headers");
+  //     // Extract headers
+  //     final headers = response.values![0]
+  //         .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+  //         .toList();
   //
-  //     List<ChallanItem> items = [];
-  //     int foundCount = 0;
+  //     // Find the index of the invoiceId column (match your column name)
+  //     final invoiceIdIndex = headers.indexOf('invoiceid'); // adjust if your column name is different
+  //     if (invoiceIdIndex == -1) {
+  //       throw Exception("InvoiceId column not found in sheet headers");
+  //     }
   //
+  //     List<InvoiceItem> invoiceItems = [];
+  //
+  //     // Iterate rows
   //     for (int i = 1; i < response.values!.length; i++) {
   //       final row = response.values![i];
   //
-  //       if (row.isEmpty) continue;
-  //
-  //       Map<String, dynamic> itemMap = {};
-  //       for (int j = 0; j < headers.length; j++) {
-  //         itemMap[headers[j]] = j < row.length ? row[j] : "";
-  //       }
-  //
-  //       // Debug: Print the row data
-  //       print("📋 Row $i: $itemMap");
-  //
-  //       // Filter items by challanId - make sure the field name matches
-  //       if (itemMap['challanId'] == challanId ||
-  //           itemMap['ChallanId'] == challanId ||
-  //           itemMap['CHALLANID'] == challanId) {
+  //       // Check if this row matches the invoiceId
+  //       if (row.length > invoiceIdIndex && row[invoiceIdIndex].toString().trim() == invoiceId) {
+  //         Map<String, dynamic> rowMap = {};
+  //         for (int j = 0; j < headers.length; j++) {
+  //           rowMap[headers[j]] = j < row.length ? row[j].toString().trim() : "";
+  //         }
   //
   //         try {
-  //           ChallanItem item = ChallanItem.fromJson(itemMap);
-  //           items.add(item);
-  //           foundCount++;
-  //           print("✅ Added item: ${item.itemName} for challan $challanId");
+  //           final item = InvoiceItem.fromJson(rowMap);
+  //           invoiceItems.add(item);
   //         } catch (e) {
-  //           print("❌ Error parsing challan item: $e");
-  //           print("❌ Item data: $itemMap");
+  //           print("⚠️ Skipping row ${i + 1} due to parse error: $e");
   //         }
   //       }
   //     }
   //
-  //     print("✅ Found $foundCount items for challan $challanId");
-  //     return items;
+  //     print("✅ Found ${invoiceItems.length} items for invoice $invoiceId");
+  //     return invoiceItems;
   //   } catch (e) {
-  //     print("❌ Error getting challan items: $e");
+  //     print("❌ Error fetching invoice items by invoiceId: $e");
   //     return [];
   //   }
   // }
 
-  /// ✅ Get headers (only once per app session, cached in memory)
-  static Future<List<String>> _getHeaders(SheetsApi sheetsApi) async {
-    if (_cachedHeaders != null) return _cachedHeaders!;
+  static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+    print("🔄 Fetching items for invoice: $invoiceId");
 
-    final response = await sheetsApi.spreadsheets.values.get(
-      spreadsheetId,
-      "$challanItemSheetName!A1:Z1",
-    );
+    // If already cached, return directly
+    if (_invoiceItemCache.containsKey(invoiceId)) {
+      print("⚡ Returning cached items for invoice $invoiceId");
+      return _invoiceItemCache[invoiceId]!;
+    }
 
-    _cachedHeaders = response.values?.first
-        .map((h) => h.toString().trim())
-        .toList() ??
-        [];
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
 
-    print("✅ Cached headers: $_cachedHeaders");
-    return _cachedHeaders!;
+      // ✅ Use the same approach as challan - get headers properly
+      final headers = await _getHeaders(sheetsApi, sheetName: invoiceItemSheetName);
+
+      // ✅ Fetch only data rows (skip headers) - same as challan
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceItemSheetName!A2:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("❌ No items found for invoice $invoiceId");
+        return <InvoiceItem>[];
+      }
+
+      List<InvoiceItem> items = [];
+      int foundCount = 0;
+
+      for (int i = 0; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isEmpty) continue;
+
+        // ✅ Create map using original headers (same as challan)
+        Map<String, dynamic> itemMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          itemMap[headers[j]] = j < row.length ? row[j] : "";
+        }
+
+        // ✅ Filter by invoiceId (same approach as challan)
+        final rowInvoiceId = itemMap['invoiceId'] ??
+            itemMap['InvoiceId'] ??
+            itemMap['INVOICEID'];
+
+        if (rowInvoiceId?.toString() == invoiceId) {
+          try {
+            // ✅ Debug the map before parsing
+            print("=== Raw item map for invoice $invoiceId ===");
+            itemMap.forEach((key, value) {
+              print("  '$key': '$value'");
+            });
+
+            InvoiceItem item = InvoiceItem.fromJson(itemMap);
+            items.add(item);
+            foundCount++;
+            print("✅ Added item: ${item.itemName} (GST: ${item.gstRate}%, Amount: ${item.gstAmount})");
+          } catch (e) {
+            print("❌ Error parsing invoice item: $e");
+            print("❌ Item data: $itemMap");
+          }
+        }
+      }
+
+      print("✅ Found $foundCount items for invoice $invoiceId");
+
+      // Cache result for next call
+      _invoiceItemCache[invoiceId] = items;
+
+      return items;
+    } catch (e) {
+      print("❌ Error getting invoice items: $e");
+      return [];
+    }
   }
 
+
+  /// ✅ Get headers (only once per app session, cached in memory)
+  static Future<List<String>> _getHeaders(SheetsApi sheetsApi, {String? sheetName}) async {
+    try {
+      final headerSheetName = sheetName ?? challanItemSheetName;
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$headerSheetName!1:1",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("No headers found in $headerSheetName");
+      }
+
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      print("📋 Headers for $headerSheetName: $headers");
+      return headers;
+    } catch (e) {
+      print("❌ Error getting headers for ${sheetName ?? challanItemSheetName}: $e");
+      return [];
+    }
+  }
   /// ✅ Optimized function: get items by challanId with caching
   static Future<List<ChallanItem>> getChallanItemsByChallanId(
       String challanId) async {
@@ -3664,5 +3765,6 @@ class GoogleSheetService {
   }
 
 
-}
+
+ }
 

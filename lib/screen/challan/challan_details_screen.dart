@@ -300,7 +300,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
   /// Payment summary
   Widget _buildPaymentSummary(Challan challan) {
     final subtotal = challan.subtotal ?? 0.0;
-    final tax = challan.taxAmount ?? 0.0;
+    final tax = challan.gstAmount ?? 0.0;
     final total = challan.subtotal ?? (subtotal + tax);
 
     return Card(

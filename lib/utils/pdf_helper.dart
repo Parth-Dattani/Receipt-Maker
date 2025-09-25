@@ -58,6 +58,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/widgets.dart' show Font;
 import 'package:open_file/open_file.dart';
+import '../constant/constant.dart';
 import '../controller/new_invoice_controller.dart';
 import '../model/model.dart';
 
@@ -67,183 +68,7 @@ import '../services/service.dart';
 
 
 
-///old Working
-// class InvoiceHelper2 {
-//   static Future<void> generateAndShareInvoice(
-//       List<Invoice> invoices,
-//       String userName,
-//       String phoneNumber,
-//       ) async {
-//     final pdf = pw.Document();
-//
-//     // Load a font that supports ₹ symbol (make sure font is in assets/fonts)
-//     final ttf = pw.Font.ttf(await rootBundle.load("assets/fonts/NotoSans-Regular.ttf"));
-//
-//     final theme = pw.ThemeData.withFont(
-//       base: ttf,
-//       bold: ttf,
-//       italic: ttf,
-//       boldItalic: ttf,
-//     );
-//
-//     final String invoiceId = invoices.isNotEmpty
-//         ? (invoices.first.invoiceId ?? "UNKNOWN")
-//         : "UNKNOWN";
-//
-//     pdf.addPage(
-//       pw.Page(
-//         pageFormat: PdfPageFormat.a4,
-//         theme: theme, // ✅ Set theme so ₹ works everywhere
-//         build: (pw.Context context) {
-//           return pw.Column(
-//             crossAxisAlignment: pw.CrossAxisAlignment.start,
-//             children: [
-//               // Header
-//               pw.Center(
-//                 child: pw.Text(
-//                   'INVOICE',
-//                   style: pw.TextStyle(
-//                     fontSize: 24,
-//                     fontWeight: pw.FontWeight.bold,
-//                   ),
-//                 ),
-//               ),
-//               pw.SizedBox(height: 20),
-//
-//               // Customer info
-//               pw.Row(
-//                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   pw.Column(
-//                     crossAxisAlignment: pw.CrossAxisAlignment.start,
-//                     children: [
-//                       pw.Text('Customer: $userName'),
-//                       pw.Text('Phone: $phoneNumber'),
-//                     ],
-//                   ),
-//                   pw.Column(
-//                     crossAxisAlignment: pw.CrossAxisAlignment.end,
-//                     children: [
-//                       pw.Text('Date: ${DateTime.now().toString().split(' ')[0]}'),
-//                       pw.Text('Invoice #: $invoiceId'),
-//                     ],
-//                   ),
-//                 ],
-//               ),
-//               pw.SizedBox(height: 20),
-//               pw.Divider(),
-//
-//               // Table header
-//               pw.Row(
-//                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   pw.Expanded(flex: 3, child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-//                   pw.Expanded(flex: 1, child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-//                   pw.Expanded(flex: 2, child: pw.Text('Price', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-//                   pw.Expanded(flex: 2, child: pw.Text('Total', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-//                 ],
-//               ),
-//               pw.Divider(),
-//
-//               // Items
-//               ...invoices.map((item) {
-//                 return pw.Padding(
-//                   padding: const pw.EdgeInsets.symmetric(vertical: 4),
-//                   child: pw.Row(
-//                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-//                     children: [
-//                       pw.Expanded(flex: 3, child: pw.Text(item.itemName)),
-//                       pw.Expanded(flex: 1, child: pw.Text('${item.qty}', textAlign: pw.TextAlign.center)),
-//                       pw.Expanded(flex: 2, child: pw.Text('₹${item.price.toStringAsFixed(2)}', textAlign: pw.TextAlign.right)),
-//                       pw.Expanded(flex: 2, child: pw.Text('₹${(item.price * item.qty).toStringAsFixed(2)}', textAlign: pw.TextAlign.right)),
-//                     ],
-//                   ),
-//                 );
-//               }),
-//
-//               pw.Divider(),
-//
-//               // Grand total
-//               pw.Row(
-//                 mainAxisAlignment: pw.MainAxisAlignment.end,
-//                 children: [
-//                   pw.Text(
-//                     'Grand Total: ₹${invoices.fold<double>(0, (sum, item) => sum + (item.price * item.qty)).toStringAsFixed(2)}',
-//                     style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-//                   ),
-//                 ],
-//               ),
-//
-//               pw.SizedBox(height: 30),
-//
-//               pw.Center(
-//                 child: pw.Text('Thank you for your business!', style: pw.TextStyle(fontStyle: pw.FontStyle.italic)),
-//               ),
-//             ],
-//           );
-//         },
-//       ),
-//     );
-//
-//     // ✅ Show preview before sharing
-//     // await Printing.layoutPdf(
-//     //   onLayout: (PdfPageFormat format) async => pdf.save(),
-//     // );
-//     // /// Save to local file
-//     final directory = await getApplicationDocumentsDirectory();
-//     final filePath = '${directory.path}/$invoiceId.pdf';
-//     final file = File(filePath);
-//     await file.writeAsBytes(await pdf.save());
-//
-//     print("✅ PDF saved with filename: $invoiceId.pdf");
-//
-//     /// Share
-//     await Share.shareXFiles([XFile(file.path)], text: "Here is your Invoice: $invoiceId");
-//   }
-//
-//   static Future<void> generateAndPreviewInvoice(
-//       List<Invoice> invoices,
-//       String userName,
-//       String phoneNumber,
-//       ) async {
-//     final pdf = pw.Document();
-//
-//     final ttf = pw.Font.ttf(await rootBundle.load("assets/fonts/NotoSans-Regular.ttf"));
-//
-//     pdf.addPage(
-//       pw.Page(
-//         build: (context) {
-//           return pw.Column(
-//             children: [
-//               pw.Text("Invoice Preview", style: pw.TextStyle(font: ttf, fontSize: 22)),
-//               pw.SizedBox(height: 20),
-//               pw.Text("Customer: $userName"),
-//               pw.Text("Phone: $phoneNumber"),
-//               pw.SizedBox(height: 10),
-//               ...invoices.map((e) => pw.Text(
-//                 "${e.itemName} x${e.qty} = ₹${(e.price * e.qty).toStringAsFixed(2)}",
-//                 style: pw.TextStyle(font: ttf),
-//               )),
-//               pw.SizedBox(height: 20),
-//               pw.Text(
-//                 'Grand Total: ₹${invoices.fold<double>(0, (sum, item) => sum + (item.price * item.qty)).toStringAsFixed(2)}',
-//                 style: pw.TextStyle(font: ttf, fontSize: 18),
-//               ),
-//             ],
-//           );
-//         },
-//       ),
-//     );
-//
-//     // ✅ Show preview before sharing
-//     await Printing.layoutPdf(
-//       onLayout: (PdfPageFormat format) async => pdf.save(),
-//     );
-//   }
-// }
 
-
-//
 
 class InvoiceHelper {
   // static Future<void> generateAndShareInvoice(
@@ -865,29 +690,29 @@ class InvoiceHelper {
   //   }
   // }
 
-  static Future<void> generateAndShareInvoice(
-      List<Invoice> invoices,
+  static Future<void> generateAndShareInvoice(List<Invoice> invoices,
       String userName,
       String phoneNumber,
       String customerEmail,
       String customerAddress,
       double subtotal,
-      double taxAmount,
+      //double taxAmount,
       double discountAmount,
       double totalAmount,
-      double taxRate,
-      String discountType,
+      //double taxRate,
+      //String discountType,
       String notes,
       Map<String, dynamic> companyData,
-      InvoiceType  invoiceType,
-  double gstAmount,
-      ) async {
+      InvoiceType invoiceType,
+      double gstAmount,) async {
     try {
       final pdf = pw.Document();
 
       // Load custom font that supports rupee symbol
       final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final iconData = await rootBundle.load("assets/fonts/NotoEmoji-Regular.ttf");
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      final notoEmoji  = pw.Font.ttf(iconData.buffer.asByteData());
 
       // Use the custom font that supports rupee symbol
       final theme = pw.ThemeData.withFont(
@@ -897,7 +722,9 @@ class InvoiceHelper {
         boldItalic: customFont,
       );
 
-      final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
+      final String invoiceId = invoices.isNotEmpty
+          ? invoices.first.invoiceId
+          : "UNKNOWN";
 
       // Extract company information
       String companyName = companyData['companyName'] ?? 'Your Company Name';
@@ -940,6 +767,7 @@ class InvoiceHelper {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+
                 // Modern Header with Gradient Background
                 pw.Container(
                   width: double.infinity,
@@ -984,15 +812,58 @@ class InvoiceHelper {
                             ),
                           ),
                           pw.SizedBox(height: 3),
+                          pw.RichText(
+                            text: pw.TextSpan(
+                              children: [
+                                pw.TextSpan(
+                                  text: '📞 ',
+                                  style: pw.TextStyle(
+                                    font: notoEmoji, // icon font
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: companyPhone,
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: '   |   ',
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: '📧 ',
+                                  style: pw.TextStyle(
+                                    font: notoEmoji, // icon font
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: companyEmail,
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           pw.Text(
-                            '📞 $companyPhone | 📧 $companyEmail',
+                           "GST: $companyGst",
                             style: pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 9,
                             ),
                           ),
                           pw.Text(
-                            companyGst,
+                           "PAN: $companyPan",
                             style: pw.TextStyle(
                               color: PdfColors.white,
                               fontSize: 9,
@@ -1003,7 +874,8 @@ class InvoiceHelper {
 
                       // Invoice Badge
                       pw.Container(
-                        padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding: pw.EdgeInsets.symmetric(
+                            horizontal: 15, vertical: 8),
                         decoration: pw.BoxDecoration(
                           color: PdfColors.white,
                           borderRadius: pw.BorderRadius.circular(20),
@@ -1046,59 +918,60 @@ class InvoiceHelper {
                 pw.Row(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    // From Section
-                    pw.Expanded(
-                      child: pw.Container(
-                        padding: pw.EdgeInsets.all(15),
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.grey50,
-                          borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
-                        ),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'FROM:',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                            pw.SizedBox(height: 8),
-                            pw.Text(
-                              companyName,
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            pw.Text(
-                              companyAddress,
-                              style: pw.TextStyle(fontSize: 10),
-                            ),
-                            pw.Text(
-                              '$companyCity, $companyState - $companyPin',
-                              style: pw.TextStyle(fontSize: 10),
-                            ),
-                            pw.SizedBox(height: 3),
-                            pw.Text(
-                              'Phone: $companyPhone',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                            pw.Text(
-                              'Email: $companyEmail',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                            pw.Text(
-                              'GST: $companyGst',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    /// From Section
+                    // pw.Expanded(
+                    //   child: pw.Container(
+                    //     padding: pw.EdgeInsets.all(15),
+                    //     decoration: pw.BoxDecoration(
+                    //       color: PdfColors.grey50,
+                    //       borderRadius: pw.BorderRadius.circular(8),
+                    //       border: pw.Border.all(color: PdfColors.grey300,
+                    //           width: 1),
+                    //     ),
+                    //     child: pw.Column(
+                    //       crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    //       children: [
+                    //         pw.Text(
+                    //           'FROM:',
+                    //           style: pw.TextStyle(
+                    //             fontWeight: pw.FontWeight.bold,
+                    //             color: primaryColor,
+                    //             fontSize: 12,
+                    //           ),
+                    //         ),
+                    //         pw.SizedBox(height: 8),
+                    //         pw.Text(
+                    //           companyName,
+                    //           style: pw.TextStyle(
+                    //             fontWeight: pw.FontWeight.bold,
+                    //             fontSize: 12,
+                    //           ),
+                    //         ),
+                    //         pw.Text(
+                    //           companyAddress,
+                    //           style: pw.TextStyle(fontSize: 10),
+                    //         ),
+                    //         pw.Text(
+                    //           '$companyCity, $companyState - $companyPin',
+                    //           style: pw.TextStyle(fontSize: 10),
+                    //         ),
+                    //         pw.SizedBox(height: 3),
+                    //         pw.Text(
+                    //           'Phone: $companyPhone',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //         pw.Text(
+                    //           'Email: $companyEmail',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //         pw.Text(
+                    //           'GST: $companyGst',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
 
                     pw.SizedBox(width: 15),
 
@@ -1109,7 +982,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.grey50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                          border: pw.Border.all(color: PdfColors.grey300,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1162,23 +1036,35 @@ class InvoiceHelper {
                   ),
                   child: pw.Table(
                     border: pw.TableBorder(
-                      horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
-                      verticalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+                      horizontalInside: pw.BorderSide(
+                          color: PdfColors.grey200, width: 1),
+                      verticalInside: pw.BorderSide(
+                          color: PdfColors.grey200, width: 1),
                       left: pw.BorderSide.none,
                       right: pw.BorderSide.none,
                       top: pw.BorderSide.none,
                       bottom: pw.BorderSide.none,
                     ),
-                    columnWidths: {
-                      0: pw.FlexColumnWidth(0.4),   // #
-                      1: pw.FlexColumnWidth(2.5),   // Description
-                      2: pw.FlexColumnWidth(0.6),   // Qty
-                      3: pw.FlexColumnWidth(1),     // Rate
-                      4: pw.FlexColumnWidth(0.8),   // GST 👈 New column
-                      5: pw.FlexColumnWidth(1),     // Amount
+                    columnWidths: AppConstants.withGST.value
+                        ? {
+                      0: pw.FlexColumnWidth(0.4), // #
+                      1: pw.FlexColumnWidth(2.5), // Description
+                      2: pw.FlexColumnWidth(0.6), // Qty
+                      3: pw.FlexColumnWidth(1),   // Price
+                      4: pw.FlexColumnWidth(1),   // Amount
+                      5: pw.FlexColumnWidth(1), // GST
+                      6: pw.FlexColumnWidth(1),   // Net
+                    }
+                        : {
+                      0: pw.FlexColumnWidth(0.4), // #
+                      1: pw.FlexColumnWidth(3),   // Description
+                      2: pw.FlexColumnWidth(0.8), // Qty
+                      3: pw.FlexColumnWidth(1.2), // Price
+                      4: pw.FlexColumnWidth(1.2), // Amount
                     },
                     children: [
-                      // Table Header
+
+                      /// Table Header
                       pw.TableRow(
                         decoration: pw.BoxDecoration(
                           color: PdfColors.blue50,
@@ -1188,142 +1074,136 @@ class InvoiceHelper {
                           ),
                         ),
                         children: [
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              '#',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'DESCRIPTION',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'QTY',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'RATE (₹)',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'GST (%)',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'AMOUNT',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
+                          _tableHeader('#'),
+                          _tableHeader('DESCRIPTION'),
+                          _tableHeader('QTY', align: pw.TextAlign.center),
+                          _tableHeader('PRICE', align: pw.TextAlign.right),
+                          _tableHeader('AMOUNT', align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableHeader('GST(₹)', align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableHeader('NET', align: pw.TextAlign.right),
                         ],
                       ),
+                      // pw.TableRow(
+                      //   decoration: pw.BoxDecoration(
+                      //     color: PdfColors.blue50,
+                      //     borderRadius: pw.BorderRadius.only(
+                      //       topLeft: pw.Radius.circular(8),
+                      //       topRight: pw.Radius.circular(8),
+                      //     ),
+                      //   ),
+                      //   children: [
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         '#',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: primaryColor,
+                      //           fontSize: 11,
+                      //         ),
+                      //         textAlign: pw.TextAlign.center,
+                      //       ),
+                      //     ),
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         'DESCRIPTION',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: primaryColor,
+                      //           fontSize: 11,
+                      //         ),
+                      //       ),
+                      //     ),
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         'QTY',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: primaryColor,
+                      //           fontSize: 11,
+                      //         ),
+                      //         textAlign: pw.TextAlign.center,
+                      //       ),
+                      //     ),
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         'RATE (₹)',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: primaryColor,
+                      //           fontSize: 11,
+                      //         ),
+                      //         textAlign: pw.TextAlign.right,
+                      //       ),
+                      //     ),
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         'GST (%)',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: PdfColors.green800,
+                      //           fontSize: 11,
+                      //         ),
+                      //         textAlign: pw.TextAlign.right,
+                      //       ),
+                      //     ),
+                      //     pw.Padding(
+                      //       padding: pw.EdgeInsets.all(12),
+                      //       child: pw.Text(
+                      //         'AMOUNT',
+                      //         style: pw.TextStyle(
+                      //           fontWeight: pw.FontWeight.bold,
+                      //           color: primaryColor,
+                      //           fontSize: 11,
+                      //         ),
+                      //         textAlign: pw.TextAlign.right,
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
 
                       /// Table Rows
-                      ...invoices.asMap().entries.map((entry) {
+                      ...invoices
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         int index = entry.key;
                         Invoice item = entry.value;
                         final isEven = index % 2 == 0;
 
+
                         /// Calculate the values
                         double baseAmount = (item.price! * item.qty!);
+                        double gstAmount = baseAmount * (item.gst ?? 0) / 100;
+                        double netAmount = baseAmount + gstAmount;
 
                         return pw.TableRow(
                           decoration: pw.BoxDecoration(
                             color: isEven ? PdfColors.white : PdfColors.grey50,
                           ),
                           children: [
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${index + 1}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.itemName}',
-                                style: pw.TextStyle(fontSize: 10),
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.qty}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.price!.toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.gst?.toStringAsFixed(1) ?? "0.0"}', // Show as percentage
-                                // '₹${((item.price! * item.qty!) * (item.gst ?? 0) / 100).toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '₹${baseAmount.toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
+                            _tableCell(
+                                '${index + 1}', align: pw.TextAlign.center),
+                            _tableCell(item.itemName ?? ''),
+                            _tableCell(
+                                '${item.qty}', align: pw.TextAlign.center),
+                            _tableCell('${item.price!.toStringAsFixed(2)}',
+                                align: pw.TextAlign.right),
+                            _tableCell('${baseAmount.toStringAsFixed(2)}',
+                                align: pw.TextAlign.right),
+                            // _tableCell('${item.gst?.toStringAsFixed(1) ?? "0.0"}', align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                              _tableCell(
+                                '${gstAmount}', align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                              _tableCell('${netAmount.toStringAsFixed(2)}',
+                                align: pw.TextAlign.right),
                           ],
                         );
                       }).toList(),
@@ -1347,7 +1227,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.grey50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                          border: pw.Border.all(color: PdfColors.grey300,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1362,7 +1243,9 @@ class InvoiceHelper {
                             ),
                             pw.SizedBox(height: 8),
                             pw.Text(
-                              notes.isNotEmpty ? notes : 'Thank you for your business!',
+                              notes.isNotEmpty
+                                  ? notes
+                                  : 'Thank you for your business!',
                               style: pw.TextStyle(fontSize: 10),
                             ),
                             pw.SizedBox(height: 15),
@@ -1375,10 +1258,14 @@ class InvoiceHelper {
                               ),
                             ),
                             pw.SizedBox(height: 5),
-                            pw.Text('Bank: $companyBank', style: pw.TextStyle(fontSize: 9)),
-                            pw.Text('A/C: $companyAccount', style: pw.TextStyle(fontSize: 9)),
-                            pw.Text('IFSC: $companyIfsc', style: pw.TextStyle(fontSize: 9)),
-                            pw.Text('PAN: $companyPan', style: pw.TextStyle(fontSize: 9)),
+                            pw.Text('Bank: $companyBank',
+                                style: pw.TextStyle(fontSize: 9)),
+                            pw.Text('A/C: $companyAccount',
+                                style: pw.TextStyle(fontSize: 9)),
+                            pw.Text('IFSC: $companyIfsc',
+                                style: pw.TextStyle(fontSize: 9)),
+                            // pw.Text('PAN: $companyPan',
+                            //     style: pw.TextStyle(fontSize: 9)),
                           ],
                         ),
                       ),
@@ -1394,17 +1281,26 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.blue50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: invoiceType == InvoiceType.quotation ? PdfColors.orange300: PdfColors.blue300 , width: 1),
+                          border: pw.Border.all(color: invoiceType ==
+                              InvoiceType.quotation
+                              ? PdfColors.orange300
+                              : PdfColors.blue300, width: 1),
                         ),
                         child: pw.Column(
                           children: [
                             _buildTotalRow('Subtotal', subtotal),
-                            _buildTotalRow('Gst', gstAmount),
-                            if (taxAmount > 0)
-                              _buildTotalRow('Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
+                            if (AppConstants.withGST.value) _buildTotalRow('CGST', gstAmount / 2),
+                            if (AppConstants.withGST.value) _buildTotalRow('SGST', gstAmount / 2),
+
+                            // if (taxAmount > 0)
+                            //   _buildTotalRow('Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
                             if (discountAmount > 0)
-                              _buildTotalRow('Discount', -discountAmount, isDiscount: true),
-                            pw.Divider(color:invoiceType == InvoiceType.quotation ? PdfColors.orange300: PdfColors.blue300 , height: 20),
+                              _buildTotalRow('Discount', -discountAmount,
+                                  isDiscount: true),
+                            pw.Divider(color: invoiceType ==
+                                InvoiceType.quotation
+                                ? PdfColors.orange300
+                                : PdfColors.blue300, height: 20),
                             _buildTotalRow(
                               'TOTAL',
                               totalAmount,
@@ -1420,7 +1316,8 @@ class InvoiceHelper {
                                 borderRadius: pw.BorderRadius.circular(4),
                               ),
                               child: pw.Text(
-                                'Amount in Words:\n${_numberToWords(totalAmount)}',
+                                'Amount in Words:\n${_numberToWords(
+                                    totalAmount)}',
                                 style: pw.TextStyle(
                                   fontSize: 8,
                                   color: primaryColor,
@@ -1498,26 +1395,29 @@ class InvoiceHelper {
       // Save and open PDF
       final directory = await getApplicationDocumentsDirectory();
       //final filePath = '${directory.path}/Invoice_${invoiceId}_${userName}.pdf';
-      final String filePrefix = invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
-      final filePath = '${directory.path}/${filePrefix}_${invoiceId}_${userName}.pdf';
+      final String filePrefix = invoiceType == InvoiceType.quotation
+          ? 'Quotation'
+          : 'Invoice';
+      final filePath = '${directory
+          .path}/${filePrefix}_${invoiceId}_${userName}.pdf';
       final file = File(filePath);
       await file.writeAsBytes(await pdf.save());
 
       print("✅ Beautiful PDF saved: $filePath");
+
       ///      await OpenFile.open(filePath);
 
       await Share.shareXFiles([XFile(filePath)], text: 'Invoice - $invoiceId');
-
-
     } catch (e) {
       print("Error generating beautiful PDF: $e");
     }
   }
 
-  /// New: generate PDF specifically for challan-based invoiceItems
+
+  /// Generate PDF specifically for challan-based invoiceItems
   static Future<void> generateAndShareInvoiceFromChallan(
       List<dynamic> invoiceItems, // items (InvoiceItem or Invoice or Map)
-      String invoiceId, // main invoice id (e.g. invoiceNumberController.text)
+      String invoiceId, // main invoice id
       String userName,
       String phoneNumber,
       String customerEmail,
@@ -1531,14 +1431,16 @@ class InvoiceHelper {
       String notes,
       Map<String, dynamic> companyData,
       InvoiceType invoiceType,
-      double gstAmount,
-      ) async {
+      double gstAmount,) async {
     try {
       final pdf = pw.Document();
 
-// load font (so rupee symbol shows)
+      // Load font (supports ₹)
       final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final iconData = await rootBundle.load("assets/fonts/NotoEmoji-Regular.ttf");
+
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      final notoEmoji  = pw.Font.ttf(iconData.buffer.asByteData());
 
       final theme = pw.ThemeData.withFont(
         base: customFont,
@@ -1547,10 +1449,15 @@ class InvoiceHelper {
         boldItalic: customFont,
       );
 
-// header colors / title
-      final PdfColor primaryColor = invoiceType == InvoiceType.quotation ? PdfColors.orange700 : PdfColors.blue700;
-      final PdfColor headerColor = invoiceType == InvoiceType.quotation ? PdfColors.orange900 : PdfColors.blue900;
-      final String documentTitle = invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
+      // Header colors and document title
+      final PdfColor primaryColor =
+      invoiceType == InvoiceType.quotation ? PdfColors.orange700 : PdfColors
+          .blue700;
+      final PdfColor headerColor =
+      invoiceType == InvoiceType.quotation ? PdfColors.orange900 : PdfColors
+          .blue900;
+      final String documentTitle =
+      invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
 
       pdf.addPage(
         pw.MultiPage(
@@ -1559,7 +1466,8 @@ class InvoiceHelper {
           margin: pw.EdgeInsets.all(25),
           build: (pw.Context context) {
             return [
-// Header (company + badge)
+
+              /// Header (company + badge)
               pw.Container(
                 width: double.infinity,
                 padding: pw.EdgeInsets.all(20),
@@ -1579,25 +1487,100 @@ class InvoiceHelper {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
-                          (companyData['companyName'] ?? 'Company Name').toString().toUpperCase(),
-                          style: pw.TextStyle(color: PdfColors.white, fontSize: 18, fontWeight: pw.FontWeight.bold),
+                          (companyData['companyName'] ?? 'Company Name')
+                              .toString()
+                              .toUpperCase(),
+                          style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontSize: 18,
+                              fontWeight: pw.FontWeight.bold),
                         ),
                         pw.SizedBox(height: 6),
-                        if ((companyData['address'] ?? '').toString().isNotEmpty)
-                          pw.Text(companyData['address'].toString(), style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                        if ((companyData['address'] ?? '')
+                            .toString()
+                            .isNotEmpty)
+                          pw.Text(companyData['address'].toString(),
+                              style: pw.TextStyle(color: PdfColors.white,
+                                  fontSize: 10)),
                         pw.SizedBox(height: 4),
-                        pw.Text('📞 ${companyData['phone'] ?? ''} | 📧 ${companyData['userEmail'] ?? ''}',
-                            style: pw.TextStyle(color: PdfColors.white, fontSize: 9)),
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: '📞 ',
+                                style: pw.TextStyle(
+                                  font: notoEmoji, // icon font
+                                  color: PdfColors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text: companyData['phone'],
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text: '   |   ',
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text: '📧 ',
+                                style: pw.TextStyle(
+                                  font: notoEmoji, // icon font
+                                  color: PdfColors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text: companyData['userEmail'],
+                                style: pw.TextStyle(
+                                  color: PdfColors.white,
+                                  fontSize: 9,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        pw.Text(
+                          companyData['gst'],
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 9,
+                          ),
+                        ),
+                        pw.Text(
+                          companyData['pan'],
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 9,
+                          ),
+                        ),
                       ],
                     ),
                     pw.Container(
-                      padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: pw.BoxDecoration(color: PdfColors.white, borderRadius: pw.BorderRadius.circular(20)),
+                      padding: pw.EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: pw.BoxDecoration(color: PdfColors.white,
+                          borderRadius: pw.BorderRadius.circular(20)),
                       child: pw.Column(children: [
-                        pw.Text(documentTitle, style: pw.TextStyle(color: PdfColors.blue800, fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(documentTitle,
+                            style: pw.TextStyle(
+                                color: PdfColors.blue800,
+                                fontSize: 16,
+                                fontWeight: pw.FontWeight.bold)),
                         pw.SizedBox(height: 4),
-                        pw.Text('#$invoiceId', style: pw.TextStyle(color: PdfColors.grey700, fontSize: 10)),
-                        pw.Text(DateFormat('dd MMM yyyy').format(DateTime.now()), style: pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
+                        pw.Text('#$invoiceId',
+                            style: pw.TextStyle(color: PdfColors.grey700,
+                                fontSize: 10)),
+                        pw.Text(DateFormat('dd MMM yyyy').format(DateTime
+                            .now()),
+                            style: pw.TextStyle(color: PdfColors.grey600,
+                                fontSize: 9)),
                       ]),
                     ),
                   ],
@@ -1606,36 +1589,59 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 20),
 
-// From / To
+              /// From / To section
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
+                  // pw.Expanded(
+                  //   child: pw.Container(
+                  //     padding: pw.EdgeInsets.all(12),
+                  //     decoration: pw.BoxDecoration(
+                  //         color: PdfColors.grey50,
+                  //         borderRadius: pw.BorderRadius.circular(8)),
+                  //     child: pw.Column(
+                  //       crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  //       children: [
+                  //         pw.Text('FROM:', style: pw.TextStyle(fontWeight: pw
+                  //             .FontWeight.bold, color: primaryColor)),
+                  //         pw.SizedBox(height: 6),
+                  //         pw.Text(companyData['companyName'] ?? '',
+                  //             style: pw.TextStyle(fontWeight: pw.FontWeight
+                  //                 .bold)),
+                  //         pw.Text(
+                  //             companyData['address'] ?? '', style: pw.TextStyle(
+                  //             fontSize: 9)),
+                  //         pw.Text('GST: ${companyData['gst'] ?? ''}',
+                  //             style: pw.TextStyle(fontSize: 9)),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
+                  // pw.SizedBox(width: 12),
                   pw.Expanded(
                     child: pw.Container(
                       padding: pw.EdgeInsets.all(12),
-                      decoration: pw.BoxDecoration(color: PdfColors.grey50, borderRadius: pw.BorderRadius.circular(8)),
-                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                        pw.Text('FROM:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.SizedBox(height: 6),
-                        pw.Text(companyData['companyName'] ?? '', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text(companyData['address'] ?? '', style: pw.TextStyle(fontSize: 9)),
-                        pw.Text('GST: ${companyData['gst'] ?? ''}', style: pw.TextStyle(fontSize: 9)),
-                      ]),
-                    ),
-                  ),
-                  pw.SizedBox(width: 12),
-                  pw.Expanded(
-                    child: pw.Container(
-                      padding: pw.EdgeInsets.all(12),
-                      decoration: pw.BoxDecoration(color: PdfColors.grey50, borderRadius: pw.BorderRadius.circular(8)),
-                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                        pw.Text('TO:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.SizedBox(height: 6),
-                        pw.Text(userName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        if (customerAddress.isNotEmpty) pw.Text(customerAddress, style: pw.TextStyle(fontSize: 9)),
-                        pw.Text('Phone: $phoneNumber', style: pw.TextStyle(fontSize: 9)),
-                        if (customerEmail.isNotEmpty) pw.Text('Email: $customerEmail', style: pw.TextStyle(fontSize: 9)),
-                      ]),
+                      decoration: pw.BoxDecoration(
+                          color: PdfColors.grey50,
+                          borderRadius: pw.BorderRadius.circular(8)),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('TO:', style: pw.TextStyle(fontWeight: pw
+                              .FontWeight.bold, color: primaryColor)),
+                          pw.SizedBox(height: 6),
+                          pw.Text(userName, style: pw.TextStyle(fontWeight: pw
+                              .FontWeight.bold)),
+                          if (customerAddress.isNotEmpty) pw.Text(
+                              customerAddress, style: pw.TextStyle(
+                              fontSize: 9)),
+                          pw.Text('Phone: $phoneNumber', style: pw.TextStyle(
+                              fontSize: 9)),
+                          if (customerEmail.isNotEmpty) pw.Text(
+                              'Email: $customerEmail', style: pw.TextStyle(
+                              fontSize: 9)),
+                        ],
+                      ),
                     ),
                   )
                 ],
@@ -1643,106 +1649,134 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 18),
 
-// Items table with separate Challan column
+              /// Items table with Challan column
               pw.Container(
-                decoration: pw.BoxDecoration(borderRadius: pw.BorderRadius.circular(8), border: pw.Border.all(color: PdfColors.grey300)),
+                decoration: pw.BoxDecoration(
+                    borderRadius: pw.BorderRadius.circular(8),
+                    border: pw.Border.all(color: PdfColors.grey300)),
                 child: pw.Table(
-                  border: pw.TableBorder(
-                    horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
-                  ),
-                  columnWidths: {
+                  border: pw.TableBorder(horizontalInside: pw.BorderSide(
+                      color: PdfColors.grey200, width: 1)),
+                  columnWidths: AppConstants.withGST.value
+                  ? {
                     0: pw.FlexColumnWidth(0.4), // #
                     1: pw.FlexColumnWidth(1.0), // challan id
                     2: pw.FlexColumnWidth(2.2), // description
                     3: pw.FlexColumnWidth(0.6), // qty
                     4: pw.FlexColumnWidth(1.0), // rate
-                    5: pw.FlexColumnWidth(0.8), // GSt
-                    6: pw.FlexColumnWidth(1.0), // amount
+                    5: pw.FlexColumnWidth(1), // amount
+                    6: pw.FlexColumnWidth(0.6), // gst
+                    7: pw.FlexColumnWidth(1), // net
+                  }
+                  :{
+                    0: pw.FlexColumnWidth(0.4), // #
+                    1: pw.FlexColumnWidth(1.0), // challan id
+                    2: pw.FlexColumnWidth(2.2), // description
+                    3: pw.FlexColumnWidth(0.6), // qty
+                    4: pw.FlexColumnWidth(1.0), // rate
+                    5: pw.FlexColumnWidth(1), // amount
+                   // net
                   },
                   children: [
-// header row
+
+                    /// Table header
                     pw.TableRow(
                       decoration: pw.BoxDecoration(color: PdfColors.blue50),
                       children: [
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('#', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('CHALLAN', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('DESCRIPTION', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor))),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('QTY', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.center)),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('RATE', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.right)),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('GST (%)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.right)),
-                        pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('AMOUNT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor), textAlign: pw.TextAlign.right)),
+                        _tableHeader('#'),
+                        _tableHeader('CHALLAN'),
+                        _tableHeader('DESCRIPTION'),
+                        _tableHeader('QTY', align: pw.TextAlign.center),
+                        _tableHeader('RATE', align: pw.TextAlign.right),
+                        _tableHeader('AMOUNT', align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeader('GST', align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeader('NET', align: pw.TextAlign.right),
                       ],
                     ),
 
-// data rows
-                    ...invoiceItems.asMap().entries.map((entry) {
+                    /// Table rows
+                    ...invoiceItems
+                        .asMap()
+                        .entries
+                        .map((entry) {
                       final int index = entry.key;
                       final dynamic value = entry.value;
 
-                      /// Calculate the values
-                      double baseAmount = (value.price! * value.qty!);
-// default fallbacks
-                      String itemName = '';
+                      // Default values
                       String challanId = '';
+                      String itemName = '';
                       int qty = 0;
-                      double rate = 0.0;
-                      double gst = 0.0;
-                      double amount = 0.0;
+                      double rate = 0;
+                      double gst = 0;
+                      double amount = 0;
+                      double netAmount = 0;
 
-// invoiceItem type handling
                       try {
                         if (value is InvoiceItem) {
-                          challanId = (value.challanId ?? '').toString();
-                          itemName = (value.itemName ?? value.description ?? '').toString();
+                          challanId = value.challanId ?? '';
+                          itemName = value.itemName ?? value.description ?? '';
                           qty = value.quantity;
-                          gst = value.gst;
                           rate = (value.rate ?? 0).toDouble();
-                          amount = (value.totalPrice ?? value.amount ?? (qty * rate)).toDouble();
+                          gst = value.gstRate!;
+                          amount =
+                              (value.totalPrice ?? (qty * rate)).toDouble();
                         } else if (value is Invoice) {
-                          challanId = (value.challanId ?? '').toString();
-                          itemName = (value.itemName ?? '').toString();
+                          challanId = value.challanId ?? '';
+                          itemName = value.itemName ?? '';
                           qty = value.qty ?? 0;
                           rate = (value.price ?? 0).toDouble();
                           gst = (value.gst ?? 0).toDouble();
-                          amount = (value.totalAmount ?? (qty * rate)).toDouble();
+                          amount =
+                              (value.totalAmount ?? (qty * rate)).toDouble();
                         } else if (value is Map) {
-                          itemName = (value['itemName'] ?? value['description'] ?? '').toString();
-                          challanId = (value['challanId'] ?? '').toString();
-                          qty = int.tryParse((value['quantity'] ?? '0').toString()) ?? 0;
-                          rate = double.tryParse((value['price'] ?? '0').toString()) ?? 0.0;
-                          gst = double.tryParse((value['gst'] ?? '0').toString()) ?? 0.0;
-                          amount = double.tryParse((value['totalPrice'] ?? (qty * rate)).toString()) ?? (qty * rate);
-                        } else {
-// try dynamic property access (best-effort)
-                          final dyn = value;
-                          itemName = dyn?.itemName ?? dyn?.description ?? '';
-                          challanId = dyn?.challanId ?? '';
-                          qty = dyn?.quantity ?? dyn?.qty ?? 0;
-                          rate = (dyn?.rate ?? dyn?.price ?? 0).toDouble();
-                          gst = (dyn?.gst ?? dyn?.gst ?? 0).toDouble();
-                          amount = (dyn?.totalPrice ?? dyn?.amount ?? (qty * rate)).toDouble();
+                          challanId = value['challanId'] ?? '';
+                          itemName =
+                              value['itemName'] ?? value['description'] ?? '';
+                          qty = int.tryParse(
+                              (value['quantity'] ?? '0').toString()) ?? 0;
+                          rate = double.tryParse(
+                              (value['price'] ?? '0').toString()) ?? 0;
+                          gst = double.tryParse(
+                              (value['gst'] ?? '0').toString()) ?? 0;
+                          amount = double.tryParse(
+                              (value['totalPrice'] ?? (qty * rate))
+                                  .toString()) ?? (qty * rate);
                         }
+                        netAmount = amount + (amount * gst / 100);
                       } catch (e) {
-// fallback safe defaults
-                        itemName = value.toString();
+                        // fallback
                         challanId = '';
+                        itemName = value.toString();
                         qty = 0;
-                        rate = 0.0;
-                        gst = 0.0;
-                        amount = 0.0;
+                        rate = 0;
+                        gst = 0;
+                        amount = 0;
+                        netAmount = 0;
                       }
 
                       final bool isEven = index % 2 == 0;
                       return pw.TableRow(
-                        decoration: pw.BoxDecoration(color: isEven ? PdfColors.white : PdfColors.grey50),
+                        decoration: pw.BoxDecoration(
+                            color: isEven ? PdfColors.white : PdfColors.grey50),
                         children: [
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('${index + 1}', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(challanId.isNotEmpty ? challanId : '-', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(itemName, style: pw.TextStyle(fontSize: 10))),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text('$qty', style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(rate.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(gst.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
-                          pw.Padding(padding: pw.EdgeInsets.all(10), child: pw.Text(baseAmount.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right)),
+                          _tableCell(
+                              '${index + 1}', align: pw.TextAlign.center),
+                          _tableCell(challanId.isNotEmpty ? challanId : '-',
+                              align: pw.TextAlign.center),
+                          _tableCell(itemName),
+                          _tableCell('$qty', align: pw.TextAlign.center),
+                          _tableCell(rate.toStringAsFixed(2),
+                              align: pw.TextAlign.right),
+                          _tableCell(amount.toStringAsFixed(2),
+                              align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableCell((amount * gst / 100).toStringAsFixed(2),
+                              align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableCell(netAmount.toStringAsFixed(2),
+                              align: pw.TextAlign.right),
                         ],
                       );
                     }).toList(),
@@ -1752,7 +1786,7 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 20),
 
-// totals & notes (reuse your helpers if present)
+              /// Totals & Notes
               pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
@@ -1760,12 +1794,21 @@ class InvoiceHelper {
                     flex: 2,
                     child: pw.Container(
                       padding: pw.EdgeInsets.all(12),
-                      decoration: pw.BoxDecoration(color: PdfColors.grey50, borderRadius: pw.BorderRadius.circular(8)),
-                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                        pw.Text('NOTES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                        pw.SizedBox(height: 6),
-                        pw.Text(notes.isNotEmpty ? notes : 'Thank you for your business!', style: pw.TextStyle(fontSize: 10)),
-                      ]),
+                      decoration:
+                      pw.BoxDecoration(color: PdfColors.grey50,
+                          borderRadius: pw.BorderRadius.circular(8)),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('NOTES', style: pw.TextStyle(fontWeight: pw
+                              .FontWeight.bold, color: primaryColor)),
+                          pw.SizedBox(height: 6),
+                          pw.Text(notes.isNotEmpty
+                              ? notes
+                              : 'Thank you for your business!',
+                              style: pw.TextStyle(fontSize: 10)),
+                        ],
+                      ),
                     ),
                   ),
                   pw.SizedBox(width: 12),
@@ -1773,31 +1816,27 @@ class InvoiceHelper {
                     flex: 1,
                     child: pw.Container(
                       padding: pw.EdgeInsets.all(12),
-                      decoration: pw.BoxDecoration(color: PdfColors.blue50, borderRadius: pw.BorderRadius.circular(8)),
-                      child: pw.Column(children: [
-// replace these with your _buildTotalRow if you have it
-                        pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                          pw.Text('Subtotal:', style: pw.TextStyle(fontSize: 10)),
-                          pw.Text('₹${subtotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10)),
-                        ]),
-                        if (taxAmount > 0)
-                          pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                            pw.Text('Tax (${taxRate.toStringAsFixed(2)}%):', style: pw.TextStyle(fontSize: 10)),
-                            pw.Text('₹${taxAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10)),
-                          ]),
-                        if (discountAmount > 0)
-                          pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                            pw.Text('Discount:', style: pw.TextStyle(fontSize: 10)),
-                            pw.Text('-₹${discountAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10)),
-                          ]),
-                        pw.Divider(),
-                        pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                          pw.Text('TOTAL', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                          pw.Text('₹${totalAmount.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                        ]),
-                        pw.SizedBox(height: 8),
-                        pw.Text('Amount in Words:\n${_numberToWords(totalAmount)}', style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.center),
-                      ]),
+                      decoration:
+                      pw.BoxDecoration(color: PdfColors.blue50,
+                          borderRadius: pw.BorderRadius.circular(8)),
+                      child: pw.Column(
+                        children: [
+                          _buildTotalRow('Subtotal:', subtotal),
+                          if (AppConstants.withGST.value) _buildTotalRow('CGST:', gstAmount / 2),
+                          if (AppConstants.withGST.value) _buildTotalRow('SGST:', gstAmount / 2),
+                          if (taxAmount > 0) _buildTotalRow('Tax (${taxRate
+                              .toStringAsFixed(2)}%):', taxAmount),
+                          if (discountAmount > 0) _buildTotalRow(
+                              'Discount:', -discountAmount),
+                          pw.Divider(),
+                          _buildTotalRow('TOTAL', totalAmount, isBold: true),
+                          pw.SizedBox(height: 8),
+                          pw.Text('Amount in Words:\n${_numberToWords(
+                              totalAmount)}',
+                              style: pw.TextStyle(fontSize: 8),
+                              textAlign: pw.TextAlign.center),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1805,24 +1844,30 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 20),
 
-// footer signatures
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceAround, children: [
-                pw.Column(children: [pw.Container(width: 150, height: 1, color: PdfColors.grey400), pw.SizedBox(height: 4), pw.Text('Customer Signature', style: pw.TextStyle(fontSize: 9))]),
-                pw.Column(children: [pw.Container(width: 150, height: 1, color: PdfColors.grey400), pw.SizedBox(height: 4), pw.Text('Authorized Signature', style: pw.TextStyle(fontSize: 9))]),
-              ]),
+              /// Footer signatures
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  _signatureField('Customer Signature'),
+                  _signatureField('Authorized Signature'),
+                ],
+              ),
             ];
           },
         ),
       );
 
-// Save & share
+      /// Save & share
       final directory = await getApplicationDocumentsDirectory();
-      final filePrefix = invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
+      final filePrefix = invoiceType == InvoiceType.quotation
+          ? 'Quotation'
+          : 'Invoice';
       final filePath = '${directory.path}/${filePrefix}_${invoiceId}.pdf';
       final file = File(filePath);
       await file.writeAsBytes(await pdf.save());
 
-      await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      await Share.shareXFiles(
+          [XFile(filePath)], text: '$documentTitle - $invoiceId');
       print("PDF saved: $filePath");
     } catch (e, st) {
       print("Error generating challan invoice PDF: $e\n$st");
@@ -1830,29 +1875,28 @@ class InvoiceHelper {
   }
 
 
-
-
-  static Future<void> generateAndShareChallan(
-      List<Challan> challans,
+  static Future<void> generateAndShareChallan(List<Challan> challans,
       String userName,
       String phoneNumber,
       String customerEmail,
       String customerAddress,
       double subtotal,
-      double taxAmount,
+      //double taxAmount,
       double totalAmount,
-      double taxRate,
+      //double taxRate,
       String paymentStatus,
       String notes,
       Map<String, dynamic> companyData,
-      double gstAmount,
-      ) async {
+      double gstAmount,) async {
     try {
       final pdf = pw.Document();
 
       // Load custom font
       final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final iconData = await rootBundle.load("assets/fonts/NotoEmoji-Regular.ttf");
+
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      final notoEmoji  = pw.Font.ttf(iconData.buffer.asByteData());
 
       // Use the custom font
       final theme = pw.ThemeData.withFont(
@@ -1862,7 +1906,9 @@ class InvoiceHelper {
         boldItalic: customFont,
       );
 
-      final String challanId = challans.isNotEmpty ? challans.first.challanId : "UNKNOWN";
+      final String challanId = challans.isNotEmpty
+          ? challans.first.challanId
+          : "UNKNOWN";
 
       // Extract company information
       String companyName = companyData['companyName'] ?? 'Your Company Name';
@@ -1927,11 +1973,47 @@ class InvoiceHelper {
                             ),
                           ),
                           pw.SizedBox(height: 3),
-                          pw.Text(
-                            '📞 $companyPhone | 📧 $companyEmail',
-                            style: pw.TextStyle(
-                              color: PdfColors.white,
-                              fontSize: 9,
+                          pw.RichText(
+                            text: pw.TextSpan(
+                              children: [
+                                pw.TextSpan(
+                                  text: '📞 ',
+                                  style: pw.TextStyle(
+                                    font: notoEmoji, // icon font
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: companyPhone,
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: '   |   ',
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: '📧 ',
+                                  style: pw.TextStyle(
+                                    font: notoEmoji, // icon font
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: companyEmail,
+                                  style: pw.TextStyle(
+                                    color: PdfColors.white,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           pw.Text(
@@ -1941,12 +2023,14 @@ class InvoiceHelper {
                               fontSize: 9,
                             ),
                           ),
+
                         ],
                       ),
 
                       // Challan Badge
                       pw.Container(
-                        padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding: pw.EdgeInsets.symmetric(
+                            horizontal: 15, vertical: 8),
                         decoration: pw.BoxDecoration(
                           color: PdfColors.white,
                           borderRadius: pw.BorderRadius.circular(20),
@@ -1954,7 +2038,7 @@ class InvoiceHelper {
                         child: pw.Column(
                           children: [
                             pw.Text(
-                              'DELIVERY CHALLAN',
+                              'CHALLAN',
                               style: pw.TextStyle(
                                 color: PdfColors.green800,
                                 fontSize: 14,
@@ -1989,59 +2073,60 @@ class InvoiceHelper {
                 pw.Row(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    // From Section
-                    pw.Expanded(
-                      child: pw.Container(
-                        padding: pw.EdgeInsets.all(15),
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.grey50,
-                          borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
-                        ),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'FROM:',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 12,
-                              ),
-                            ),
-                            pw.SizedBox(height: 8),
-                            pw.Text(
-                              companyName,
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            pw.Text(
-                              companyAddress,
-                              style: pw.TextStyle(fontSize: 10),
-                            ),
-                            pw.Text(
-                              '$companyCity, $companyState - $companyPin',
-                              style: pw.TextStyle(fontSize: 10),
-                            ),
-                            pw.SizedBox(height: 3),
-                            pw.Text(
-                              'Phone: $companyPhone',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                            pw.Text(
-                              'Email: $companyEmail',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                            pw.Text(
-                              'GST: $companyGst',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    /// From Section
+                    // pw.Expanded(
+                    //   child: pw.Container(
+                    //     padding: pw.EdgeInsets.all(15),
+                    //     decoration: pw.BoxDecoration(
+                    //       color: PdfColors.grey50,
+                    //       borderRadius: pw.BorderRadius.circular(8),
+                    //       border: pw.Border.all(color: PdfColors.grey300,
+                    //           width: 1),
+                    //     ),
+                    //     child: pw.Column(
+                    //       crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    //       children: [
+                    //         pw.Text(
+                    //           'FROM:',
+                    //           style: pw.TextStyle(
+                    //             fontWeight: pw.FontWeight.bold,
+                    //             color: PdfColors.green800,
+                    //             fontSize: 12,
+                    //           ),
+                    //         ),
+                    //         pw.SizedBox(height: 8),
+                    //         pw.Text(
+                    //           companyName,
+                    //           style: pw.TextStyle(
+                    //             fontWeight: pw.FontWeight.bold,
+                    //             fontSize: 12,
+                    //           ),
+                    //         ),
+                    //         pw.Text(
+                    //           companyAddress,
+                    //           style: pw.TextStyle(fontSize: 10),
+                    //         ),
+                    //         pw.Text(
+                    //           '$companyCity, $companyState - $companyPin',
+                    //           style: pw.TextStyle(fontSize: 10),
+                    //         ),
+                    //         pw.SizedBox(height: 3),
+                    //         pw.Text(
+                    //           'Phone: $companyPhone',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //         pw.Text(
+                    //           'Email: $companyEmail',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //         pw.Text(
+                    //           'GST: $companyGst',
+                    //           style: pw.TextStyle(fontSize: 9),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
 
                     pw.SizedBox(width: 15),
 
@@ -2052,7 +2137,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.grey50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                          border: pw.Border.all(color: PdfColors.grey300,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2105,20 +2191,31 @@ class InvoiceHelper {
                   ),
                   child: pw.Table(
                     border: pw.TableBorder(
-                      horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
-                      verticalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+                      horizontalInside: pw.BorderSide(
+                          color: PdfColors.grey200, width: 1),
+                      verticalInside: pw.BorderSide(
+                          color: PdfColors.grey200, width: 1),
                       left: pw.BorderSide.none,
                       right: pw.BorderSide.none,
                       top: pw.BorderSide.none,
                       bottom: pw.BorderSide.none,
                     ),
-                    columnWidths: {
-                      0: pw.FlexColumnWidth(0.4),   // #
-                      1: pw.FlexColumnWidth(2.5),   // Description
-                      2: pw.FlexColumnWidth(0.6),   // Qty
-                      3: pw.FlexColumnWidth(1),     // Rate
-                      4: pw.FlexColumnWidth(0.8),   // GST 👈 New column
-                      5: pw.FlexColumnWidth(1),     // Amount
+                    columnWidths: AppConstants.withGST.value
+                        ? {
+                      0: pw.FlexColumnWidth(0.4), // #
+                      1: pw.FlexColumnWidth(2.5), // Description
+                      2: pw.FlexColumnWidth(0.6), // Qty
+                      3: pw.FlexColumnWidth(1),   // Price
+                      4: pw.FlexColumnWidth(1),   // Amount
+                      5: pw.FlexColumnWidth(1), // GST
+                      6: pw.FlexColumnWidth(1),   // Net
+                    }
+                        : {
+                      0: pw.FlexColumnWidth(0.4), // #
+                      1: pw.FlexColumnWidth(3),   // Description
+                      2: pw.FlexColumnWidth(0.8), // Qty
+                      3: pw.FlexColumnWidth(1.2), // Price
+                      4: pw.FlexColumnWidth(1.2), // Amount
                     },
                     children: [
                       // Table Header
@@ -2131,151 +2228,53 @@ class InvoiceHelper {
                           ),
                         ),
                         children: [
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              '#',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'DESCRIPTION',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'QTY',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'RATE (₹)',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'GST (%)',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'AMOUNT',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.green800,
-                                fontSize: 11,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
+                          _tableHeader('#'),
+                          _tableHeader('DESCRIPTION'),
+                          _tableHeader('QTY', align: pw.TextAlign.center),
+                          _tableHeader('PRICE(₹)', align: pw.TextAlign.right),
+                          _tableHeader('AMOUNT', align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableHeader('GST(₹)', align: pw.TextAlign.right),
+                          if (AppConstants.withGST.value)
+                            _tableHeader('NET', align: pw.TextAlign.right),
                         ],
                       ),
+
                       // Table Rows
-                      ...challans.asMap().entries.map((entry) {
+                      ...challans
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         int index = entry.key;
                         Challan item = entry.value;
                         final isEven = index % 2 == 0;
 
-                        /// Calculate the values
+                        /// Calculate values
                         double baseAmount = (item.price! * item.qty!);
                         double gstAmount = baseAmount * (item.gst ?? 0) / 100;
-                        double totalAmountWithGst = baseAmount + gstAmount;
+                        double netAmount = baseAmount + gstAmount;
 
                         return pw.TableRow(
                           decoration: pw.BoxDecoration(
                             color: isEven ? PdfColors.white : PdfColors.grey50,
                           ),
                           children: [
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${index + 1}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                item.itemName!,
-                                style: pw.TextStyle(fontSize: 10),
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.qty}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.price!.toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                '${item.gst?.toStringAsFixed(1) ?? "0.0"}', // Show as percentage
-                                // '₹${((item.price! * item.qty!) * (item.gst ?? 0) / 100).toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(10),
-                              child: pw.Text(
-                                /// Option 1: Show base amount only (price * quantity)
-                                '₹${baseAmount.toStringAsFixed(2)}',
-
-                                /// Option 2: Show amount with GST included
-                                // '₹${totalAmountWithGst.toStringAsFixed(2)}',
-
-                                /// Option 3: Show both (base + GST)
-                                 //'₹${baseAmount.toStringAsFixed(2)}\n(+GST: ₹${gstAmount.toStringAsFixed(2)})',
-
-                                style: pw.TextStyle(fontSize: 10),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
+                            _tableCell(
+                                '${index + 1}', align: pw.TextAlign.center),
+                            _tableCell(item.itemName ?? ''),
+                            _tableCell(
+                                '${item.qty}', align: pw.TextAlign.center),
+                            _tableCell('${item.price!.toStringAsFixed(2)}',
+                                align: pw.TextAlign.right),
+                            _tableCell('₹${baseAmount.toStringAsFixed(2)}',
+                                align: pw.TextAlign.right),
+                            // _tableCell('${item.gst?.toStringAsFixed(1) ?? "0.0"}', align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                              _tableCell('${gstAmount.toStringAsFixed(2)}',
+                                  align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                              _tableCell('₹${netAmount.toStringAsFixed(2)}',
+                                  align: pw.TextAlign.right),
                           ],
                         );
                       }).toList(),
@@ -2297,7 +2296,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.grey50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                          border: pw.Border.all(color: PdfColors.grey300,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2312,7 +2312,9 @@ class InvoiceHelper {
                             ),
                             pw.SizedBox(height: 8),
                             pw.Text(
-                              notes.isNotEmpty ? notes : 'Thank you for your business!',
+                              notes.isNotEmpty
+                                  ? notes
+                                  : 'Thank you for your business!',
                               style: pw.TextStyle(fontSize: 10),
                             ),
                             pw.SizedBox(height: 15),
@@ -2350,14 +2352,17 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.green50,
                           borderRadius: pw.BorderRadius.circular(8),
-                          border: pw.Border.all(color: PdfColors.green200, width: 1),
+                          border: pw.Border.all(color: PdfColors.green200,
+                              width: 1),
                         ),
                         child: pw.Column(
                           children: [
                             _buildTotalRow('Subtotal', subtotal),
-                            _buildTotalRow('Gst', gstAmount),
-                            if (taxAmount > 0)
-                              _buildTotalRow('Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
+                            if (AppConstants.withGST.value) _buildTotalRow('CGST', gstAmount / 2),
+                            if (AppConstants.withGST.value) _buildTotalRow('SGST', gstAmount / 2),
+
+                            // if (taxAmount > 0)
+                            //   _buildTotalRow('Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
                             pw.Divider(color: PdfColors.green300, height: 20),
                             _buildTotalRow(
                               'TOTAL',
@@ -2447,8 +2452,8 @@ class InvoiceHelper {
       //await Future.delayed(Duration(seconds: 1));
 
       // Share the file
-      await Share.shareXFiles([XFile(filePath)], text: 'Delivery Challan - $challanId');
-
+      await Share.shareXFiles(
+          [XFile(filePath)], text: 'Delivery Challan - $challanId');
     } catch (e) {
       print("Error generating beautiful Challan PDF: $e");
     }
@@ -2456,7 +2461,14 @@ class InvoiceHelper {
 
 
   // Helper method for total rows (same as in invoice)
-  static pw.Widget _buildTotalRow(String label, double amount, {bool isTotal = false, bool isBold = false, bool isDiscount = false,   PdfColor primaryColor = PdfColors.blue800,}) {
+  static pw.Widget _buildTotalRow(String label, double amount,
+      {bool isTotal = false, bool isBold = false, bool isDiscount = false, PdfColor primaryColor = PdfColors
+          .blue800, bool formatted = false}) {
+    final displayAmount = formatted
+        ? formatCurrency(amount)
+        : amount.toStringAsFixed(2);
+
+
     return pw.Padding(
       padding: pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Row(
@@ -2471,11 +2483,13 @@ class InvoiceHelper {
             ),
           ),
           pw.Text(
-            '${isDiscount ? '-' : ''}₹${amount.toStringAsFixed(2)}',
+            '₹ $displayAmount',
             style: pw.TextStyle(
               fontSize: isTotal ? 12 : 10,
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isTotal ? PdfColors.blue900 : (isDiscount ? PdfColors.red : PdfColors.grey700),
+              color: isTotal ? PdfColors.blue900 : (isDiscount
+                  ? PdfColors.red
+                  : PdfColors.grey700),
             ),
           ),
         ],
@@ -2500,29 +2514,74 @@ class InvoiceHelper {
   static String _convertNumber(int number) {
     // Simple number conversion logic (you can use a proper package for this)
     if (number < 20) {
-      final units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-        'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      final units = [
+        '',
+        'One',
+        'Two',
+        'Three',
+        'Four',
+        'Five',
+        'Six',
+        'Seven',
+        'Eight',
+        'Nine',
+        'Ten',
+        'Eleven',
+        'Twelve',
+        'Thirteen',
+        'Fourteen',
+        'Fifteen',
+        'Sixteen',
+        'Seventeen',
+        'Eighteen',
+        'Nineteen'
+      ];
       return units[number];
     }
     if (number < 100) {
-      final tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      final tens = [
+        '',
+        '',
+        'Twenty',
+        'Thirty',
+        'Forty',
+        'Fifty',
+        'Sixty',
+        'Seventy',
+        'Eighty',
+        'Ninety'
+      ];
       return '${tens[number ~/ 10]} ${_convertNumber(number % 10)}';
     }
     if (number < 1000) {
-      return '${_convertNumber(number ~/ 100)} Hundred ${_convertNumber(number % 100)}';
+      return '${_convertNumber(number ~/ 100)} Hundred ${_convertNumber(
+          number % 100)}';
     }
     if (number < 100000) {
-      return '${_convertNumber(number ~/ 1000)} Thousand ${_convertNumber(number % 1000)}';
+      return '${_convertNumber(number ~/ 1000)} Thousand ${_convertNumber(
+          number % 1000)}';
     }
     if (number < 10000000) {
-      return '${_convertNumber(number ~/ 100000)} Lakh ${_convertNumber(number % 100000)}';
+      return '${_convertNumber(number ~/ 100000)} Lakh ${_convertNumber(
+          number % 100000)}';
     }
-    return '${_convertNumber(number ~/ 10000000)} Crore ${_convertNumber(number % 10000000)}';
+    return '${_convertNumber(number ~/ 10000000)} Crore ${_convertNumber(
+        number % 10000000)}';
+  }
+
+  /// Helper: Signature field
+  static pw.Widget _signatureField(String label) {
+    return pw.Column(
+      children: [
+        pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+        pw.SizedBox(height: 4),
+        pw.Text(label, style: pw.TextStyle(fontSize: 9)),
+      ],
+    );
   }
 
   // NEW METHOD: Modern Minimalist Invoice Format
-  static Future<void> generateModernInvoice(
-      List<Invoice> invoices,
+  static Future<void> generateModernInvoice(List<Invoice> invoices,
       String userName,
       String phoneNumber,
       String customerEmail,
@@ -2534,13 +2593,13 @@ class InvoiceHelper {
       double taxRate,
       String discountType,
       String notes,
-      Map<String, dynamic> companyData,
-      ) async {
+      Map<String, dynamic> companyData,) async {
     try {
       final pdf = pw.Document();
 
       // Load custom font
-      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final fontData = await rootBundle.load(
+          "assets/fonts/NotoSans-Regular.ttf");
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
 
       final theme = pw.ThemeData.withFont(
@@ -2550,7 +2609,9 @@ class InvoiceHelper {
         boldItalic: customFont,
       );
 
-      final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
+      final String invoiceId = invoices.isNotEmpty
+          ? invoices.first.invoiceId
+          : "UNKNOWN";
 
       // Extract company information
       String companyName = companyData['companyName'] ?? 'Your Company Name';
@@ -2711,7 +2772,8 @@ class InvoiceHelper {
                           ),
                         ),
                         pw.Text(
-                          DateFormat('dd MMM yyyy').format(DateTime.now().add(Duration(days: 15))),
+                          DateFormat('dd MMM yyyy').format(
+                              DateTime.now().add(Duration(days: 15))),
                           style: pw.TextStyle(
                             fontSize: 12,
                             fontWeight: pw.FontWeight.bold,
@@ -2727,7 +2789,8 @@ class InvoiceHelper {
                 // Items Table with Clean Design
                 pw.Table(
                   border: pw.TableBorder(
-                    horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 1),
+                    horizontalInside: pw.BorderSide(
+                        color: PdfColors.grey200, width: 1),
                     bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
                   ),
                   columnWidths: {
@@ -2801,7 +2864,10 @@ class InvoiceHelper {
                       ],
                     ),
                     // Table Rows
-                    ...invoices.asMap().entries.map((entry) {
+                    ...invoices
+                        .asMap()
+                        .entries
+                        .map((entry) {
                       int index = entry.key;
                       Invoice item = entry.value;
                       return pw.TableRow(
@@ -2840,7 +2906,8 @@ class InvoiceHelper {
                           pw.Padding(
                             padding: pw.EdgeInsets.all(10),
                             child: pw.Text(
-                              '₹${(item.price! * item.qty!).toStringAsFixed(2)}',
+                              '₹${(item.price! * item.qty!).toStringAsFixed(
+                                  2)}',
                               style: pw.TextStyle(fontSize: 10),
                               textAlign: pw.TextAlign.right,
                             ),
@@ -2861,9 +2928,11 @@ class InvoiceHelper {
                     children: [
                       _buildModernTotalRow('Subtotal', subtotal),
                       if (taxAmount > 0)
-                        _buildModernTotalRow('Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
+                        _buildModernTotalRow(
+                            'Tax (${taxRate.toStringAsFixed(1)}%)', taxAmount),
                       if (discountAmount > 0)
-                        _buildModernTotalRow('Discount', -discountAmount, isDiscount: true),
+                        _buildModernTotalRow(
+                            'Discount', -discountAmount, isDiscount: true),
                       pw.SizedBox(height: 10),
                       pw.Container(
                         width: 200,
@@ -2964,19 +3033,20 @@ class InvoiceHelper {
 
       // Save and open PDF
       final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/Modern_Invoice_${invoiceId}_${userName}.pdf';
+      final filePath = '${directory
+          .path}/Modern_Invoice_${invoiceId}_${userName}.pdf';
       final file = File(filePath);
       await file.writeAsBytes(await pdf.save());
 
       print("✅ Modern PDF saved: $filePath");
       await OpenFile.open(filePath);
-
     } catch (e) {
       print("Error generating modern PDF: $e");
     }
   }
 
-  static pw.Widget _buildModernTotalRow(String label, double amount, {bool isTotal = false, bool isBold = false, bool isDiscount = false}) {
+  static pw.Widget _buildModernTotalRow(String label, double amount,
+      {bool isTotal = false, bool isBold = false, bool isDiscount = false}) {
     return pw.Padding(
       padding: pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Row(
@@ -2996,7 +3066,9 @@ class InvoiceHelper {
             style: pw.TextStyle(
               fontSize: isTotal ? 12 : 10,
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isTotal ? PdfColors.blue900 : (isDiscount ? PdfColors.red : PdfColors.grey700),
+              color: isTotal ? PdfColors.blue900 : (isDiscount
+                  ? PdfColors.red
+                  : PdfColors.grey700),
             ),
           ),
         ],
@@ -3005,8 +3077,7 @@ class InvoiceHelper {
   }
 
 // NEW METHOD: Colorful Premium Invoice Format
-  static Future<void> generateColorfulInvoice(
-      List<Invoice> invoices,
+  static Future<void> generateColorfulInvoice(List<Invoice> invoices,
       String userName,
       String phoneNumber,
       String customerEmail,
@@ -3018,13 +3089,13 @@ class InvoiceHelper {
       double taxRate,
       String discountType,
       String notes,
-      Map<String, dynamic> companyData,
-      ) async {
+      Map<String, dynamic> companyData,) async {
     try {
       final pdf = pw.Document();
 
       // Load custom font
-      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final fontData = await rootBundle.load(
+          "assets/fonts/NotoSans-Regular.ttf");
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
 
       final theme = pw.ThemeData.withFont(
@@ -3034,10 +3105,13 @@ class InvoiceHelper {
         boldItalic: customFont,
       );
 
-      final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
+      final String invoiceId = invoices.isNotEmpty
+          ? invoices.first.invoiceId
+          : "UNKNOWN";
       // Extract company information
       String companyName = companyData['companyName'] ?? 'Samira Hadid';
-      String companyAddress = companyData['address'] ?? '123 Anywhere St., Any City';
+      String companyAddress = companyData['address'] ??
+          '123 Anywhere St., Any City';
       String companyPhone = companyData['phone'] ?? '+123-456-7890';
       String companyEmail = companyData['email'] ?? 'company@email.com';
       String companyBank = companyData['bankName'] ?? 'Name Bank';
@@ -3101,7 +3175,8 @@ class InvoiceHelper {
                       decoration: pw.BoxDecoration(
                         color: PdfColors.blue50,
                         borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(color: PdfColors.blue200, width: 2),
+                        border: pw.Border.all(
+                            color: PdfColors.blue200, width: 2),
                       ),
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -3129,7 +3204,9 @@ class InvoiceHelper {
                           ),
                           pw.SizedBox(height: 8),
                           pw.Text(
-                            customerAddress.isEmpty ? '123 Anywhere St., Any City' : customerAddress,
+                            customerAddress.isEmpty
+                                ? '123 Anywhere St., Any City'
+                                : customerAddress,
                             style: pw.TextStyle(fontSize: 12),
                           ),
                           if (customerEmail.isNotEmpty) pw.SizedBox(height: 8),
@@ -3149,7 +3226,8 @@ class InvoiceHelper {
                       decoration: pw.BoxDecoration(
                         color: PdfColors.purple50,
                         borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(color: PdfColors.purple200, width: 2),
+                        border: pw.Border.all(
+                            color: PdfColors.purple200, width: 2),
                       ),
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -3198,13 +3276,15 @@ class InvoiceHelper {
                   mainAxisAlignment: pw.MainAxisAlignment.end,
                   children: [
                     pw.Container(
-                      padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      padding: pw.EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 8),
                       decoration: pw.BoxDecoration(
                         color: PdfColors.blue100,
                         borderRadius: pw.BorderRadius.circular(20),
                       ),
                       child: pw.Text(
-                        'Date: ${DateFormat('dd MMMM yyyy').format(DateTime.now())}',
+                        'Date: ${DateFormat('dd MMMM yyyy').format(
+                            DateTime.now())}',
                         style: pw.TextStyle(
                           fontSize: 12,
                           fontWeight: pw.FontWeight.bold,
@@ -3225,6 +3305,7 @@ class InvoiceHelper {
                       pw.BoxShadow(
                         color: PdfColors.grey300,
                         blurRadius: 5,
+
                         ///offset: pw.Offset(0, 2),
                       ),
                     ],
@@ -3233,6 +3314,7 @@ class InvoiceHelper {
                     border: pw.TableBorder.all(
                       color: PdfColors.grey200,
                       width: 1,
+
                       ///borderRadius: pw.BorderRadius.circular(8),
                     ),
                     columnWidths: {
@@ -3306,7 +3388,10 @@ class InvoiceHelper {
                         ],
                       ),
                       // Table Rows - Only show actual items (no empty rows)
-                      ...invoices.asMap().entries.map((entry) {
+                      ...invoices
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         int index = entry.key;
                         Invoice item = entry.value;
                         final isEven = index % 2 == 0;
@@ -3341,7 +3426,8 @@ class InvoiceHelper {
                             pw.Padding(
                               padding: pw.EdgeInsets.all(12),
                               child: pw.Text(
-                                '\$${(item.price! * item.qty!).toStringAsFixed(2)}',
+                                '\$${(item.price! * item.qty!).toStringAsFixed(
+                                    2)}',
                                 style: pw.TextStyle(fontSize: 12),
                                 textAlign: pw.TextAlign.right,
                               ),
@@ -3383,15 +3469,18 @@ class InvoiceHelper {
                           end: pw.Alignment.bottomRight,
                         ),
                         borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(color: PdfColors.blue200, width: 1),
+                        border: pw.Border.all(
+                            color: PdfColors.blue200, width: 1),
                       ),
                       child: pw.Column(
                         children: [
                           _buildColorfulTotalRow('Sub Total:', subtotal),
                           if (taxAmount > 0)
-                            _buildColorfulTotalRow('Tax (${taxRate.toStringAsFixed(1)}%):', taxAmount),
+                            _buildColorfulTotalRow('Tax (${taxRate
+                                .toStringAsFixed(1)}%):', taxAmount),
                           if (discountAmount > 0)
-                            _buildColorfulTotalRow('Discount:', -discountAmount, isDiscount: true),
+                            _buildColorfulTotalRow(
+                                'Discount:', -discountAmount, isDiscount: true),
                           pw.Divider(color: PdfColors.blue300, height: 20),
                           _buildColorfulTotalRow(
                             'TOTAL:',
@@ -3417,7 +3506,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.blue50,
                           borderRadius: pw.BorderRadius.circular(10),
-                          border: pw.Border.all(color: PdfColors.blue200, width: 1),
+                          border: pw.Border.all(color: PdfColors.blue200,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -3432,7 +3522,9 @@ class InvoiceHelper {
                             ),
                             pw.SizedBox(height: 10),
                             pw.Text(
-                              notes.isNotEmpty ? notes : 'Thank you for your business!',
+                              notes.isNotEmpty
+                                  ? notes
+                                  : 'Thank you for your business!',
                               style: pw.TextStyle(fontSize: 12),
                             ),
                           ],
@@ -3449,7 +3541,8 @@ class InvoiceHelper {
                         decoration: pw.BoxDecoration(
                           color: PdfColors.purple50,
                           borderRadius: pw.BorderRadius.circular(10),
-                          border: pw.Border.all(color: PdfColors.purple200, width: 1),
+                          border: pw.Border.all(color: PdfColors.purple200,
+                              width: 1),
                         ),
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -3491,7 +3584,8 @@ class InvoiceHelper {
                 // Thank You Message with gradient background
                 pw.Center(
                   child: pw.Container(
-                    padding: pw.EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                    padding: pw.EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 15),
                     decoration: pw.BoxDecoration(
                       gradient: pw.LinearGradient(
                         colors: [PdfColors.blue700, PdfColors.purple700],
@@ -3525,13 +3619,13 @@ class InvoiceHelper {
 
       print("✅ Colorful PDF saved: $filePath");
       await OpenFile.open(filePath);
-
     } catch (e) {
       print("Error generating colorful PDF: $e");
     }
   }
 
-  static pw.Widget _buildColorfulTotalRow(String label, double amount, {bool isTotal = false, bool isDiscount = false}) {
+  static pw.Widget _buildColorfulTotalRow(String label, double amount,
+      {bool isTotal = false, bool isDiscount = false}) {
     return pw.Padding(
       padding: pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Row(
@@ -3550,7 +3644,9 @@ class InvoiceHelper {
             style: pw.TextStyle(
               fontSize: isTotal ? 14 : 12,
               fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isTotal ? PdfColors.blue900 : (isDiscount ? PdfColors.red : PdfColors.grey700),
+              color: isTotal ? PdfColors.blue900 : (isDiscount
+                  ? PdfColors.red
+                  : PdfColors.grey700),
             ),
           ),
         ],
@@ -3560,6 +3656,52 @@ class InvoiceHelper {
 
 
   /// Generate PDF for Invoice OR Challan
+  ///
+  ///
+  ///
+// DEBUG: Let's check what's happening with your GST data
+// Add this debug method to see what values your models actually contain
+
+  void debugPrintItemData(List<InvoiceItem>? invoiceItems, List<ChallanItem>? challanItems, bool isChallan) {
+    print("=== DEBUG GST DATA ===");
+
+    if (isChallan && challanItems != null) {
+      print("CHALLAN ITEMS DEBUG:");
+      for (int i = 0; i < challanItems.length; i++) {
+        ChallanItem item = challanItems[i];
+        print("Item $i:");
+        print("  - itemName: ${item.itemName}");
+        print("  - quantity: ${item.quantity}");
+        print("  - price: ${item.price}");
+        print("  - gstRate: ${item.gstRate}");
+        print("  - gstAmount (direct): ${item.gstAmount}");
+        print("  - calculatedGstAmount: ${item.calculatedGstAmount}");
+        print("  - amountWithGst (direct): ${item.amountWithGst}");
+        print("  - calculatedAmountWithGst: ${item.calculatedAmountWithGst}");
+        print("  - totalPrice: ${item.totalPrice}");
+        print("---");
+      }
+    } else if (!isChallan && invoiceItems != null) {
+      print("INVOICE ITEMS DEBUG:");
+      for (int i = 0; i < invoiceItems.length; i++) {
+        InvoiceItem item = invoiceItems[i];
+        print("Item $i:");
+        print("  - itemName: ${item.itemName}");
+        print("  - quantity: ${item.quantity}");
+        print("  - rate: ${item.rate}");
+        print("  - gstRate: ${item.gstRate}");
+        print("  - gstAmount (direct): ${item.gstAmount}");
+        print("  - calculatedGstAmount: ${item.calculatedGstAmount}");
+        print("  - amountWithGst (direct): ${item.amountWithGst}");
+        print("  - calculatedAmountWithGst: ${item.calculatedAmountWithGst}");
+        print("  - totalPrice: ${item.totalPrice}");
+        print("---");
+      }
+    }
+    print("=== END DEBUG ===");
+  }
+
+// FIXED PDF GENERATION METHOD
   static Future<File> generateDocument({
     required bool isChallan,
     Invoice? invoice,
@@ -3568,6 +3710,8 @@ class InvoiceHelper {
     List<ChallanItem>? challanItems,
     required Map<String, dynamic> companyData,
   }) async {
+
+
     final pdf = pw.Document();
 
     // Load font
@@ -3582,23 +3726,23 @@ class InvoiceHelper {
     );
 
     // Company details
-    String companyName = companyData["companyName"] ?? 'Your Company Name';
-    String companyAddress = companyData["address"] ?? '123 Business Street';
-    String companyCity = companyData["city"] ?? 'City';
-    String companyState = companyData["state"] ?? 'State';
-    String companyPin = companyData["pincode"] ?? 'PIN Code';
-    String companyPhone = companyData["phone"] ?? '+91 XXXXXXXXXX';
-    String companyEmail = companyData["userEmail"] ?? 'company@email.com';
-    String companyGst = companyData["gst"] ?? 'GSTIN: XXXXXXXXXXXXXX';
-    String companyBank = companyData["bankName"] ?? 'Bank Name';
-    String companyAccount = companyData["accountNumber"] ?? 'Account Number';
-    String companyIfsc = companyData["ifsc"] ?? 'IFSC Code';
-    String companyPan = companyData["pan"] ?? 'PAN Number';
+    final companyName = companyData["companyName"] ?? 'Your Company Name';
+    final companyAddress = companyData["address"] ?? '123 Business Street';
+    final companyCity = companyData["city"] ?? 'City';
+    final companyState = companyData["state"] ?? 'State';
+    final companyPin = companyData["pincode"] ?? 'PIN Code';
+    final companyPhone = companyData["phone"] ?? '+91 XXXXXXXXXX';
+    final companyEmail = companyData["userEmail"] ?? 'company@email.com';
+    final companyGst = companyData["gst"] ?? 'GSTIN: XXXXXXXXXXXXXX';
+    final companyBank = companyData["bankName"] ?? 'Bank Name';
+    final companyAccount = companyData["accountNumber"] ?? 'Account Number';
+    final companyIfsc = companyData["ifsc"] ?? 'IFSC Code';
+    final companyPan = companyData["pan"] ?? 'PAN Number';
 
-    // Title
-    final String docTitle = isChallan ? "CHALLAN" : "INVOICE";
-    final String docId = isChallan ? challan!.challanId : invoice!.invoiceId;
-    final DateTime docDate = isChallan
+    // Document details
+    final docTitle = isChallan ? "CHALLAN" : "INVOICE";
+    final docId = isChallan ? challan!.challanId : invoice!.invoiceId;
+    final docDate = isChallan
         ? challan!.challanDate ?? DateTime.now()
         : invoice!.issueDate ?? DateTime.now();
 
@@ -3611,14 +3755,14 @@ class InvoiceHelper {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Header
+              // Modern Header
               pw.Container(
                 width: double.infinity,
                 padding: const pw.EdgeInsets.all(20),
                 decoration: pw.BoxDecoration(
                   gradient: pw.LinearGradient(
                     colors: isChallan
-                        ? [PdfColors.indigo700, PdfColors.indigo900]
+                        ? [PdfColors.green700, PdfColors.green900]
                         : [PdfColors.blue700, PdfColors.blue900],
                     begin: pw.Alignment.topLeft,
                     end: pw.Alignment.bottomRight,
@@ -3640,24 +3784,20 @@ class InvoiceHelper {
                                 fontWeight: pw.FontWeight.bold)),
                         pw.SizedBox(height: 5),
                         pw.Text(companyAddress,
-                            style: const pw.TextStyle(
-                                color: PdfColors.white, fontSize: 10)),
+                            style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
                         pw.Text('$companyCity, $companyState - $companyPin',
-                            style: const pw.TextStyle(
-                                color: PdfColors.white, fontSize: 10)),
+                            style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
                         pw.SizedBox(height: 3),
                         pw.Text('📞 $companyPhone | 📧 $companyEmail',
-                            style: const pw.TextStyle(
-                                color: PdfColors.white, fontSize: 9)),
+                            style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)),
                         pw.Text(companyGst,
-                            style: const pw.TextStyle(
-                                color: PdfColors.white, fontSize: 9)),
+                            style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)),
                       ],
                     ),
-                    // Badge
+
+                    // Invoice/Challan Badge
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 8),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       decoration: pw.BoxDecoration(
                         color: PdfColors.white,
                         borderRadius: pw.BorderRadius.circular(20),
@@ -3666,18 +3806,14 @@ class InvoiceHelper {
                         children: [
                           pw.Text(docTitle,
                               style: pw.TextStyle(
-                                  color: isChallan
-                                      ? PdfColors.indigo800
-                                      : PdfColors.blue800,
+                                  color: isChallan ? PdfColors.green800 : PdfColors.blue800,
                                   fontSize: 16,
                                   fontWeight: pw.FontWeight.bold)),
                           pw.SizedBox(height: 3),
                           pw.Text("#$docId",
-                              style: const pw.TextStyle(
-                                  color: PdfColors.grey700, fontSize: 10)),
-                          pw.Text(DateFormat('dd MMM yyyy').format(docDate),
-                              style: const pw.TextStyle(
-                                  color: PdfColors.grey600, fontSize: 9)),
+                              style: const pw.TextStyle(color: PdfColors.grey700, fontSize: 10)),
+                          pw.Text(DateFormat("dd MMM yyyy").format(docDate),
+                              style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
                         ],
                       ),
                     ),
@@ -3687,146 +3823,14 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 25),
 
-              // Customer Section
-              pw.Container(
-                padding: const pw.EdgeInsets.all(15),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey50,
-                  borderRadius: pw.BorderRadius.circular(8),
-                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(isChallan ? "DELIVER TO:" : "BILL TO:",
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            color: isChallan
-                                ? PdfColors.indigo800
-                                : PdfColors.blue800,
-                            fontSize: 12)),
-                    pw.SizedBox(height: 8),
-                    pw.Text(
-                      isChallan
-                          ? challan!.customerName
-                          : invoice!.customerName,
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 12),
-                    ),
-                    if ((isChallan
-                        ? challan!.customerAddress
-                        : invoice!.customerAddress) !=
-                        null)
-                      pw.Text(
-                          isChallan
-                              ? challan!.customerAddress!
-                              : invoice!.customerAddress!,
-                          style: const pw.TextStyle(fontSize: 10)),
-                    pw.SizedBox(height: 3),
-                    pw.Text(
-                        'Phone: ${isChallan ? challan!.customerMobile : invoice!.mobile}',
-                        style: const pw.TextStyle(fontSize: 9)),
-                  ],
-                ),
-              ),
-
-              pw.SizedBox(height: 25),
-
-              // Items Table
-              pw.Container(
-                decoration: pw.BoxDecoration(
-                  borderRadius: pw.BorderRadius.circular(8),
-                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
-                ),
-                child: pw.Table(
-                  border: pw.TableBorder(
-                    horizontalInside: const pw.BorderSide(
-                        color: PdfColors.grey200, width: 1),
-                    verticalInside: const pw.BorderSide(
-                        color: PdfColors.grey200, width: 1),
-                    left: pw.BorderSide.none,
-                    right: pw.BorderSide.none,
-                    top: pw.BorderSide.none,
-                    bottom: pw.BorderSide.none,
-                  ),
-                  columnWidths: isChallan
-                      ? {
-                    0: const pw.FlexColumnWidth(0.4),
-                    1: const pw.FlexColumnWidth(3),
-                    2: const pw.FlexColumnWidth(0.8),
-                  }
-                      : {
-                    0: pw.FlexColumnWidth(0.4),
-                    1: pw.FlexColumnWidth(2.5),
-                    2: pw.FlexColumnWidth(0.6),
-                    3: pw.FlexColumnWidth(1),
-                    4: pw.FlexColumnWidth(1),
-                  },
-                  children: [
-                    // Header Row
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(
-                        color: isChallan
-                            ? PdfColors.indigo50
-                            : PdfColors.blue50,
-                      ),
-                      children: [
-                        _tableHeader('#'),
-                        _tableHeader('DESCRIPTION'),
-                        _tableHeader('QTY', align: pw.TextAlign.center),
-                        if (!isChallan) _tableHeader('RATE', align: pw.TextAlign.right),
-                        if (!isChallan) _tableHeader('AMOUNT', align: pw.TextAlign.right),
-                      ],
-                    ),
-
-                    // Items
-                    ...(isChallan ? challanItems! : invoiceItems!)
-                        .asMap()
-                        .entries
-                        .map((entry) {
-                      int index = entry.key;
-                      final item = entry.value;
-                      return pw.TableRow(
-                        decoration: pw.BoxDecoration(
-                          color: index % 2 == 0
-                              ? PdfColors.grey50
-                              : PdfColors.white,
-                        ),
-                        children: [
-                          _tableCell('${index + 1}',
-                              align: pw.TextAlign.center),
-                          _tableCell(isChallan
-                              ? (item as ChallanItem).itemName ?? ''
-                              : (item as InvoiceItem).itemName ?? ''),
-                          _tableCell(
-                              '${isChallan ? (item as ChallanItem).quantity : (item as InvoiceItem).quantity}',
-                              align: pw.TextAlign.center),
-                          if (!isChallan)
-                            _tableCell(
-                                '₹${(item as InvoiceItem).rate?.toStringAsFixed(2) ?? '0.00'}',
-                                align: pw.TextAlign.right),
-                          if (!isChallan)
-                            _tableCell(
-                                '₹${((item as InvoiceItem).rate ?? 0) * (item.quantity ?? 1)}',
-                                align: pw.TextAlign.right),
-                        ],
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-
-              pw.SizedBox(height: 20),
-
-              if(isChallan)
-               pw.Row(
+              // FROM / TO Section
+              pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // Notes Section
+                  // FROM
                   pw.Expanded(
-                    flex: 2,
                     child: pw.Container(
-                      padding: pw.EdgeInsets.all(15),
+                      padding: const pw.EdgeInsets.all(15),
                       decoration: pw.BoxDecoration(
                         color: PdfColors.grey50,
                         borderRadius: pw.BorderRadius.circular(8),
@@ -3835,80 +3839,302 @@ class InvoiceHelper {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            'NOTES',
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.blue800,
-                              fontSize: 11,
-                            ),
-                          ),
+                          pw.Text("FROM:",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: isChallan ? PdfColors.green800 : PdfColors.blue800,
+                                  fontSize: 12)),
                           pw.SizedBox(height: 8),
-                          pw.Text(
-                            (invoice!.notes! ?? '').isNotEmpty ? invoice.notes! : 'Thank you for your business!',
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                          pw.SizedBox(height: 15),
-                          pw.Text(
-                            'BANK DETAILS',
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.blue800,
-                              fontSize: 11,
-                            ),
-                          ),
-                          pw.SizedBox(height: 5),
-                          pw.Text('Bank: $companyBank!', style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('A/C: $companyAccount!', style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('IFSC: $companyIfsc', style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('PAN: $companyPan', style: pw.TextStyle(fontSize: 9)),
+                          pw.Text(companyName,
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                          pw.Text(companyAddress, style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text('$companyCity, $companyState - $companyPin',
+                              style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text("Phone: $companyPhone",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          pw.Text("Email: $companyEmail",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          pw.Text("GST: $companyGst",
+                              style: const pw.TextStyle(fontSize: 9)),
                         ],
                       ),
                     ),
                   ),
+                  pw.SizedBox(width: 15),
+                  // TO
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text("TO:",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: isChallan ? PdfColors.green800 : PdfColors.blue800,
+                                  fontSize: 12)),
+                          pw.SizedBox(height: 8),
+                          pw.Text(
+                            isChallan ? challan!.customerName : invoice!.customerName,
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold, fontSize: 12),
+                          ),
+                          if ((isChallan
+                              ? challan!.customerAddress ?? ''
+                              : invoice!.customerAddress ?? '')
+                              .isNotEmpty)
+                            pw.Text(
+                                isChallan
+                                    ? challan!.customerAddress
+                                    : invoice!.customerAddress!,
+                                style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text(
+                              "Phone: ${isChallan ? challan!.customerMobile : invoice!.mobile}",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          if (!isChallan &&
+                              (invoice!.customerEmail ?? '').isNotEmpty)
+                            pw.Text("Email: ${invoice.customerEmail}",
+                                style: const pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
+              pw.SizedBox(height: 25),
+
+              // Status and Date info
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // Issue Date (Challan vs Invoice)
+                  pw.Text(
+                    'Issue Date: ${DateFormat('MMM dd, yyyy').format(
+                      isChallan
+                          ? (challan!.challanDate ?? DateTime.now())
+                          : (invoice!.issueDate ?? DateTime.now()),
+                    )}',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+
+                  // Due Date (only for Invoice)
+                  if (!isChallan && invoice!.dueDate != null)
+                    pw.Text(
+                      'Due Date: ${DateFormat('MMM dd, yyyy').format(invoice.dueDate!)}',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+
+                  // Status Badge
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: pw.BoxDecoration(
+                      color: _getStatusColor(
+                        isChallan ? challan!.paymentStatus : invoice!.status,
+                      ),
+                      borderRadius: pw.BorderRadius.circular(20),
+                    ),
+                    child: pw.Text(
+                      (isChallan ? challan!.paymentStatus : invoice!.status)?.toUpperCase() ?? 'ISSUED',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 20),
+
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                ),
+                child: pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: const pw.BorderSide(color: PdfColors.grey200, width: 1),
+                    verticalInside: const pw.BorderSide(color: PdfColors.grey200, width: 1),
+                    left: pw.BorderSide.none,
+                    right: pw.BorderSide.none,
+                    top: pw.BorderSide.none,
+                    bottom: pw.BorderSide.none,
+                  ),
+                  columnWidths:
+          AppConstants.withGST.value ?
+                  {
+                    0: const pw.FlexColumnWidth(0.4),  // #
+                    1: const pw.FlexColumnWidth(2.0),  // Description
+                    2: const pw.FlexColumnWidth(0.6),  // QTY
+                    3: const pw.FlexColumnWidth(0.8),  // Rate
+                    4: const pw.FlexColumnWidth(0.8),  // GST %
+                    5: const pw.FlexColumnWidth(0.8),  // GST Amount
+                    6: const pw.FlexColumnWidth(1.0),  // Total Amount
+                  }
+          :
+          {
+          0: const pw.FlexColumnWidth(0.4),  // #
+          1: const pw.FlexColumnWidth(2.0),  // Description
+          2: const pw.FlexColumnWidth(0.6),  // QTY
+          3: const pw.FlexColumnWidth(0.8),  // Rate
+          4: const pw.FlexColumnWidth(0.8),  // GST %
+          },
+                  children: [
+                    // Header
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: isChallan ? PdfColors.green50 : PdfColors.blue50,
+                        borderRadius: const pw.BorderRadius.only(
+                            topLeft: pw.Radius.circular(8),
+                            topRight: pw.Radius.circular(8)),
+                      ),
+                      children: [
+                        _tableHeader('#'),
+                        _tableHeader('DESCRIPTION'),
+                        _tableHeader('QTY', align: pw.TextAlign.center),
+                        _tableHeader('RATE', align: pw.TextAlign.right),
+                        _tableHeader('GST%', align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeader('GST', align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeader('TOTAL', align: pw.TextAlign.right),
+                      ],
+                    ),
+
+                    // Items - FIXED GST READING FROM GOOGLE SHEETS
+                    ...(isChallan ? challanItems! : invoiceItems!)
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                      int index = entry.key;
+                      final item = entry.value;
+
+                      if (isChallan) {
+                        final challanItem = item as ChallanItem;
+
+                        return pw.TableRow(
+                          decoration: pw.BoxDecoration(
+                            color: index % 2 == 0 ? PdfColors.grey50 : PdfColors.white,
+                          ),
+                          children: [
+                            _tableCell('${index + 1}', align: pw.TextAlign.center),
+                            _tableCell(challanItem.itemName ?? 'Item ${index + 1}'),
+                            _tableCell('${challanItem.quantity ?? 1}', align: pw.TextAlign.center),
+                            _tableCell('₹${(challanItem.price ?? 0.0).toStringAsFixed(2)}', align: pw.TextAlign.right),
+                            _tableCell('${challanItem.gstRate}%', align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                              _tableCell('₹${challanItem.gstAmount}', align: pw.TextAlign.right),
+                            if (AppConstants.withGST.value)
+                            _tableCell('₹${challanItem.totalPrice}', align: pw.TextAlign.right),
+                          ],
+                        );
+                      } else {
+                        final invoiceItem = item as InvoiceItem;
+                        return pw.TableRow(
+                          decoration: pw.BoxDecoration(
+                            color: index % 2 == 0 ? PdfColors.grey50 : PdfColors.white,
+                          ),
+                          children: [
+                            _tableCell('${index + 1}', align: pw.TextAlign.center),
+                            _tableCell(invoiceItem.itemName ?? 'Item ${index + 1}'),
+                            _tableCell('${invoiceItem.quantity ?? 1}', align: pw.TextAlign.center),
+                            _tableCell('₹${(invoiceItem.rate ?? 0.0).toStringAsFixed(2)}', align: pw.TextAlign.right),
+                            _tableCell('${invoiceItem.gstRate}%', align: pw.TextAlign.right),
+          if (AppConstants.withGST.value)
+            _tableCell('₹${invoiceItem.gstAmount}', align: pw.TextAlign.right),
+          if (AppConstants.withGST.value)
+                            _tableCell('₹${invoiceItem.totalPrice}', align: pw.TextAlign.right),
+                          ],
+                        );
+                      }
+                    }),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 20),
+
+              // Totals + Notes + Bank
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(15),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text("NOTES",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: isChallan ? PdfColors.green800 : PdfColors.blue800,
+                                  fontSize: 11)),
+                          pw.SizedBox(height: 8),
+                          pw.Text(
+                              !isChallan
+                                  ? ((invoice!.notes ?? '').isNotEmpty
+                                  ? invoice.notes!
+                                  : "Thank you for your business!")
+                                  : "Delivered as requested.",
+                              style: const pw.TextStyle(fontSize: 10)),
+                          pw.SizedBox(height: 15),
+                          pw.Text("BANK DETAILS",
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: isChallan ? PdfColors.green800 : PdfColors.blue800,
+                                  fontSize: 11)),
+                          pw.SizedBox(height: 5),
+                          pw.Text("Bank: $companyBank",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          pw.Text("A/C: $companyAccount",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          pw.Text("IFSC: $companyIfsc",
+                              style: const pw.TextStyle(fontSize: 9)),
+                          pw.Text("PAN: $companyPan",
+                              style: const pw.TextStyle(fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ),
                   pw.SizedBox(width: 20),
-
-                  // Totals
                   pw.Expanded(
                     flex: 1,
                     child: pw.Container(
-                      padding: pw.EdgeInsets.all(15),
+                      padding: const pw.EdgeInsets.all(15),
                       decoration: pw.BoxDecoration(
-                        color: PdfColors.blue50,
+                        color: isChallan ? PdfColors.green50 : PdfColors.blue50,
                         borderRadius: pw.BorderRadius.circular(8),
-                        border: pw.Border.all(color: PdfColors.blue200, width: 1),
+                        border: pw.Border.all(
+                            color:
+                            isChallan ? PdfColors.green200 : PdfColors.blue200,
+                            width: 1),
                       ),
                       child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
                         children: [
-                          //_buildTotalRow('Subtotal', 'invoice.subtotal' ),
-                          if ((invoice!.taxAmount! ?? 0) > 0)
-                            _buildTotalRow('Tax (${invoice!.taxRate?.toStringAsFixed(1) ?? '0.0'}%)', invoice.taxAmount ?? 0),
-                          if ((invoice.discountAmount ?? 0) > 0)
-                            _buildTotalRow('Discount', -(invoice.discountAmount ?? 0), isDiscount: true),
-                          pw.Divider(color: PdfColors.blue300, height: 20),
-                          _buildTotalRow(
-                            'TOTAL AMOUNT ',
-                            invoice.totalAmount!,
-                            isTotal: true,
-                            isBold: true,
-                          ),
-                          pw.SizedBox(height: 15),
-                          pw.Container(
-                            padding: pw.EdgeInsets.all(8),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.blue100,
-                              borderRadius: pw.BorderRadius.circular(4),
-                            ),
-                            child: pw.Text(
-                              'Amount in Words:\n${_numberToWords(invoice.totalAmount!)}',
-                              style: pw.TextStyle(
-                                fontSize: 8,
-                                color: PdfColors.blue800,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
+                          // Use the passed parameters for accurate totals
+                          _buildTotalRow("Subtotal", isChallan ? (challan!.subtotal ?? 0.0) : (invoice!.subtotal ?? 0.0),),
+          if (AppConstants.withGST.value)
+            _buildTotalRow("GST",   isChallan ? (challan!.gstAmount ?? 0.0) : (invoice!.gstAmount ?? 0.0),),
+                          pw.Divider(
+                              color: isChallan ? PdfColors.green300 : PdfColors.blue300,
+                              height: 20),
+                          _buildTotalRow("TOTAL ",  isChallan ? (challan!.subtotal + challan.gstAmount ?? 0.0) : (invoice!.subtotal! + invoice.gstAmount! ?? 0.0),
+                              isTotal: true, isBold: true),
                         ],
                       ),
                     ),
@@ -3922,21 +4148,36 @@ class InvoiceHelper {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
-                  pw.Column(children: [
-                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
-                    pw.SizedBox(height: 5),
-                    pw.Text("Customer Signature",
-                        style: const pw.TextStyle(
-                            fontSize: 9, color: PdfColors.grey600)),
-                  ]),
-                  pw.Column(children: [
-                    pw.Container(width: 150, height: 1, color: PdfColors.grey400),
-                    pw.SizedBox(height: 5),
-                    pw.Text("Authorized Signature",
-                        style: const pw.TextStyle(
-                            fontSize: 9, color: PdfColors.grey600)),
-                  ]),
+                  pw.Column(
+                    children: [
+                      pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                      pw.SizedBox(height: 5),
+                      pw.Text("Customer Signature",
+                          style:
+                          const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(width: 150, height: 1, color: PdfColors.grey400),
+                      pw.SizedBox(height: 5),
+                      pw.Text("Authorized Signature",
+                          style:
+                          const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                    ],
+                  ),
                 ],
+              ),
+
+              pw.SizedBox(height: 20),
+              pw.Center(
+                child: pw.Text(
+                  "Thank you for your business! • This is a computer generated ${docTitle.toLowerCase()}",
+                  style: pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.grey500,
+                      fontStyle: pw.FontStyle.italic),
+                ),
               ),
             ],
           );
@@ -3944,9 +4185,9 @@ class InvoiceHelper {
       ),
     );
 
-    // Save File
+    // Save
     final dir = await getApplicationDocumentsDirectory();
-    final path = '${dir.path}/${isChallan ? "challan" : "invoice"}_$docId.pdf';
+    final path = "${dir.path}/${docTitle.toLowerCase()}_$docId.pdf";
     final file = File(path);
     await file.writeAsBytes(await pdf.save());
     return file;
@@ -3954,7 +4195,53 @@ class InvoiceHelper {
 
 
 
-  static Future<File> generate(Invoice invoice, List<InvoiceItem> invoiceItems, Map<String, dynamic> companyData) async {
+
+
+
+// Example usage method - call it like this:
+/*
+// For Invoice:
+File invoicePdf = await generateDocument(
+  isChallan: false,
+  invoice: myInvoice,
+  invoiceItems: myInvoiceItems,
+  companyData: myCompanyData,
+  subtotal: 10000.0,
+  gstAmount: 1800.0,
+  total: 11600.0,
+  discount: 200.0,
+);
+
+// For Challan:
+File challanPdf = await generateDocument(
+  isChallan: true,
+  challan: myChallan,
+  challanItems: myChallanItems,
+  companyData: myCompanyData,
+  subtotal: 5000.0,
+  gstAmount: 900.0,
+  total: 5900.0,
+);
+*/
+
+  ///
+  ///
+  ///
+  ///
+
+
+
+
+  static Future<File> generate(Invoice invoice,
+      List<InvoiceItem> invoiceItems,
+      Map<String, dynamic> companyData,
+      {
+  required double subtotal,
+  required double gstAmount,
+  required double total,
+  double discount = 0.0,
+}
+) async {
     final pdf = pw.Document();
 
     // Load custom font that supports rupee symbol
@@ -4258,7 +4545,8 @@ class InvoiceHelper {
                     1: pw.FlexColumnWidth(2.5),
                     2: pw.FlexColumnWidth(0.6),
                     3: pw.FlexColumnWidth(1),
-                    4: pw.FlexColumnWidth(1),
+                    4: pw.FlexColumnWidth(0.8),
+                    5: pw.FlexColumnWidth(1),
                   },
                   children: [
                     // Table Header
@@ -4318,6 +4606,7 @@ class InvoiceHelper {
                             textAlign: pw.TextAlign.right,
                           ),
                         ),
+                        _tableHeader('GST AMT', align: pw.TextAlign.right),
                         pw.Padding(
                           padding: pw.EdgeInsets.all(12),
                           child: pw.Text(
@@ -4375,6 +4664,7 @@ class InvoiceHelper {
                               textAlign: pw.TextAlign.right,
                             ),
                           ),
+                          _tableCell('₹${item.gstAmount}', align: pw.TextAlign.right),
                           pw.Padding(
                             padding: pw.EdgeInsets.all(10),
                             child: pw.Text(
@@ -4454,39 +4744,24 @@ class InvoiceHelper {
                         border: pw.Border.all(color: PdfColors.blue200, width: 1),
                       ),
                       child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
                         children: [
-                          //_buildTotalRow('Subtotal', 'invoice.subtotal' ),
-                          if ((invoice.taxAmount ?? 0) > 0)
-                            _buildTotalRow('Tax (${invoice.taxRate?.toStringAsFixed(1) ?? '0.0'}%)', invoice.taxAmount ?? 0),
-                          if ((invoice.discountAmount ?? 0) > 0)
-                            _buildTotalRow('Discount', -(invoice.discountAmount ?? 0), isDiscount: true),
-                          pw.Divider(color: PdfColors.blue300, height: 20),
-                          _buildTotalRow(
-                            'TOTAL AMOUNT ',
-                            invoice.totalAmount!,
-                            isTotal: true,
-                            isBold: true,
-                          ),
-                          pw.SizedBox(height: 15),
-                          pw.Container(
-                            padding: pw.EdgeInsets.all(8),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.blue100,
-                              borderRadius: pw.BorderRadius.circular(4),
-                            ),
-                            child: pw.Text(
-                              'Amount in Words:\n${_numberToWords(invoice.totalAmount!)}',
-                              style: pw.TextStyle(
-                                fontSize: 8,
-                                color: PdfColors.blue800,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
+                            _buildTotalRow('Subtotal', invoice.subtotal ?? 0),
+                            if ((invoice.gstAmount ?? 0) > 0)
+                              _buildTotalRow('GST ',invoice.gstAmount ?? 0),
+                            if ((invoice.discountAmount ?? 0) > 0)
+                              _buildTotalRow('Discount', -(invoice.discountAmount ?? 0),
+                                  isDiscount: true),
+                            pw.Divider(color: PdfColors.blue300, height: 20),
+                            _buildTotalRow('TOTAL ', invoice.totalAmount ?? 0,
+                                isTotal: true, isBold: true),
+
                         ],
                       ),
                     ),
                   ),
+
+
                 ],
               ),
 
@@ -4813,12 +5088,12 @@ class InvoiceHelper {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    _buildTotalRow('Subtotal', challan.subtotal ?? 0),
-                    _buildTotalRow('Tax (${challan.taxRate?.toStringAsFixed(1) ?? '0'}%)',
-                        challan.taxAmount ?? 0),
+                    _buildTotalRow('Subtotal', challan.subtotal ?? 0,  formatted: true),
+                    _buildTotalRow('Tax (${challan.gst?.toStringAsFixed(1) ?? '0'}%)',
+                        challan.gstAmount ?? 0,  formatted: true),
                     pw.Divider(),
                     _buildTotalRow('Total', challan.subtotal ?? 0,
-                        isBold: true, isTotal: true),
+                        isBold: true, isTotal: true, formatted: true),
                     pw.SizedBox(height: 10),
                     pw.Text(
                       "Amount in words: ${_numberToWords(challan.subtotal ?? 0)} only",
@@ -4861,6 +5136,16 @@ class InvoiceHelper {
 
     await file.writeAsBytes(await pdf.save());
     return file;
+  }
+
+
+
+  static String formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'en_IN',   // Indian format (12,34,567.89)
+      symbol: '',        // Remove ₹ symbol (since you already add text)
+    );
+    return formatter.format(amount);
   }
 
 

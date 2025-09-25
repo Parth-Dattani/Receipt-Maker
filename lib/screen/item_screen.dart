@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/constant/app_colors.dart';
+import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -343,31 +344,34 @@ class ItemScreen extends GetView<ItemController> {
                         SizedBox(height: 16),
                         // GST Percentage
                         SizedBox(height: 16),
-                        TextFormField(
-                          controller: gstCtrl,
-                          decoration: InputDecoration(
-                            labelText: "GST (%)",
-                            hintText: "Enter GST percentage",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (value) {
-                            final gst = double.tryParse(value) ?? 0;
-                            setState(() {
-                              // just to hold for save
-                            });
-                          },
-                          validator: (value) {
-                            final gst = double.tryParse(value ?? '');
-                            if (gst == null || gst < 0 || gst > 100) {
-                              return "Enter valid GST (0-100)";
-                            }
-                            return null;
-                          },
-                        ),
+                        Obx(() => AppConstants.withGST.value
+                            ? Column(
+                          children: [
+                            SizedBox(height: 16),
+                            TextFormField(
+                              controller: gstCtrl,
+                              decoration: InputDecoration(
+                                labelText: "GST (%)",
+                                hintText: "Enter GST percentage",
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
+                              ),
+                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              validator: (value) {
+                                final gst = double.tryParse(value ?? '');
+                                if (gst == null || gst < 0 || gst > 100) {
+                                  return "Enter valid GST (0-100)";
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        )
+                            : const SizedBox.shrink()),
+
 
                         // Stock Section
                         Column(
@@ -663,7 +667,10 @@ class ItemScreen extends GetView<ItemController> {
                         ),
                         SizedBox(height: 16),
 
-                        TextFormField(
+                        // GST Percentage
+                        SizedBox(height: 16),
+                        Obx(() => AppConstants.withGST.value
+                            ? TextFormField(
                           controller: gstCtrl,
                           decoration: InputDecoration(
                             labelText: "GST (%)",
@@ -675,10 +682,14 @@ class ItemScreen extends GetView<ItemController> {
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           validator: (value) {
                             final gst = double.tryParse(value ?? '');
-                            if (gst == null || gst < 0 || gst > 100) return "Enter valid GST (0-100)";
+                            if (gst == null || gst < 0 || gst > 100) {
+                              return "Enter valid GST (0-100)";
+                            }
                             return null;
                           },
-                        ),
+                        )
+                            : const SizedBox.shrink()),
+
 
 
                         // Stock Section
@@ -890,12 +901,21 @@ class ItemScreen extends GetView<ItemController> {
             ],
           ),
           SizedBox(height: 12),
-          Row(
+          Obx(() => AppConstants.withGST.value
+              ? Row(
             children: [
               Expanded(child: _buildDetailRow("GST", "${item.gstPercent.toStringAsFixed(2)} %")),
-              Expanded(child: _buildDetailRow("Final Price", "₹${(item.price + (item.price * item.gstPercent / 100)).toStringAsFixed(2)}")),
+              Expanded(child: _buildDetailRow(
+                  "Final Price",
+                  "₹${(item.price + (item.price * item.gstPercent / 100)).toStringAsFixed(2)}")),
             ],
-          ),
+          )
+              : Row(
+            children: [
+              Expanded(child: _buildDetailRow("Final Price", "₹${item.price.toStringAsFixed(2)}")),
+            ],
+          )),
+
           SizedBox(height: 12),
           Row(
             children: [

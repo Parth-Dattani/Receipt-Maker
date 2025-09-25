@@ -1,4 +1,6 @@
 // controllers/invoice_list_controller.dart
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/screen/screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -231,7 +233,7 @@ class InvoiceListController extends BaseController {
     }
   }
 
-  /// Updated method with proper parameter handling
+  /// Updated method with proper parameter handling ---invoice
   void exportInvoiceAsPdf(Invoice invoice) async {
     try {
       // Show loading indicator
@@ -241,11 +243,22 @@ class InvoiceListController extends BaseController {
       print("Fetching invoice items for PDF: ${invoice.invoiceId}");
       List<InvoiceItem> fetchedInvoiceItems = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoice.invoiceId);
 
+      print("Fettttttt----ITem======= :${fetchedInvoiceItems[0].gstAmount}");
+
       // ✅ Fix: Fallback itemName -> description if blank
       final cleanedItems = fetchedInvoiceItems.map((item) {
         final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
             ? item.itemName
             : (item.description ?? "Service/Product");
+
+
+        // final qty = (item.quantity ?? 0).toDouble();
+        // final rate = item.rate ?? 0.0;
+        // final baseAmount = qty * rate;
+        // final gstRate = (item.gstRate ?? 0).toDouble();
+        // final gstAmount = (baseAmount * gstRate) / 100;
+        // final totalWithGst = baseAmount + gstAmount;
+
 
         return InvoiceItem(
           itemId: item.itemId,
@@ -253,13 +266,41 @@ class InvoiceListController extends BaseController {
           description: item.description,
           quantity: item.quantity,
           rate: item.rate,
+          gstRate: item.gstRate,
+          gstAmount: item.gstAmount,           // ✅ Keep original from sheet
+          amountWithGst: item.amountWithGst,   // ✅ Keep original from sheet
           totalPrice: item.totalPrice,
         );
       }).toList();
 
-      invoiceItems.assignAll(cleanedItems);
+      // invoiceItems.assignAll(cleanedItems);
 
-      print("Found ${invoiceItems.length} items for invoice ${invoice.invoiceId}");
+      //print("Found ${invoiceItems.length} items for invoice ${invoice.invoiceId}");
+
+      /// ✅ Debug: Print the ACTUAL data being used
+      print("Found ${cleanedItems.length} items for challan ${invoice.invoiceId}");
+      for (var item in cleanedItems) {
+        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, price: ${item.rate}-----GSt: ${item.gstAmount}---tot: ${item.totalPrice}");
+      }
+      print("--------=================-----------");
+      print(cleanedItems, );
+
+      // ✅ Calculate totals
+      final subtotal = cleanedItems.fold<double>(0, (s, it) {
+        final qty = (it.quantity ?? 0).toDouble();
+        final rate = it.rate ?? 0.0;
+        return s + (qty * rate);
+      });
+
+      final gstTotal = cleanedItems.fold<double>(0, (s, it) {
+        final qty = (it.quantity ?? 0).toDouble();
+        final rate = it.rate ?? 0.0;
+        final base = qty * rate;
+        return s + ((base * (it.gstRate ?? 0)) / 100);
+      });
+
+      final discount = invoice.discountAmount ?? 0.0;
+      final grandTotal = subtotal + gstTotal - discount;
 
 
       /// If no items found, create a default item based on invoice data
@@ -277,17 +318,37 @@ class InvoiceListController extends BaseController {
       //   ];
       // }
       for (var item in invoiceItems) {
-        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, rate: ${item.rate}");
+        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, rate: ${item.rate} gst: ${item.gstAmount}, total: ${item.totalPrice}");
       }
 
+      // DEBUG: Print the data before generating PDF
+      print("--------=================-----------");
+      print(invoiceItems, );
 
-      // Generate PDF with the complete invoice data including items
-      final pdfFile = await InvoiceHelper.generate(
-          invoice,
-           invoiceItems,
-           companyData.value);
 
-      // Open the PDF file
+      /// Generate PDF with the complete invoice data including items
+      final pdfFile = await InvoiceHelper
+      //     .generate(
+      //   invoice,
+      //   cleanedItems,
+      //   companyData,
+      //   subtotal: subtotal,
+      //   gstAmount: gstTotal,
+      //   total: grandTotal,
+      //   discount: discount,
+      // );
+
+          .generateDocument(
+      isChallan: false,
+          invoice: invoice,
+           invoiceItems: cleanedItems,
+           companyData: companyData.value,
+        //  subtotal: subtotal,
+        // gstAmount: gstTotal,   // ✅ pass GST to PDF
+        // total: grandTotal,
+      );
+
+      /// Open the PDF file
       ///await OpenFile.open(pdfFile.path);
       await Share.shareXFiles([XFile(pdfFile.path)], text: 'Invoice - ${invoice.invoiceId}');
 

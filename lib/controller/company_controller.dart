@@ -30,7 +30,7 @@ class CompanyController extends BaseController {
   var isChallanEnabled = false.obs;
   var selectedCountry = ''.obs;
   var selectedState = ''.obs;
-
+  var isGstEnabled = false.obs;
   final formKey = GlobalKey<FormState>();
 
   // Observable variables
@@ -114,6 +114,7 @@ class CompanyController extends BaseController {
     accountNumberController.text = companyData['accountNumber'] ?? '';
     authorisedSignatureController.text = companyData['authorisedSignature'] ?? '';
     isChallanEnabled.value = companyData['isChallanEnabled'] ?? false;
+    isGstEnabled.value = companyData['isGstEnabled'] ?? false;
 
     // Handle country first
     final String country = companyData['country'] ?? '';
@@ -386,6 +387,7 @@ class CompanyController extends BaseController {
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
         'isChallanEnabled': isChallanEnabled.value,
+        'isGstEnabled': isGstEnabled.value,
       };
 
       await companyRef.set(companyData);
@@ -399,7 +401,8 @@ class CompanyController extends BaseController {
         icon: Icons.done_all,
         baseColor: AppColors.greenColor2,
       );
-
+      AppConstants.isChallan.value = isChallanEnabled.value;
+    AppConstants.withGST.value = isGstEnabled.value;
       // Navigate to customer registration with company data
       Get.offNamed(
         CustomerRegistrationScreen.pageId,
@@ -482,6 +485,7 @@ class CompanyController extends BaseController {
         'authorisedSignature': authorisedSignatureController.text.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isChallanEnabled': isChallanEnabled.value,
+        'isGstEnabled': isGstEnabled.value,
       };
 
       await _firestore
@@ -503,6 +507,8 @@ class CompanyController extends BaseController {
         baseColor: AppColors.greenColor2,
         icon: Icons.done_all,
       );
+      AppConstants.isChallan.value = isChallanEnabled.value;
+      AppConstants.withGST.value = isGstEnabled.value;
 // Delay slightly so snackbar shows, then go back
       Future.delayed(const Duration(milliseconds: 500), () {
         if (Get.isOverlaysOpen) {
