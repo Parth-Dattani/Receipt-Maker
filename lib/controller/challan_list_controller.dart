@@ -146,11 +146,16 @@ class ChallanListController extends BaseController {
   }
 
   /// 🔹 Actions for each challan
+  // In ChallanListController, replace viewChallanDetails with:
   void viewChallanDetails(Challan challan) {
-    Get.lazyPut<ChallanDetailsController>(() => ChallanDetailsController());
-    Get.to(() => ChallanDetailsScreen(), arguments: challan);
+    // Clean up existing controller
+    if (Get.isRegistered<ChallanDetailsController>()) {
+      Get.delete<ChallanDetailsController>(force: true);
+    }
 
-    //Get.toNamed(ChallanDetailsScreen.pageId, arguments: challan);
+    Get.lazyPut<ChallanDetailsController>(() => ChallanDetailsController());
+
+    Get.to(() => ChallanDetailsScreen(), arguments: challan);
   }
 
   void editChallan(Challan challan) {
@@ -211,7 +216,7 @@ class ChallanListController extends BaseController {
       await GoogleSheetService.getChallanItemsByChallanId(challan.challanId);
 
       print("Fettttttt----ITem======= :${fetchedChallanItems[0].gstAmount}");
-      
+
       // ✅ Fix: Fallback itemName -> description if blank
       final cleanedItems = fetchedChallanItems.map((item) {
         final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)

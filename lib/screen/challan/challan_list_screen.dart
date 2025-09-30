@@ -24,11 +24,6 @@ class ChallanListScreen extends GetView<ChallanListController> {
             onPressed: controller.refreshChallans,
             tooltip: 'Refresh',
           ),
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => Get.toNamed('/new-challan'),
-            tooltip: 'Create New Challan',
-          ),
         ],
       ),
       body: Obx(() {
@@ -233,12 +228,15 @@ class ChallanListScreen extends GetView<ChallanListController> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "${challan.challanId} - ${challan.customerName}" ?? 'No ID',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.blue.shade800,
+                          Expanded(
+                            child: Text(
+                              "${challan.challanId} - ${challan.customerName}" ?? 'No ID',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.blue.shade800,
+                                overflow: TextOverflow.clip
+                              ),
                             ),
                           ),
                           Container(

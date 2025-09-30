@@ -2,7 +2,7 @@ class Invoice {
   final String invoiceId;
   final String? itemId;
   final String? itemName;
-  final int? qty;
+  final double? qty;
   final double? price;
   final double gst; // overall GST % for invoice (if applicable)
   final String mobile;
@@ -101,7 +101,7 @@ class Invoice {
       invoiceId: map['invoiceId'] ?? map['InvoiceId'] ?? '',
       itemId: map['itemId'] ?? '',
       itemName: map['itemName'] ?? '',
-      qty: int.tryParse(map['qty']?.toString() ?? map['quantity']?.toString() ?? '0') ?? 0,
+      qty: double.tryParse(map['qty']?.toString() ?? map['quantity']?.toString() ?? '0') ?? 0,
       price: double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
       gst: double.tryParse(map['gst']?.toString() ?? '0') ?? 0.0,
       mobile: map['mobile'] ?? '',
@@ -128,7 +128,7 @@ class Invoice {
     String? invoiceId,
     String? itemId,
     String? itemName,
-    int? qty,
+    double? qty,
     double? price,
     String? mobile,
     String? customerName,
@@ -174,6 +174,156 @@ class Invoice {
   String toString() {
     return 'Invoice(invoiceId: $invoiceId, customerName: $customerName, totalAmount: $totalAmount)';
   }
+}
+
+class InvoiceItem {
+  final String? invoiceId;
+  final String? customerId;
+  final String description;
+  final double quantity;
+  final double rate;
+  final String itemId;
+  final String itemName;
+  final String? challanId;
+  final double gstRate;
+  final double? gstAmount;      // ✅ Make this a stored field
+  final double? amountWithGst;  // ✅ Make this a stored field
+  final double? totalPrice;    // ✅ Make this a stored field
+  final String? unit; // info only (comes from Item, not editable)
+
+  InvoiceItem({
+    this.invoiceId,
+    this.customerId,
+    required this.description,
+    required this.quantity,
+    required this.rate,
+    required this.itemId,
+    required this.itemName,
+    this.challanId,
+    this.gstRate = 0.0,
+    this.gstAmount,      // ✅ Accept from data
+    this.amountWithGst,  // ✅ Accept from data
+    this.totalPrice,     // ✅ Accept from data
+    this.unit,
+  });
+
+  /// ✅ Computed getters as fallback
+  double get calculatedTotalPrice => totalPrice ?? (quantity * rate);
+  double get calculatedGstAmount => gstAmount ?? ((calculatedTotalPrice * gstRate) / 100);
+  double get calculatedAmountWithGst => amountWithGst ?? (calculatedTotalPrice + calculatedGstAmount);
+
+
+  Map<String, dynamic> toMap() {
+    return {
+      'customerId': customerId,
+      'itemId': itemId,
+      'itemName': itemName,
+      'description': description,
+      'quantity': quantity,
+      'rate': rate,
+      'totalPrice': calculatedTotalPrice,
+      'gstRate': gstRate,
+      'gstAmount': calculatedGstAmount,
+      'amountWithGst': calculatedAmountWithGst,
+      'challanId': challanId,
+      'unit': unit,
+    };
+  }
+
+
+  // factory InvoiceItem.fromJson(Map<String, dynamic> map) {
+  //   return InvoiceItem(
+  //     description: map['description']?.toString() ?? '',
+  //     quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
+  //     rate: double.tryParse(map['rate']?.toString() ?? map['price']?.toString() ?? '0') ?? 0.0,
+  //     itemId: map['itemId']?.toString() ?? '',
+  //     itemName: map['itemName']?.toString() ?? '',
+  //     gstRate: double.tryParse(map['gstRate']?.toString() ?? '0') ?? 0.0,
+  //     gstAmount: double.tryParse(map['gstAmount']?.toString() ?? '0') ?? null, // ✅ From data
+  //     amountWithGst: double.tryParse(map['amountWithGst']?.toString() ?? '0') ?? null, // ✅ From data
+  //     totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0') ?? null, // ✅ From data
+  //     challanId: map['challanId'],
+  //   );
+  // }
+
+  // ✅ FIXED fromJson method - this is the key fix!
+  // ✅ ALSO - Make sure your InvoiceItem.fromJson is using the fixed version:
+  // Add this debug method to your InvoiceItem.fromJson:
+  factory InvoiceItem.fromJson(Map<String, dynamic> map) {
+    print("=== PARSING INVOICE ITEM ===");
+    print("Raw map data: $map");
+
+    // Parse GST with multiple fallbacks
+    double gstRate = double.tryParse(
+      map['gstRate']?.toString() ??
+          map['GstRate']?.toString() ??
+          map['gst_rate']?.toString() ??
+          '0.0',
+    ) ??
+        0.0;
+
+    double? gstAmount = double.tryParse(map['gstAmount']?.toString() ?? '');
+    double? amountWithGst =
+    double.tryParse(map['amountWithGst']?.toString() ?? '');
+    double? totalPrice =
+    double.tryParse(map['totalPrice']?.toString() ?? '');
+
+    print("✅ Parsed gstRate: $gstRate");
+    print("✅ Parsed gstAmount: $gstAmount");
+    print("✅ Parsed amountWithGst: $amountWithGst");
+    print("✅ Parsed totalPrice: $totalPrice");
+
+    return InvoiceItem(
+      customerId: map['customerId']?.toString(),
+      description: map['description']?.toString() ?? '',
+      quantity: double.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
+      rate: double.tryParse(map['rate']?.toString() ?? '0.0') ?? 0.0,
+      itemId: map['itemId']?.toString() ?? '',
+      invoiceId: map['invoiceId']?.toString() ?? '',
+      itemName: map['itemName']?.toString() ?? '',
+      gstRate: gstRate,              // ✅ Now properly parsed
+      gstAmount: gstAmount,
+      amountWithGst: amountWithGst,
+      totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ??
+          null,
+      challanId: map['challanId'],
+      unit: map['unit']?.toString(),
+    );
+  }
+
+
+  InvoiceItem copyWith({
+    String? invoiceId,
+    String? customerId,
+    String? description,
+    double? quantity,
+    double? rate,
+    String? itemId,
+    String? itemName,
+    double? gstRate,
+    double? gstAmount,
+    double? amountWithGst,
+    double? totalPrice,
+    String? challanId,
+    String? unit,
+  }) {
+    return InvoiceItem(
+      invoiceId: invoiceId ?? this.invoiceId,
+      customerId: customerId ?? this.customerId,
+      description: description ?? this.description,
+      quantity: quantity ?? this.quantity,
+      rate: rate ?? this.rate,
+      itemId: itemId ?? this.itemId,
+      itemName: itemName ?? this.itemName,
+      gstRate: gstRate ?? this.gstRate,
+      gstAmount: gstAmount ?? this.gstAmount,
+      amountWithGst: amountWithGst ?? this.amountWithGst,
+      totalPrice: totalPrice ?? this.totalPrice,
+      challanId: challanId ?? this.challanId,
+      unit: unit ?? this.unit,
+    );
+  }
+
 }
 
 // class InvoiceItem {
@@ -252,135 +402,3 @@ class Invoice {
   //   );
   // }
 
-class InvoiceItem {
-  final String description;
-  final int quantity;
-  final double rate;
-  final String itemId;
-  final String itemName;
-  final String? challanId;
-  final double gstRate;
-  final double? gstAmount;      // ✅ Make this a stored field
-  final double? amountWithGst;  // ✅ Make this a stored field
-  final double? totalPrice;    // ✅ Make this a stored field
-
-  InvoiceItem({
-    required this.description,
-    required this.quantity,
-    required this.rate,
-    required this.itemId,
-    required this.itemName,
-    this.challanId,
-    this.gstRate = 0.0,
-    this.gstAmount,      // ✅ Accept from data
-    this.amountWithGst,  // ✅ Accept from data
-    this.totalPrice,     // ✅ Accept from data
-  });
-
-  /// ✅ Computed getters as fallback
-  double get calculatedTotalPrice => totalPrice ?? (quantity * rate);
-  double get calculatedGstAmount => gstAmount ?? ((calculatedTotalPrice * gstRate) / 100);
-  double get calculatedAmountWithGst => amountWithGst ?? (calculatedTotalPrice + calculatedGstAmount);
-
-
-  Map<String, dynamic> toMap() {
-    return {
-      'itemId': itemId,
-      'itemName': itemName,
-      'description': description,
-      'quantity': quantity,
-      'rate': rate,
-      'totalPrice': calculatedTotalPrice,
-      'gstRate': gstRate,
-      'gstAmount': calculatedGstAmount,
-      'amountWithGst': calculatedAmountWithGst,
-      'challanId': challanId,
-    };
-  }
-
-
-  // factory InvoiceItem.fromJson(Map<String, dynamic> map) {
-  //   return InvoiceItem(
-  //     description: map['description']?.toString() ?? '',
-  //     quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
-  //     rate: double.tryParse(map['rate']?.toString() ?? map['price']?.toString() ?? '0') ?? 0.0,
-  //     itemId: map['itemId']?.toString() ?? '',
-  //     itemName: map['itemName']?.toString() ?? '',
-  //     gstRate: double.tryParse(map['gstRate']?.toString() ?? '0') ?? 0.0,
-  //     gstAmount: double.tryParse(map['gstAmount']?.toString() ?? '0') ?? null, // ✅ From data
-  //     amountWithGst: double.tryParse(map['amountWithGst']?.toString() ?? '0') ?? null, // ✅ From data
-  //     totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0') ?? null, // ✅ From data
-  //     challanId: map['challanId'],
-  //   );
-  // }
-
-  // ✅ FIXED fromJson method - this is the key fix!
-  // ✅ ALSO - Make sure your InvoiceItem.fromJson is using the fixed version:
-  // Add this debug method to your InvoiceItem.fromJson:
-  factory InvoiceItem.fromJson(Map<String, dynamic> map) {
-    print("=== PARSING INVOICE ITEM ===");
-    print("Raw map data: $map");
-
-    // Parse GST with multiple fallbacks
-    double gstRate = double.tryParse(
-      map['gstRate']?.toString() ??
-          map['GstRate']?.toString() ??
-          map['gst_rate']?.toString() ??
-          '0.0',
-    ) ??
-        0.0;
-
-    double? gstAmount = double.tryParse(map['gstAmount']?.toString() ?? '');
-    double? amountWithGst =
-    double.tryParse(map['amountWithGst']?.toString() ?? '');
-    double? totalPrice =
-    double.tryParse(map['totalPrice']?.toString() ?? '');
-
-    print("✅ Parsed gstRate: $gstRate");
-    print("✅ Parsed gstAmount: $gstAmount");
-    print("✅ Parsed amountWithGst: $amountWithGst");
-    print("✅ Parsed totalPrice: $totalPrice");
-
-    return InvoiceItem(
-      description: map['description']?.toString() ?? '',
-      quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
-      rate: double.tryParse(map['rate']?.toString() ?? '0.0') ?? 0.0,
-      itemId: map['itemId']?.toString() ?? '',
-      itemName: map['itemName']?.toString() ?? '',
-      gstRate: gstRate,              // ✅ Now properly parsed
-      gstAmount: gstAmount,
-      amountWithGst: amountWithGst,
-      totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ??
-          null,
-      challanId: map['challanId'],
-    );
-  }
-
-
-  InvoiceItem copyWith({
-    String? description,
-    int? quantity,
-    double? rate,
-    String? itemId,
-    String? itemName,
-    double? gstRate,
-    double? gstAmount,
-    double? amountWithGst,
-    double? totalPrice,
-    String? challanId,
-  }) {
-    return InvoiceItem(
-      description: description ?? this.description,
-      quantity: quantity ?? this.quantity,
-      rate: rate ?? this.rate,
-      itemId: itemId ?? this.itemId,
-      itemName: itemName ?? this.itemName,
-      gstRate: gstRate ?? this.gstRate,
-      gstAmount: gstAmount ?? this.gstAmount,
-      amountWithGst: amountWithGst ?? this.amountWithGst,
-      totalPrice: totalPrice ?? this.totalPrice,
-      challanId: challanId ?? this.challanId,
-    );
-  }
-
-}

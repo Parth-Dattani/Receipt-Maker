@@ -1,13 +1,17 @@
 
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/controller/bash_controller.dart';
 import 'package:demo_prac_getx/screen/customer/customer_registration_screen.dart';
 import 'package:demo_prac_getx/screen/item_screen.dart';
 import 'package:demo_prac_getx/screen/setting/setting_screen.dart';
+import 'package:excel/excel.dart' show Excel, Sheet, TextCellValue, IntCellValue, DoubleCellValue;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
 
 import '../constant/constant.dart';
 import '../model/model.dart';
@@ -18,6 +22,7 @@ import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../widgets/widgets.dart';
 import 'controller.dart';
+import 'package:path_provider/path_provider.dart';
 
 // class DashboardController extends BaseController {
 //   // Observable variables
@@ -186,20 +191,37 @@ class DashboardController extends BaseController {
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isInitializing = true;
 
   @override
   void onInit() {
     super.onInit();
-    _loadCompanyData();
-    loadCompanyData();
-    loadDashboardData();
+    _initializeDashboard();
     // Auto-calculate whenever invoices change
+    // 🔹 FIXED: Only recalculate when NOT initializing
     ever(invoiceList, (_) {
-      calculateStats();
-      // calculatePendingAmount();
-      // calculateOverdueAmount();
+      if (!_isInitializing) {
+        calculateStats();
+      }
     });
     ///loadChallanPreference();
+  }
+
+  Future<void> _initializeDashboard() async {
+    try {
+      _isInitializing = true;
+      // Step 1: Load company first (await!)
+      await _loadCompanyData();
+
+      await loadCompanySettings();
+
+      /// Step 2: Now load dashboard data
+      await loadDashboardData();
+    } catch (e) {
+      print("Error initializing dashboard: $e");
+    }finally {
+      _isInitializing = false;
+    }
   }
 
   // Add this method to save the challan preference to SharedPreferences
@@ -207,8 +229,10 @@ class DashboardController extends BaseController {
    print("Is Enable Valure : --------- ${isEnabled}");
 
     try {
-      await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isEnabled);
-      AppConstants.isChallan.value = isEnabled;
+      // await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isEnabled);
+      // AppConstants.isChallan.value = isEnabled;
+
+      await updateCompanyPreference('isChallanEnabled', isEnabled);
 
       /// Also update in Firestore
       final user = FirebaseAuth.instance.currentUser;
@@ -227,72 +251,33 @@ class DashboardController extends BaseController {
     }
   }
 
-  // Add this method to load the challan preference from SharedPreferences
-  Future<void> loadChallanPreference() async {
-    try {
-      final prefs = await sharedPreferencesHelper.getSharedPreferencesInstance();
-      final isEnabled = prefs.retrievePrefBoolData('isChallanEnabled') ?? false;
-      AppConstants.isChallan.value = isEnabled;
-      print('Challan preference loaded: $isEnabled');
-    } catch (e) {
-      print('Error loading challan preference from SharedPreferences: $e');
-      AppConstants.isChallan.value = false; // Default value if error occurs
-    }
-  }
 
-  // In your DashboardController or CompanyController
-  Future<void> loadCompanySettings(String companyId) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('companies')
-            .doc(companyId)
-            .get();
 
-        if (doc.exists) {
-          final data = doc.data();
-          if (data != null) {
-            final isChallanEnabled = data['isChallanEnabled'] ?? false;
 
-            print("IsssChallN-------------${isChallanEnabled}");
-            // Update SharedPreferences and AppConstants
-            await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
-            AppConstants.isChallan.value = isChallanEnabled;
-          }
-        }
-      }
-    } catch (e) {
-      print('Error loading company settings: $e');
-    }
-  }
+  Future<void> updateCompanyPreference(String key, bool value) async {
+    // Update local cache
+    await sharedPreferencesHelper.storeBoolPrefData(key, value);
 
-  Future<void> loadCompanyData() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
+    // Update local observable
+    if (key == 'isChallanEnabled') AppConstants.isChallan.value = value;
+    if (key == 'isGstEnabled') AppConstants.withGST.value = value;
 
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-     print("------------cmptyID:----------${companyId}");
-      if (companyId.isEmpty) return;
-
-      final companyDoc = await _firestore
-          .collection("users")
+    // Update Firestore
+    final user = _auth.currentUser;
+    if (user != null && companyId.value.isNotEmpty) {  // ✅ use companyId.value
+      await _firestore
+          .collection('users')
           .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .get();
-
-      if (companyDoc.exists) {
-        companyData.value = companyDoc.data() ?? {};
-        print("Company data loaded");
-      }
-    } catch (e) {
-      print("Error loading company data: $e");
+          .collection('companies')
+          .doc(companyId.value) // ✅ not AppConstants.companyId
+          .update({key: value});
     }
+
+    print("✅ Company Preference Updated → $key = $value "
+        "(Local: ${AppConstants.isChallan.value}, GST: ${AppConstants.withGST.value})");
   }
+
+
 
   Future<void> checkSubscriptionStatus() async {
     // Get user creation date from Firestore
@@ -359,6 +344,7 @@ class DashboardController extends BaseController {
 
         if (savedCompany != null) {
           _setCurrentCompany(savedCompany);
+
         } else if (allUserCompanies.isNotEmpty) {
           // Saved company not found, use first available
           _setCurrentCompany(allUserCompanies.first);
@@ -385,12 +371,45 @@ class DashboardController extends BaseController {
 
     // Save to SharedPreferences
     sharedPreferencesHelper.storePrefData("CompanyId" , company['id']);
+    AppConstants.companyId = company['id'];
 
     print("Current company set: ${company['companyName']} (${company['id']})");
   }
 
 
-  // Load current company data for navigation purposes
+  // 🔹 REMOVED: Redundant _loadDashboardStatistics()
+  // All stats now come from invoiceList via calculateStats()
+
+  Future<void> loadCompanySettings() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || companyId.value.isEmpty) return;
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId.value)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null) {
+          final isChallanEnabled = data['isChallanEnabled'] ?? false;
+          final isGstEnabled = data['isGstEnabled'] ?? false;
+
+          await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+          await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
+
+          AppConstants.isChallan.value = isChallanEnabled;
+          AppConstants.withGST.value = isGstEnabled;
+        }
+      }
+    } catch (e) {
+      print('Error loading company settings: $e');
+    }
+  }
+
   Future<void> _loadCompanyData() async {
     try {
       final user = _auth.currentUser;
@@ -405,100 +424,52 @@ class DashboardController extends BaseController {
           .get();
 
       if (companyDocs.docs.isNotEmpty) {
-        currentCompany.value = companyDocs.docs.first.data();
-        currentCompany.value!['id'] = companyDocs.docs.first.id;
-        companyId.value = companyDocs.docs.first.id;
+        final doc = companyDocs.docs.first;
+        final data = doc.data();
+
+        currentCompany.value = data;
+        currentCompany.value!['id'] = doc.id;
+        companyId.value = doc.id;
+
+        AppConstants.companyId = companyId.value;
+        await sharedPreferencesHelper.storePrefData("CompanyId", doc.id);
+
+        print("Active company loaded: ${data['companyName'] ?? 'Unknown'}");
       }
     } catch (e) {
-      print("Error loading company data: $e");
+      print("Error loading active company: $e");
     }
   }
 
-  // Future<void> loadInvoices() async {
-  //   try {
-  //     isLoading.value = true;
-  //
-  //     print("=== ATTEMPTING TO FETCH INVOICES ===");
-  //
-  //     final currentUserId = _auth.currentUser?.uid;
-  //     if (currentUserId == null) {
-  //       showCustomSnackbar(
-  //         title: "Error",
-  //         message: "User not logged in",
-  //         baseColor: Colors.red.shade700,
-  //         icon: Icons.error_outline,
-  //       );
-  //       return;
-  //     }
-  //
-  //     // Try to get invoices
-  //     List<Invoice> invoices = await GoogleSheetService.getInvoices();
-  //
-  //     // If no invoices found, try alternative methods
-  //     if (invoices.isEmpty) {
-  //       print("Standard method failed, trying alternative...");
-  //       invoices = await GoogleSheetService.getInvoices();
-  //     }
-  //
-  //     // Filter invoices by current user ID
-  //     List<Invoice> userInvoices = invoices.where((invoice) {
-  //       // Check if invoice has userId field and it matches current user
-  //       return invoice.userId == currentUserId;
-  //     }).toList();
-  //     print("=============usrInvoice----${userInvoices}");
-  //
-  //     // If no invoices found, try alternative methods
-  //     if (userInvoices.isEmpty) {
-  //       print("Standard method failed, trying alternative...");
-  //       invoices = await RemoteService.getInvoices();
-  //       // Filter again
-  //       userInvoices = invoices.where((invoice) => invoice.userId == currentUserId).toList();
-  //     }
-  //
-  //
-  //     print("Final result: ${invoices.length} invoices found");
-  //
-  //     // Debug: Print each found invoice
-  //     double totalRevenueCalculated = 0.0;
-  //     for (var invoice in userInvoices) {
-  //       print("Found invoice: ${invoice.invoiceId} (ID: ${invoice.itemName}) - Amount: ${invoice.totalAmount}");
-  //       totalRevenueCalculated += invoice.totalAmount ?? 0.0;
-  //     }
-  //
-  //
-  //
-  //     invoiceList.assignAll(userInvoices);
-  //     // Update total revenue
-  //     totalRevenue.value = totalRevenueCalculated;
-  //
-  //     if (userInvoices.isEmpty) {
-  //       showCustomSnackbar(
-  //         title: "No Invoices",
-  //         message: "No invoices found",
-  //         baseColor: Colors.orange.shade700,
-  //         icon: Icons.info_outline,
-  //       );
-  //     } else {
-  //       print("Success---Found ${userInvoices.length} invoices");
-  //
-  //     }
-  //
-  //   } catch (e) {
-  //     print("Error in fetchInvoices2(): $e");
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Failed to load invoices: $e",
-  //       baseColor: Colors.red.shade700,
-  //       icon: Icons.error_outline,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
+
+  Future<void> loadDashboardData() async {
+    try {
+      isLoading.value = true;
+
+      // 🔹 FIXED: Load invoices FIRST, then calculate everything once
+      await loadInvoices();
+
+      // 🔹 Now load other data in parallel (no invoice dependencies)
+      await Future.wait([
+        loadCustomerCount(),
+        getMonthlyRevenueData(),
+      ]);
+
+    } catch (error) {
+      Get.snackbar(
+        'Error',
+        'Failed to load dashboard data: ${error.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   Future<void> loadInvoices() async {
     try {
-      isLoading.value = true;
       print("=== ATTEMPTING TO FETCH INVOICES ===");
 
       final currentUserId = _auth.currentUser?.uid;
@@ -509,72 +480,41 @@ class DashboardController extends BaseController {
           baseColor: Colors.red.shade700,
           icon: Icons.error_outline,
         );
-        isLoading.value = false;
         return;
       }
-
-      print("Current user ID: $currentUserId");
 
       List<Invoice> invoices = [];
 
       // Try Google Sheets first
       try {
-        print("Trying Google Sheets API...");
         invoices = await GoogleSheetService.getInvoices();
-        print("Google Sheets returned ${invoices.length} invoices");
       } catch (e) {
         print("Google Sheets failed: $e");
-        // Fall back to AppSheet if Google Sheets fails
-        print("Falling back to AppSheet API...");
         invoices = await GoogleSheetService.getInvoices();
-        print("AppSheet returned ${invoices.length} invoices");
       }
 
-      // Filter invoices by current user ID
-      List<Invoice> userInvoices = invoices.where((invoice) {
-        bool matches = invoice.userId == currentUserId;
-        if (!matches) {
-          print("Invoice ${invoice.invoiceId} has userId ${invoice.userId}, expected $currentUserId");
-        }
-        return matches;
-      }).toList();
+      // Filter by user
+      List<Invoice> userInvoices = invoices
+          .where((invoice) => invoice.userId == currentUserId)
+          .toList();
 
-      print("Filtered to ${userInvoices.length} user invoices");
-
-      // If no invoices found after filtering, show message
       if (userInvoices.isEmpty) {
-        print("No invoices found for user $currentUserId");
-        showCustomSnackbar(
-          title: "No Invoices",
-          message: "No invoices found for your account",
-          baseColor: Colors.orange.shade700,
-          icon: Icons.info_outline,
-        );
         invoiceList.clear();
         totalRevenue.value = 0.0;
+        _clearStats();
         return;
       }
 
-      // Debug: Print each found invoice and calculate total
-      double totalRevenueCalculated = 0.0;
-      for (var invoice in userInvoices) {
-        print("Found invoice: ${invoice.invoiceId} - Item: ${invoice.itemName} - Amount: ${invoice.totalAmount} - User: ${invoice.userId}");
-        totalRevenueCalculated += invoice.totalAmount ?? 0.0;
-      }
-
-      // Update the observable lists and values
+      // 🔹 FIXED: Update list once, calculate stats once
       invoiceList.assignAll(userInvoices);
-      totalRevenue.value = totalRevenueCalculated;
 
-      calculateStats();
-
-      print("Success - Found ${userInvoices.length} invoices with total revenue: $totalRevenueCalculated");
-      showCustomSnackbar(
-        title: "Success",
-        message: "Loaded ${userInvoices.length} invoices",
-        baseColor: Colors.green.shade700,
-        icon: Icons.check_circle,
-      );
+      // 🔹 Calculate everything in one pass (not during initialization trigger)
+      if (!_isInitializing) {
+        calculateStats();
+      } else {
+        // During init, calculate manually without triggering observers
+        _calculateStatsInternal();
+      }
 
     } catch (e) {
       print("Error in loadInvoices(): $e");
@@ -584,9 +524,61 @@ class DashboardController extends BaseController {
         baseColor: Colors.red.shade700,
         icon: Icons.error_outline,
       );
-    } finally {
-      isLoading.value = false;
     }
+  }
+
+
+
+  void _clearStats() {
+    paidCount.value = 0;
+    pendingCount.value = 0;
+    overdueCount.value = 0;
+    totalRevenue.value = 0.0;
+    pendingAmount.value = 0.0;
+    overdueAmount.value = 0.0;
+    invoiceStatusData.clear();
+  }
+
+  // 🔹 NEW: Internal stats calculation (doesn't trigger reactive updates)
+  void _calculateStatsInternal() {
+    int paidCnt = 0;
+    int pendingCnt = 0;
+    int overdueCnt = 0;
+
+    double totalRev = 0.0;
+    double pendingAmt = 0.0;
+    double overdueAmt = 0.0;
+
+    for (var invoice in invoiceList) {
+      final status = invoice.status?.toLowerCase().trim();
+      final amount = invoice.totalAmount ?? 0.0;
+
+      totalRev += amount;
+
+      if (status == "paid") {
+        paidCnt++;
+      } else if (status == "pending") {
+        pendingCnt++;
+        pendingAmt += amount;
+      } else if (status == "overdue") {
+        overdueCnt++;
+        overdueAmt += amount;
+      }
+    }
+
+    // 🔹 Batch update all observables at once
+    paidCount.value = paidCnt;
+    pendingCount.value = pendingCnt;
+    overdueCount.value = overdueCnt;
+    totalRevenue.value = totalRev;
+    pendingAmount.value = pendingAmt;
+    overdueAmount.value = overdueAmt;
+
+    invoiceStatusData.assignAll([
+      ChartData("Paid", paidCnt.toDouble(), Colors.green),
+      ChartData("Pending", pendingCnt.toDouble(), Colors.orange),
+      ChartData("Overdue", overdueCnt.toDouble(), Colors.red),
+    ]);
   }
 
   double calculateTotalRevenue() {
@@ -598,42 +590,8 @@ class DashboardController extends BaseController {
   }
 
   void calculateStats() {
-    int paidCount = 0;
-    int pendingCount = 0;
-    int overdueCount = 0;
-
-    double paidAmount = 0.0;
-    double pendingAmountCalc = 0.0;
-    double overdueAmountCalc = 0.0;
-
-    for (var invoice in invoiceList) {
-      final status = invoice.status?.toLowerCase().trim();
-
-      if (status == "paid") {
-        paidCount++;
-        paidAmount += invoice.totalAmount ?? 0.0;
-      } else if (status == "pending") {
-        pendingCount++;
-        pendingAmountCalc += invoice.totalAmount ?? 0.0;
-      } else if (status == "overdue") {
-        overdueCount++;
-        overdueAmountCalc += invoice.totalAmount ?? 0.0;
-      }
-    }
-
-    // ✅ Update observables
-    this.paidCount.value = paidCount;
-    this.pendingAmount.value = pendingAmountCalc;
-    this.overdueAmount.value = overdueAmountCalc;
-
-    // ✅ Update chart data counts
-    invoiceStatusData.assignAll([
-      ChartData("Paid", paidCount.toDouble(), Colors.green),
-      ChartData("Pending", pendingCount.toDouble(), Colors.orange),
-      ChartData("Overdue", overdueCount.toDouble(), Colors.red),
-    ]);
+    _calculateStatsInternal();
   }
-
 
 
   double calculatePendingAmount() {
@@ -881,33 +839,6 @@ class DashboardController extends BaseController {
     );
   }
 
-  void loadDashboardData() async {
-    try {
-      isLoading.value = true;
-
-      // Load dashboard statistics and customer count
-      await Future.wait([
-        _loadDashboardStatistics(),
-        loadCustomerCount(),
-        loadInvoices()
-      ]);
-
-      // Generate monthly revenue data after invoices are loaded
-      await getMonthlyRevenueData();
-
-
-    } catch (error) {
-      Get.snackbar(
-        'Error',
-        'Failed to load dashboard data: ${error.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
 
   // Load actual dashboard statistics from Firebase
   Future<void> _loadDashboardStatistics() async {
@@ -951,7 +882,7 @@ class DashboardController extends BaseController {
         switch (status.toLowerCase()) {
           case 'paid':
             paidCount++;
-            totalRev += amount;
+            //totalRev += amount;
             break;
           case 'pending':
           case 'unpaid':
@@ -1051,11 +982,13 @@ class DashboardController extends BaseController {
     ];
   }
 
-  void refreshDashboard() {
-    _loadCompanyData();
-    loadDashboardData();
+  // 🔹 FIXED: refreshDashboard now properly reloads
+  void refreshDashboard() async {
+    _isInitializing = true;
+    await _loadCompanyData();
+    await loadDashboardData();
+    _isInitializing = false;
   }
-
   ///working
   void navigateToCreateInvoice() {
     print("Compny--------:${companyId.value}");
@@ -1165,10 +1098,7 @@ class DashboardController extends BaseController {
     }
   }
 
-
-  // Method to navigate to customer list (if you have one)
   // Updated method to navigate to customer list
-
   void navigateToCustomerList() {
     if (companyId.value.isEmpty) {
       print("companyId.value: ${companyId.value}");
@@ -1367,6 +1297,72 @@ class DashboardController extends BaseController {
     );
   }
 
+
+
+
+
+  Future<void> exportInvoiceData() async {
+    final invoices = await GoogleSheetService.getInvoices(type: "INV");
+
+    if (invoices.isEmpty) {
+      print("⚠️ No invoices found to export");
+      return;
+    }
+
+    // Create Excel workbook
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Invoices'];
+
+    // Add header row
+    sheetObject.appendRow([
+      TextCellValue('Invoice ID'),
+      TextCellValue('Customer ID'),
+      TextCellValue('Customer Name'),
+      TextCellValue('Mobile'),
+      TextCellValue("total Amount"), // placeholder, will be overwritten per-row
+      TextCellValue('Customer Email'),
+      TextCellValue('Customer Address'),
+      TextCellValue('Issue Date'),
+      TextCellValue("subtotal"), // subtotal
+      TextCellValue("gstRate"), // gstRate
+      TextCellValue("gstAmount"), // gstAmount
+      TextCellValue('Notes'),
+      TextCellValue('Status'),
+      TextCellValue('User ID'),
+    ]);
+
+    // Add invoice rows
+    for (var inv in invoices) {
+      sheetObject.appendRow([
+        TextCellValue(inv.invoiceId),
+        TextCellValue(inv.customerId),
+        TextCellValue(inv.customerName),
+        TextCellValue(inv.mobile),
+        DoubleCellValue(inv.totalAmount ?? 0.0),
+        TextCellValue(inv.customerEmail ?? ""),
+        TextCellValue(inv.customerAddress ?? ""),
+        TextCellValue(inv.issueDate != null ? inv.issueDate!.toIso8601String().split("T").first : ""),
+        DoubleCellValue(inv.subtotal ?? 0.0),
+        DoubleCellValue(inv.gstRate ?? 0.0),
+        DoubleCellValue(inv.gstAmount ?? 0.0),
+        TextCellValue(inv.notes ?? ""),
+        TextCellValue(inv.status ?? ""),
+        TextCellValue(inv.userId ?? ""),
+      ]);
+    }
+
+    // Save file
+    final dir = await getApplicationDocumentsDirectory();
+    String outputFile = "${dir.path}/Invoices_FullExport.xlsx";
+    File(outputFile)
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(excel.encode()!);
+
+    print("✅ Invoice data exported to $outputFile");
+    // After saving
+    OpenFile.open(outputFile);
+  }
+
   void viewInvoiceDetails(String invoiceId) {
     Get.toNamed('/invoice-details/$invoiceId');
   }
@@ -1401,19 +1397,34 @@ class DashboardController extends BaseController {
 
   Future<void> logout() async {
     try {
-      // Clear Firebase Auth
+      // 🔹 Sign out from Firebase
       await FirebaseAuth.instance.signOut();
 
-      // Clear local storage
+      // 🔹 Clear SharedPreferences
       await sharedPreferencesHelper.clearPrefData();
 
-      // Navigate to Auth/Login screen
+      // 🔹 Reset AppConstants
+      AppConstants.userId = "";
+      AppConstants.companyId = "";
+      AppConstants.appId = "";
+      AppConstants.spreadsheetId = "";
+      AppConstants.accessKey = "";
+      AppConstants.isChallan.value = false;
+      AppConstants.withGST.value = false;
+
+      // 🔹 (Optional) Clear any controller states if needed
+      Get.deleteAll(force: true); // removes all GetX controllers
+
+      // 🔹 Navigate back to Auth screen
       Get.offAllNamed(AuthScreen.pageId);
 
-      print("✅ User logged out successfully");
+      print("✅ Logout completed. State cleared.");
     } catch (e) {
-      print("❌ Logout Error: $e");
-      Get.snackbar("Error", "Logout failed, try again");
+      print("❌ Logout failed: $e");
+      Get.snackbar("Error", "Logout failed, please try again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+      );
     }
   }
 
@@ -1428,10 +1439,10 @@ class DashboardController extends BaseController {
 
   // Add this method to generate revenue data dynamically
   /// Method to generate month-based revenue data
-// Enhanced monthly revenue calculation with filters
+
   Future<List<RevenueData>> getMonthlyRevenueData({
     int monthsBack = 12,
-    String? statusFilter, // 'paid', 'pending', 'overdue', or null for all
+    String? statusFilter,
     bool includeCurrentMonth = true,
   }) async {
     try {
@@ -1449,12 +1460,10 @@ class DashboardController extends BaseController {
 
         double monthlyTotal = 0;
         for (var invoice in invoiceList) {
-          // Check date filter
           final isSameMonth = invoice.issueDate != null &&
               invoice.issueDate!.year == monthDate.year &&
               invoice.issueDate!.month == monthDate.month;
 
-          // Check status filter
           final matchesStatus = statusFilter == null ||
               (invoice.status?.toLowerCase() == statusFilter.toLowerCase());
 
@@ -1470,6 +1479,7 @@ class DashboardController extends BaseController {
         ));
       }
 
+      monthlyRevenueData.assignAll(result);
       return result;
 
     } catch (e) {
@@ -1477,6 +1487,7 @@ class DashboardController extends BaseController {
       return [];
     }
   }
+
 
   // Get total revenue for current month
   double get currentMonthRevenue {
@@ -1513,8 +1524,6 @@ class ChartData {
 
   ChartData(this.label, this.value, this.color);
 }
-
-
 
 
 

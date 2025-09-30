@@ -1873,6 +1873,10 @@ class GoogleSheetService {
   static final Map<String, List<ChallanItem>> _challanCache = {};
   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
 
+  static final Map<String, List<dynamic>> _itemCache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheValidDuration = Duration(minutes: 5);
+
 
   /// Load credentials from assets/credentials.json
   static Future<AuthClient> _getAuthClient() async {
@@ -2095,89 +2099,160 @@ class GoogleSheetService {
 
 
   ///Invoice
-  // Get all invoices from Google Sheet
-  static Future<List<Invoice>> getInvoices() async {
+  /// Get all invoices from Google Sheet working 29-09 12:10
+  // static Future<List<Invoice>> getInvoices() async {
+  //   print("🔄 Fetching invoices from Google Sheet...");
+  //
+  //   try {
+  //     final client = await _getAuthClient();
+  //     final sheetsApi = SheetsApi(client);
+  //
+  //     // First, get the header row to understand column positions
+  //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$invoiceSheetName!1:1", // Get only the header row
+  //     );
+  //
+  //     print("----Header Response: -------${spreadsheetId}");
+  //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+  //       print("No header row found in sheet");
+  //       return <Invoice>[];
+  //     }
+  //
+  //     final headers = headerResponse.values![0];
+  //     print("Sheet headers: $headers");
+  //
+  //     // Create a map of column names to indices
+  //     final columnIndices = {};
+  //     for (int i = 0; i < headers.length; i++) {
+  //       columnIndices[headers[i].toString().toLowerCase()] = i;
+  //     }
+  //     print("Column indices: $columnIndices");
+  //
+  //     // Get all data from the invoice sheet
+  //     final response = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$invoiceSheetName!A:Z", // Get all columns
+  //     );
+  //
+  //     if (response.values == null || response.values!.isEmpty) {
+  //       print("No invoice data found in sheet");
+  //       return <Invoice>[];
+  //     }
+  //
+  //     if (response.values!.length <= 1) {
+  //       print("Only header row found, no invoice data");
+  //       return <Invoice>[];
+  //     }
+  //
+  //     List<Invoice> invoices = [];
+  //
+  //     // Skip header row (index 0)
+  //     for (int i = 1; i < response.values!.length; i++) {
+  //       final row = response.values![i];
+  //
+  //       // Skip empty rows
+  //       if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) {
+  //         continue;
+  //       }
+  //
+  //       try {
+  //         // Create a map using the header names as keys
+  //         Map<String, dynamic> rowData = {};
+  //         for (int j = 0; j < min(row.length, headers.length); j++) {
+  //           rowData[headers[j].toString()] = row[j];
+  //         }
+  //
+  //         // Convert to Invoice object
+  //         final invoice = Invoice.fromMap(rowData);
+  //         invoices.add(invoice);
+  //
+  //       } catch (e) {
+  //         print("Error parsing invoice row ${i}: $e");
+  //         print("Row data: $row");
+  //         continue;
+  //       }
+  //     }
+  //
+  //     print("✅ Retrieved ${invoices.length} invoices from Google Sheet");
+  //     return invoices;
+  //
+  //   } catch (e) {
+  //     print("❌ Error in getInvoices: $e");
+  //     rethrow; // Re-throw to let caller handle fallback
+  //   }
+  // }
+
+  static Future<List<Invoice>> getInvoices({String? type}) async {
     print("🔄 Fetching invoices from Google Sheet...");
 
     try {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // First, get the header row to understand column positions
+      // Get header row
       final headerResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$invoiceSheetName!1:1", // Get only the header row
+        "$invoiceSheetName!1:1",
       );
 
-      print("----Header Response: -------${spreadsheetId}");
       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
         print("No header row found in sheet");
         return <Invoice>[];
       }
 
       final headers = headerResponse.values![0];
-      print("Sheet headers: $headers");
+      final columnIndices = {
+        for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
+      };
 
-      // Create a map of column names to indices
-      final columnIndices = {};
-      for (int i = 0; i < headers.length; i++) {
-        columnIndices[headers[i].toString().toLowerCase()] = i;
-      }
-      print("Column indices: $columnIndices");
-
-      // Get all data from the invoice sheet
+      // Get all data
       final response = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$invoiceSheetName!A:Z", // Get all columns
+        "$invoiceSheetName!A:Z",
       );
 
-      if (response.values == null || response.values!.isEmpty) {
+      if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
         print("No invoice data found in sheet");
-        return <Invoice>[];
-      }
-
-      if (response.values!.length <= 1) {
-        print("Only header row found, no invoice data");
         return <Invoice>[];
       }
 
       List<Invoice> invoices = [];
 
-      // Skip header row (index 0)
+      // Skip header row
       for (int i = 1; i < response.values!.length; i++) {
         final row = response.values![i];
-
-        // Skip empty rows
-        if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) {
-          continue;
-        }
+        if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
 
         try {
-          // Create a map using the header names as keys
           Map<String, dynamic> rowData = {};
           for (int j = 0; j < min(row.length, headers.length); j++) {
             rowData[headers[j].toString()] = row[j];
           }
 
-          // Convert to Invoice object
           final invoice = Invoice.fromMap(rowData);
+
+          // 🔑 Apply filter
+          if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+          if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+
           invoices.add(invoice);
 
         } catch (e) {
           print("Error parsing invoice row ${i}: $e");
-          print("Row data: $row");
           continue;
         }
       }
 
-      print("✅ Retrieved ${invoices.length} invoices from Google Sheet");
+      print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
       return invoices;
 
     } catch (e) {
       print("❌ Error in getInvoices: $e");
-      rethrow; // Re-throw to let caller handle fallback
+      rethrow;
     }
   }
+
 
 // Add invoice to Google Sheet
   static Future<void> addInvoice(dynamic invoiceData, String userId) async {
@@ -2449,6 +2524,21 @@ class GoogleSheetService {
   }
 
 
+  /// Clear cache for a specific invoice
+  static void clearInvoiceItemCache(String invoiceId) {
+    if (_invoiceItemCache.containsKey(invoiceId)) {
+      _invoiceItemCache.remove(invoiceId);
+      print("🗑️ Cleared cache for invoice: $invoiceId");
+    }
+  }
+
+  /// Clear entire invoice items cache
+  static void clearAllInvoiceItemCache() {
+    _invoiceItemCache.clear();
+    print("🗑️ Cleared all invoice item cache");
+  }
+
+// Update your existing updateInvoiceItems method - add cache clear at the end:
   static Future<void> updateInvoiceItems(
       String invoiceId, List<Map<String, dynamic>> items, String userId) async {
     try {
@@ -2456,14 +2546,12 @@ class GoogleSheetService {
       final sheetsApi = SheetsApi(client);
       const String itemSheet = "InvoiceItems";
 
-      // 🔹 Get headers
       final headerRes = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         "$itemSheet!1:1",
       );
       final headers = headerRes.values![0];
 
-      // 🔹 Load all rows
       final allRows = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         itemSheet,
@@ -2472,35 +2560,32 @@ class GoogleSheetService {
       final values = allRows.values ?? [];
       final rowsToUpdate = <int>[];
 
-      // 🔹 Find row indexes for this invoiceId
       for (int i = 1; i < values.length; i++) {
         if (values[i].isNotEmpty &&
             values[i][0].toString().trim() == invoiceId) {
-          rowsToUpdate.add(i + 1); // sheet row index (1-based)
+          rowsToUpdate.add(i + 1);
         }
       }
 
-      // 🔹 Overwrite existing rows but PRESERVE unchanged values
       for (int i = 0; i < rowsToUpdate.length; i++) {
-        final sheetRow = values[rowsToUpdate[i] - 1]; // current values in sheet
+        final sheetRow = values[rowsToUpdate[i] - 1];
 
         if (i < items.length) {
           final item = items[i];
           item['invoiceId'] = invoiceId;
           item['userId'] = userId;
 
-          // merge old values with new ones
           final rowValues = <String>[];
           for (int j = 0; j < headers.length; j++) {
             final key = headers[j].toString().trim();
             final newVal = item[key]?.toString();
 
             if (newVal != null && newVal.isNotEmpty) {
-              rowValues.add(newVal); // use new value
+              rowValues.add(newVal);
             } else if (j < sheetRow.length) {
-              rowValues.add(sheetRow[j]?.toString() ?? ""); // preserve old value
+              rowValues.add(sheetRow[j]?.toString() ?? "");
             } else {
-              rowValues.add(""); // blank if truly new column
+              rowValues.add("");
             }
           }
 
@@ -2514,7 +2599,6 @@ class GoogleSheetService {
             valueInputOption: "USER_ENTERED",
           );
         } else {
-          // Extra old rows -> clear them
           final range =
               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
           await sheetsApi.spreadsheets.values.clear(
@@ -2525,7 +2609,6 @@ class GoogleSheetService {
         }
       }
 
-      // 🔹 If new items > old rows → append extra ones
       if (items.length > rowsToUpdate.length) {
         for (int i = rowsToUpdate.length; i < items.length; i++) {
           final item = items[i];
@@ -2546,7 +2629,12 @@ class GoogleSheetService {
         }
       }
 
-      print("✅ InvoiceItems updated (preserve unchanged values) for $invoiceId");
+      print("✅ InvoiceItems updated for $invoiceId");
+
+      // ✅ CRITICAL: Clear cache after successful update
+      clearInvoiceItemCache(invoiceId);
+      print("✅ Cache cleared after update");
+
     } catch (e, st) {
       print("❌ Error in updateInvoiceItems: $e\n$st");
       rethrow;
@@ -3180,6 +3268,666 @@ class GoogleSheetService {
     }
   }
 
+  /// Clear specific cache for challan items
+  static void clearChallanItemCache(String challanId) {
+    final cacheKey = 'challan_items_$challanId';
+    _itemCache.remove(cacheKey);
+    _cacheTimestamps.remove(cacheKey);
+    print("🗑️ Cleared cache for challan: $challanId");
+  }
+
+  /// Check if cache is valid
+  static bool _isCacheValid(String cacheKey) {
+    if (!_itemCache.containsKey(cacheKey) || !_cacheTimestamps.containsKey(cacheKey)) {
+      return false;
+    }
+
+    final cacheTime = _cacheTimestamps[cacheKey]!;
+    final now = DateTime.now();
+    final isValid = now.difference(cacheTime) < _cacheValidDuration;
+
+    if (!isValid) {
+      _itemCache.remove(cacheKey);
+      _cacheTimestamps.remove(cacheKey);
+    }
+
+    return isValid;
+  }
+
+
+  static Future<void> updateChallanStatus(
+      String challanId, String status, String userId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all challans
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("Challan sheet is empty");
+      }
+
+      final headers = response.values![0];
+      final challanIdIndex = headers.indexOf("challanId");
+      final statusIndex = headers.indexOf("status");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (challanIdIndex == -1 || statusIndex == -1 || userIdIndex == -1) {
+        throw Exception("Required columns missing in Challan sheet");
+      }
+
+      int? rowToUpdate;
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > challanIdIndex &&
+            row[challanIdIndex].toString() == challanId &&
+            row.length > userIdIndex &&
+            row[userIdIndex].toString() == userId) {
+          rowToUpdate = i + 1; // because rows are 1-based
+          break;
+        }
+      }
+
+      if (rowToUpdate == null) {
+        throw Exception("Challan not found for id=$challanId and user=$userId");
+      }
+
+      final range =
+          "$challanSheetName!${String.fromCharCode(65 + statusIndex)}$rowToUpdate";
+      final valueRange = ValueRange.fromJson({
+        "values": [
+          [status]
+        ]
+      });
+
+      await sheetsApi.spreadsheets.values.update(
+        valueRange,
+        spreadsheetId,
+        range,
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Challan $challanId status updated to $status");
+    } catch (e) {
+      print("❌ Error updating challan status: $e");
+      rethrow;
+    }
+  }
+
+  /// Fixed updateChallan function in GoogleSheetService
+// Modified updateChallan function in GoogleSheetService to preserve GST
+  static Future<void> updateChallan(Map<String, dynamic> challanData, String userId) async {
+    print("🔄 Updating Challan in Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all challans
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("❌ Challan sheet is empty");
+      }
+
+      final headers = response.values![0];
+      final challanIdIndex = headers.indexOf("challanId");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (challanIdIndex == -1 || userIdIndex == -1) {
+        throw Exception("❌ Missing challanId or userId column in sheet");
+      }
+
+      int? rowToUpdate;
+      List<Object?> existingRow = [];
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > challanIdIndex &&
+            row[challanIdIndex].toString() == challanData["challanId"].toString() &&
+            row[userIdIndex].toString() == userId) {
+          rowToUpdate = i + 1;
+          existingRow = row; // Store existing row data
+          break;
+        }
+      }
+
+      if (rowToUpdate == null) {
+        throw Exception("❌ Challan not found for update (id: ${challanData["challanId"]})");
+      }
+
+      // Get existing GST values from the current row
+      final gstRateIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstrate');
+      final gstAmountIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstamount');
+
+      String existingGstRate = '';
+      String existingGstAmount = '';
+
+      if (gstRateIndex != -1 && existingRow.length > gstRateIndex) {
+        existingGstRate = existingRow[gstRateIndex]?.toString() ?? '';
+      }
+      if (gstAmountIndex != -1 && existingRow.length > gstAmountIndex) {
+        existingGstAmount = existingRow[gstAmountIndex]?.toString() ?? '';
+      }
+
+      // Build normalized data with all required fields
+      Map<String, dynamic> normalized = {};
+
+      for (var header in headers) {
+        String key = header.toString().trim().toLowerCase();
+
+        switch (key) {
+          case 'challanid':
+            normalized[key] = challanData["challanId"] ?? '';
+            break;
+          case 'customername':
+            normalized[key] = challanData["customerName"] ?? '';
+            break;
+          case 'customeremail':
+            normalized[key] = challanData["customerEmail"] ?? '';
+            break;
+          case 'customerphone':
+            normalized[key] = challanData["customerPhone"] ?? '';
+            break;
+          case 'customeraddress':
+            normalized[key] = challanData["customerAddress"] ?? '';
+            break;
+          case 'challandate':
+            normalized[key] = challanData["challanDate"] ?? '';
+            break;
+          case 'subtotal':
+            normalized[key] = challanData["subtotal"] ?? 0;
+            break;
+          case 'gstrate':
+          // Preserve existing GST rate if not explicitly changed
+            if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+              normalized[key] = existingGstRate;
+            } else {
+              double subtotal = double.tryParse(challanData["subtotal"]?.toString() ?? "0") ?? 0;
+              double gstAmount = double.tryParse(challanData["gstAmount"]?.toString() ?? "0") ?? 0;
+              double gstRate = subtotal > 0 ? (gstAmount / subtotal * 100) : 0;
+              normalized[key] = gstRate.toStringAsFixed(2);
+            }
+            break;
+          case 'gstamount':
+          // Preserve existing GST amount if not explicitly changed
+            if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+              normalized[key] = existingGstAmount;
+            } else {
+              normalized[key] = challanData["gstAmount"] ?? 0;
+            }
+            break;
+          case 'totalamount':
+            normalized[key] = challanData["totalAmount"] ?? 0;
+            break;
+          case 'status':
+            normalized[key] = challanData["status"] ?? 'Pending';
+            break;
+          case 'statusprogress':
+            normalized[key] = challanData["statusProgress"] ?? 'InProgress';
+            break;
+          case 'userid':
+            normalized[key] = userId;
+            break;
+          default:
+          // Keep existing value for unknown columns
+            int existingIndex = headers.indexWhere((h) => h.toString().toLowerCase() == key);
+            if (existingIndex != -1 && existingRow.length > existingIndex) {
+              normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+            } else {
+              normalized[key] = '';
+            }
+            break;
+        }
+      }
+
+      // Build row data in the same order as headers
+      List<dynamic> rowData = [];
+      for (var header in headers) {
+        final key = header.toString().trim().toLowerCase();
+        rowData.add(normalized[key]?.toString() ?? '');
+      }
+
+      final range = "$challanSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+
+      final valueRange = ValueRange(
+        values: [rowData],
+      );
+
+      await sheetsApi.spreadsheets.values.update(
+        valueRange,
+        spreadsheetId,
+        range,
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Challan updated successfully at row $rowToUpdate");
+      print("📊 GST Rate: ${normalized['gstrate']}, GST Amount: ${normalized['gstamount']}");
+
+    } catch (e) {
+      print("❌ Error updating Challan: $e");
+      rethrow;
+    }
+  }
+
+
+  static Future<void> updateChallanItems(
+      String challanId, List<Map<String, dynamic>> items, String userId) async {
+    print("🔄 Updating Challan Items in Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get current sheet data
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!A:Z", // Make sure to get all columns A to Z
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        // Sheet is empty, just add new items
+        for (var item in items) {
+          await addChallanItem({...item, "challanId": challanId}, userId);
+        }
+        return;
+      }
+
+      final headers = response.values![0];
+      print("Sheet headers: $headers"); // Debug print
+
+      final challanIdIndex = headers.indexOf("challanId");
+
+      if (challanIdIndex == -1) {
+        throw Exception("❌ Missing challanId column");
+      }
+
+      // Build new sheet data (keep all items except for this challanId)
+      List<List<Object?>> newSheetData = [];
+      newSheetData.add(headers); // Add headers first
+
+      // Add all rows that DON'T belong to our challanId
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > challanIdIndex &&
+            row[challanIdIndex].toString() != challanId) {
+          newSheetData.add(row);
+        }
+      }
+
+      // Add our new items to the data
+      for (var item in items) {
+        List<Object?> newRow = [];
+        for (var header in headers) {
+          String key = header.toString().trim().toLowerCase();
+
+          switch (key) {
+            case 'challanid':
+              newRow.add(item['challanId'] ?? challanId);
+              break;
+            case 'customerid':
+              newRow.add(item['customerId'] ?? '');
+              break;
+            case 'itemid':
+              newRow.add(item['itemId'] ?? '');
+              break;
+            case 'itemname':
+              newRow.add(item['itemName'] ?? '');
+              break;
+            case 'description':
+              newRow.add(item['description'] ?? '');
+              break;
+            case 'quantity':
+              newRow.add(item['quantity'] ?? '0');
+              break;
+            case 'price':
+              newRow.add(item['price'] ?? '0');
+              break;
+            case 'challandate':
+              newRow.add(item['challanDate'] ?? '');
+              break;
+            case 'gstrate':
+              newRow.add(item['gstRate'] ?? '0');
+              break;
+            case 'gstamount':
+              newRow.add(item['gstAmount'] ?? '0');
+              break;
+            case 'amountwithgst':
+              newRow.add(item['amountWithGst'] ?? '0');
+              break;
+            case 'totalprice':
+              newRow.add(item['totalPrice'] ?? '0');
+              break;
+            case 'unit':
+              newRow.add(item['unit'] ?? '');
+              break;
+            case 'userid':
+              newRow.add(item['userId'] ?? userId);
+              break;
+            default:
+              newRow.add('');
+              break;
+          }
+        }
+        newSheetData.add(newRow);
+        print("Added row: $newRow"); // Debug print
+      }
+
+      // Clear the entire sheet
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+      );
+
+      // Write all data back to sheet
+      if (newSheetData.length > 1) {
+        final range = "$challanItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: newSheetData),
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+
+      print("✅ Successfully updated ${items.length} challan items");
+
+    } catch (e, stackTrace) {
+      print("❌ Error updating Challan items: $e");
+      print("Stack trace: $stackTrace");
+      rethrow;
+    }
+  }
+
+// Alternative method using append after clearing specific rows
+  static Future<void> updateChallanItemsV2(
+      String challanId, List<Map<String, dynamic>> items, String userId) async {
+    print("🔄 Updating Challan Items (Method V2)...");
+
+    try {
+      // First, delete existing items for this challanId
+      await deleteChallanItemsByChallanId(challanId);
+
+      // Then add new items
+      for (var item in items) {
+        await addChallanItem({...item, "challanId": challanId}, userId);
+      }
+
+      print("✅ Successfully updated challan items using V2 method");
+
+    } catch (e) {
+      print("❌ Error in updateChallanItemsV2: $e");
+      rethrow;
+    }
+  }
+
+
+  // Add these batch update methods for better performance
+
+  /// Batch update challan items (more efficient than individual updates)
+  static Future<void> updateChallanItemsBatch(String challanId, List<Map<String, dynamic>> itemsData, String userId) async {
+    try {
+      print("🔄 Batch updating ${itemsData.length} items for challan: $challanId");
+
+      // First, delete existing items for this challan
+      await deleteChallanItems(challanId, userId);
+
+      // Then insert all new items
+      for (var itemData in itemsData) {
+        await addChallanItem(itemData, userId);
+      }
+
+      // Clear cache to force refresh on next read
+      clearChallanItemCache(challanId);
+
+      print("✅ Batch update completed for challan: $challanId");
+
+    } catch (e) {
+      print("❌ Error in batch update: $e");
+      throw e;
+    }
+  }
+
+  // ✅ FIXED: Delete all items for a specific challan
+  static Future<void> deleteChallanItems(String challanId, String userId) async {
+    print("🗑️ Deleting all items for challan: $challanId");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all challan items
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ Sheet is empty, nothing to delete");
+        return;
+      }
+
+      final headers = response.values![0];
+      final challanIdIndex = headers.indexOf("challanId");
+
+      if (challanIdIndex == -1) {
+        throw Exception("❌ challanId column not found in sheet");
+      }
+
+      // Find all rows that match this challanId
+      List<int> rowsToDelete = [];
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > challanIdIndex &&
+            row[challanIdIndex].toString() == challanId) {
+          rowsToDelete.add(i);
+        }
+      }
+
+      if (rowsToDelete.isEmpty) {
+        print("ℹ️ No items found for challan: $challanId");
+        return;
+      }
+
+      print("Found ${rowsToDelete.length} rows to delete");
+
+      // Get sheet ID for batch delete
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      int? sheetId;
+      for (var sheet in spreadsheet.sheets ?? []) {
+        if (sheet.properties?.title == challanItemSheetName) {
+          sheetId = sheet.properties?.sheetId;
+          break;
+        }
+      }
+
+      if (sheetId == null) {
+        throw Exception("❌ Could not find sheet ID for $challanItemSheetName");
+      }
+
+      // Delete rows in reverse order to maintain indices
+      List<Request> deleteRequests = [];
+      for (int rowIndex in rowsToDelete.reversed) {
+        deleteRequests.add(
+            Request()
+              ..deleteDimension = (DeleteDimensionRequest()
+                ..range = (DimensionRange()
+                  ..sheetId = sheetId
+                  ..dimension = 'ROWS'
+                  ..startIndex = rowIndex  // 0-based for API
+                  ..endIndex = rowIndex + 1))
+        );
+      }
+
+      // Execute batch delete
+      final batchRequest = BatchUpdateSpreadsheetRequest()
+        ..requests = deleteRequests;
+
+      await sheetsApi.spreadsheets.batchUpdate(
+        batchRequest,
+        spreadsheetId,
+      );
+
+      print("✅ Successfully deleted ${rowsToDelete.length} items for challan: $challanId");
+
+      // Clear cache
+      clearChallanItemCache(challanId);
+
+    } catch (e, stackTrace) {
+      print("❌ Error deleting challan items: $e");
+      print("Stack trace: $stackTrace");
+      rethrow;
+    }
+  }
+
+// Helper method to delete challan items by challanId
+  static Future<void> deleteChallanItemsByChallanId(String challanId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        return; // Nothing to delete
+      }
+
+      final headers = response.values![0];
+      final challanIdIndex = headers.indexOf("challanId");
+
+      if (challanIdIndex == -1) {
+        return; // No challanId column
+      }
+
+      // Build filtered data (exclude rows matching challanId)
+      List<List<Object?>> filteredData = [headers];
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length <= challanIdIndex ||
+            row[challanIdIndex].toString() != challanId) {
+          filteredData.add(row);
+        }
+      }
+
+      // Clear and rewrite sheet
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$challanItemSheetName!A:Z",
+      );
+
+      if (filteredData.length > 1) {
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: filteredData),
+          spreadsheetId,
+          "$challanItemSheetName!A${filteredData.length}",
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+
+      print("🗑️ Deleted existing items for challanId: $challanId");
+
+    } catch (e) {
+      print("❌ Error deleting challan items: $e");
+      rethrow;
+    }
+  }
+
+  // Add to your GoogleSheetService class:
+  static Future<void> updateChallanWithCacheClear(
+      Map<String, dynamic> challanData, String userId) async {
+    print("🔄 Updating challan with cache clear...");
+
+    final challanId = challanData['challanId']?.toString();
+
+    try {
+      // Update the challan
+      await updateChallan(challanData, userId);
+
+      // Clear cache immediately after update
+      if (challanId != null) {
+        clearChallanItemCache(challanId);
+        _challanCache.remove(challanId);
+        print("✅ Cleared cache for challan: $challanId");
+      }
+
+      // Also clear any general cache timestamps
+      _cacheTimestamps.clear();
+
+    } catch (e) {
+      print("❌ Error updating challan: $e");
+      rethrow;
+    }
+  }
+
+  static Future<void> updateChallanItemsWithCacheClear(
+      String challanId,
+      List<Map<String, dynamic>> items,
+      String userId) async {
+    print("🔄 Updating challan items with cache clear...");
+
+    try {
+      // Update items
+      await updateChallanItems(challanId, items, userId);
+
+      // Force clear ALL caches
+      clearChallanItemCache(challanId);
+      _challanCache.remove(challanId);
+      _itemCache.remove('challan_items_$challanId');
+      _cacheTimestamps.remove('challan_items_$challanId');
+
+      print("✅ Cleared all caches for challan: $challanId");
+
+    } catch (e) {
+      print("❌ Error updating items: $e");
+      rethrow;
+    }
+  }
+
+
+  static Future<int> _getChallanItemSheetId() async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+
+      for (var sheet in spreadsheet.sheets ?? []) {
+        if (sheet.properties?.title == challanItemSheetName) {
+          return sheet.properties?.sheetId ?? 0;
+        }
+      }
+
+      throw Exception("Sheet '$challanItemSheetName' not found");
+    } catch (e) {
+      print("❌ Error getting sheet ID: $e");
+      // Fallback to a default ID or throw
+      return 0; // You might need to adjust this based on your sheet structure
+    }
+  }
+
+
+////
+////
+////
+
+
+
+
 
   static Future<void> deleteItems(String userId, Item item) async {
     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
@@ -3337,10 +4085,8 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // ✅ Use the same approach as challan - get headers properly
       final headers = await _getHeaders(sheetsApi, sheetName: invoiceItemSheetName);
 
-      // ✅ Fetch only data rows (skip headers) - same as challan
       final response = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         "$invoiceItemSheetName!A2:Z",
@@ -3358,31 +4104,54 @@ class GoogleSheetService {
         final row = response.values![i];
         if (row.isEmpty) continue;
 
-        // ✅ Create map using original headers (same as challan)
+        // Create map using original headers
         Map<String, dynamic> itemMap = {};
         for (int j = 0; j < headers.length; j++) {
           itemMap[headers[j]] = j < row.length ? row[j] : "";
         }
 
-        // ✅ Filter by invoiceId (same approach as challan)
+        // Filter by invoiceId
         final rowInvoiceId = itemMap['invoiceId'] ??
             itemMap['InvoiceId'] ??
             itemMap['INVOICEID'];
 
         if (rowInvoiceId?.toString() == invoiceId) {
           try {
-            // ✅ Debug the map before parsing
             print("=== Raw item map for invoice $invoiceId ===");
             itemMap.forEach((key, value) {
               print("  '$key': '$value'");
             });
 
+            // ✅ FIX: Normalize the map to use 'rate' field
+            // If 'price' exists but 'rate' doesn't, copy price to rate
+            if (itemMap.containsKey('price') && !itemMap.containsKey('rate')) {
+              itemMap['rate'] = itemMap['price'];
+              print("✅ Mapped 'price' -> 'rate': ${itemMap['price']}");
+            }
+
+            // Also handle totalPrice column name variations
+            if (!itemMap.containsKey('totalPrice')) {
+              if (itemMap.containsKey('totalAmount')) {
+                itemMap['totalPrice'] = itemMap['totalAmount'];
+              } else if (itemMap.containsKey('total')) {
+                itemMap['totalPrice'] = itemMap['total'];
+              }
+            }
+
             InvoiceItem item = InvoiceItem.fromJson(itemMap);
             items.add(item);
             foundCount++;
-            print("✅ Added item: ${item.itemName} (GST: ${item.gstRate}%, Amount: ${item.gstAmount})");
-          } catch (e) {
+
+            print("✅ Added item: ${item.itemName}");
+            print("   - Rate: ${item.rate}");
+            print("   - Quantity: ${item.quantity}");
+            print("   - GST Rate: ${item.gstRate}%");
+            print("   - GST Amount: ${item.gstAmount}");
+            print("   - Total Price: ${item.totalPrice}");
+
+          } catch (e, stackTrace) {
             print("❌ Error parsing invoice item: $e");
+            print("❌ Stack trace: $stackTrace");
             print("❌ Item data: $itemMap");
           }
         }
@@ -3399,7 +4168,6 @@ class GoogleSheetService {
       return [];
     }
   }
-
 
   /// ✅ Get headers (only once per app session, cached in memory)
   static Future<List<String>> _getHeaders(SheetsApi sheetsApi, {String? sheetName}) async {

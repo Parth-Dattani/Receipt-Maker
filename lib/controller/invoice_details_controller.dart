@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../model/model.dart';
+import '../screen/screen.dart';
 import '../services/remote_service.dart';
 import '../utils/pdf_helper.dart';
 
@@ -142,521 +143,7 @@ import 'package:shimmer/shimmer.dart';
 
 import 'controller.dart';
 
-// class InvoiceDetailsController extends GetxController {
-//   final invoice = Rx<Invoice?>(null);
-//   final invoiceItems = <InvoiceItem>[].obs;
-//   final isLoading = false.obs;
-//   final isLoadingItems = false.obs;
-//   final isEditMode = false.obs;
-//
-//   late TextEditingController customerNameCtrl;
-//   late TextEditingController customerEmailCtrl;
-//   late TextEditingController customerPhoneCtrl;
-//   late TextEditingController customerAddressCtrl;
-//
-//   // Editable items
-//   var editableItems = <Map<String, TextEditingController>>[].obs;
-//
-//
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     // Get the invoice passed as argument
-//     final arg = Get.arguments as Invoice?;
-//     if (arg != null) {
-//       // Prepare controllers for each item
-//       editableItems.value = arg.items?.map((item) {
-//         return {
-//           "name": TextEditingController(text: item.itemName ?? ""),
-//           "qty": TextEditingController(text: item.quantity.toString()),
-//           "rate": TextEditingController(text: item.rate.toString()),
-//         };
-//       }).toList() ?? [];
-//
-//     }
-//
-//     final Invoice? passedInvoice = Get.arguments as Invoice?;
-//     if (passedInvoice != null) {
-//       invoice.value = passedInvoice;
-//       loadInvoiceItems(passedInvoice.invoiceId);
-//     }
-//   }
-//
-//   Future<void> loadInvoiceItems(String invoiceId) async {
-//     try {
-//       isLoadingItems.value = true;
-//       print("Loading items for invoice: $invoiceId");
-//
-//       // Fetch ONLY the items for this specific invoice
-//       List<InvoiceItem> items = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
-//       invoiceItems.assignAll(items);
-//
-//       print("✅ Successfully loaded ${items.length} items for invoice $invoiceId");
-//
-//       // Add debug info
-//       if (items.isNotEmpty) {
-//         print("Items breakdown:");
-//         for (var item in items) {
-//           print("Items name:-${item.itemName} :  Desc:- ${item.description}: Qty ${item.quantity} × \$${item.rate} = \$${item.totalPrice}");
-//         }
-//       }
-//     } catch (e) {
-//       print("Error loading invoice items: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to load invoice items: ${e.toString()}',
-//         backgroundColor: Colors.red.shade100,
-//         colorText: Colors.red.shade800,
-//       );
-//     } finally {
-//       isLoadingItems.value = false;
-//     }
-//   }
-//
-//   void editInvoice() {
-//     if (invoice.value != null) {
-//       Get.toNamed('/edit-invoice', arguments: invoice.value);
-//     }
-//   }
-//
-//   Future<void> updateInvoice() async {
-//     if (invoice.value == null) return;
-//
-//     // Build updated items
-//     final updatedItems = editableItems.map((ctrls) {
-//       return InvoiceItem(
-//         itemName: ctrls["name"]!.text,
-//         quantity: int.tryParse(ctrls["qty"]!.text) ?? 0,
-//         rate: double.tryParse(ctrls["rate"]!.text) ?? 0.0,
-//       itemId: '',
-//         totalPrice: 0.0,
-//         description: '',
-//       );
-//     }).toList();
-//
-//     final updated = invoice.value!.copyWith(
-//       items: updatedItems,
-//     );
-//
-//     try {
-//       //await Get.find<InvoiceListController>().updateInvoice(updated);
-//       invoice.value = updated;
-//       isEditMode.value = false;
-//     } catch (e) {
-//       Get.snackbar("Error", "Failed to update invoice: $e");
-//     }
-//   }
-//
-//
-//
-// void downloadInvoice() {
-//     // Implement download functionality
-//     Get.snackbar(
-//       'Download',
-//       'Download functionality to be implemented',
-//       backgroundColor: Colors.green.shade100,
-//       colorText: Colors.green.shade800,
-//     );
-//   }
-//
-//   // void deleteInvoice() async {
-//   //   final confirmed = await Get.dialog(
-//   //     AlertDialog(
-//   //       title: Text('Delete Invoice?'),
-//   //       content: Text('Are you sure you want to delete this invoice?'),
-//   //       actions: [
-//   //         TextButton(
-//   //           onPressed: () => Get.back(result: false),
-//   //           child: Text('Cancel'),
-//   //         ),
-//   //         TextButton(
-//   //           onPressed: () => Get.back(result: true),
-//   //           child: Text('Delete', style: TextStyle(color: Colors.red)),
-//   //         ),
-//   //       ],
-//   //     ),
-//   //   );
-//   //
-//   //   if (confirmed == true) {
-//   //     try {
-//   //       isLoading.value = true;
-//   //
-//   //       // Delete from remote service
-//   //       if (invoice.value != null) {
-//   //         await RemoteService.deleteInvoiceItems(invoice.value!.invoiceId);
-//   //       }
-//   //
-//   //       Get.back(); // Go back to invoice list
-//   //       Get.snackbar(
-//   //         'Deleted',
-//   //         'Invoice deleted successfully',
-//   //         backgroundColor: Colors.green.shade100,
-//   //         colorText: Colors.green.shade800,
-//   //       );
-//   //     } catch (e) {
-//   //       Get.snackbar(
-//   //         'Error',
-//   //         'Failed to delete invoice: ${e.toString()}',
-//   //         backgroundColor: Colors.red.shade100,
-//   //         colorText: Colors.red.shade800,
-//   //       );
-//   //     } finally {
-//   //       isLoading.value = false;
-//   //     }
-//   //   }
-//   // }
-//
-//   /// Calculate totals from loaded items
-//   double get itemsSubtotal {
-//     return invoiceItems.fold(0.0, (sum, item) => sum + item.totalPrice);
-//   }
-//
-//   void refreshInvoiceItems() {
-//     if (invoice.value != null) {
-//       loadInvoiceItems(invoice.value!.invoiceId);
-//     }
-//   }
-//
-//
-// }
 
-
-class InvoiceDetailsController extends GetxController {
-  final invoice = Rxn<Invoice>();
-  final invoiceItems = <InvoiceItem>[].obs;
-  final isLoading = false.obs;
-  final isLoadingItems = false.obs;
-  final isEditMode = false.obs;
-
-  late TextEditingController customerNameCtrl;
-  late TextEditingController customerEmailCtrl;
-  late TextEditingController customerPhoneCtrl;
-  late TextEditingController customerAddressCtrl;
-  var statusOptions = ["Pending", "Paid", "Overdue"];
-  late RxString selectedStatus;
-
-  /// Editable items: map keys are consistent: "itemName", "qty", "rate"
-  var editableItems = <Map<String, TextEditingController>>[].obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-
-    // init customer controllers
-    customerNameCtrl = TextEditingController();
-    customerEmailCtrl = TextEditingController();
-    customerPhoneCtrl = TextEditingController();
-    customerAddressCtrl = TextEditingController();
-
-    // get invoice from arguments (if any)
-    final Invoice? passedInvoice = Get.arguments as Invoice?;
-    if (passedInvoice != null) {
-      invoice.value = passedInvoice;
-
-      selectedStatus = (passedInvoice.status ?? "Pending").obs;
-      // populate customer fields
-      customerNameCtrl.text = passedInvoice.customerName ?? '';
-      customerEmailCtrl.text = passedInvoice.customerEmail ?? '';
-      customerPhoneCtrl.text = passedInvoice.mobile ?? '';
-      customerAddressCtrl.text = passedInvoice.customerAddress ?? '';
-
-      // load items (async)
-      if ((passedInvoice.invoiceId ?? '').isNotEmpty) {
-        loadInvoiceItems(passedInvoice.invoiceId!);
-      } else {
-        // if invoice has embedded items, prepare editable items from them
-        if ((passedInvoice.items ?? []).isNotEmpty) {
-          _setupEditableItemsFromLoaded(passedInvoice.items!);
-          invoiceItems.assignAll(passedInvoice.items!);
-        }
-      }
-    }
-  }
-
-  @override
-  void onClose() {
-    // dispose customer controllers
-    customerNameCtrl.dispose();
-    customerEmailCtrl.dispose();
-    customerPhoneCtrl.dispose();
-    customerAddressCtrl.dispose();
-
-    // dispose item controllers
-    for (var m in editableItems) {
-      m['itemName']?.dispose();
-      m['qty']?.dispose();
-      m['rate']?.dispose();
-    }
-
-    super.onClose();
-  }
-
-  Future<void> loadInvoiceItems(String invoiceId) async {
-    try {
-      isLoadingItems.value = true;
-      // fetch items from your service
-      final List<InvoiceItem> items = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
-
-      invoiceItems.assignAll(items);
-
-      // prepare editable items
-      _setupEditableItemsFromLoaded(items);
-    } catch (e, st) {
-      print('Error loading items: $e\n$st');
-      Get.snackbar('Error', 'Failed to load invoice items');
-    } finally {
-      isLoadingItems.value = false;
-    }
-  }
-
-  void _setupEditableItemsFromLoaded(List<InvoiceItem> items) {
-    // dispose previous controllers first
-    for (var m in editableItems) {
-      m['itemName']?.dispose();
-      m['qty']?.dispose();
-      m['rate']?.dispose();
-    }
-
-    final newList = <Map<String, TextEditingController>>[];
-
-    if (items.isNotEmpty) {
-      for (var item in items) {
-        // FIX: Better handling of item name
-        String itemName = '';
-        if (item.itemName?.trim().isNotEmpty == true) {
-          itemName = item.itemName!.trim();
-        } else if (item.description?.trim().isNotEmpty == true) {
-          itemName = item.description!.trim();
-        }
-
-        newList.add({
-          'itemName': TextEditingController(text: itemName),
-          'qty': TextEditingController(text: (item.quantity ?? 1).toString()),
-          'rate': TextEditingController(text: (item.rate ?? 0.0).toStringAsFixed(2)),
-        });
-      }
-    } else {
-      // ensure at least one empty row for editing
-      newList.add({
-        'itemName': TextEditingController(),
-        'qty': TextEditingController(text: '1'),
-        'rate': TextEditingController(text: '0.00'),
-      });
-    }
-
-    editableItems.value = newList;
-    editableItems.refresh();
-  }
-
-  /// Call this from UI when user taps edit icon
-  void enterEditMode() {
-    // ensure editableItems prepared
-    if (editableItems.isEmpty) {
-      if (invoiceItems.isNotEmpty) {
-        _setupEditableItemsFromLoaded(invoiceItems);
-      } else if ((invoice.value?.items ?? []).isNotEmpty) {
-        _setupEditableItemsFromLoaded(invoice.value!.items!);
-      } else {
-        addNewItem();
-      }
-    }
-
-    isEditMode.value = true;
-  }
-
-  void addNewItem() {
-    editableItems.add({
-      'itemName': TextEditingController(),
-      'qty': TextEditingController(text: '1'),
-      'rate': TextEditingController(text: '0.00'),
-    });
-    editableItems.refresh();
-  }
-
-  void removeItem(int index) {
-    if (index >= 0 && index < editableItems.length) {
-      editableItems[index]['itemName']?.dispose();
-      editableItems[index]['qty']?.dispose();
-      editableItems[index]['rate']?.dispose();
-      editableItems.removeAt(index);
-
-      if (editableItems.isEmpty) addNewItem();
-      editableItems.refresh();
-    }
-  }
-
-  double calculateItemTotal(int index) {
-    if (index < 0 || index >= editableItems.length) return 0.0;
-    final qtyText = editableItems[index]['qty']?.text ?? '0';
-    final rateText = editableItems[index]['rate']?.text ?? '0';
-    final qty = double.tryParse(qtyText) ?? 0.0;
-    final rate = double.tryParse(rateText) ?? 0.0;
-    return qty * rate;
-  }
-
-  double get calculatedTotal {
-    double t = 0.0;
-    for (int i = 0; i < editableItems.length; i++) {
-      t += calculateItemTotal(i);
-    }
-    return t;
-  }
-
-  /// Validate and persist the edited invoice + items
-  Future<void> updateInvoice() async {
-    try {
-      final updatedInvoice = invoice.value;
-      if (updatedInvoice == null) throw Exception("No invoice selected");
-
-      // 1️⃣ Collect updated items from editable controllers
-      final updatedItems = <InvoiceItem>[];
-      for (int i = 0; i < editableItems.length; i++) {
-        final ctrls = editableItems[i];
-
-        final itemName = ctrls['itemName']?.text.trim() ?? '';
-        final qty = int.tryParse(ctrls['qty']?.text ?? '0') ?? 0;
-        final rate = double.tryParse(ctrls['rate']?.text ?? '0') ?? 0.0;
-
-        // Skip empty rows
-        if (itemName.isEmpty && qty == 0 && rate == 0) continue;
-
-        // ✅ Preserve old itemId if available, else generate a new one
-        final existingItemId = (i < invoiceItems.length)
-            ? invoiceItems[i].itemId
-            : DateTime.now().millisecondsSinceEpoch.toString();
-
-        updatedItems.add(InvoiceItem(
-          itemId: existingItemId,
-          //invoiceId: updatedInvoice.invoiceId,
-          itemName: itemName,
-          description: itemName,
-          quantity: qty,
-          rate: rate,
-        ));
-      }
-
-      // 2️⃣ Recalculate totals
-      final subtotal = updatedItems.fold<double>(0, (s, it) => s + (it.totalPrice ?? 0));
-      final gstAmount = updatedItems.fold<double>(0, (s, it) => s + calculateItemGst(it));
-      final discount = updatedInvoice.discountAmount ?? 0;
-      final total = subtotal + gstAmount - discount;
-
-      // 3️⃣ Prepare invoice data map
-      final invoiceData = {
-        'invoiceId': updatedInvoice.invoiceId,
-        'customerName': updatedInvoice.customerName,
-        'customerEmail': updatedInvoice.customerEmail,
-        'customerPhone': updatedInvoice.mobile,
-        'customerAddress': updatedInvoice.customerAddress,
-        'issueDate': updatedInvoice.issueDate?.toIso8601String(),
-        'dueDate': updatedInvoice.dueDate?.toIso8601String(),
-        'subtotal': subtotal.toStringAsFixed(2),
-        'gstAmount': gstAmount.toStringAsFixed(2),   //
-        'discountAmount': discount.toStringAsFixed(2),
-        'totalAmount': total.toStringAsFixed(2),
-        'status': selectedStatus.value,
-      };
-
-      // 4️⃣ Update Invoice sheet
-      await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);
-
-      // 5️⃣ Update InvoiceItems sheet (overwrite old + add new)
-      await GoogleSheetService.updateInvoiceItems(
-        updatedInvoice.invoiceId!,
-        updatedItems.map((e) => e.toMap()).toList(),
-        AppConstants.userId,
-      );
-
-      // ✅ Refresh local state
-      invoiceItems.assignAll(updatedItems);
-      isEditMode.value = false;
-
-      Get.snackbar("Success", "Invoice updated successfully!");
-      print("✅ Invoice + Items updated successfully");
-
-    } catch (e, st) {
-      print("❌ Error in updateInvoice controller: $e\n$st");
-      Get.snackbar("Error", "Failed to update invoice");
-    }
-  }
-
-// 🔹 Calculate GST per item (based on gstRate and rate*qty)
-  double calculateItemGst(InvoiceItem item) {
-    final qty = (item.quantity ?? 0).toDouble();
-    final rate = item.rate ?? 0.0;
-    final base = qty * rate;
-    final gstRate = (item.gstRate ?? 0).toDouble();
-    return (base * gstRate) / 100;
-  }
-
-
-
-// 🔹 Total GST amount for all items
-  double get totalGstAmount {
-    double gst = 0.0;
-    for (var item in invoiceItems) {
-      gst += calculateItemGst(item);
-    }
-    return gst;
-  }
-
-// 🔹 Final total (subtotal + GST – discount)
-  double get grandTotal {
-    final discount = invoice.value?.discountAmount ?? 0.0;
-    return itemsSubtotal + totalGstAmount - discount;
-  }
-
-
-
-
-
-  // Manual calculation function for view mode
-  double calculateViewModeSubtotal() {
-    double total = 0.0;
-    for (var item in invoiceItems) {
-      final qty = (item.quantity ?? 0).toDouble();
-      final rate = item.rate ?? 0.0;
-      total += (qty * rate);
-    }
-    return total;
-  }
-
-  // FIX: Use manual calculation for view mode
-  double get itemsSubtotal {
-    if (isEditMode.value) {
-      return calculatedTotal;
-    } else {
-      // Use manual calculation function for view mode
-      return calculateViewModeSubtotal();
-    }
-  }
-
-  void refreshInvoiceItems() {
-    if ((invoice.value?.invoiceId ?? '').isNotEmpty) {
-      loadInvoiceItems(invoice.value!.invoiceId!);
-    }
-  }
-
-  // Debug method to check what's happening with totals
-  void debugTotals() {
-    print('=== DEBUG TOTALS ===');
-    print('isEditMode: ${isEditMode.value}');
-    print('invoiceItems.length: ${invoiceItems.length}');
-    print('invoice.value?.totalAmount: ${invoice.value?.totalAmount}');
-
-    if (invoiceItems.isNotEmpty) {
-      for (int i = 0; i < invoiceItems.length; i++) {
-        final item = invoiceItems[i];
-        print('Item $i: ${item.itemName} - qty: ${item.quantity}, rate: ${item.rate}, totalPrice: ${item.totalPrice}');
-      }
-    }
-
-    print('Calculated itemsSubtotal: ${itemsSubtotal}');
-    print('==================');
-  }
-}
-
-///
 // class InvoiceDetailsController extends GetxController {
 //   final invoice = Rxn<Invoice>();
 //   final invoiceItems = <InvoiceItem>[].obs;
@@ -669,73 +156,98 @@ class InvoiceDetailsController extends GetxController {
 //   late TextEditingController customerPhoneCtrl;
 //   late TextEditingController customerAddressCtrl;
 //
-//   /// Editable items: map keys are consistent: "itemName", "qty", "rate"
+//   var statusOptions = ["Pending", "Paid", "Overdue"];
+//   late RxString selectedStatus;
+//
+//   /// Editable items for edit mode
 //   var editableItems = <Map<String, TextEditingController>>[].obs;
 //
 //   @override
 //   void onInit() {
 //     super.onInit();
 //
-//     // init customer controllers
+//     // init controllers
 //     customerNameCtrl = TextEditingController();
 //     customerEmailCtrl = TextEditingController();
 //     customerPhoneCtrl = TextEditingController();
 //     customerAddressCtrl = TextEditingController();
 //
-//     // get invoice from arguments (if any)
+//     if (Get.arguments != null && Get.arguments is Invoice) {
+//       invoice.value = Get.arguments as Invoice;
+//     }
+//
+//     // get invoice from navigation
 //     final Invoice? passedInvoice = Get.arguments as Invoice?;
 //     if (passedInvoice != null) {
 //       invoice.value = passedInvoice;
 //
-//       // populate customer fields
+//       selectedStatus = (passedInvoice.status ?? "Pending").obs;
+//
+//       // populate UI fields
 //       customerNameCtrl.text = passedInvoice.customerName ?? '';
 //       customerEmailCtrl.text = passedInvoice.customerEmail ?? '';
 //       customerPhoneCtrl.text = passedInvoice.mobile ?? '';
 //       customerAddressCtrl.text = passedInvoice.customerAddress ?? '';
 //
-//       // load items (async)
+//       // load items if id exists
 //       if ((passedInvoice.invoiceId ?? '').isNotEmpty) {
 //         loadInvoiceItems(passedInvoice.invoiceId!);
-//       } else {
-//         // if invoice has embedded items, prepare editable items from them
-//         if ((passedInvoice.items ?? []).isNotEmpty) {
-//           _setupEditableItemsFromLoaded(passedInvoice.items!);
-//           invoiceItems.assignAll(passedInvoice.items!);
-//         }
 //       }
+//       // else if ((passedInvoice.items ?? []).isNotEmpty) {
+//       //   _setupEditableItemsFromLoaded(passedInvoice.items!);
+//       //   invoiceItems.assignAll(passedInvoice.items!);
+//       // }
 //     }
 //   }
 //
 //   @override
 //   void onClose() {
-//     // dispose customer controllers
 //     customerNameCtrl.dispose();
 //     customerEmailCtrl.dispose();
 //     customerPhoneCtrl.dispose();
 //     customerAddressCtrl.dispose();
 //
-//     // dispose item controllers
 //     for (var m in editableItems) {
 //       m['itemName']?.dispose();
 //       m['qty']?.dispose();
 //       m['rate']?.dispose();
 //     }
-//
 //     super.onClose();
 //   }
 //
 //   Future<void> loadInvoiceItems(String invoiceId) async {
 //     try {
 //       isLoadingItems.value = true;
-//       // fetch items from your service
 //       final List<InvoiceItem> items = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
 //
 //       invoiceItems.assignAll(items);
 //
-//       // prepare editable items
 //       _setupEditableItemsFromLoaded(items);
+//       // if (items.isNotEmpty) {
+//       //   invoiceItems.assignAll(items);
+//       //   _setupEditableItemsFromLoaded(items);
+//       // }
+//       // else {
+//       //   // fallback if no rows in InvoiceItems sheet
+//       //   final inv = invoice.value;
+//       //   if (inv != null) {
+//       //     final subtotal = inv.subtotal ?? 0;
+//       //     invoiceItems.assignAll([
+//       //       InvoiceItem(
+//       //         itemId: DateTime.now().millisecondsSinceEpoch.toString(),
+//       //         invoiceId: inv.invoiceId,
+//       //         itemName: "General",
+//       //         description: "Imported from Invoice sheet",
+//       //         quantity: 1,
+//       //         rate: subtotal.toDouble(),
+//       //         gstRate: inv.gstRate ?? 0,
+//       //       )
+//       //     ]);
+//       //     _setupEditableItemsFromLoaded(invoiceItems);
+//       //   }
+//       // }
 //     } catch (e, st) {
-//       print('Error loading items: $e\n$st');
+//       print('❌ Error loading invoice items: $e\n$st');
 //       Get.snackbar('Error', 'Failed to load invoice items');
 //     } finally {
 //       isLoadingItems.value = false;
@@ -743,7 +255,7 @@ class InvoiceDetailsController extends GetxController {
 //   }
 //
 //   void _setupEditableItemsFromLoaded(List<InvoiceItem> items) {
-//     // dispose previous controllers first
+//     // dispose old
 //     for (var m in editableItems) {
 //       m['itemName']?.dispose();
 //       m['qty']?.dispose();
@@ -751,39 +263,32 @@ class InvoiceDetailsController extends GetxController {
 //     }
 //
 //     final newList = <Map<String, TextEditingController>>[];
-//
-//     if (items.isNotEmpty) {
-//       for (var item in items) {
-//         // FIX: Better handling of item name
-//         String itemName = '';
-//         if (item.itemName?.trim().isNotEmpty == true) {
-//           itemName = item.itemName!.trim();
-//         } else if (item.description?.trim().isNotEmpty == true) {
-//           itemName = item.description!.trim();
-//         }
-//
-//         newList.add({
-//           'itemName': TextEditingController(text: itemName),
-//           'qty': TextEditingController(text: (item.quantity ?? 1).toString()),
-//           'rate': TextEditingController(text: (item.rate ?? 0.0).toStringAsFixed(2)),
-//         });
-//       }
-//     } else {
-//       // ensure at least one empty row for editing
+//     for (var item in items) {
+//       String itemName = item.itemName?.trim().isNotEmpty == true
+//           ? item.itemName!.trim()
+//           : (item.description ?? '');
 //       newList.add({
-//         'itemName': TextEditingController(),
-//         'qty': TextEditingController(text: '1'),
-//         'rate': TextEditingController(text: '0.00'),
+//         'itemName': TextEditingController(text: itemName),
+//         'qty': TextEditingController(text: (item.quantity ?? 1).toString()),
+//         'rate': TextEditingController(
+//             text: (item.rate ?? 0.0).toStringAsFixed(2)),
 //       });
 //     }
 //
-//     editableItems.value = newList;
+//     editableItems.value = newList.isNotEmpty
+//         ? newList
+//         : [
+//       {
+//         'itemName': TextEditingController(),
+//         'qty': TextEditingController(text: '1'),
+//         'rate': TextEditingController(text: '0.00'),
+//       }
+//     ];
 //     editableItems.refresh();
 //   }
 //
-//   /// Call this from UI when user taps edit icon
+//   /// --- Edit mode controls ---
 //   void enterEditMode() {
-//     // ensure editableItems prepared
 //     if (editableItems.isEmpty) {
 //       if (invoiceItems.isNotEmpty) {
 //         _setupEditableItemsFromLoaded(invoiceItems);
@@ -793,7 +298,6 @@ class InvoiceDetailsController extends GetxController {
 //         addNewItem();
 //       }
 //     }
-//
 //     isEditMode.value = true;
 //   }
 //
@@ -812,134 +316,831 @@ class InvoiceDetailsController extends GetxController {
 //       editableItems[index]['qty']?.dispose();
 //       editableItems[index]['rate']?.dispose();
 //       editableItems.removeAt(index);
-//
 //       if (editableItems.isEmpty) addNewItem();
 //       editableItems.refresh();
 //     }
 //   }
 //
+//   /// --- Totals ---
 //   double calculateItemTotal(int index) {
 //     if (index < 0 || index >= editableItems.length) return 0.0;
-//     final qtyText = editableItems[index]['qty']?.text ?? '0';
-//     final rateText = editableItems[index]['rate']?.text ?? '0';
-//     final qty = double.tryParse(qtyText) ?? 0.0;
-//     final rate = double.tryParse(rateText) ?? 0.0;
+//     final qty = double.tryParse(editableItems[index]['qty']?.text ?? '0') ?? 0;
+//     final rate = double.tryParse(editableItems[index]['rate']?.text ?? '0') ?? 0.0;
 //     return qty * rate;
 //   }
 //
-//   double get calculatedTotal {
-//     double t = 0.0;
-//     for (int i = 0; i < editableItems.length; i++) {
-//       t += calculateItemTotal(i);
-//     }
-//     return t;
+//   double get calculatedTotal =>
+//       List.generate(editableItems.length, (i) => calculateItemTotal(i))
+//           .fold(0.0, (a, b) => a + b);
+//
+//   double calculateItemGst(InvoiceItem item) {
+//     final qty = (item.quantity ?? 0).toDouble();
+//     final rate = item.rate ?? 0.0;
+//     final base = qty * rate;
+//     final gstRate = (item.gstRate ?? 0).toDouble();
+//     return (base * gstRate) / 100;
 //   }
 //
-//   /// Validate and persist the edited invoice + items
+//   double get totalGstAmount =>
+//       invoiceItems.fold(0.0, (s, it) => s + calculateItemGst(it));
+//
+//   double get itemsSubtotal => isEditMode.value
+//       ? calculatedTotal
+//       : invoiceItems.fold(
+//       0.0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+//
+//   double get grandTotal {
+//     final discount = invoice.value?.discountAmount ?? 0.0;
+//     return itemsSubtotal + totalGstAmount - discount;
+//   }
+//
+//   /// --- Update ---
 //   Future<void> updateInvoice() async {
-//     if (invoice.value == null) return;
-//
-//     // basic validation
-//     if (customerNameCtrl.text.trim().isEmpty) {
-//       Get.snackbar('Error', 'Customer name is required');
-//       return;
-//     }
-//
-//     // Build updated items
-//     final updatedItems = <InvoiceItem>[];
-//
-//     for (int i = 0; i < editableItems.length; i++) {
-//       final m = editableItems[i];
-//       final name = m['itemName']?.text.trim() ?? '';
-//       final qtyText = m['qty']?.text.trim() ?? '';
-//       final rateText = m['rate']?.text.trim() ?? '';
-//
-//       // skip completely empty rows
-//       if (name.isEmpty && qtyText.isEmpty && rateText.isEmpty) continue;
-//
-//       if (name.isEmpty) {
-//         Get.snackbar('Error', 'Please enter item name for row ${i + 1}');
-//         return;
-//       }
-//
-//       final qty = int.tryParse(qtyText) ?? (double.tryParse(qtyText)?.toInt() ?? null);
-//       final rate = double.tryParse(rateText);
-//
-//       if (qty == null || qty <= 0) {
-//         Get.snackbar('Error', 'Please enter valid quantity for row ${i + 1}');
-//         return;
-//       }
-//       if (rate == null || rate < 0) {
-//         Get.snackbar('Error', 'Please enter valid rate for row ${i + 1}');
-//         return;
-//       }
-//
-//       // preserve existing itemId when possible
-//       final existingItemId = (i < invoiceItems.length) ? (invoiceItems[i].itemId ?? '') : '';
-//
-//       final totalPrice = qty * rate;
-//
-//       updatedItems.add(InvoiceItem(
-//         itemId: existingItemId,
-//         itemName: name,
-//         description: name,
-//         quantity: qty,
-//         rate: rate,
-//         totalPrice: totalPrice,
-//       ));
-//     }
-//
-//     if (updatedItems.isEmpty) {
-//       Get.snackbar('Error', 'Please add at least one item');
-//       return;
-//     }
-//
-//     final newTotal = updatedItems.fold<double>(0.0, (s, it) => s + (it.totalPrice ?? 0.0));
-//
-//     final updatedInvoice = invoice.value!.copyWith(
-//       customerName: customerNameCtrl.text.trim(),
-//       customerEmail: customerEmailCtrl.text.trim(),
-//       mobile: customerPhoneCtrl.text.trim(),
-//       customerAddress: customerAddressCtrl.text.trim(),
-//       items: updatedItems,
-//       totalAmount: newTotal,
-//     );
-//
 //     try {
-//       isLoading.value = true;
+//       final updatedInvoice = invoice.value;
+//       if (updatedInvoice == null) throw Exception("No invoice selected");
 //
-//       // Persist to your backends
-//       // await GoogleSheetService.updateInvoice(updatedInvoice);
-//       // Optionally notify InvoiceListController if present:
-//       try {
-//         final listController = Get.find<dynamic>(tag: 'invoice_list');
-//         if (listController != null) {
-//           // If you have a proper typed controller, call its updateInvoice method
-//           // listController.updateInvoice(updatedInvoice);
-//         }
-//       } catch (_) {}
+//       final updatedItems = <InvoiceItem>[];
+//       for (int i = 0; i < editableItems.length; i++) {
+//         final ctrls = editableItems[i];
+//         final itemName = ctrls['itemName']?.text.trim() ?? '';
+//         final qty = double.tryParse(ctrls['qty']?.text ?? '0') ?? 0;
+//         final rate = double.tryParse(ctrls['rate']?.text ?? '0') ?? 0.0;
 //
-//       // update local state
-//       invoice.value = updatedInvoice;
+//         if (itemName.isEmpty && qty == 0 && rate == 0) continue;
+//
+//         final existingItemId = (i < invoiceItems.length)
+//             ? invoiceItems[i].itemId
+//             : DateTime.now().millisecondsSinceEpoch.toString();
+//
+//         updatedItems.add(InvoiceItem(
+//           itemId: existingItemId,
+//           invoiceId: updatedInvoice.invoiceId, // 🔑 fixed
+//           itemName: itemName,
+//           description: itemName,
+//           quantity: qty,
+//           rate: rate,
+//         ));
+//       }
+//
+//       final subtotal = updatedItems.fold<double>(
+//           0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+//       final gstAmount =
+//       updatedItems.fold<double>(0, (s, it) => s + calculateItemGst(it));
+//       final discount = updatedInvoice.discountAmount ?? 0;
+//       final total = subtotal + gstAmount - discount;
+//
+//       final invoiceData = {
+//         'invoiceId': updatedInvoice.invoiceId,
+//         'customerName': updatedInvoice.customerName,
+//         'customerEmail': updatedInvoice.customerEmail,
+//         'customerPhone': updatedInvoice.mobile,
+//         'customerAddress': updatedInvoice.customerAddress,
+//         'issueDate': updatedInvoice.issueDate?.toIso8601String(),
+//         'dueDate': updatedInvoice.dueDate?.toIso8601String(),
+//         'subtotal': subtotal.toStringAsFixed(2),
+//         'gstAmount': gstAmount.toStringAsFixed(2),
+//         'discountAmount': discount.toStringAsFixed(2),
+//         'totalAmount': total.toStringAsFixed(2),
+//         'status': selectedStatus.value,
+//       };
+//
+//       await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);
+//       await GoogleSheetService.updateInvoiceItems(
+//         updatedInvoice.invoiceId!,
+//         updatedItems.map((e) => e.toMap()).toList(),
+//         AppConstants.userId,
+//       );
+//
 //       invoiceItems.assignAll(updatedItems);
-//
 //       isEditMode.value = false;
 //
-//       Get.snackbar('Success', 'Invoice updated');
+//       Get.snackbar("Success", "Invoice updated successfully!");
 //     } catch (e, st) {
-//       print('Error updating invoice: $e\n$st');
-//       Get.snackbar('Error', 'Failed to update invoice');
-//     } finally {
-//       isLoading.value = false;
+//       print("❌ Error in updateInvoice: $e\n$st");
+//       Get.snackbar("Error", "Failed to update invoice");
 //     }
 //   }
 //
-//   // FIX: Getter for items subtotal that works in both modes
-//   double get itemsSubtotal {
-//     if (isEditMode.value) {
-//       return calculatedTotal;
-//     } else {
-//       return invoiceItems.fold(0.0, (s, it) => s + (it.totalPrice ?? 0.0));
+//   void refreshInvoiceItems() {
+//     if ((invoice.value?.invoiceId ?? '').isNotEmpty) {
+//       loadInvoiceItems(invoice.value!.invoiceId!);
+//     }
+//   }
+// }
+
+class InvoiceDetailsController extends GetxController {
+  final invoice = Rxn<Invoice>();
+  final invoiceItems = <InvoiceItem>[].obs;
+  final isLoading = false.obs;
+  final isLoadingItems = false.obs;
+  final isEditMode = false.obs;
+
+  late TextEditingController customerNameCtrl;
+  late TextEditingController customerEmailCtrl;
+  late TextEditingController customerPhoneCtrl;
+  late TextEditingController customerAddressCtrl;
+
+  var statusOptions = ["Pending", "Paid", "Overdue"];
+  late RxString selectedStatus;
+
+  /// Editable items for edit mode
+  var editableItems = <Map<String, TextEditingController>>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+
+    // init controllers
+    customerNameCtrl = TextEditingController();
+    customerEmailCtrl = TextEditingController();
+    customerPhoneCtrl = TextEditingController();
+    customerAddressCtrl = TextEditingController();
+
+    // get invoice from navigation
+    final Invoice? passedInvoice = Get.arguments as Invoice?;
+    if (passedInvoice != null) {
+      invoice.value = passedInvoice;
+
+      selectedStatus = (passedInvoice.status ?? "Pending").obs;
+
+      // populate UI fields
+      customerNameCtrl.text = passedInvoice.customerName ?? '';
+      customerEmailCtrl.text = passedInvoice.customerEmail ?? '';
+      customerPhoneCtrl.text = passedInvoice.mobile ?? '';
+      customerAddressCtrl.text = passedInvoice.customerAddress ?? '';
+
+      // load items if id exists
+      if ((passedInvoice.invoiceId ?? '').isNotEmpty) {
+        loadInvoiceItems(passedInvoice.invoiceId!);
+      }
+    }
+  }
+
+  @override
+  void onClose() {
+    customerNameCtrl.dispose();
+    customerEmailCtrl.dispose();
+    customerPhoneCtrl.dispose();
+    customerAddressCtrl.dispose();
+
+    for (var m in editableItems) {
+      m['itemName']?.dispose();
+      m['qty']?.dispose();
+      m['rate']?.dispose();
+    }
+    super.onClose();
+  }
+
+  /// NEW: Navigate to edit mode (similar to Challan)
+  // In InvoiceDetailsController - Replace navigateToEditMode and refreshInvoiceData:
+  void navigateToEditMode() async {
+    final currentInvoice = invoice.value;
+    if (currentInvoice == null) {
+      Get.snackbar(
+        'Error',
+        'No invoice data available for editing',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      print("=== STARTING EDIT MODE NAVIGATION ===");
+      print("Current invoice: ${currentInvoice.invoiceId}");
+      print("Current items count: ${invoiceItems.length}");
+
+      // Clean up existing controller
+      if (Get.isRegistered<NewInvoiceController>()) {
+        print("Removing old controller");
+        Get.delete<NewInvoiceController>(force: true);
+      }
+
+      await Future.delayed(Duration(milliseconds: 50));
+
+      // **FIX: Register the controller BEFORE navigation**
+      Get.put(NewInvoiceController());
+
+      final argumentsMap = {
+        'editMode': true,
+        'invoiceId': currentInvoice.invoiceId,
+        'invoiceData': currentInvoice,
+      };
+
+      print("Navigation arguments: editMode=${argumentsMap['editMode']}, invoiceId=${argumentsMap['invoiceId']}");
+
+      // Navigate and wait for result
+      final result = await Get.to(
+            () => NewInvoiceScreen(),
+        arguments: argumentsMap,
+        preventDuplicates: true,
+      );
+
+      print("=== NAVIGATION COMPLETED ===");
+      print("Result: $result");
+
+      // CRITICAL: Always force refresh data
+      await Future.delayed(Duration(milliseconds: 200));
+
+      print("=== FORCING DATA REFRESH ===");
+      await forceRefreshInvoiceData();
+
+      if (result == true) {
+        Get.snackbar(
+          'Success',
+          'Invoice updated and data refreshed',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      }
+
+    } catch (e, stack) {
+      print('Navigation error: $e');
+      print('Stack trace: $stack');
+      Get.snackbar(
+        'Error',
+        'Failed to open edit screen',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+
+      // Still try to refresh
+      try {
+        await forceRefreshInvoiceData();
+      } catch (refreshError) {
+        print('Error refreshing: $refreshError');
+      }
+    }
+  }
+
+// NEW: Force refresh with cache clearing
+  Future<void> forceRefreshInvoiceData() async {
+    try {
+      print("=== FORCE REFRESHING INVOICE DATA ===");
+
+      final currentInvoice = invoice.value;
+      if (currentInvoice?.invoiceId == null) {
+        print("No invoice to refresh");
+        return;
+      }
+
+      isLoadingItems.value = true;
+
+      // Clear the cache first
+      GoogleSheetService.clearInvoiceItemCache(currentInvoice!.invoiceId!);
+
+      print("Fetching fresh data for invoice: ${currentInvoice.invoiceId}");
+
+      // Force fresh load from sheets
+      final List<InvoiceItem> freshItems =
+      await GoogleSheetService.getInvoiceItemsByInvoiceId(currentInvoice.invoiceId!);
+
+      print("=== FRESH DATA RECEIVED ===");
+      print("Total items: ${freshItems.length}");
+
+      // Clear and assign new data
+      invoiceItems.clear();
+      invoiceItems.assignAll(freshItems);
+
+      // Debug each item
+      for (int i = 0; i < freshItems.length; i++) {
+        print("Item $i: ${freshItems[i].itemName}");
+        print("  Qty: ${freshItems[i].quantity}");
+        print("  Rate: ${freshItems[i].rate}");
+        print("  Total: ${freshItems[i].totalPrice}");
+      }
+
+      // Update UI controllers
+      _setupEditableItemsFromLoaded(freshItems);
+
+      // Force UI update
+      invoiceItems.refresh();
+
+      print("=== REFRESH COMPLETED ===");
+      print("Final items count: ${invoiceItems.length}");
+
+    } catch (e, stack) {
+      print("Error force refreshing: $e");
+      print("Stack: $stack");
+      Get.snackbar('Error', 'Failed to refresh invoice data');
+    } finally {
+      isLoadingItems.value = false;
+    }
+  }
+
+// Keep your existing refreshInvoiceData for backward compatibility
+  Future<void> refreshInvoiceData() async {
+    await forceRefreshInvoiceData();
+  }
+
+  /// NEW: Load invoice details (if needed)
+  Future<void> loadInvoiceDetails(String invoiceId) async {
+    try {
+      isLoading.value = true;
+      print("Loading fresh invoice details for ID: $invoiceId");
+
+      // TODO: If you have a method to get invoice by ID, use it here
+      // For now, we'll refresh items which is what we can do
+      await loadInvoiceItems(invoiceId);
+
+      print("Invoice details loaded successfully");
+    } catch (e) {
+      print('Error loading invoice details: $e');
+      Get.snackbar('Error', 'Failed to load invoice details');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// UPDATED: Force load fresh items
+  Future<void> loadInvoiceItems(String invoiceId) async {
+    try {
+      isLoadingItems.value = true;
+      print("🔄 Loading items for: $invoiceId");
+
+      invoiceItems.clear();
+
+      final List<InvoiceItem> freshItems =
+      await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
+
+      // ✅ DEBUG: Check what we got
+      for (var item in freshItems) {
+        print("Loaded item: ${item.itemName}");
+        print("  - Rate: ${item.rate}");  // ✅ Check if this prints 0 or actual value
+        print("  - Quantity: ${item.quantity}");
+        print("  - Total: ${item.totalPrice}");
+      }
+
+      invoiceItems.assignAll(freshItems);
+      _setupEditableItemsFromLoaded(freshItems);
+      invoiceItems.refresh();
+
+    } catch (e, st) {
+      print('❌ Error: $e\n$st');
+    } finally {
+      isLoadingItems.value = false;
+    }
+  }
+
+  void _setupEditableItemsFromLoaded(List<InvoiceItem> items) {
+    // dispose old
+    for (var m in editableItems) {
+      m['itemName']?.dispose();
+      m['qty']?.dispose();
+      m['rate']?.dispose();
+    }
+
+    final newList = <Map<String, TextEditingController>>[];
+    for (var item in items) {
+      String itemName = item.itemName?.trim().isNotEmpty == true
+          ? item.itemName!.trim()
+          : (item.description ?? '');
+      newList.add({
+        'itemName': TextEditingController(text: itemName),
+        'qty': TextEditingController(text: (item.quantity ?? 1).toString()),
+        'rate': TextEditingController(
+            text: (item.rate ?? 0.0).toStringAsFixed(2)),
+      });
+    }
+
+    editableItems.value = newList.isNotEmpty
+        ? newList
+        : [
+      {
+        'itemName': TextEditingController(),
+        'qty': TextEditingController(text: '1'),
+        'rate': TextEditingController(text: '0.00'),
+      }
+    ];
+    editableItems.refresh();
+  }
+
+  /// --- Edit mode controls ---
+  void enterEditMode() {
+    if (editableItems.isEmpty) {
+      if (invoiceItems.isNotEmpty) {
+        _setupEditableItemsFromLoaded(invoiceItems);
+      } else if ((invoice.value?.items ?? []).isNotEmpty) {
+        _setupEditableItemsFromLoaded(invoice.value!.items!);
+      } else {
+        addNewItem();
+      }
+    }
+    isEditMode.value = true;
+  }
+
+  void addNewItem() {
+    editableItems.add({
+      'itemName': TextEditingController(),
+      'qty': TextEditingController(text: '1'),
+      'rate': TextEditingController(text: '0.00'),
+    });
+    editableItems.refresh();
+  }
+
+  void removeItem(int index) {
+    if (index >= 0 && index < editableItems.length) {
+      editableItems[index]['itemName']?.dispose();
+      editableItems[index]['qty']?.dispose();
+      editableItems[index]['rate']?.dispose();
+      editableItems.removeAt(index);
+      if (editableItems.isEmpty) addNewItem();
+      editableItems.refresh();
+    }
+  }
+
+  /// --- Totals ---
+  double calculateItemTotal(int index) {
+    if (index < 0 || index >= editableItems.length) return 0.0;
+    final qty = double.tryParse(editableItems[index]['qty']?.text ?? '0') ?? 0;
+    final rate = double.tryParse(editableItems[index]['rate']?.text ?? '0') ?? 0.0;
+    return qty * rate;
+  }
+
+  double get calculatedTotal =>
+      List.generate(editableItems.length, (i) => calculateItemTotal(i))
+          .fold(0.0, (a, b) => a + b);
+
+  double calculateItemGst(InvoiceItem item) {
+    final qty = (item.quantity ?? 0).toDouble();
+    final rate = item.rate ?? 0.0;
+    final base = qty * rate;
+    final gstRate = (item.gstRate ?? 0).toDouble();
+    return (base * gstRate) / 100;
+  }
+
+  double get totalGstAmount =>
+      invoiceItems.fold(0.0, (s, it) => s + calculateItemGst(it));
+
+  double get itemsSubtotal => isEditMode.value
+      ? calculatedTotal
+      : invoiceItems.fold(
+      0.0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+
+  double get grandTotal {
+    final discount = invoice.value?.discountAmount ?? 0.0;
+    return itemsSubtotal + totalGstAmount - discount;
+  }
+
+  /// --- Update ---
+  Future<void> updateInvoice() async {
+    try {
+      final updatedInvoice = invoice.value;
+      if (updatedInvoice == null) throw Exception("No invoice selected");
+
+      final updatedItems = <InvoiceItem>[];
+      for (int i = 0; i < editableItems.length; i++) {
+        final ctrls = editableItems[i];
+        final itemName = ctrls['itemName']?.text.trim() ?? '';
+        final qty = double.tryParse(ctrls['qty']?.text ?? '0') ?? 0;
+        final rate = double.tryParse(ctrls['rate']?.text ?? '0') ?? 0.0;
+
+        if (itemName.isEmpty && qty == 0 && rate == 0) continue;
+
+        final existingItemId = (i < invoiceItems.length)
+            ? invoiceItems[i].itemId
+            : DateTime.now().millisecondsSinceEpoch.toString();
+
+        updatedItems.add(InvoiceItem(
+          itemId: existingItemId,
+          invoiceId: updatedInvoice.invoiceId,
+          itemName: itemName,
+          description: itemName,
+          quantity: qty,
+          rate: rate,
+        ));
+      }
+
+      final subtotal = updatedItems.fold<double>(
+          0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+      final gstAmount =
+      updatedItems.fold<double>(0, (s, it) => s + calculateItemGst(it));
+      final discount = updatedInvoice.discountAmount ?? 0;
+      final total = subtotal + gstAmount - discount;
+
+      final invoiceData = {
+        'invoiceId': updatedInvoice.invoiceId,
+        'customerName': customerNameCtrl.text,
+        'customerEmail': customerEmailCtrl.text,
+        'customerPhone': customerPhoneCtrl.text,
+        'customerAddress': customerAddressCtrl.text,
+        'issueDate': updatedInvoice.issueDate?.toIso8601String(),
+        'dueDate': updatedInvoice.dueDate?.toIso8601String(),
+        'subtotal': subtotal.toStringAsFixed(2),
+        'gstAmount': gstAmount.toStringAsFixed(2),
+        'discountAmount': discount.toStringAsFixed(2),
+        'totalAmount': total.toStringAsFixed(2),
+        'status': selectedStatus.value,
+      };
+
+      await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);
+      await GoogleSheetService.updateInvoiceItems(
+        updatedInvoice.invoiceId!,
+        updatedItems.map((e) => e.toMap()).toList(),
+        AppConstants.userId,
+      );
+
+      invoiceItems.assignAll(updatedItems);
+      isEditMode.value = false;
+
+      Get.snackbar("Success", "Invoice updated successfully!");
+    } catch (e, st) {
+      print("❌ Error in updateInvoice: $e\n$st");
+      Get.snackbar("Error", "Failed to update invoice");
+    }
+  }
+
+  /// UPDATED: Force refresh with snackbar
+  Future<void> refreshInvoiceItems() async {
+    if ((invoice.value?.invoiceId ?? '').isNotEmpty) {
+      print("🔄 MANUAL REFRESH TRIGGERED");
+      await loadInvoiceItems(invoice.value!.invoiceId!);
+      Get.snackbar('Success', 'Items refreshed from server');
+    }
+  }
+
+  /// NEW: Debug data flow (like Challan)
+  void debugDataFlow() async {
+    print("=== DEBUGGING DATA FLOW ===");
+
+    // Check controller registration
+    print("Controllers registered:");
+    print("  - InvoiceListController: ${Get.isRegistered<InvoiceListController>()}");
+    print("  - InvoiceDetailsController: ${Get.isRegistered<InvoiceDetailsController>()}");
+
+    // Check current data
+    if (Get.isRegistered<InvoiceListController>()) {
+      final listController = Get.find<InvoiceListController>();
+      print("  - InvoiceList count: ${listController.invoiceList.length}");
+      print("  - FilteredList count: ${listController.filteredInvoiceList.length}");
+
+      // Find current invoice in the list
+      final currentInvoiceInList = listController.invoiceList.firstWhereOrNull(
+              (inv) => inv.invoiceId == invoice.value?.invoiceId);
+
+      if (currentInvoiceInList != null) {
+        print("  - Current invoice found in list");
+        print("  - List invoice customer: ${currentInvoiceInList.customerName}");
+        print("  - Local invoice customer: ${invoice.value?.customerName}");
+      } else {
+        print("  - Current invoice NOT found in list!");
+      }
+    }
+
+    print("=== END DEBUG ===");
+  }
+}
+/// 29-09 Mormning 10:41
+///
+// class InvoiceDetailsController extends GetxController {
+//   final invoice = Rxn<Invoice>();
+//   final invoiceItems = <InvoiceItem>[].obs;
+//   final isLoading = false.obs;
+//   final isLoadingItems = false.obs;
+//   final isEditMode = false.obs;
+//
+//   late TextEditingController customerNameCtrl;
+//   late TextEditingController customerEmailCtrl;
+//   late TextEditingController customerPhoneCtrl;
+//   late TextEditingController customerAddressCtrl;
+//
+//   var statusOptions = ["Pending", "Paid", "Overdue"];
+//   late RxString selectedStatus;
+//
+//   /// Editable items for edit mode
+//   var editableItems = <Map<String, TextEditingController>>[].obs;
+//
+//   @override
+//   void onInit() {
+//     super.onInit();
+//
+//     // init controllers
+//     customerNameCtrl = TextEditingController();
+//     customerEmailCtrl = TextEditingController();
+//     customerPhoneCtrl = TextEditingController();
+//     customerAddressCtrl = TextEditingController();
+//
+//     if (Get.arguments != null && Get.arguments is Invoice) {
+//       invoice.value = Get.arguments as Invoice;
+//     }
+//
+//     // get invoice from navigation
+//     final Invoice? passedInvoice = Get.arguments as Invoice?;
+//     if (passedInvoice != null) {
+//       invoice.value = passedInvoice;
+//
+//       selectedStatus = (passedInvoice.status ?? "Pending").obs;
+//
+//       // populate UI fields
+//       customerNameCtrl.text = passedInvoice.customerName ?? '';
+//       customerEmailCtrl.text = passedInvoice.customerEmail ?? '';
+//       customerPhoneCtrl.text = passedInvoice.mobile ?? '';
+//       customerAddressCtrl.text = passedInvoice.customerAddress ?? '';
+//
+//       // load items if id exists
+//       if ((passedInvoice.invoiceId ?? '').isNotEmpty) {
+//         loadInvoiceItems(passedInvoice.invoiceId!);
+//       }
+//     }
+//   }
+//
+//   @override
+//   void onClose() {
+//     customerNameCtrl.dispose();
+//     customerEmailCtrl.dispose();
+//     customerPhoneCtrl.dispose();
+//     customerAddressCtrl.dispose();
+//
+//     for (var m in editableItems) {
+//       m['itemName']?.dispose();
+//       m['qty']?.dispose();
+//       m['rate']?.dispose();
+//     }
+//     super.onClose();
+//   }
+//
+//   Future<void> loadInvoiceItems(String invoiceId) async {
+//     try {
+//       isLoadingItems.value = true;
+//       final List<InvoiceItem> items = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoiceId);
+//
+//       invoiceItems.assignAll(items);
+//       _setupEditableItemsFromLoaded(items);
+//
+//     } catch (e, st) {
+//       print('❌ Error loading invoice items: $e\n$st');
+//       Get.snackbar('Error', 'Failed to load invoice items');
+//     } finally {
+//       isLoadingItems.value = false;
+//     }
+//   }
+//
+//   void _setupEditableItemsFromLoaded(List<InvoiceItem> items) {
+//     // dispose old
+//     for (var m in editableItems) {
+//       m['itemName']?.dispose();
+//       m['qty']?.dispose();
+//       m['rate']?.dispose();
+//     }
+//
+//     final newList = <Map<String, TextEditingController>>[];
+//     for (var item in items) {
+//       String itemName = item.itemName?.trim().isNotEmpty == true
+//           ? item.itemName!.trim()
+//           : (item.description ?? '');
+//       newList.add({
+//         'itemName': TextEditingController(text: itemName),
+//         'qty': TextEditingController(text: (item.quantity ?? 1).toString()),
+//         'rate': TextEditingController(
+//             text: (item.rate ?? 0.0).toStringAsFixed(2)),
+//       });
+//     }
+//
+//     editableItems.value = newList.isNotEmpty
+//         ? newList
+//         : [
+//       {
+//         'itemName': TextEditingController(),
+//         'qty': TextEditingController(text: '1'),
+//         'rate': TextEditingController(text: '0.00'),
+//       }
+//     ];
+//     editableItems.refresh();
+//   }
+//
+//   /// --- Edit mode controls ---
+//   void enterEditMode() {
+//     if (editableItems.isEmpty) {
+//       if (invoiceItems.isNotEmpty) {
+//         _setupEditableItemsFromLoaded(invoiceItems);
+//       } else if ((invoice.value?.items ?? []).isNotEmpty) {
+//         _setupEditableItemsFromLoaded(invoice.value!.items!);
+//       } else {
+//         addNewItem();
+//       }
+//     }
+//     isEditMode.value = true;
+//   }
+//
+//   void addNewItem() {
+//     editableItems.add({
+//       'itemName': TextEditingController(),
+//       'qty': TextEditingController(text: '1'),
+//       'rate': TextEditingController(text: '0.00'),
+//     });
+//     editableItems.refresh();
+//   }
+//
+//   void removeItem(int index) {
+//     if (index >= 0 && index < editableItems.length) {
+//       editableItems[index]['itemName']?.dispose();
+//       editableItems[index]['qty']?.dispose();
+//       editableItems[index]['rate']?.dispose();
+//       editableItems.removeAt(index);
+//       if (editableItems.isEmpty) addNewItem();
+//       editableItems.refresh();
+//     }
+//   }
+//
+//   /// --- Totals ---
+//   double calculateItemTotal(int index) {
+//     if (index < 0 || index >= editableItems.length) return 0.0;
+//     final qty = double.tryParse(editableItems[index]['qty']?.text ?? '0') ?? 0;
+//     final rate = double.tryParse(editableItems[index]['rate']?.text ?? '0') ?? 0.0;
+//     return qty * rate;
+//   }
+//
+//   double get calculatedTotal =>
+//       List.generate(editableItems.length, (i) => calculateItemTotal(i))
+//           .fold(0.0, (a, b) => a + b);
+//
+//   double calculateItemGst(InvoiceItem item) {
+//     final qty = (item.quantity ?? 0).toDouble();
+//     final rate = item.rate ?? 0.0;
+//     final base = qty * rate;
+//     final gstRate = (item.gstRate ?? 0).toDouble();
+//     return (base * gstRate) / 100;
+//   }
+//
+//   double get totalGstAmount =>
+//       invoiceItems.fold(0.0, (s, it) => s + calculateItemGst(it));
+//
+//   double get itemsSubtotal => isEditMode.value
+//       ? calculatedTotal
+//       : invoiceItems.fold(
+//       0.0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+//
+//   double get grandTotal {
+//     final discount = invoice.value?.discountAmount ?? 0.0;
+//     return itemsSubtotal + totalGstAmount - discount;
+//   }
+//
+//   /// --- Update ---
+//   Future<void> updateInvoice() async {
+//     try {
+//       final updatedInvoice = invoice.value;
+//       if (updatedInvoice == null) throw Exception("No invoice selected");
+//
+//       final updatedItems = <InvoiceItem>[];
+//       for (int i = 0; i < editableItems.length; i++) {
+//         final ctrls = editableItems[i];
+//         final itemName = ctrls['itemName']?.text.trim() ?? '';
+//         final qty = double.tryParse(ctrls['qty']?.text ?? '0') ?? 0;
+//         final rate = double.tryParse(ctrls['rate']?.text ?? '0') ?? 0.0;
+//
+//         if (itemName.isEmpty && qty == 0 && rate == 0) continue;
+//
+//         final existingItemId = (i < invoiceItems.length)
+//             ? invoiceItems[i].itemId
+//             : DateTime.now().millisecondsSinceEpoch.toString();
+//
+//         updatedItems.add(InvoiceItem(
+//           itemId: existingItemId,
+//           invoiceId: updatedInvoice.invoiceId,
+//           itemName: itemName,
+//           description: itemName,
+//           quantity: qty,
+//           rate: rate,
+//         ));
+//       }
+//
+//       final subtotal = updatedItems.fold<double>(
+//           0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
+//       final gstAmount =
+//       updatedItems.fold<double>(0, (s, it) => s + calculateItemGst(it));
+//       final discount = updatedInvoice.discountAmount ?? 0;
+//       final total = subtotal + gstAmount - discount;
+//
+//       final invoiceData = {
+//         'invoiceId': updatedInvoice.invoiceId,
+//         'customerName': updatedInvoice.customerName,
+//         'customerEmail': updatedInvoice.customerEmail,
+//         'customerPhone': updatedInvoice.mobile,
+//         'customerAddress': updatedInvoice.customerAddress,
+//         'issueDate': updatedInvoice.issueDate?.toIso8601String(),
+//         'dueDate': updatedInvoice.dueDate?.toIso8601String(),
+//         'subtotal': subtotal.toStringAsFixed(2),
+//         'gstAmount': gstAmount.toStringAsFixed(2),
+//         'discountAmount': discount.toStringAsFixed(2),
+//         'totalAmount': total.toStringAsFixed(2),
+//         'status': selectedStatus.value,
+//       };
+//
+//       await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);
+//       await GoogleSheetService.updateInvoiceItems(
+//         updatedInvoice.invoiceId!,
+//         updatedItems.map((e) => e.toMap()).toList(),
+//         AppConstants.userId,
+//       );
+//
+//       invoiceItems.assignAll(updatedItems);
+//       isEditMode.value = false;
+//
+//       Get.snackbar("Success", "Invoice updated successfully!");
+//     } catch (e, st) {
+//       print("❌ Error in updateInvoice: $e\n$st");
+//       Get.snackbar("Error", "Failed to update invoice");
 //     }
 //   }
 //

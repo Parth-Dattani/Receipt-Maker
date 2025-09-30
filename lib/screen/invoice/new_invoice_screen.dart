@@ -16,6 +16,1298 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../model/model.dart';
 
 
+///29-09 Morning 10-51
+// class NewInvoiceScreen extends GetView<NewInvoiceController> {
+//   static const String pageId = '/NewInvoiceScreen';
+//
+//   const NewInvoiceScreen({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('New Invoice'),
+//         backgroundColor: Colors.blue.shade700,
+//         foregroundColor: Colors.white,
+//         actions: [
+//
+//         ],
+//       ),
+//       body: SafeArea(
+//         child: Stack(
+//           children: [
+//             Form(
+//               key: controller.formKey,
+//               child: SingleChildScrollView(
+//                 padding: EdgeInsets.all(16),
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     _buildChallanToInvoiceSection(),
+//                     // Invoice Details Section
+//                     _buildInvoiceDetailsCard(),
+//
+//                     SizedBox(height: 16),
+//
+//                     // Customer Section
+//                     _buildCustomerSection(),
+//
+//                     SizedBox(height: 16),
+//
+//                     // Items Section
+//                     _buildItemsSection(),
+//
+//                     SizedBox(height: 16),
+//
+//                     // Calculations Section
+//                     _buildCalculationsSection(),
+//
+//                     SizedBox(height: 16),
+//
+//                     // Notes Section
+//                     _buildNotesSection(),
+//
+//                     SizedBox(height: 32),
+//
+//                     // Action Buttons
+//                     _buildActionButtons(),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//             Obx(() => controller.isLoading.value
+//                 ? Container(
+//               color: Colors.black.withOpacity(0.3),
+//               child: Center(
+//                 child: Container(
+//                   width: 80,
+//                   height: 80,
+//                   decoration: BoxDecoration(
+//                     color: Colors.white,
+//                     borderRadius: BorderRadius.circular(12),
+//                     boxShadow: [
+//                       BoxShadow(
+//                         color: Colors.black26,
+//                         blurRadius: 10,
+//                         offset: Offset(0, 4),
+//                       ),
+//                     ],
+//                   ),
+//                   child: Column(
+//                     mainAxisAlignment: MainAxisAlignment.center,
+//                     children: [
+//                       CircularProgressIndicator(
+//                         valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+//                       ),
+//                       SizedBox(height: 8),
+//                       Text(
+//                         'Loading...',
+//                         style: TextStyle(
+//                           fontSize: 12,
+//                           color: Colors.grey.shade700,
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ),
+//             )
+//                 : SizedBox.shrink()),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildInvoiceDetailsCard() {
+//     return Card(
+//       elevation: 4,
+//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//       child: Padding(
+//         padding: EdgeInsets.all(16),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             // Document Type Selection - FIXED
+//             Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   'Invoice Type',
+//                   style: TextStyle(
+//                     fontSize: 16,
+//                     fontWeight: FontWeight.bold,
+//                     color: Colors.blue.shade700,
+//                   ),
+//                 ),
+//                 SizedBox(width: 16),
+//                 // Use Obx only where needed
+//                 _buildDocumentTypeSelection(),
+//               ],
+//             ),
+//             SizedBox(height: 16),
+//
+//             // Use Obx for the title that changes with document type
+//             Obx(() => Text(
+//               '${controller.invoiceType.value.name} Details',
+//               style: TextStyle(
+//                 fontSize: 18,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.blue.shade700,
+//               ),
+//             )),
+//             SizedBox(height: 16),
+//
+//             Row(
+//               children: [
+//                 Expanded(
+//                   child: Obx(() => TextFormField(
+//                     controller: controller.invoiceNumberController,
+//                     decoration: InputDecoration(
+//                       labelText: '${controller.invoiceType.value.name} Number',
+//                       prefixIcon: Icon(controller.invoiceType.value == InvoiceType.invoice
+//                           ? Icons.receipt
+//                           : Icons.description),
+//                       border: OutlineInputBorder(
+//                         borderRadius: BorderRadius.circular(8),
+//                       ),
+//                     ),
+//                     readOnly: true,
+//                   )),
+//                 ),
+//                 SizedBox(width: 16),
+//                 Expanded(
+//                   child: TextFormField(
+//                     controller: controller.dueDateController,
+//                     decoration: InputDecoration(
+//                       labelText: 'Invoice Date',
+//                       prefixIcon: Icon(Icons.calendar_today),
+//                       border: OutlineInputBorder(
+//                         borderRadius: BorderRadius.circular(8),
+//                       ),
+//                     ),
+//                     readOnly: true,
+//                     onTap: controller.selectDueDate,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+// // Separate method for document type selection
+//   Widget _buildDocumentTypeSelection() {
+//     return Row(
+//       children: [
+//         _buildDocumentTypeChip(InvoiceType.invoice, Icons.receipt, Colors.blue),
+//         SizedBox(width: 8),
+//         _buildDocumentTypeChip(InvoiceType.quotation, Icons.description, Colors.orange),
+//       ],
+//     );
+//   }
+//
+//   Widget _buildDocumentTypeChip(InvoiceType type, IconData icon, Color color) {
+//     return Obx(() {
+//       final isSelected = controller.invoiceType.value == type;
+//       return ChoiceChip(
+//         label: Row(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             Icon(icon, size: 16, color: isSelected ? Colors.white : color),
+//             SizedBox(width: 4),
+//             Text(type.name),
+//           ],
+//         ),
+//         selected: isSelected,
+//         onSelected: (_) => controller.setInvoiceType(type),
+//         selectedColor: color,
+//         backgroundColor: color.withOpacity(0.1),
+//         labelStyle: TextStyle(
+//           color: isSelected ? Colors.white : color,
+//           fontWeight: FontWeight.bold,
+//         ),
+//       );
+//     });
+//   }
+//
+//
+//   Widget _buildCustomerSection() {
+//     return Obx((){
+//       // Hide customer section when creating from challan
+//       if (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty) {
+//         return SizedBox.shrink();
+//       }
+//       return Card(
+//         elevation: 4,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//         child: Padding(
+//           padding: EdgeInsets.all(16),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Text(
+//                     'Customer Information',
+//                     style: TextStyle(
+//                       fontSize: 18,
+//                       fontWeight: FontWeight.bold,
+//                       color: Colors.blue.shade700,
+//                     ),
+//                   ),
+//                   Spacer(),
+//                   IconButton(
+//                     onPressed: controller.toggleCustomerForm,
+//                     icon: Icon(
+//                       controller.showCustomerForm.value
+//                           ? Icons.person
+//                           : Icons.person_add,
+//                       color: Colors.blue.shade700,
+//                     ),
+//                     tooltip: controller.showCustomerForm.value
+//                         ? 'Select from existing customers'
+//                         : 'Add new customer manually',
+//                   ),
+//                 ],
+//               ),
+//               SizedBox(height: 16),
+//               // Obx(() {
+//               //   if (controller.customers.isEmpty && !controller.showCustomerForm.value) {
+//               //     return Column(
+//               //       children: [
+//               //         Text(
+//               //           'No customers found. Please add a customer.',
+//               //           style: TextStyle(color: Colors.grey),
+//               //         ),
+//               //         SizedBox(height: 12),
+//               //         ElevatedButton(
+//               //           onPressed: controller.toggleCustomerForm,
+//               //           child: Text('Add New Customer'),
+//               //         ),
+//               //       ],
+//               //     );
+//               //   } else if (!controller.showCustomerForm.value) {
+//               //     return Container(
+//               //       padding: EdgeInsets.symmetric(horizontal: 12),
+//               //       decoration: BoxDecoration(
+//               //         border: Border.all(color: Colors.grey.shade300),
+//               //         borderRadius: BorderRadius.circular(8),
+//               //       ),
+//               //       child: DropdownButton<Map<String, dynamic>>(
+//               //         value: controller.selectedCustomer.value,
+//               //         isExpanded: true,
+//               //         hint: Text('Select Customer'),
+//               //         underline: SizedBox(),
+//               //         items: [
+//               //           DropdownMenuItem(
+//               //             value: null,
+//               //             child: Text('Select Customer'),
+//               //           ),
+//               //           ...controller.customers.map((customer) {
+//               //             return DropdownMenuItem(
+//               //               value: customer,
+//               //               child: Text(customer['name'] ?? 'Unknown Customer'),
+//               //             );
+//               //           }).toList(),
+//               //         ],
+//               //         onChanged: controller.selectCustomer,
+//               //       ),
+//               //     );
+//               //   } else {
+//               //     return Column(
+//               //       children: [
+//               //         SizedBox(height: 12),
+//               //         Text(
+//               //           'Add New Customer',
+//               //           style: TextStyle(
+//               //             fontWeight: FontWeight.bold,
+//               //             color: Colors.orange.shade700,
+//               //           ),
+//               //         ),
+//               //         SizedBox(height: 12),
+//               //         TextFormField(
+//               //           controller: controller.customerNameController,
+//               //           decoration: InputDecoration(
+//               //             labelText: 'Customer Name *',
+//               //             prefixIcon: Icon(Icons.person),
+//               //             border: OutlineInputBorder(
+//               //               borderRadius: BorderRadius.circular(8),
+//               //             ),
+//               //           ),
+//               //           validator: (value) {
+//               //             if (value == null || value.isEmpty) {
+//               //               return 'Please enter customer name';
+//               //             }
+//               //             return null;
+//               //           },
+//               //         ),
+//               //         SizedBox(height: 12),
+//               //         Row(
+//               //           children: [
+//               //             Expanded(
+//               //               child: TextFormField(
+//               //                 controller: controller.customerMobileController,
+//               //                 decoration: InputDecoration(
+//               //                   labelText: 'Mobile Number',
+//               //                   prefixIcon: Icon(Icons.phone),
+//               //                   border: OutlineInputBorder(
+//               //                     borderRadius: BorderRadius.circular(8),
+//               //                   ),
+//               //                 ),
+//               //                 keyboardType: TextInputType.phone,
+//               //               ),
+//               //             ),
+//               //             SizedBox(width: 16),
+//               //             Expanded(
+//               //               child: TextFormField(
+//               //                 controller: controller.customerEmailController,
+//               //                 decoration: InputDecoration(
+//               //                   labelText: 'Email',
+//               //                   prefixIcon: Icon(Icons.email),
+//               //                   border: OutlineInputBorder(
+//               //                     borderRadius: BorderRadius.circular(8),
+//               //                   ),
+//               //                 ),
+//               //                 keyboardType: TextInputType.emailAddress,
+//               //               ),
+//               //             ),
+//               //           ],
+//               //         ),
+//               //         SizedBox(height: 12),
+//               //         TextFormField(
+//               //           controller: controller.customerAddressController,
+//               //           decoration: InputDecoration(
+//               //             labelText: 'Address',
+//               //             prefixIcon: Icon(Icons.location_on),
+//               //             border: OutlineInputBorder(
+//               //               borderRadius: BorderRadius.circular(8),
+//               //             ),
+//               //           ),
+//               //           maxLines: 2,
+//               //         ),
+//               //       ],
+//               //     );
+//               //   }
+//               // }),
+//               Obx(() {
+//                 if (controller.customers.isEmpty && !controller.showCustomerForm.value) {
+//                   return Column(
+//                     children: [
+//                       Text(
+//                         'No customers found. Please add a customer.',
+//                         style: TextStyle(color: Colors.grey),
+//                       ),
+//                       SizedBox(height: 12),
+//                       ElevatedButton(
+//                         onPressed: controller.toggleCustomerForm,
+//                         child: Text('Add New Customer'),
+//                       ),
+//                     ],
+//                   );
+//                 } else if (!controller.showCustomerForm.value) {
+//                   return Container(
+//                     padding: EdgeInsets.symmetric(horizontal: 12),
+//                     decoration: BoxDecoration(
+//                       border: Border.all(color: Colors.grey.shade300),
+//                       borderRadius: BorderRadius.circular(8),
+//                     ),
+//                     child:
+//                     DropdownButton<String?>(
+//                       value: controller.selectedCustomerId.value.isEmpty
+//                           ? null
+//                           : controller.selectedCustomerId.value,
+//                       isExpanded: true,
+//                       hint: Text('Select Customer'),
+//                       underline: SizedBox(),
+//                       items: [
+//                         DropdownMenuItem<String?>(
+//                           value: null,
+//                           child: Text('Select Customer'),
+//                         ),
+//                         ...controller.customers.map((customer) {
+//                           return DropdownMenuItem<String?>(
+//                             value: customer['id']?.toString(),
+//                             child: Text(customer['name'] ?? 'Unknown Customer'),
+//                           );
+//                         }).toList(),
+//                       ],
+//                       onChanged: (customerId) {
+//                         if (customerId == null || customerId.isEmpty) {
+//                           controller.selectCustomer(null);
+//                         } else {
+//                           final customer = controller.customers
+//                               .firstWhereOrNull((c) => c['id'] == customerId);
+//                           controller.selectCustomer(customer);
+//                         }
+//                       },
+//                     )
+//                   );
+//                 } else {
+//                   return Column(
+//                     children: [
+//                       SizedBox(height: 12),
+//                       Text(
+//                         'Add New Customer',
+//                         style: TextStyle(
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.orange.shade700,
+//                         ),
+//                       ),
+//                       SizedBox(height: 12),
+//                       TextFormField(
+//                         controller: controller.customerNameController,
+//                         decoration: InputDecoration(
+//                           labelText: 'Customer Name *',
+//                           prefixIcon: Icon(Icons.person),
+//                           border: OutlineInputBorder(
+//                             borderRadius: BorderRadius.circular(8),
+//                           ),
+//                         ),
+//                         validator: (value) {
+//                           if (value == null || value.isEmpty) {
+//                             return 'Please enter customer name';
+//                           }
+//                           return null;
+//                         },
+//                       ),
+//                       SizedBox(height: 12),
+//                       Row(
+//                         children: [
+//                           Expanded(
+//                             child: TextFormField(
+//                               controller: controller.customerMobileController,
+//                               decoration: InputDecoration(
+//                                 labelText: 'Mobile Number',
+//                                 prefixIcon: Icon(Icons.phone),
+//                                 border: OutlineInputBorder(
+//                                   borderRadius: BorderRadius.circular(8),
+//                                 ),
+//                               ),
+//                               keyboardType: TextInputType.phone,
+//                             ),
+//                           ),
+//                           SizedBox(width: 16),
+//                           Expanded(
+//                             child: TextFormField(
+//                               controller: controller.customerEmailController,
+//                               decoration: InputDecoration(
+//                                 labelText: 'Email',
+//                                 prefixIcon: Icon(Icons.email),
+//                                 border: OutlineInputBorder(
+//                                   borderRadius: BorderRadius.circular(8),
+//                                 ),
+//                               ),
+//                               keyboardType: TextInputType.emailAddress,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                       SizedBox(height: 12),
+//                       TextFormField(
+//                         controller: controller.customerAddressController,
+//                         decoration: InputDecoration(
+//                           labelText: 'Address',
+//                           prefixIcon: Icon(Icons.location_on),
+//                           border: OutlineInputBorder(
+//                             borderRadius: BorderRadius.circular(8),
+//                           ),
+//                         ),
+//                         maxLines: 2,
+//                       ),
+//                     ],
+//                   );
+//                 }
+//               }),
+//
+//             ],
+//           ),
+//         ),
+//       );
+//     }
+//
+//     );
+//   }
+//
+//   Widget _buildItemsSection() {
+//     return Obx(() {
+//       final isFromChallan = controller.createFromChallan.value &&
+//           controller.selectedCustomerForInvoice.value.isNotEmpty;
+//
+//       return Card(
+//         elevation: 4,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//         child: Padding(
+//           padding: EdgeInsets.all(16),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Text(
+//                     'Invoice Items',
+//                     style: TextStyle(
+//                       fontSize: 18,
+//                       fontWeight: FontWeight.bold,
+//                       color: Colors.blue.shade700,
+//                     ),
+//                   ),
+//                   Spacer(),
+//                   if (isFromChallan)
+//                     Chip(
+//                       label: Text('From Challan', style: TextStyle(color: Colors.white)),
+//                       backgroundColor: Colors.purple.shade700,
+//                     )
+//                   else
+//                     Obx(() => Text(
+//                       'Total: ₹${controller.totalAmount.value.toStringAsFixed(2)}',
+//                       style: TextStyle(
+//                         fontWeight: FontWeight.bold,
+//                         color: Colors.green.shade700,
+//                       ),
+//                     )),
+//                 ],
+//               ),
+//               SizedBox(height: 16),
+//
+//               // Items list header
+//               Container(
+//                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+//                 decoration: BoxDecoration(
+//                   color: Colors.blue.shade50,
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//                 child: Row(
+//                   children: [
+//                     Expanded(
+//                       flex: 3,
+//                       child: Text(
+//                         'Item Description',
+//                         style: TextStyle(
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.blue.shade800,
+//                         ),
+//                       ),
+//                     ),
+//                     Expanded(
+//                       flex: 2,
+//                       child: Text(
+//                         'Price (₹)',
+//                         style: TextStyle(
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.blue.shade800,
+//                         ),
+//                         textAlign: TextAlign.center,
+//                       ),
+//                     ),
+//                     Expanded(
+//                       flex: 1,
+//                       child: Text(
+//                         'Qty',
+//                         style: TextStyle(
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.blue.shade800,
+//                         ),
+//                         textAlign: TextAlign.end,
+//                       ),
+//                     ),
+//
+//                     if (!isFromChallan) SizedBox(width: 40), // Space for delete button
+//                   ],
+//                 ),
+//               ),
+//               SizedBox(height: 12),
+//
+//               Obx(() => Column(
+//                 children: [
+//                   // Display message if no items available
+//                   if (controller.itemList.isEmpty && !isFromChallan)
+//                     Container(
+//                       padding: EdgeInsets.all(16),
+//                       margin: EdgeInsets.only(bottom: 16),
+//                       decoration: BoxDecoration(
+//                         color: Colors.orange.shade50,
+//                         borderRadius: BorderRadius.circular(8),
+//                         border: Border.all(color: Colors.orange.shade200),
+//                       ),
+//                       child: Row(
+//                         children: [
+//                           Icon(Icons.info, color: Colors.orange.shade700),
+//                           SizedBox(width: 12),
+//                           Expanded(
+//                             child: Text(
+//                               'No items available. Please add items in your inventory first.',
+//                               style: TextStyle(color: Colors.orange.shade800),
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//
+//                   /// Invoice items list
+//                   ...controller.invoiceItems.asMap().entries.map((entry) {
+//                     int index = entry.key;
+//                     InvoiceItem item = entry.value;
+//
+//                     return Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         // Header row
+//                         Padding(
+//                           padding: const EdgeInsets.symmetric(vertical: 6),
+//                           child: Row(
+//                             children: [
+//                               const Expanded(flex: 3, child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
+//                               const Expanded(flex: 2, child: Text('Price', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+//                               const Expanded(flex: 2, child: Text('Qty', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+//
+//                             // Delete button (just at the end)
+//                             IconButton(
+//                               onPressed: () => controller.removeItem(index),
+//                               icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+//                             ),
+//                             ],
+//                           ),
+//                         ),
+//                         Row(
+//                           crossAxisAlignment: CrossAxisAlignment.center,
+//                           children: [
+//                             // Item Dropdown
+//                             Expanded(
+//                               flex: 3,
+//                               child: Container(
+//                                 height: 40,
+//                                 padding: EdgeInsets.symmetric(horizontal: 8),
+//                                 decoration: BoxDecoration(
+//                                   border: Border.all(color: Colors.grey.shade300),
+//                                   borderRadius: BorderRadius.circular(6),
+//                                 ),
+//                                 child: DropdownButton<Item>(
+//                                   value: controller.itemList.firstWhereOrNull((e) => e.itemId == item.itemId),
+//                                   isExpanded: true,
+//                                   underline: SizedBox(),
+//                                   hint: Text('Select Item', style: TextStyle(fontSize: 14)),
+//                                   items: controller.itemList.map((i) {
+//                                     return DropdownMenuItem(
+//                                       value: i,
+//                                       child: Text(i.itemName, style: TextStyle(fontSize: 14)),
+//                                     );
+//                                   }).toList(),
+//                                   onChanged: (selectedItem) {
+//                                     if (selectedItem != null) controller.selectRemoteItemForIndex(index, selectedItem);
+//                                   },
+//                                 ),
+//                               ),
+//                             ),
+//
+//                             SizedBox(width: 6),
+//
+//                             // Price Field
+//                             Expanded(
+//                               flex: 2,
+//                               child: TextFormField(
+//                                 controller: controller.getPriceController(index, initialValue: item.rate),
+//                                 textAlign: TextAlign.center,
+//                                 decoration: InputDecoration(
+//                                   hintText: "0.00",
+//                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+//                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+//                                 ),
+//                                 keyboardType: TextInputType.number,
+//                                 onChanged: (v) {
+//                                   final price = double.tryParse(v);
+//                                   if (price != null) controller.updateItem(index, rate: price);
+//                                 },
+//                               ),
+//                             ),
+//
+//                             SizedBox(width: 6),
+//
+//                             // Qty Field
+//                             Expanded(
+//                               flex: 2,
+//                               child: TextFormField(
+//                                 initialValue: item.quantity.toString(),
+//                                 textAlign: TextAlign.center,
+//                                 decoration: InputDecoration(
+//                                   hintText: "1",
+//                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+//                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+//                                 ),
+//                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+//                                 onChanged: (v) {
+//                                   double? qty = double.tryParse(v);
+//                                   if (qty != null && qty > 0) controller.updateItem(index, quantity: qty);
+//                                 },
+//                               ),
+//                             ),
+//
+//
+//                           ],
+//                         ),
+//                         ],
+//                     );
+//
+//                   }).toList(),
+//
+//
+//
+//                   /// Add item button - hide when from challan
+//                   if (!isFromChallan) ...[
+//                     SizedBox(height: 16),
+//                     Container(
+//                       width: double.infinity,
+//                       child: ElevatedButton.icon(
+//                         onPressed: controller.addNewItem,
+//                         icon: Icon(Icons.add_circle_outline, size: 20),
+//                         label: Text('Add Another Item'),
+//                         style: ElevatedButton.styleFrom(
+//                           backgroundColor: Colors.blue.shade600,
+//                           foregroundColor: Colors.white,
+//                           padding: EdgeInsets.symmetric(vertical: 12),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(8),
+//                           ),
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//
+//                   // Summary
+//                   SizedBox(height: 16),
+//                   Container(
+//                     padding: EdgeInsets.all(12),
+//                     decoration: BoxDecoration(
+//                       color: Colors.green.shade50,
+//                       borderRadius: BorderRadius.circular(8),
+//                       border: Border.all(color: Colors.green.shade200),
+//                     ),
+//                     child: Row(
+//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                       children: [
+//                         Text(
+//                           'Total Items:',
+//                           style: TextStyle(
+//                             fontWeight: FontWeight.bold,
+//                             color: Colors.green.shade800,
+//                           ),
+//                         ),
+//                         Text(
+//                           '${controller.invoiceItems.length}',
+//                           style: TextStyle(
+//                             fontWeight: FontWeight.bold,
+//                             color: Colors.green.shade800,
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                 ],
+//               )),
+//             ],
+//           ),
+//         ),
+//       );
+//     });
+//   }
+//
+//   Widget _buildCalculationsSection() {
+//     return Card(
+//       elevation: 4,
+//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//       child: Padding(
+//         padding: const EdgeInsets.all(16),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             /// Title
+//             Text(
+//               'Calculations',
+//               style: TextStyle(
+//                 fontSize: 18,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.blue.shade700,
+//               ),
+//             ),
+//             const SizedBox(height: 16),
+//
+//             /// Tax + Discount in one row
+//             // Row(
+//             //   children: [
+//             //     /// Tax Rate (40%)
+//             //     Expanded(
+//             //       flex: 4, // 40%
+//             //       child: TextFormField(
+//             //         decoration: InputDecoration(
+//             //           labelText: 'Tax Rate (%)',
+//             //           prefixIcon: const Icon(Icons.percent, size: 18,),
+//             //           prefixIconConstraints: const BoxConstraints(
+//             //             minWidth: 30,  // shrink the space
+//             //             minHeight: 30,
+//             //           ),
+//             //           border: OutlineInputBorder(
+//             //             borderRadius: BorderRadius.circular(8),
+//             //           ),
+//             //         ),
+//             //         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+//             //         onChanged: (value) {
+//             //           final rate = double.tryParse(value);
+//             //           if (rate != null && rate >= 0) {
+//             //             controller.updateTaxRate(rate);
+//             //           }
+//             //         },
+//             //       ),
+//             //     ),
+//             //     const SizedBox(width: 6),
+//             //
+//             //     /// Discount (60%)
+//             //     Expanded(
+//             //       flex: 6, // 60%
+//             //       child: TextFormField(
+//             //         decoration: InputDecoration(
+//             //           labelText: 'Discount',
+//             //           //prefixIcon: const Icon(Icons.discount),
+//             //           border: OutlineInputBorder(
+//             //             borderRadius: BorderRadius.circular(8),
+//             //           ),
+//             //           suffixIcon: Obx(
+//             //                 () => DropdownButton<String>(
+//             //               value: controller.discountType.value,
+//             //               underline: const SizedBox(),
+//             //               items: const [
+//             //                 DropdownMenuItem(value: 'amount', child: Text('₹')),
+//             //                 DropdownMenuItem(value: 'percentage', child: Text('%')),
+//             //               ],
+//             //               onChanged: (value) {
+//             //                 if (value != null) {
+//             //                   controller.updateDiscount(
+//             //                     controller.discountAmount.value,
+//             //                     value,
+//             //                   );
+//             //                 }
+//             //               },
+//             //             ),
+//             //           ),
+//             //         ),
+//             //         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+//             //         onChanged: (value) {
+//             //           final discount = double.tryParse(value);
+//             //           if (discount != null && discount >= 0) {
+//             //             controller.updateDiscount(
+//             //               discount,
+//             //               controller.discountType.value,
+//             //             );
+//             //           }
+//             //         },
+//             //       ),
+//             //     ),
+//             //   ],
+//             // ),
+//
+//
+//
+//             /// Totals Section
+//             Obx(
+//                   () => Column(
+//                 children: [
+//                   _buildTotalRow('Subtotal', controller.subtotal.value),
+//
+//     if (AppConstants.withGST.value) ...[
+//                   _buildTotalRow('CGST', controller.gstAmount.value / 2),
+//                   _buildTotalRow('SGST', controller.gstAmount.value / 2),
+//                  ],
+//                    Divider(),
+//                   _buildTotalRow(
+//                     'Total Amount',
+//                     controller.totalAmount.value,
+//                     isTotal: true,
+//                   ),
+//                 ],
+//               ),
+//             ),
+//
+//             const SizedBox(height: 20),
+//             const Divider(),
+//             /// Payment Status
+//             Text("Payment Staus"),
+//             Obx(
+//                   () => Container(
+//                 padding: const EdgeInsets.symmetric(horizontal: 12),
+//                 decoration: BoxDecoration(
+//                   border: Border.all(color: Colors.grey.shade300),
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//                 child: DropdownButton<String>(
+//                   value: controller.paymentStatus.value,
+//                   isExpanded: true,
+//                   underline: const SizedBox(),
+//                   items: const [
+//                     DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+//                     DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+//                     DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+//                   ],
+//                   onChanged: (value) {
+//                     if (value != null) {
+//                       controller.updatePaymentStatus(value);
+//                     }
+//                   },
+//                 ),
+//               ),
+//             ),
+//
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//
+//   Widget _buildTotalRow(String label, double amount, {bool isDiscount = false, bool isTotal = false}) {
+//     return Padding(
+//       padding: EdgeInsets.symmetric(vertical: 4),
+//       child: Row(
+//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//         children: [
+//           Text(
+//             label,
+//             style: TextStyle(
+//               fontSize: isTotal ? 18 : 16,
+//               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+//               color: isTotal ? Colors.blue.shade700 : Colors.black87,
+//             ),
+//           ),
+//           Text(
+//             '${isDiscount ? '-' : ''}₹ ${amount.toStringAsFixed(2)}',
+//             style: TextStyle(
+//               fontSize: isTotal ? 18 : 16,
+//               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+//               color: isDiscount ? Colors.red : (isTotal ? Colors.blue.shade700 : Colors.black87),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   Widget _buildNotesSection() {
+//     return Card(
+//       elevation: 4,
+//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//       child: Padding(
+//         padding: EdgeInsets.all(16),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text(
+//               'Additional Notes',
+//               style: TextStyle(
+//                 fontSize: 18,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.blue.shade700,
+//               ),
+//             ),
+//             SizedBox(height: 16),
+//             TextFormField(
+//               controller: controller.notesController,
+//               decoration: InputDecoration(
+//                 hintText: 'Add any additional notes or terms...',
+//                 border: OutlineInputBorder(
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//               ),
+//               maxLines: 4,
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildActionButtons() {
+//     return Obx(() => Row(
+//       children: [
+//         // Cancel button
+//         Expanded(
+//           flex: 2,
+//           child: OutlinedButton(
+//             onPressed: controller.isLoading.value ? null : () => Get.back(),
+//             style: OutlinedButton.styleFrom(
+//               padding: EdgeInsets.symmetric(vertical: 12),
+//             ),
+//             child: Text('Cancel'),
+//           ),
+//         ),
+//         SizedBox(width: 8),
+//
+//         /// Save Draft button
+//         // Expanded(
+//         //   flex: 3,
+//         //   child: ElevatedButton(
+//         //     onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: true),
+//         //     style: ElevatedButton.styleFrom(
+//         //       backgroundColor: Colors.grey.shade600,
+//         //       padding: EdgeInsets.symmetric(vertical: 12),
+//         //     ),
+//         //     child: Text('Save Draft'),
+//         //   ),
+//         // ),
+//         // SizedBox(width: 8),
+//
+//         /// Main action button
+//         Expanded(
+//           flex: 3,
+//           child: ElevatedButton(
+//             onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: false),
+//             style: ElevatedButton.styleFrom(
+//               backgroundColor: controller.invoiceType.value == InvoiceType.invoice
+//                   ? Colors.blue.shade700
+//                   : Colors.orange.shade700,
+//               padding: EdgeInsets.symmetric(vertical: 12),
+//             ),
+//             child: Obx(() => Text(
+//               controller.invoiceType.value == InvoiceType.invoice
+//                   ? 'Create Invoice'
+//                   : 'Create Quotation',
+//               style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.whiteColor),
+//             )),
+//           ),
+//         ),
+//       ],
+//     ));
+//   }
+//
+//   /// In your _buildChallanToInvoiceSection method
+//   Widget _buildChallanToInvoiceSection() {
+//     return Obx(() {
+//       return Card(
+//         elevation: 4,
+//         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//         child: Padding(
+//           padding: EdgeInsets.all(16),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               // Checkbox to toggle create from challan
+//               Row(
+//                 children: [
+//                   Checkbox(
+//                     value: controller.createFromChallan.value,
+//                     onChanged: (value) {
+//                       controller.createFromChallan.value = value ?? false;
+//                       if (value == true) {
+//                         // Load challans when checkbox is checked
+//                         controller.loadChallansForInvoice();
+//                       } else {
+//                         // Clear selection when unchecked
+//                         controller.selectedCustomerForInvoice.value = '';
+//                         controller.selectedCustomerChallans.clear();
+//                       }
+//                     },
+//                   ),
+//                   Text(
+//                     'Create Invoice from Challans',
+//                     style: TextStyle(
+//                       fontSize: 16,
+//                       fontWeight: FontWeight.bold,
+//                       color: Colors.purple.shade700,
+//                     ),
+//                   ),
+//                   Spacer(),
+//                   if (controller.createFromChallan.value)
+//                     IconButton(
+//                       onPressed: controller.loadChallansForInvoice,
+//                       icon: Icon(Icons.refresh),
+//                       color: Colors.purple.shade700,
+//                     ),
+//                 ],
+//               ),
+//
+//               // Show challan section only when checkbox is checked
+//               if (controller.createFromChallan.value) ...[
+//                 SizedBox(height: 16),
+//
+//                 // Date Range Picker
+//                 Text(
+//                   'Select Date Range:',
+//                   style: TextStyle(
+//                     fontWeight: FontWeight.bold,
+//                     color: Colors.purple.shade700,
+//                   ),
+//                 ),
+//                 SizedBox(height: 8),
+//                 Row(
+//                   children: [
+//                     Expanded(
+//                       child: TextFormField(
+//                         controller: controller.fromDateController,
+//                         decoration: InputDecoration(
+//                           labelText: 'From Date',
+//                           prefixIcon: Icon(Icons.calendar_today),
+//                           border: OutlineInputBorder(
+//                             borderRadius: BorderRadius.circular(8),
+//                           ),
+//                         ),
+//                         readOnly: true,
+//                         onTap: () => controller.selectFromDate(Get.context!),
+//                       ),
+//                     ),
+//                     SizedBox(width: 16),
+//                     Expanded(
+//                       child: TextFormField(
+//                         controller: controller.toDateController,
+//                         decoration: InputDecoration(
+//                           labelText: 'To Date',
+//                           prefixIcon: Icon(Icons.calendar_today),
+//                           border: OutlineInputBorder(
+//                             borderRadius: BorderRadius.circular(8),
+//                           ),
+//                         ),
+//                         readOnly: true,
+//                         onTap: () => controller.selectToDate(Get.context!),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//                 SizedBox(height: 16),
+//
+//                 if (controller.allChallans.isEmpty)
+//                   ElevatedButton(
+//                     onPressed: controller.loadChallansForInvoice,
+//                     child: Text('Load Challans'),
+//                     style: ElevatedButton.styleFrom(
+//                       backgroundColor: Colors.purple.shade700,
+//                       foregroundColor: Colors.white,
+//                     ),
+//                   )
+//                 else
+//                   Column(
+//                     children: [
+//                       // Customer dropdown
+//                       Container(
+//                         padding: EdgeInsets.symmetric(horizontal: 12),
+//                         decoration: BoxDecoration(
+//                           border: Border.all(color: Colors.grey.shade300),
+//                           borderRadius: BorderRadius.circular(8),
+//                         ),
+//                         child: DropdownButton<String>(
+//                           value: controller.selectedCustomerForInvoice.value.isEmpty
+//                               ? null
+//                               : controller.selectedCustomerForInvoice.value,
+//                           isExpanded: true,
+//                           hint: Text('Select Customer'),
+//                           underline: SizedBox(),
+//                           items: [
+//                             DropdownMenuItem(
+//                               value: null,
+//                               child: Text('Select Customer'),
+//                             ),
+//
+//                             ...controller.customerNames.map((customerName) {
+//                               final allCount = controller.allChallans
+//                                   .where((challan) => challan.customerName == customerName)
+//                                   .length;
+//
+//                               final inProgressCount = controller.allChallans
+//                                   .where((challan) =>
+//                               challan.customerName == customerName &&
+//                                   challan.status?.toLowerCase() == "inprogress")
+//                                   .length;
+//
+//                               return DropdownMenuItem(
+//                                 value: customerName,
+//                                 child: Column(
+//                                   crossAxisAlignment: CrossAxisAlignment.start,
+//                                   children: [
+//                                     Text(
+//                                       customerName,
+//                                       style: TextStyle(fontWeight: FontWeight.bold),
+//                                     ),
+//                                     Text(
+//                                       '$inProgressCount  challan(s)',
+//                                       style: TextStyle(
+//                                         fontSize: 12,
+//                                         color: Colors.grey.shade600,
+//                                       ),
+//                                     ),
+//                                   ],
+//                                 ),
+//                               );
+//                             }).toList(),
+//
+//                           ],
+//                           onChanged: controller.selectCustomerForInvoice,
+//                         ),
+//                       ),
+//
+//                       // Selected customer challans info
+//                       if (controller.selectedCustomerForInvoice.value.isNotEmpty)
+//                         Column(
+//                           children: [
+//                             SizedBox(height: 16),
+//                             Text(
+//                               'Challans to be combined:',
+//                               style: TextStyle(
+//                                 fontWeight: FontWeight.bold,
+//                                 color: Colors.green.shade700,
+//                               ),
+//                             ),
+//                             SizedBox(height: 8),
+//                             ...controller.selectedCustomerChallans.map((challan) {
+//                               return ListTile(
+//                                 contentPadding: EdgeInsets.zero,
+//                                 leading: Icon(Icons.receipt, size: 20, color: Colors.blue),
+//                                 title: Text(
+//                                   'Challan #${challan.challanId}',
+//                                   style: TextStyle(fontSize: 14),
+//                                 ),
+//                                 subtitle: Text(
+//                                   DateFormat('MMM dd, yyyy').format(
+//                                       challan.challanDate ?? DateTime.now()
+//                                   ),
+//                                   style: TextStyle(fontSize: 12, color: Colors.grey),
+//                                 ),
+//                               );
+//                             }).toList(),
+//
+//                             SizedBox(height: 12),
+//                             Container(
+//                               padding: EdgeInsets.all(12),
+//                               decoration: BoxDecoration(
+//                                 color: Colors.green.shade50,
+//                                 borderRadius: BorderRadius.circular(8),
+//                                 border: Border.all(color: Colors.green.shade200),
+//                               ),
+//                               child: Row(
+//                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                                 children: [
+//                                   Text(
+//                                     'Total Items:',
+//                                     style: TextStyle(fontWeight: FontWeight.bold),
+//                                   ),
+//                                   Text(
+//                                     '${controller.invoiceItems.length}',
+//                                     style: TextStyle(
+//                                       fontWeight: FontWeight.bold,
+//                                       color: Colors.green.shade700,
+//                                     ),
+//                                   ),
+//                                 ],
+//                               ),
+//                             ),
+//                           ],
+//                         ),
+//                     ],
+//                   ),
+//               ],
+//             ],
+//           ),
+//         ),
+//       );
+//     });
+//   }
+// }
 
 class NewInvoiceScreen extends GetView<NewInvoiceController> {
   static const String pageId = '/NewInvoiceScreen';
@@ -26,11 +1318,18 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('New Invoice'),
-        backgroundColor: Colors.blue.shade700,
+        title: Obx(() => Text(
+          controller.isEditMode.value ? 'Edit Invoice' : 'New Invoice',
+        )),
+        backgroundColor: controller.isEditMode.value
+            ? Colors.orange.shade700
+            : Colors.blue.shade700,
         foregroundColor: Colors.white,
         actions: [
-
+          Obx(() => controller.isEditMode.value
+              ? _buildEditModeActions()
+              : _buildCreateModeActions()
+          ),
         ],
       ),
       body: SafeArea(
@@ -43,33 +1342,27 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildChallanToInvoiceSection(),
-                    // Invoice Details Section
+                    Obx(() {
+                      if (!controller.isEditMode.value) {
+                        return Column(
+                          children: [
+                            _buildChallanToInvoiceSection(),
+                            SizedBox(height: 16),
+                          ],
+                        );
+                      }
+                      return SizedBox.shrink();
+                    }),
                     _buildInvoiceDetailsCard(),
-
                     SizedBox(height: 16),
-        
-                    // Customer Section
                     _buildCustomerSection(),
-        
                     SizedBox(height: 16),
-        
-                    // Items Section
                     _buildItemsSection(),
-        
                     SizedBox(height: 16),
-        
-                    // Calculations Section
                     _buildCalculationsSection(),
-        
                     SizedBox(height: 16),
-        
-                    // Notes Section
                     _buildNotesSection(),
-        
                     SizedBox(height: 32),
-        
-                    // Action Buttons
                     _buildActionButtons(),
                   ],
                 ),
@@ -97,11 +1390,15 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            controller.isEditMode.value
+                                ? Colors.orange.shade700
+                                : Colors.blue.shade700
+                        ),
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Loading...',
+                        controller.isEditMode.value ? 'Updating...' : 'Loading...',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade700,
@@ -119,6 +1416,55 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     );
   }
 
+  Widget _buildEditModeActions() {
+    return Row(
+      children: [
+        IconButton(
+          icon: Icon(Icons.delete, color: Colors.white),
+          onPressed: () => _showDeleteConfirmation(),
+          tooltip: 'Delete Invoice',
+        ),
+        SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildCreateModeActions() {
+    return Obx(() => controller.isLoading.value
+        ? Padding(
+      padding: EdgeInsets.all(16),
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      ),
+    )
+        : Row(
+      children: [
+        TextButton(
+          onPressed: () => controller.saveInvoice(isDraft: true),
+          child: Text(
+            'Save Draft',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        TextButton(
+          onPressed: () => controller.saveInvoice(isDraft: false),
+          child: Text(
+            'Create Invoice',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ));
+  }
+
   Widget _buildInvoiceDetailsCard() {
     return Card(
       elevation: 4,
@@ -128,35 +1474,63 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Document Type Selection - FIXED
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  'Invoice Type',
+                Obx(() => Text(
+                  controller.isEditMode.value ? 'Invoice Details' : '${controller.invoiceType.value.name} Details',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+                    color: controller.isEditMode.value
+                        ? Colors.orange.shade700
+                        : Colors.blue.shade700,
                   ),
+                )),
+                Spacer(),
+                Obx(() => controller.isEditMode.value
+                    ? Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Text(
+                    'Edit Mode',
+                    style: TextStyle(
+                      color: Colors.orange.shade800,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+                    : SizedBox()
                 ),
-                SizedBox(width: 16),
-                // Use Obx only where needed
-                _buildDocumentTypeSelection(),
               ],
             ),
             SizedBox(height: 16),
 
-            // Use Obx for the title that changes with document type
-            Obx(() => Text(
-              '${controller.invoiceType.value.name} Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
-              ),
-            )),
-            SizedBox(height: 16),
+            Obx(() {
+              if (!controller.isEditMode.value && !controller.createFromChallan.value) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Invoice Type',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    _buildDocumentTypeSelection(),
+                    SizedBox(height: 16),
+                  ],
+                );
+              }
+              return SizedBox();
+            }),
 
             Row(
               children: [
@@ -164,15 +1538,18 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                   child: Obx(() => TextFormField(
                     controller: controller.invoiceNumberController,
                     decoration: InputDecoration(
-                      labelText: '${controller.invoiceType.value.name} Number',
-                      prefixIcon: Icon(controller.invoiceType.value == InvoiceType.invoice
-                          ? Icons.receipt
-                          : Icons.description),
+                      labelText: controller.isEditMode.value
+                          ? 'Invoice Number'
+                          : '${controller.invoiceType.value.name} Number',
+                      prefixIcon: Icon(Icons.receipt_long),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     readOnly: true,
+                    style: TextStyle(
+                      color: controller.isEditMode.value ? Colors.grey.shade600 : Colors.black87,
+                    ),
                   )),
                 ),
                 SizedBox(width: 16),
@@ -192,13 +1569,41 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 ),
               ],
             ),
+
+            Obx(() {
+              if (controller.isEditMode.value && controller.originalInvoiceData != null) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 12),
+                    Divider(),
+                    Text(
+                      'Original Invoice Information:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Date: ${controller.formatOriginalInvoiceDate()}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return SizedBox();
+            }),
           ],
         ),
       ),
     );
   }
 
-// Separate method for document type selection
   Widget _buildDocumentTypeSelection() {
     return Row(
       children: [
@@ -233,13 +1638,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     });
   }
 
-
   Widget _buildCustomerSection() {
-    return Obx((){
-      // Hide customer section when creating from challan
+    return Obx(() {
       if (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty) {
         return SizedBox.shrink();
       }
+
       return Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -255,149 +1659,209 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
+                      color: controller.isEditMode.value
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700,
                     ),
                   ),
                   Spacer(),
-                  IconButton(
+                  Obx(() => !controller.isEditMode.value ? IconButton(
                     onPressed: controller.toggleCustomerForm,
                     icon: Icon(
                       controller.showCustomerForm.value
                           ? Icons.person
                           : Icons.person_add,
-                      color: Colors.blue.shade700,
+                      color: controller.isEditMode.value
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700,
                     ),
                     tooltip: controller.showCustomerForm.value
                         ? 'Select from existing customers'
                         : 'Add new customer manually',
-                  ),
+                  ) : SizedBox()),
                 ],
               ),
               SizedBox(height: 16),
+
               Obx(() {
-                if (controller.customers.isEmpty && !controller.showCustomerForm.value) {
-                  return Column(
-                    children: [
-                      Text(
-                        'No customers found. Please add a customer.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: controller.toggleCustomerForm,
-                        child: Text('Add New Customer'),
-                      ),
-                    ],
-                  );
-                } else if (!controller.showCustomerForm.value) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<Map<String, dynamic>>(
-                      value: controller.selectedCustomer.value,
-                      isExpanded: true,
-                      hint: Text('Select Customer'),
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text('Select Customer'),
-                        ),
-                        ...controller.customers.map((customer) {
-                          return DropdownMenuItem(
-                            value: customer,
-                            child: Text(customer['name'] ?? 'Unknown Customer'),
-                          );
-                        }).toList(),
-                      ],
-                      onChanged: controller.selectCustomer,
-                    ),
-                  );
+                if (controller.isEditMode.value) {
+                  return _buildEditModeCustomerInfo();
                 } else {
-                  return Column(
-                    children: [
-                      SizedBox(height: 12),
-                      Text(
-                        'Add New Customer',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade700,
+                  if (controller.customers.isEmpty && !controller.showCustomerForm.value) {
+                    return Column(
+                      children: [
+                        Text(
+                          'No customers found. Please add a customer.',
+                          style: TextStyle(color: Colors.grey),
                         ),
+                        SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: controller.toggleCustomerForm,
+                          child: Text('Add New Customer'),
+                        ),
+                      ],
+                    );
+                  } else if (!controller.showCustomerForm.value) {
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      SizedBox(height: 12),
-                      TextFormField(
-                        controller: controller.customerNameController,
-                        decoration: InputDecoration(
-                          labelText: 'Customer Name *',
-                          prefixIcon: Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      child: DropdownButton<String?>(
+                        value: controller.selectedCustomerId.value.isEmpty
+                            ? null
+                            : controller.selectedCustomerId.value,
+                        isExpanded: true,
+                        hint: Text('Select Customer'),
+                        underline: SizedBox(),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Select Customer'),
                           ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter customer name';
+                          ...controller.customers.map((customer) {
+                            return DropdownMenuItem<String?>(
+                              value: customer['id']?.toString(),
+                              child: Text(customer['name'] ?? 'Unknown Customer'),
+                            );
+                          }).toList(),
+                        ],
+                        onChanged: (customerId) {
+                          if (customerId == null || customerId.isEmpty) {
+                            controller.selectCustomer(null);
+                          } else {
+                            final customer = controller.customers
+                                .firstWhereOrNull((c) => c['id'] == customerId);
+                            controller.selectCustomer(customer);
                           }
-                          return null;
                         },
                       ),
-                      SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: controller.customerMobileController,
-                              decoration: InputDecoration(
-                                labelText: 'Mobile Number',
-                                prefixIcon: Icon(Icons.phone),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              keyboardType: TextInputType.phone,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: controller.customerEmailController,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.email),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12),
-                      TextFormField(
-                        controller: controller.customerAddressController,
-                        decoration: InputDecoration(
-                          labelText: 'Address',
-                          prefixIcon: Icon(Icons.location_on),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  );
+                    );
+                  } else {
+                    return _buildNewCustomerForm();
+                  }
                 }
               }),
             ],
           ),
         ),
       );
-    }
+    });
+  }
 
+  Widget _buildEditModeCustomerInfo() {
+    return Column(
+      children: [
+        if (controller.originalInvoiceData != null) ...[
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current Customer:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text('Name: ${controller.customerNameController.text}'),
+                Text('Phone: ${controller.customerMobileController.text}'),
+                Text('Email: ${controller.customerEmailController.text}'),
+                if (controller.customerAddressController.text.isNotEmpty)
+                  Text('Address: ${controller.customerAddressController.text}'),
+              ],
+            ),
+          ),
+          SizedBox(height: 12),
+        ],
+        _buildNewCustomerForm(),
+      ],
+    );
+  }
+
+  Widget _buildNewCustomerForm() {
+    return Column(
+      children: [
+        if (!controller.isEditMode.value) ...[
+          SizedBox(height: 12),
+          Text(
+            'Add New Customer',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange.shade700,
+            ),
+          ),
+          SizedBox(height: 12),
+        ],
+        TextFormField(
+          controller: controller.customerNameController,
+          decoration: InputDecoration(
+            labelText: 'Customer Name *',
+            prefixIcon: Icon(Icons.person),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter customer name';
+            }
+            return null;
+          },
+        ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: controller.customerMobileController,
+                decoration: InputDecoration(
+                  labelText: 'Mobile Number',
+                  prefixIcon: Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                controller: controller.customerEmailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        TextFormField(
+          controller: controller.customerAddressController,
+          decoration: InputDecoration(
+            labelText: 'Address',
+            prefixIcon: Icon(Icons.location_on),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          maxLines: 2,
+        ),
+      ],
     );
   }
 
@@ -421,7 +1885,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
+                      color: controller.isEditMode.value
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700,
                     ),
                   ),
                   Spacer(),
@@ -435,18 +1901,49 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       'Total: ₹${controller.totalAmount.value.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade700,
+                        color: controller.isEditMode.value
+                            ? Colors.orange.shade700
+                            : Colors.green.shade700,
                       ),
                     )),
                 ],
               ),
               SizedBox(height: 16),
 
-              // Items list header
+              Obx(() {
+                if (controller.isEditMode.value && controller.originalItemsCount > 0) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.history, size: 16, color: Colors.orange.shade700),
+                        SizedBox(width: 8),
+                        Text(
+                          'Originally had ${controller.originalItemsCount} items',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return SizedBox();
+              }),
+              SizedBox(height: 12),
+
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: controller.isEditMode.value
+                      ? Colors.orange.shade50
+                      : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -457,7 +1954,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         'Item Description',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
+                          color: controller.isEditMode.value
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
                         ),
                       ),
                     ),
@@ -467,9 +1966,11 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         'Price (₹)',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
+                          color: controller.isEditMode.value
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
                         ),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
                     ),
                     Expanded(
@@ -478,13 +1979,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         'Qty',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
+                          color: controller.isEditMode.value
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
                         ),
-                        textAlign: TextAlign.end,
+                        textAlign: TextAlign.start,
                       ),
                     ),
-
-                    if (!isFromChallan) SizedBox(width: 40), // Space for delete button
                   ],
                 ),
               ),
@@ -492,7 +1993,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
               Obx(() => Column(
                 children: [
-                  // Display message if no items available
                   if (controller.itemList.isEmpty && !isFromChallan)
                     Container(
                       padding: EdgeInsets.all(16),
@@ -516,7 +2016,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       ),
                     ),
 
-                  /// Invoice items list
                   ...controller.invoiceItems.asMap().entries.map((entry) {
                     int index = entry.key;
                     InvoiceItem item = entry.value;
@@ -536,211 +2035,187 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                           ),
                         ],
                       ),
-                      child: Column(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Item ${index + 1}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade700,
-                                        fontSize: 12,
-                                      ),
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Item ${index + 1}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                if (controller.itemList.isNotEmpty)
+                                  Container(
+                                    height: 40,
+                                    padding: EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
-                                    SizedBox(height: 8),
-                                    // Make item selection read-only when from challan
-                                    if (isFromChallan)
-                                      Column(mainAxisAlignment: MainAxisAlignment.start,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item.description,
-                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                          ),
-                                          if (item.challanId != null)
-                                            Text(
-                                              '${item.challanId}',
-                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                            ),
-                                        ],
-                                      )
-                                    else if (controller.itemList.isNotEmpty)
-                                      Container(
-                                        height: 40,
+                                    child: DropdownButton<Item>(
+                                      value: controller.itemList.firstWhereOrNull(
+                                              (element) => element.itemId == item.itemId
+                                      ),
+                                      isExpanded: true,
+                                      hint: Padding(
                                         padding: EdgeInsets.symmetric(horizontal: 8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: DropdownButton<Item>(
-                                          value: controller.itemList.firstWhereOrNull(
-                                                  (element) => element.itemId == item.itemId
-                                          ),
-                                          isExpanded: true,
-                                          hint: Padding(
+                                        child: Text('Select Item', style: TextStyle(fontSize: 14)),
+                                      ),
+                                      underline: SizedBox(),
+                                      icon: Padding(
+                                        padding: EdgeInsets.only(right: 8),
+                                        child: Icon(Icons.arrow_drop_down, size: 20),
+                                      ),
+                                      items: [
+                                        DropdownMenuItem(
+                                          value: null,
+                                          child: Padding(
                                             padding: EdgeInsets.symmetric(horizontal: 8),
                                             child: Text('Select Item', style: TextStyle(fontSize: 14)),
                                           ),
-                                          underline: SizedBox(),
-                                          icon: Padding(
-                                            padding: EdgeInsets.only(right: 8),
-                                            child: Icon(Icons.arrow_drop_down, size: 20),
-                                          ),
-                                          items: [
-                                            DropdownMenuItem(
-                                              value: null,
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                                child: Text('Select Item', style: TextStyle(fontSize: 14)),
+                                        ),
+                                        ...controller.itemList.map((item) {
+                                          return DropdownMenuItem(
+                                            value: item,
+                                            child: Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text(
+                                                '${item.itemName}',
+                                                style: TextStyle(fontSize: 14),
                                               ),
                                             ),
-                                            ...controller.itemList.map((item) {
-                                              return DropdownMenuItem(
-                                                value: item,
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8),
-                                                  child: Text(
-                                                    '${item.itemName}',
-                                                    style: TextStyle(fontSize: 14),
-                                                  ),
-                                                ),
-                                              );
-                                            }).toList(),
-                                          ],
-                                          onChanged: isFromChallan ? null : (selectedItem) {
-                                            if (selectedItem != null) {
-                                              controller.selectRemoteItemForIndex(index, selectedItem);
-                                            }
-                                          },
-                                        ),
-                                      )
-                                    else
-                                      TextFormField(
-                                        initialValue: item.description,
-                                        decoration: InputDecoration(
-                                          labelText: 'Item Description',
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                        ),
-                                        readOnly: isFromChallan,
-                                        onChanged: isFromChallan ? null : (value) {
-                                          controller.updateItem(index, description: value);
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(width: 6),
-                              /// Price
-                              Expanded(
-                                flex: 2,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Price',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Container(
-                                      height: 40,
-                                      child: TextFormField(
-                                        controller: controller.getPriceController(index, initialValue: item.rate),
-                                        textAlign: TextAlign.center,
-                                        decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                        ),
-                                        readOnly: isFromChallan, // disable editing when from challan
-                                        keyboardType: TextInputType.number, // ✅ number only
-                                        onChanged: isFromChallan ? null : (value) {
-                                          final price = int.tryParse(value); // ✅ integers only
-                                          if (price != null && price >= 0) {
-                                            controller.updateItem(index, rate: price.toDouble());
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(width: 6),
-
-                              // Quantity - make read-only when from challan
-                              Expanded(
-                                flex: 1,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Qty',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Container(
-                                      height: 40,
-                                      child: TextFormField(
-                                        initialValue: item.quantity.toString(),
-                                        textAlign: TextAlign.center,
-                                        decoration: InputDecoration(
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                        ),
-                                        readOnly: isFromChallan,
-                                        keyboardType: TextInputType.number,
-                                        onChanged: isFromChallan ? null : (value) {
-                                          int? qty = int.tryParse(value);
-                                          if (qty != null && qty > 0) {
-                                            controller.updateItem(index, quantity: qty);
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-
-                              if (!isFromChallan && controller.invoiceItems.length > 1)
-                                SizedBox(width: 20,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(top: 20, left: 5),
-                                    child: IconButton(
-                                      onPressed: () => controller.removeItem(index),
-                                      icon: Icon(Icons.delete, color: Colors.red, size: 20),
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
+                                          );
+                                        }).toList(),
+                                      ],
+                                      onChanged: (selectedItem) {
+                                        if (selectedItem != null) {
+                                          controller.selectRemoteItemForIndex(index, selectedItem);
+                                        }
+                                      },
                                     ),
                                   ),
-                                ),
-                            ],
+                                if (controller.itemList.isEmpty)
+                                  TextFormField(
+                                    initialValue: item.description,
+                                    decoration: InputDecoration(
+                                      labelText: 'Item Description',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    ),
+                                    onChanged: (value) {
+                                      controller.updateItem(index, description: value);
+                                    },
+                                  ),
+                              ],
+                            ),
                           ),
+
+                          SizedBox(width: 12),
+
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Price',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Container(
+                                  height: 40,
+                                  child: TextFormField(
+                                    controller: controller.getPriceController(index, initialValue: item.rate),
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                    onChanged: (value) {
+                                      double? price = double.tryParse(value);
+                                      if (price != null && price >= 0) {
+                                        controller.updateItem(index, rate: price);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(width: 12),
+
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Qty',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Container(
+                                  height: 40,
+                                  child: TextFormField(
+                                    controller: controller.getQuantityController(index, initialValue: item.quantity),  // ✅ Use controller instead of initialValue
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                    onChanged: (value) {
+                                      double? qty = double.tryParse(value);
+                                      if (qty != null && qty > 0) {
+                                        controller.updateItem(index, quantity: qty);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (!isFromChallan && controller.invoiceItems.length > 1)
+                            SizedBox(
+                              width: 20,
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 20, left: 5),
+                                child: IconButton(
+                                  onPressed: () => controller.removeItem(index),
+                                  icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                                  padding: EdgeInsets.zero,
+                                  constraints: BoxConstraints(),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     );
                   }).toList(),
 
-
-
-                  /// Add item button - hide when from challan
                   if (!isFromChallan) ...[
                     SizedBox(height: 16),
                     Container(
@@ -761,7 +2236,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     ),
                   ],
 
-                  // Summary
                   SizedBox(height: 16),
                   Container(
                     padding: EdgeInsets.all(12),
@@ -804,166 +2278,70 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// Title
             Text(
               'Calculations',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
+                color: controller.isEditMode.value
+                    ? Colors.orange.shade700
+                    : Colors.blue.shade700,
               ),
             ),
-            const SizedBox(height: 16),
-
-            /// Tax + Discount in one row
-            // Row(
-            //   children: [
-            //     /// Tax Rate (40%)
-            //     Expanded(
-            //       flex: 4, // 40%
-            //       child: TextFormField(
-            //         decoration: InputDecoration(
-            //           labelText: 'Tax Rate (%)',
-            //           prefixIcon: const Icon(Icons.percent, size: 18,),
-            //           prefixIconConstraints: const BoxConstraints(
-            //             minWidth: 30,  // shrink the space
-            //             minHeight: 30,
-            //           ),
-            //           border: OutlineInputBorder(
-            //             borderRadius: BorderRadius.circular(8),
-            //           ),
-            //         ),
-            //         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            //         onChanged: (value) {
-            //           final rate = double.tryParse(value);
-            //           if (rate != null && rate >= 0) {
-            //             controller.updateTaxRate(rate);
-            //           }
-            //         },
-            //       ),
-            //     ),
-            //     const SizedBox(width: 6),
-            //
-            //     /// Discount (60%)
-            //     Expanded(
-            //       flex: 6, // 60%
-            //       child: TextFormField(
-            //         decoration: InputDecoration(
-            //           labelText: 'Discount',
-            //           //prefixIcon: const Icon(Icons.discount),
-            //           border: OutlineInputBorder(
-            //             borderRadius: BorderRadius.circular(8),
-            //           ),
-            //           suffixIcon: Obx(
-            //                 () => DropdownButton<String>(
-            //               value: controller.discountType.value,
-            //               underline: const SizedBox(),
-            //               items: const [
-            //                 DropdownMenuItem(value: 'amount', child: Text('₹')),
-            //                 DropdownMenuItem(value: 'percentage', child: Text('%')),
-            //               ],
-            //               onChanged: (value) {
-            //                 if (value != null) {
-            //                   controller.updateDiscount(
-            //                     controller.discountAmount.value,
-            //                     value,
-            //                   );
-            //                 }
-            //               },
-            //             ),
-            //           ),
-            //         ),
-            //         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            //         onChanged: (value) {
-            //           final discount = double.tryParse(value);
-            //           if (discount != null && discount >= 0) {
-            //             controller.updateDiscount(
-            //               discount,
-            //               controller.discountType.value,
-            //             );
-            //           }
-            //         },
-            //       ),
-            //     ),
-            //   ],
-            // ),
-
-
-
-            /// Totals Section
-            Obx(
-                  () => Column(
-                children: [
-                  _buildTotalRow('Subtotal', controller.subtotal.value),
-                  if (controller.discountAmount.value > 0)
-                    _buildTotalRow(
-                      'Discount',
-                      controller.discountType.value == 'percentage'
-                          ? controller.subtotal.value *
-                          (controller.discountAmount.value / 100)
-                          : controller.discountAmount.value,
-                      isDiscount: true,
-                    ),
-                  if (controller.taxRate.value > 0)
-                    _buildTotalRow(
-                      'Tax (${controller.taxRate.value}%)',
-                      controller.taxAmount.value,
-                    ),
-    if (AppConstants.withGST.value) ...[
+            SizedBox(height: 16),
+            Obx(() => Column(
+              children: [
+                _buildTotalRow('Subtotal', controller.subtotal.value),
+                if (AppConstants.withGST.value) ...[
                   _buildTotalRow('CGST', controller.gstAmount.value / 2),
                   _buildTotalRow('SGST', controller.gstAmount.value / 2),
-                 ],
-                   Divider(),
-                  _buildTotalRow(
-                    'Total Amount',
-                    controller.totalAmount.value,
-                    isTotal: true,
-                  ),
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            const Divider(),
-            /// Payment Status
-            Text("Payment Staus"),
-            Obx(
-                  () => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
+                Divider(),
+                _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
+              ],
+            )),
+            SizedBox(height: 20),
+            Divider(),
+            Text("Payment Status"),
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() => Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButton<String>(
+                      value: controller.paymentStatus.value,
+                      isExpanded: true,
+                      underline: SizedBox(),
+                      items: [
+                        DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                        DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                        DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          controller.updatePaymentStatus(value);
+                        }
+                      },
+                    ),
+                  )),
                 ),
-                child: DropdownButton<String>(
-                  value: controller.paymentStatus.value,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  items: const [
-                    DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                    DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                    DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      controller.updatePaymentStatus(value);
-                    }
-                  },
-                ),
-              ),
+              ],
             ),
-
           ],
         ),
       ),
     );
   }
 
-
-  Widget _buildTotalRow(String label, double amount, {bool isDiscount = false, bool isTotal = false}) {
+  Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -974,15 +2352,19 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.blue.shade700 : Colors.black87,
+              color: isTotal ?
+              (controller.isEditMode.value ? Colors.orange.shade700 : Colors.blue.shade700)
+                  : Colors.black87,
             ),
           ),
           Text(
-            '${isDiscount ? '-' : ''}₹ ${amount.toStringAsFixed(2)}',
+            '₹${amount.toStringAsFixed(2)}',
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isDiscount ? Colors.red : (isTotal ? Colors.blue.shade700 : Colors.black87),
+              color: isTotal ?
+              (controller.isEditMode.value ? Colors.orange.shade700 : Colors.blue.shade700)
+                  : Colors.black87,
             ),
           ),
         ],
@@ -1004,7 +2386,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue.shade700,
+                color: controller.isEditMode.value
+                    ? Colors.orange.shade700
+                    : Colors.blue.shade700,
               ),
             ),
             SizedBox(height: 16),
@@ -1027,7 +2411,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
   Widget _buildActionButtons() {
     return Obx(() => Row(
       children: [
-        // Cancel button
         Expanded(
           flex: 2,
           child: OutlinedButton(
@@ -1040,44 +2423,26 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         ),
         SizedBox(width: 8),
 
-        /// Save Draft button
-        // Expanded(
-        //   flex: 3,
-        //   child: ElevatedButton(
-        //     onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: true),
-        //     style: ElevatedButton.styleFrom(
-        //       backgroundColor: Colors.grey.shade600,
-        //       padding: EdgeInsets.symmetric(vertical: 12),
-        //     ),
-        //     child: Text('Save Draft'),
-        //   ),
-        // ),
-        // SizedBox(width: 8),
-
-        /// Main action button
         Expanded(
-          flex: 3,
+          flex: 4,
           child: ElevatedButton(
             onPressed: controller.isLoading.value ? null : () => controller.saveInvoice(isDraft: false),
             style: ElevatedButton.styleFrom(
-              backgroundColor: controller.invoiceType.value == InvoiceType.invoice
-                  ? Colors.blue.shade700
-                  : Colors.orange.shade700,
+              backgroundColor: controller.isEditMode.value
+                  ? Colors.orange.shade700
+                  : Colors.blue.shade700,
               padding: EdgeInsets.symmetric(vertical: 12),
             ),
-            child: Obx(() => Text(
-              controller.invoiceType.value == InvoiceType.invoice
-                  ? 'Create Invoice'
-                  : 'Create Quotation',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.whiteColor),
-            )),
+            child: Text(
+              controller.isEditMode.value ? 'Update Invoice' : 'Create Invoice',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ),
         ),
       ],
     ));
   }
 
-  /// In your _buildChallanToInvoiceSection method
   Widget _buildChallanToInvoiceSection() {
     return Obx(() {
       return Card(
@@ -1088,7 +2453,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Checkbox to toggle create from challan
               Row(
                 children: [
                   Checkbox(
@@ -1096,10 +2460,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     onChanged: (value) {
                       controller.createFromChallan.value = value ?? false;
                       if (value == true) {
-                        // Load challans when checkbox is checked
                         controller.loadChallansForInvoice();
                       } else {
-                        // Clear selection when unchecked
                         controller.selectedCustomerForInvoice.value = '';
                         controller.selectedCustomerChallans.clear();
                       }
@@ -1123,11 +2485,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 ],
               ),
 
-              // Show challan section only when checkbox is checked
               if (controller.createFromChallan.value) ...[
                 SizedBox(height: 16),
 
-                // Date Range Picker
                 Text(
                   'Select Date Range:',
                   style: TextStyle(
@@ -1183,7 +2543,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 else
                   Column(
                     children: [
-                      // Customer dropdown
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
@@ -1203,8 +2562,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                               child: Text('Select Customer'),
                             ),
                             ...controller.customerNames.map((customerName) {
-                              final challanCount = controller.allChallans
-                                  .where((challan) => challan.customerName == customerName)
+                              final inProgressCount = controller.allChallans
+                                  .where((challan) =>
+                              challan.customerName == customerName &&
+                                  challan.status?.toLowerCase() == "inprogress")
                                   .length;
 
                               return DropdownMenuItem(
@@ -1217,7 +2578,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       style: TextStyle(fontWeight: FontWeight.bold),
                                     ),
                                     Text(
-                                      '$challanCount challan(s)',
+                                      '$inProgressCount challan(s)',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade600,
@@ -1232,7 +2593,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         ),
                       ),
 
-                      // Selected customer challans info
                       if (controller.selectedCustomerForInvoice.value.isNotEmpty)
                         Column(
                           children: [
@@ -1297,5 +2657,30 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         ),
       );
     });
+  }
+
+  void _showDeleteConfirmation() {
+    Get.dialog(
+      AlertDialog(
+        title: Text('Delete Invoice'),
+        content: Text('Are you sure you want to delete this invoice? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              // controller.deleteInvoice();
+            },
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

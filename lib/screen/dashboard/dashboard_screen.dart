@@ -99,9 +99,12 @@ class DashboardScreen extends GetView<DashboardController> {
               // Charts Section
               Row(
                 children: [
-                  Expanded(child: RevenueChartCard()),
-                  SizedBox(width: 10),
-                  Expanded(child: InvoiceStatusChart()),
+                  // Expanded(child: RevenueChartCard()),
+                  // SizedBox(width: 10),
+                  Expanded(
+                      flex: 1,
+                      child: InvoiceStatusChart()),
+                Expanded(child: Container())
                 ],
               ),
 
@@ -113,17 +116,16 @@ class DashboardScreen extends GetView<DashboardController> {
           ),
         ),
       )),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: controller.navigateToNewChallan,
-      //   backgroundColor: Colors.blue.shade700,
-      //   child: Icon(Icons.add, color: Colors.white),
-      // ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: controller.exportInvoiceData,
+        backgroundColor: Colors.blue.shade700,
+        child: Icon(Icons.download, color: Colors.white),
+      ),
       drawer: buildDrawer(),
     );
   }
 
   // Add these methods to your Dashboard screen widget
-
   Widget _buildQuickActionsSection() {
     return Card(
       elevation: 4,
@@ -372,22 +374,54 @@ class DashboardScreen extends GetView<DashboardController> {
                     controller.navigateToCustomerList();
                   },
                 ),
-                // Add Challan Option Toggle
+
+                // 🔹 Challan Toggle
                 Obx(() => ListTile(
                   leading: Icon(Icons.list_alt, color: Colors.green),
                   title: Text("Enable Challan Feature"),
                   trailing: Switch(
                     value: AppConstants.isChallan.value,
                     onChanged: (value) async {
-                      AppConstants.isChallan.value = value;
-                      // Optionally save this preference to Firebase or local storage
-                      await controller.saveChallanPreference(value);
-
-
-                      },
-                    activeColor: Colors.green,
+                      await controller.updateCompanyPreference('isChallanEnabled', value);
+                    },
+                    activeColor: Colors.white,                // thumb when active
+                    activeTrackColor: Colors.green.shade600,  // track when active
+                    inactiveThumbColor: Colors.white,         // thumb when inactive
+                    inactiveTrackColor: Colors.grey.shade400, // track when inactive
+                    splashRadius: 28,                         // ripple effect
+                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Icon(Icons.check, color: Colors.green); // ✅ when ON
+                      }
+                      return Icon(Icons.close, color: Colors.grey);    // ❌ when OFF
+                    }),
                   ),
                 )),
+
+// 🔹 GST Toggle
+                Obx(() => ListTile(
+                  leading: Icon(Icons.attach_money, color: Colors.teal),
+                  title: Text("Enable GST Feature"),
+                  trailing: Switch(
+                    value: AppConstants.withGST.value,
+                    onChanged: (value) async {
+                      await controller.updateCompanyPreference('isGstEnabled', value);
+                    },
+                    activeColor: Colors.white,
+                    activeTrackColor: Colors.teal.shade600,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: Colors.grey.shade400,
+                    splashRadius: 28,
+                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Icon(Icons.check, color: Colors.teal);
+                      }
+                      return Icon(Icons.close, color: Colors.grey);
+                    }),
+                  ),
+                )),
+
+
                 ListTile(
                   leading: Icon(Icons.analytics, color: Colors.purple),
                   title: Text("challans"),
@@ -412,12 +446,30 @@ class DashboardScreen extends GetView<DashboardController> {
                 ListTile(
                   leading: Icon(Icons.add_business, color: Colors.teal),
                   title: Text("Edit Company Info"),
+                  // onTap: () {
+                  //   controller.navigateToEditCompany(
+                  //       controller.companyData,
+                  //       controller.companyData['id']);
+                  //   // Get.back();
+                  //   // Get.toNamed(CompanyRegistrationScreen.pageId);
+                  // },
                   onTap: () {
-                    controller.navigateToEditCompany(
-                        controller.companyData,
-                        controller.companyData['id']);
-                    // Get.back();
-                    // Get.toNamed(CompanyRegistrationScreen.pageId);
+                   // Get.back(); // always close the drawer first
+                    final data = controller.companyData;
+
+                    print("CompnyID0----------------:${AppConstants.companyId}");
+                    print("CompnyID0-------------2---:${data}");
+
+                    if (AppConstants.companyId.isNotEmpty) {
+                      controller.navigateToEditCompany(data, AppConstants.companyId);
+                    } else {
+                      Get.snackbar(
+                        "Error",
+                        "No active company found to edit.",
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red.shade100,
+                      );
+                    }
                   },
                 ),
 
@@ -433,12 +485,53 @@ class DashboardScreen extends GetView<DashboardController> {
                 // ),
                 ListTile(
                   leading: Icon(Icons.logout, color: Colors.red),
-                  title: Text("Logout"),
+                  title: Text(
+                    "Logout",
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   onTap: () async {
-                    ///Get.back();
-                    await controller.logout();
+                    Get.dialog(
+                      AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        title: Row(
+                          children: [
+                            Icon(Icons.logout, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text("Confirm Logout"),
+                          ],
+                        ),
+                        content: Text(
+                          "Are you sure you want to log out?",
+                          style: TextStyle(fontSize: 15),
+                        ),
+                        actions: [
+                          TextButton(
+                            child: Text("Cancel", style: TextStyle(color: Colors.grey)),
+                            onPressed: () => Get.back(),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text("Logout"),
+                            onPressed: () async {
+                              Get.back(); // close dialog
+                              await controller.logout();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
+
               ],
             ),
           ),
@@ -449,10 +542,6 @@ class DashboardScreen extends GetView<DashboardController> {
 
 
 }
-
-
-
-
 
 class DashboardShimmer extends StatelessWidget {
   const DashboardShimmer({super.key});

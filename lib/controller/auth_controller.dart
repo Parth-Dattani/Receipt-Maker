@@ -265,11 +265,11 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       // Store basic user info in shared preferences
       final currentUser = _auth.currentUser!;
-      await sharedPreferencesHelper.storePrefData("userId", currentUser.uid);
+      await AppConstants.setUserId(currentUser.uid);
       await sharedPreferencesHelper.storePrefData("email", currentUser.email ?? "");
-      AppConstants.userId = currentUser.uid;
+      //AppConstants.userId = currentUser.uid;
 
-      // Try to get user document from Firestore (with error handling)
+      /// Try to get user document from Firestore (with error handling)
       try {
         final userDoc = await FirebaseFirestore.instance
             .collection("users")
@@ -560,7 +560,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         icon: Icons.done_all,
       );
 
-      await sharedPreferencesHelper.storePrefData("userId", userCred.user!.uid);
+      await AppConstants.setUserId(userCred.user!.uid);
+      //await sharedPreferencesHelper.storePrefData("userId", userCred.user!.uid);
       await sharedPreferencesHelper.storePrefData("email", email);
       await sharedPreferencesHelper.storePrefData("username", regUsernameController.text.trim());
 
@@ -870,13 +871,15 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
 
       if (companyQuery.docs.isNotEmpty) {
-        final companyData = companyQuery.docs.first.data();
+        final companyData = companyQuery.docs.first;
         print("Company found: ${companyData['companyName'] ?? 'Unnamed'}");
 
         // Store company ID for future use
-        final companyId = companyQuery.docs.first.id;
-        await sharedPreferencesHelper.storePrefData("companyId", companyId);
-        print("Stored company ID: $companyId");
+        final companyId = companyData.id;
+         print("Stored company ID: $companyId");
+        await AppConstants.setCompanyId(companyId);
+        // await sharedPreferencesHelper.storePrefData("companyId", companyId);
+        // AppConstants.companyId = companyId;
 
         Get.offAllNamed(DashboardScreen.pageId);
       } else {

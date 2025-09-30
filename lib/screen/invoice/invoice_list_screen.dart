@@ -384,11 +384,6 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
             onPressed: controller.refreshInvoices,
             tooltip: 'Refresh',
           ),
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => Get.toNamed('/new-invoice'),
-            tooltip: 'Create New Invoice',
-          ),
         ],
       ),
       body: Obx((){
@@ -410,11 +405,6 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           ],
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Get.toNamed('/new-invoice'),
-        backgroundColor: Colors.blue.shade700,
-        child: Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 
