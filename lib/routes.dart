@@ -93,4 +93,10 @@ List<GetPage> appPages = [
     page: () => ChallanDetailsScreen(),
     binding: ChallanDetailsBinding(),
   ),
+
+  GetPage(
+    name: QuotationListScreen.pageId,
+    page: () =>  QuotationListScreen(),
+    binding: QuotationListBinding(),
+  ),
 ];

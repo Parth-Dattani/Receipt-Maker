@@ -1,5 +1,6 @@
 // new_invoice_screen.dart
 import 'package:demo_prac_getx/constant/constant.dart';
+import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -1328,7 +1329,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         actions: [
           Obx(() => controller.isEditMode.value
               ? _buildEditModeActions()
-              : _buildCreateModeActions()
+              : const SizedBox.shrink()
           ),
         ],
       ),
@@ -1427,42 +1428,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         SizedBox(width: 8),
       ],
     );
-  }
-
-  Widget _buildCreateModeActions() {
-    return Obx(() => controller.isLoading.value
-        ? Padding(
-      padding: EdgeInsets.all(16),
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-        ),
-      ),
-    )
-        : Row(
-      children: [
-        TextButton(
-          onPressed: () => controller.saveInvoice(isDraft: true),
-          child: Text(
-            'Save Draft',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        TextButton(
-          onPressed: () => controller.saveInvoice(isDraft: false),
-          child: Text(
-            'Create Invoice',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    ));
   }
 
   Widget _buildInvoiceDetailsCard() {
@@ -1898,7 +1863,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     )
                   else
                     Obx(() => Text(
-                      'Total: ₹${controller.totalAmount.value.toStringAsFixed(2)}',
+                      'Total: ₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: controller.isEditMode.value
@@ -2358,7 +2323,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             ),
           ),
           Text(
-            '₹${amount.toStringAsFixed(2)}',
+            '₹${AppUtil.formatCurrency(amount)}',
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,

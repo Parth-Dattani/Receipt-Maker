@@ -133,7 +133,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
     if (appId == null) {
       showCustomSnackbar(
-        title: "Error",
+        title: "Error===========",
         message: "Could not find an App ID in this URL. Please check the link.",
         baseColor: AppColors.errorColor,
         icon: Icons.error_outline,
@@ -149,7 +149,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (!isValid) {
         showCustomSnackbar(
-          title: "Error",
+          title: "Error,,,,,,",
           message: "This App ID appears to be invalid or inaccessible.",
           baseColor: AppColors.errorColor,
           icon: Icons.error_outline,
@@ -161,7 +161,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         showCustomSnackbar(
-          title: "Error",
+          title: "Error--------",
           message: "You must be logged in to connect an app.",
           baseColor: AppColors.errorColor,
           icon: Icons.error_outline,
@@ -194,7 +194,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
     } catch (e) {
       showCustomSnackbar(
-        title: "Error",
+        title: "Error.......",
         message: "An error occurred: ${e.toString()}",
         baseColor: AppColors.errorColor,
         icon: Icons.error_outline,
@@ -311,7 +311,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
     } on FirebaseAuthException catch (e) {
       showCustomSnackbar(
-        title: "Error",
+        title: "Error-------",
         message: e.message ?? "Login failed",
         baseColor: AppColors.errorColor,
         icon: Icons.sms_failed_outlined,
@@ -319,7 +319,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     } catch (e) {
       print("Unexpected error during login: $e");
       showCustomSnackbar(
-        title: "Error",
+        title: "Error====================",
         message: "An unexpected error occurred during login",
         baseColor: AppColors.errorColor,
         icon: Icons.sms_failed_outlined,
@@ -409,7 +409,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     } catch (error) {
       if (!_isDisposed) {
         showCustomSnackbar(
-          title: "Error",
+          title: "Error--------",
           message: "Registration failed: ${error.toString()}",
           baseColor: AppColors.errorColor,
           icon: Icons.sms_failed_outlined,
@@ -597,7 +597,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         }
 
         showCustomSnackbar(
-          title: "Error",
+          title: "Error....",
           message: errorMessage,
           baseColor: AppColors.errorColor,
           icon: Icons.error,
@@ -700,7 +700,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
     } catch (e) {
       showCustomSnackbar(
-        title: "Error",
+        title: "Error----",
         message: "Failed to save profile data: ${e.toString()}",
         baseColor: AppColors.errorColor,
         icon: Icons.error,
@@ -817,7 +817,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     } catch (error) {
       if (!_isDisposed) {
         showCustomSnackbar(
-          title: "Error",
+          title: "Error+++++++",
           message: "Authentication failed: ${error.toString()}",
           baseColor: AppColors.errorColor,
           icon: Icons.error,

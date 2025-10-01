@@ -30,10 +30,6 @@ class DashboardScreen extends GetView<DashboardController> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.settings),
-            onPressed: controller.navigateToChallanList,
-          ),
-          IconButton(
             icon: Icon(Icons.refresh),
             onPressed: controller.refreshDashboard,
           ),
@@ -104,7 +100,46 @@ class DashboardScreen extends GetView<DashboardController> {
                   Expanded(
                       flex: 1,
                       child: InvoiceStatusChart()),
-                Expanded(child: Container())
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        showExportDialog(context);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 120, // ⬅️ increase height here
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300, width: 1),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.15),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.download, size: 36, color: Colors.blue.shade700),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Export",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                 ],
               ),
 
@@ -116,13 +151,316 @@ class DashboardScreen extends GetView<DashboardController> {
           ),
         ),
       )),
-      floatingActionButton: FloatingActionButton(
-        onPressed: controller.exportInvoiceData,
-        backgroundColor: Colors.blue.shade700,
-        child: Icon(Icons.download, color: Colors.white),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: controller.exportInvoiceData,
+      //   backgroundColor: Colors.blue.shade700,
+      //   child: Icon(Icons.download, color: Colors.white),
+      // ),
       drawer: buildDrawer(),
     );
+  }
+
+  Future<void> showExportDialog(BuildContext context) async {
+    DateTime? fromDate;
+    DateTime? toDate;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade600, Colors.blue.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.file_download_outlined,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Export Invoices",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Select date range to export",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          // From Date Card
+                          _buildDateCard(
+                            context: context,
+                            icon: Icons.calendar_today,
+                            label: "From Date",
+                            date: fromDate,
+                            color: Colors.green,
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: fromDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => fromDate = picked);
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Arrow indicator
+                          Icon(
+                            Icons.arrow_downward_rounded,
+                            color: Colors.grey.shade400,
+                            size: 24,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // To Date Card
+                          _buildDateCard(
+                            context: context,
+                            icon: Icons.event,
+                            label: "To Date",
+                            date: toDate,
+                            color: Colors.orange,
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: toDate ?? DateTime.now(),
+                                firstDate: fromDate ?? DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => toDate = picked);
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Info box
+                          if (fromDate != null && toDate != null)
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      color: Colors.blue.shade700, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      "Exporting ${_calculateDays(fromDate!, toDate!)} days of data",
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          const SizedBox(height: 24),
+
+                          // Export Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (fromDate == null || toDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text("Please select both dates"),
+                                      backgroundColor: Colors.red.shade600,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                Navigator.pop(context);
+                                await controller.exportInvoiceDataWithDateFilter(
+                                  fromDate!,
+                                  toDate!,
+                                );
+                              },
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.download_rounded, size: 24),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    "Export to Excel",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDateCard({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required DateTime? date,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: date != null ? color.withOpacity(0.5) : Colors.grey.shade300,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    date == null
+                        ? "Select date"
+                        : "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}",
+                    style: TextStyle(
+                      color: date != null ? Colors.black87 : Colors.grey.shade400,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.grey.shade400,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _calculateDays(DateTime from, DateTime to) {
+    return to.difference(from).inDays + 1;
   }
 
   // Add these methods to your Dashboard screen widget
@@ -430,6 +768,16 @@ class DashboardScreen extends GetView<DashboardController> {
                     controller.navigateToChallanList();
                   },
                 ),
+
+                ListTile(
+                  leading: Icon(Icons.analytics, color: Colors.purple),
+                  title: Text("quotations"),
+                  onTap: () {
+                    Get.back();
+                    controller.navigateToQuotList();
+                  },
+                ),
+
                 Divider(),
 
                 // Company Management Section
@@ -446,22 +794,12 @@ class DashboardScreen extends GetView<DashboardController> {
                 ListTile(
                   leading: Icon(Icons.add_business, color: Colors.teal),
                   title: Text("Edit Company Info"),
-                  // onTap: () {
-                  //   controller.navigateToEditCompany(
-                  //       controller.companyData,
-                  //       controller.companyData['id']);
-                  //   // Get.back();
-                  //   // Get.toNamed(CompanyRegistrationScreen.pageId);
-                  // },
                   onTap: () {
-                   // Get.back(); // always close the drawer first
-                    final data = controller.companyData;
+                    // ✅ Use currentCompany instead of companyData
+                    final data = controller.currentCompany.value;
 
-                    print("CompnyID0----------------:${AppConstants.companyId}");
-                    print("CompnyID0-------------2---:${data}");
-
-                    if (AppConstants.companyId.isNotEmpty) {
-                      controller.navigateToEditCompany(data, AppConstants.companyId);
+                    if (data != null && controller.companyId.value.isNotEmpty) {
+                      controller.navigateToEditCompany(data, controller.companyId.value);
                     } else {
                       Get.snackbar(
                         "Error",

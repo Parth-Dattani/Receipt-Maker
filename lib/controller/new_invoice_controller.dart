@@ -1164,7 +1164,7 @@ class NewInvoiceController extends GetxController {
 
   // Company data
   var companyData = <String, dynamic>{}.obs;
-  int _lastInvoiceId = 0;
+
 
   // Challan related variables
   var challanList = <Challan>[].obs;
@@ -1375,7 +1375,7 @@ class NewInvoiceController extends GetxController {
 
       // Pre-fill customer info
       customerNameController.text = invoiceData['customerName']?.toString() ?? '';
-      customerMobileController.text = invoiceData['mobile']?.toString() ?? '';
+      customerMobileController.text = invoiceData['mobile1']?.toString() ?? '';
       customerEmailController.text = invoiceData['customerEmail']?.toString() ?? '';
       customerAddressController.text = invoiceData['customerAddress']?.toString() ?? '';
 
@@ -1532,11 +1532,10 @@ class NewInvoiceController extends GetxController {
 
     try {
       await loadInvoices();
-      _initializeLastInvoiceId();
 
       // Only initialize new invoice if NOT in edit mode
       if (!isEditMode.value) {
-        initializeInvoice();
+        await initializeInvoice();
       }
 
       _isEssentialDataLoaded = true;
@@ -1704,24 +1703,7 @@ class NewInvoiceController extends GetxController {
     return data;
   }
 
-  void _initializeLastInvoiceId() {
-    final sameTypeInvoices = invoiceList.where((inv) =>
-    inv.invoiceId != null &&
-        inv.invoiceId!.startsWith(invoiceType.value.prefix)
-    ).toList();
 
-    if (sameTypeInvoices.isNotEmpty) {
-      final maxId = sameTypeInvoices.map((inv) {
-        return int.tryParse(inv.invoiceId!.replaceAll(invoiceType.value.prefix, '')) ?? 0;
-      }).reduce((a, b) => a > b ? a : b);
-
-      _lastInvoiceId = maxId;
-    } else {
-      _lastInvoiceId = 0;
-    }
-
-    print("📌 Last invoice ID initialized to $_lastInvoiceId");
-  }
 
   Future<void> loadChallansForInvoice({bool loadMore = false}) async {
     if (!loadMore) {
@@ -2124,40 +2106,166 @@ class NewInvoiceController extends GetxController {
   }
 
   // Modified initializeInvoice to be called only for new invoices
-  void initializeInvoice() async {
+  // Replace your existing initializeInvoice() method:
+  // ============================================
+// 1. REPLACE initializeInvoice() method
+// ============================================
+  Future<void> initializeInvoice() async {
     print("🆕 INITIALIZING NEW INVOICE - Starting...");
 
-    // Only generate new ID if not in edit mode
     if (isEditMode.value) {
       print("⚠️ In edit mode, skipping new invoice initialization");
       return;
     }
 
-    final newInvoiceId = generateInvoiceId();
-    print("🆔 GENERATED NEW INVOICE ID: $newInvoiceId");
-    invoiceNumberController.text = newInvoiceId;
+    isLoading.value = true;
+
+    // ✅ DON'T increment - just show next number as preview
+    final nextInvoiceId = await getNextInvoiceNumber();
+    print("🆔 NEXT INVOICE ID (PREVIEW): $nextInvoiceId");
+
+    invoiceNumberController.text = nextInvoiceId;
     dueDateController.text = _formatDate(dueDate.value);
     print("📅 DUE DATE SET TO: ${dueDateController.text}");
+
     addNewItem();
+
+    isLoading.value = false;
     print("✅ INVOICE INITIALIZATION COMPLETE");
   }
 
-  void setInvoiceType(InvoiceType type) {
+// ============================================
+// 2. ADD NEW METHOD: getNextInvoiceNumber (preview only)
+// ============================================
+  Future<String> getNextInvoiceNumber() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return "${invoiceType.value.prefix}0001";
+
+      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+      if (companyId.isEmpty) return "${invoiceType.value.prefix}0001";
+
+      final companyDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .get();
+
+      if (!companyDoc.exists) {
+        return "${invoiceType.value.prefix}0001";
+      }
+
+      final data = companyDoc.data();
+      final currentNumber = data?['currentInvoiceNumber'] ?? 1;
+
+      // ✅ Return next number WITHOUT incrementing in Firebase
+      return "${invoiceType.value.prefix}${currentNumber.toString().padLeft(4, '0')}";
+    } catch (e) {
+      print('Error getting next invoice number: $e');
+      return "${invoiceType.value.prefix}0001";
+    }
+  }
+
+// ============================================
+// 3. ADD NEW METHOD: incrementAndGetInvoiceNumber (actual increment)
+// ============================================
+  Future<String> incrementAndGetInvoiceNumber() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return "${invoiceType.value.prefix}0001";
+
+      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+      if (companyId.isEmpty) return "${invoiceType.value.prefix}0001";
+
+      final companyRef = _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId);
+
+      // ✅ Use transaction to prevent race conditions and actually increment
+      return await _firestore.runTransaction((transaction) async {
+        final companyDoc = await transaction.get(companyRef);
+
+        if (!companyDoc.exists) {
+          return "${invoiceType.value.prefix}0001";
+        }
+
+        final data = companyDoc.data();
+        final currentNumber = data?['currentInvoiceNumber'] ?? 1;
+        final nextNumber = currentNumber + 1;
+
+        // ✅ NOW we increment in Firebase
+        transaction.update(companyRef, {
+          'currentInvoiceNumber': nextNumber,
+        });
+
+        // Return formatted invoice number with current counter
+        return "${invoiceType.value.prefix}${currentNumber.toString().padLeft(4, '0')}";
+      });
+    } catch (e) {
+      print('Error incrementing invoice number: $e');
+      return "${invoiceType.value.prefix}0001";
+    }
+  }
+
+  void setInvoiceType(InvoiceType type) async {
     invoiceType.value = type;
-    _generateInvoiceId();
+    final nextNumber = await getNextInvoiceNumber();
+    invoiceNumberController.text = nextNumber;
+   // await _generateInvoiceId(); // ✅ Now awaiting
   }
 
-  String _generateInvoiceId() {
-    final newId = generateInvoiceId();
-    invoiceNumberController.text = newId;
-    print("------------New ID---------${newId}");
-    return newId;
-  }
-
-  String generateInvoiceId() {
-    _lastInvoiceId++;
-    return "${invoiceType.value.prefix}${(_lastInvoiceId).toString().padLeft(3, '0')}";
-  }
+  // /// Replace your existing _generateInvoiceId() method:
+  // Future<String> _generateInvoiceId() async {
+  //   final newId = await generateInvoiceId(); // ✅ Now awaiting
+  //   invoiceNumberController.text = newId;
+  //   print("------------New ID---------${newId}");
+  //   return newId;
+  // }
+  //
+  // /// Replace your existing generateInvoiceId() method with this:
+  // Future<String> generateInvoiceId() async {
+  //   try {
+  //     final user = _auth.currentUser;
+  //     if (user == null) return "${invoiceType.value.prefix}001";
+  //
+  //     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+  //     if (companyId.isEmpty) return "${invoiceType.value.prefix}001";
+  //
+  //     final companyRef = _firestore
+  //         .collection('users')
+  //         .doc(user.uid)
+  //         .collection('companies')
+  //         .doc(companyId);
+  //
+  //     // Use transaction to prevent race conditions
+  //     return await _firestore.runTransaction((transaction) async {
+  //       final companyDoc = await transaction.get(companyRef);
+  //
+  //       if (!companyDoc.exists) {
+  //         return "${invoiceType.value.prefix}001";
+  //       }
+  //
+  //       final data = companyDoc.data();
+  //       final currentNumber = data?['currentInvoiceNumber'] ?? 1;
+  //       final nextNumber = currentNumber + 1;
+  //
+  //       // Update the counter
+  //       transaction.update(companyRef, {
+  //         'currentInvoiceNumber': nextNumber,
+  //       });
+  //
+  //       // Return formatted invoice number with prefix
+  //       return "${invoiceType.value.prefix}${currentNumber.toString().padLeft(4, '0')}";
+  //     });
+  //
+  //   } catch (e) {
+  //     print('Error generating invoice number: $e');
+  //     return "${invoiceType.value.prefix}001";
+  //   }
+  // }
 
   void selectCustomer(Map<String, dynamic>? customer) {
     if (customer == null) {
@@ -2704,9 +2812,18 @@ class NewInvoiceController extends GetxController {
 
         return true;
 
-      } else {
+      }
+      else {
         // ✅ CREATE MODE
         print("=== CREATING NEW INVOICE ===");
+
+        // ✅ CRITICAL: Get and increment invoice number ONLY NOW
+        final actualInvoiceId = await incrementAndGetInvoiceNumber();
+        invoiceNumberController.text = actualInvoiceId;
+
+        // Update invoice data with actual ID
+        invoiceData['invoiceId'] = actualInvoiceId;
+        print("Invoice ID (FINAL): $actualInvoiceId");
         print("Invoice ID: ${invoiceNumberController.text}");
         debugInvoiceItemsBeforeSaving();
 
@@ -2789,6 +2906,8 @@ class NewInvoiceController extends GetxController {
             invoiceItems,
             invoiceNumberController.text,
             dueDateController.text,
+            selectedFromDate.value.toString(),
+            selectedToDate.value.toString(),
             customerNameController.text.trim(),
             customerMobileController.text.trim(),
             customerEmailController.text.trim(),

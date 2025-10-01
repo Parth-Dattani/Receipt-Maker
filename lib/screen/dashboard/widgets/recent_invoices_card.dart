@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -72,7 +73,7 @@ class RecentInvoicesCard extends GetView<DashboardController> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '₹${invoice.totalAmount}',
+                      '₹${AppUtil.formatCurrency(invoice.totalAmount!)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,

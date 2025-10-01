@@ -15,4 +15,5 @@ export 'new_challan_controller.dart';
 export 'invoice_details_controller.dart';
 export 'challan_list_controller.dart';
 export 'challan_details_controller.dart';
+export 'quotation_list_controller.dart';
 

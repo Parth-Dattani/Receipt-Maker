@@ -95,7 +95,6 @@ class Invoice {
       };
     }).toList();
   }
-
   factory Invoice.fromMap(Map<String, dynamic> map) {
     return Invoice(
       invoiceId: map['invoiceId'] ?? map['InvoiceId'] ?? '',
@@ -109,8 +108,9 @@ class Invoice {
       customerName: map['customerName'] ?? '',
       customerEmail: map['customerEmail'],
       customerAddress: map['customerAddress'],
-      issueDate: map['issueDate'] != null ? DateTime.tryParse(map['issueDate']) : null,
-      dueDate: map['dueDate'] != null ? DateTime.tryParse(map['dueDate']) : null,
+      // 🔹 FIX: Handle both DateTime objects and String dates
+      issueDate: _parseDateField(map['issueDate']),
+      dueDate: _parseDateField(map['dueDate']),
       subtotal: double.tryParse(map['subtotal']?.toString() ?? '0') ?? 0.0,
       gstRate: double.tryParse(map['gstRate']?.toString() ?? '0') ?? 0.0,
       gstAmount: double.tryParse(map['gstAmount']?.toString() ?? '0') ?? 0.0,
@@ -124,6 +124,40 @@ class Invoice {
     );
   }
 
+// 🔹 Helper method to parse date fields
+  static DateTime? _parseDateField(dynamic dateValue) {
+    if (dateValue == null) return null;
+
+    // If already a DateTime object, return it
+    if (dateValue is DateTime) {
+      return dateValue;
+    }
+
+    // If it's a String, try to parse it
+    if (dateValue is String && dateValue.isNotEmpty) {
+      // Try ISO format first
+      DateTime? parsed = DateTime.tryParse(dateValue);
+      if (parsed != null) return parsed;
+
+      // Try dd/MM/yyyy format
+      if (dateValue.contains("/")) {
+        try {
+          final parts = dateValue.split("/");
+          if (parts.length == 3) {
+            return DateTime(
+              int.parse(parts[2]), // yyyy
+              int.parse(parts[1]), // MM
+              int.parse(parts[0]), // dd
+            );
+          }
+        } catch (_) {
+          return null;
+        }
+      }
+    }
+
+    return null;
+  }
   Invoice copyWith({
     String? invoiceId,
     String? itemId,
@@ -232,26 +266,63 @@ class InvoiceItem {
 
 
   // factory InvoiceItem.fromJson(Map<String, dynamic> map) {
+  //   print("=== PARSING INVOICE ITEM ===");
+  //   print("Raw map data: $map");
+  //
+  //   // Parse GST with multiple fallbacks
+  //   double gstRate = double.tryParse(
+  //     map['gstRate']?.toString() ??
+  //         map['GstRate']?.toString() ??
+  //         map['gst_rate']?.toString() ??
+  //         '0.0',
+  //   ) ??
+  //       0.0;
+  //
+  //   double? gstAmount = double.tryParse(map['gstAmount']?.toString() ?? '');
+  //   double? amountWithGst =
+  //   double.tryParse(map['amountWithGst']?.toString() ?? '');
+  //   double? totalPrice =
+  //   double.tryParse(map['totalPrice']?.toString() ?? '');
+  //
+  //   print("✅ Parsed gstRate: $gstRate");
+  //   print("✅ Parsed gstAmount: $gstAmount");
+  //   print("✅ Parsed amountWithGst: $amountWithGst");
+  //   print("✅ Parsed totalPrice: $totalPrice");
+  //
   //   return InvoiceItem(
+  //     customerId: map['customerId']?.toString(),
   //     description: map['description']?.toString() ?? '',
-  //     quantity: int.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
-  //     rate: double.tryParse(map['rate']?.toString() ?? map['price']?.toString() ?? '0') ?? 0.0,
+  //     quantity: double.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
+  //     rate: double.tryParse(map['rate']?.toString() ?? '0.0') ?? 0.0,
   //     itemId: map['itemId']?.toString() ?? '',
+  //     invoiceId: map['invoiceId']?.toString() ?? '',
   //     itemName: map['itemName']?.toString() ?? '',
-  //     gstRate: double.tryParse(map['gstRate']?.toString() ?? '0') ?? 0.0,
-  //     gstAmount: double.tryParse(map['gstAmount']?.toString() ?? '0') ?? null, // ✅ From data
-  //     amountWithGst: double.tryParse(map['amountWithGst']?.toString() ?? '0') ?? null, // ✅ From data
-  //     totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0') ?? null, // ✅ From data
+  //     gstRate: gstRate,              // ✅ Now properly parsed
+  //     gstAmount: gstAmount,
+  //     amountWithGst: amountWithGst,
+  //     totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ??
+  //         null,
   //     challanId: map['challanId'],
+  //     unit: map['unit']?.toString(),
   //   );
   // }
 
-  // ✅ FIXED fromJson method - this is the key fix!
-  // ✅ ALSO - Make sure your InvoiceItem.fromJson is using the fixed version:
-  // Add this debug method to your InvoiceItem.fromJson:
   factory InvoiceItem.fromJson(Map<String, dynamic> map) {
     print("=== PARSING INVOICE ITEM ===");
     print("Raw map data: $map");
+
+    // Parse rate/price with multiple fallbacks
+    // Try 'price' FIRST (your column name), then 'rate' as fallback
+    double rate = double.tryParse(
+      map['price']?.toString() ??   // ✅ Try 'price' first (your sheet column)
+          map['rate']?.toString() ??    // Fallback to 'rate'
+          '0.0',
+    ) ?? 0.0;
+
+    // Parse quantity
+    double quantity = double.tryParse(
+        map['quantity']?.toString() ?? '0'
+    ) ?? 0.0;
 
     // Parse GST with multiple fallbacks
     double gstRate = double.tryParse(
@@ -259,15 +330,14 @@ class InvoiceItem {
           map['GstRate']?.toString() ??
           map['gst_rate']?.toString() ??
           '0.0',
-    ) ??
-        0.0;
+    ) ?? 0.0;
 
     double? gstAmount = double.tryParse(map['gstAmount']?.toString() ?? '');
-    double? amountWithGst =
-    double.tryParse(map['amountWithGst']?.toString() ?? '');
-    double? totalPrice =
-    double.tryParse(map['totalPrice']?.toString() ?? '');
+    double? amountWithGst = double.tryParse(map['amountWithGst']?.toString() ?? '');
+    double? totalPrice = double.tryParse(map['totalPrice']?.toString() ?? '');
 
+    print("✅ Parsed rate: $rate");
+    print("✅ Parsed quantity: $quantity");
     print("✅ Parsed gstRate: $gstRate");
     print("✅ Parsed gstAmount: $gstAmount");
     print("✅ Parsed amountWithGst: $amountWithGst");
@@ -276,21 +346,19 @@ class InvoiceItem {
     return InvoiceItem(
       customerId: map['customerId']?.toString(),
       description: map['description']?.toString() ?? '',
-      quantity: double.tryParse(map['quantity']?.toString() ?? '0') ?? 0,
-      rate: double.tryParse(map['rate']?.toString() ?? '0.0') ?? 0.0,
+      quantity: quantity,
+      rate: rate,  // ✅ Now properly gets value from 'price' column
       itemId: map['itemId']?.toString() ?? '',
       invoiceId: map['invoiceId']?.toString() ?? '',
       itemName: map['itemName']?.toString() ?? '',
-      gstRate: gstRate,              // ✅ Now properly parsed
+      gstRate: gstRate,
       gstAmount: gstAmount,
       amountWithGst: amountWithGst,
-      totalPrice: double.tryParse(map['totalPrice']?.toString() ?? '0.0') ??
-          null,
+      totalPrice: totalPrice,
       challanId: map['challanId'],
       unit: map['unit']?.toString(),
     );
   }
-
 
   InvoiceItem copyWith({
     String? invoiceId,

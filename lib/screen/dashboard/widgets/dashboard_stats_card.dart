@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,7 +16,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
             Expanded(
               child: _buildStatCard(
                 title: 'Total Revenue',
-                value: '₹${controller.totalRevenue.value.toStringAsFixed(2)}',
+                value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}',
                 icon: Icons.account_balance_wallet,
                 color: Colors.green,
               ),
@@ -24,7 +25,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
             Expanded(
               child: _buildStatCard(
                 title: 'Pending Amount',
-                value: '₹${controller.pendingAmount.value.toStringAsFixed(2)}',
+                value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
                 icon: Icons.pending,
                 color: Colors.orange,
               ),

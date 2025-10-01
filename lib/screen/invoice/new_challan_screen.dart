@@ -1,4 +1,5 @@
 import 'package:demo_prac_getx/constant/constant.dart';
+import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -1542,7 +1543,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 ),
                 Spacer(),
                 Obx(() => Text(
-                  'Total: ₹${controller.totalAmount.value}',
+                  'Total: ₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: controller.isEditMode.value
@@ -2092,7 +2093,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
             ),
           ),
           Text(
-            '₹${amount.toStringAsFixed(2)}',
+            '₹${AppUtil.formatCurrency(amount)}',
             style: TextStyle(
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,

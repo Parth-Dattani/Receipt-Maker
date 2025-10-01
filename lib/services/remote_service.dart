@@ -2098,88 +2098,73 @@ class GoogleSheetService {
   }
 
 
-  ///Invoice
-  /// Get all invoices from Google Sheet working 29-09 12:10
-  // static Future<List<Invoice>> getInvoices() async {
+  // static Future<List<Invoice>> getInvoices({String? type}) async {
   //   print("🔄 Fetching invoices from Google Sheet...");
   //
   //   try {
   //     final client = await _getAuthClient();
   //     final sheetsApi = SheetsApi(client);
   //
-  //     // First, get the header row to understand column positions
+  //     // Get header row
   //     final headerResponse = await sheetsApi.spreadsheets.values.get(
   //       spreadsheetId,
-  //       "$invoiceSheetName!1:1", // Get only the header row
+  //       "$invoiceSheetName!1:1",
   //     );
   //
-  //     print("----Header Response: -------${spreadsheetId}");
   //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
   //       print("No header row found in sheet");
   //       return <Invoice>[];
   //     }
   //
   //     final headers = headerResponse.values![0];
-  //     print("Sheet headers: $headers");
+  //     final columnIndices = {
+  //       for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
+  //     };
   //
-  //     // Create a map of column names to indices
-  //     final columnIndices = {};
-  //     for (int i = 0; i < headers.length; i++) {
-  //       columnIndices[headers[i].toString().toLowerCase()] = i;
-  //     }
-  //     print("Column indices: $columnIndices");
-  //
-  //     // Get all data from the invoice sheet
+  //     // Get all data
   //     final response = await sheetsApi.spreadsheets.values.get(
   //       spreadsheetId,
-  //       "$invoiceSheetName!A:Z", // Get all columns
+  //       "$invoiceSheetName!A:Z",
   //     );
   //
-  //     if (response.values == null || response.values!.isEmpty) {
+  //     if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
   //       print("No invoice data found in sheet");
-  //       return <Invoice>[];
-  //     }
-  //
-  //     if (response.values!.length <= 1) {
-  //       print("Only header row found, no invoice data");
   //       return <Invoice>[];
   //     }
   //
   //     List<Invoice> invoices = [];
   //
-  //     // Skip header row (index 0)
+  //     // Skip header row
   //     for (int i = 1; i < response.values!.length; i++) {
   //       final row = response.values![i];
-  //
-  //       // Skip empty rows
-  //       if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) {
-  //         continue;
-  //       }
+  //       if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
   //
   //       try {
-  //         // Create a map using the header names as keys
   //         Map<String, dynamic> rowData = {};
   //         for (int j = 0; j < min(row.length, headers.length); j++) {
   //           rowData[headers[j].toString()] = row[j];
   //         }
   //
-  //         // Convert to Invoice object
   //         final invoice = Invoice.fromMap(rowData);
+  //
+  //         // 🔑 Apply filter
+  //         if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+  //         if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+  //
   //         invoices.add(invoice);
   //
   //       } catch (e) {
   //         print("Error parsing invoice row ${i}: $e");
-  //         print("Row data: $row");
   //         continue;
   //       }
   //     }
   //
-  //     print("✅ Retrieved ${invoices.length} invoices from Google Sheet");
+  //     print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
   //     return invoices;
   //
   //   } catch (e) {
   //     print("❌ Error in getInvoices: $e");
-  //     rethrow; // Re-throw to let caller handle fallback
+  //     rethrow;
   //   }
   // }
 
@@ -2227,10 +2212,39 @@ class GoogleSheetService {
         try {
           Map<String, dynamic> rowData = {};
           for (int j = 0; j < min(row.length, headers.length); j++) {
-            rowData[headers[j].toString()] = row[j];
+            final headerKey = headers[j].toString();
+            final cellValue = row[j];
+
+            // 🔹 Parse date fields (issueDate, dueDate) - keep as STRING for now
+            if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+              if (cellValue != null && cellValue.toString().isNotEmpty) {
+                // Store the parsed DateTime
+                final parsedDate = _parseDate(cellValue.toString());
+                rowData[headerKey] = parsedDate; // Store as DateTime
+
+                // Debug first few rows
+                if (i <= 3) {
+                  print("📅 Row $i - $headerKey: ${cellValue.toString()} → $parsedDate");
+                }
+              } else {
+                rowData[headerKey] = null;
+              }
+            } else {
+              rowData[headerKey] = cellValue;
+            }
+          }
+
+          // Debug first invoice
+          if (i == 1) {
+            print("🔍 First invoice rowData: $rowData");
           }
 
           final invoice = Invoice.fromMap(rowData);
+
+          // Debug first invoice
+          if (i == 1) {
+            print("🔍 First invoice object: invoiceId=${invoice.invoiceId}, issueDate=${invoice.issueDate}");
+          }
 
           // 🔑 Apply filter
           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
@@ -2238,8 +2252,9 @@ class GoogleSheetService {
 
           invoices.add(invoice);
 
-        } catch (e) {
-          print("Error parsing invoice row ${i}: $e");
+        } catch (e, stackTrace) {
+          print("❌ Error parsing invoice row ${i}: $e");
+          print("Stack trace: $stackTrace");
           continue;
         }
       }
@@ -2253,6 +2268,35 @@ class GoogleSheetService {
     }
   }
 
+// 🔹 Helper method to parse dates from Google Sheets
+  static DateTime? _parseDate(String dateString) {
+    if (dateString.isEmpty) return null;
+
+    try {
+      // Format: dd/MM/yyyy (most common in Google Sheets)
+      if (dateString.contains("/")) {
+        final parts = dateString.split("/");
+        if (parts.length == 3) {
+          return DateTime(
+            int.parse(parts[2]), // yyyy
+            int.parse(parts[1]), // MM
+            int.parse(parts[0]), // dd
+          );
+        }
+      }
+
+      // Format: yyyy-MM-dd (ISO format)
+      if (dateString.contains("-")) {
+        return DateTime.tryParse(dateString);
+      }
+
+      print("⚠️ Could not parse date: $dateString");
+      return null;
+    } catch (e) {
+      print("❌ Error parsing date '$dateString': $e");
+      return null;
+    }
+  }
 
 // Add invoice to Google Sheet
   static Future<void> addInvoice(dynamic invoiceData, String userId) async {
@@ -2879,6 +2923,60 @@ class GoogleSheetService {
       }
     } catch (e) {
       print("❌ Error updating stock after invoice: $e");
+    }
+  }
+
+  static Future<List<InvoiceItem>> getInvoiceItems({String? invoiceId}) async {
+    print("🔄 Fetching invoice items from Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all rows from InvoiceItem sheet
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceItemSheetName!A:Z", // adjust range as needed
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No invoice items found in sheet");
+        return [];
+      }
+
+      // First row = headers
+      final headers = response.values!.first.map((h) => h.toString()).toList();
+      final rows = response.values!.skip(1); // skip header row
+
+      print("✅ Headers: $headers");
+      List<InvoiceItem> items = [];
+
+      for (var row in rows) {
+        Map<String, dynamic> rowMap = {};
+        for (int i = 0; i < headers.length; i++) {
+          if (i < row.length) {
+            rowMap[headers[i]] = row[i];
+          }
+        }
+
+        try {
+          final item = InvoiceItem.fromJson(rowMap);
+
+          // ✅ If filtering by invoiceId
+          if (invoiceId == null || item.invoiceId == invoiceId) {
+            items.add(item);
+          }
+        } catch (e) {
+          print("❌ Error parsing invoice item row: $rowMap");
+          print("Error: $e");
+        }
+      }
+
+      print("✅ Loaded ${items.length} invoice items");
+      return items;
+    } catch (e) {
+      print("❌ Error fetching invoice items: $e");
+      throw Exception("Failed to fetch invoice items: ${e.toString()}");
     }
   }
 

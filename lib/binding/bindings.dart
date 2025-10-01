@@ -13,3 +13,4 @@ export 'invoice_list_binding.dart';
 export 'new_challan_binding.dart';
 export 'challan_list_binding.dart';
 export 'challan_details_binding.dart';
+export 'quotation_list_binding.dart';
