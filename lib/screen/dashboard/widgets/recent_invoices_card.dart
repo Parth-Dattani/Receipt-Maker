@@ -49,7 +49,6 @@ class RecentInvoicesCard extends GetView<DashboardController> {
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
             itemCount: controller.invoiceList.take(5).length,
-            reverse: true,
             separatorBuilder: (context, index) => Divider(height: 1),
             itemBuilder: (context, index) {
               final invoice = controller.invoiceList.reversed.take(5).toList()[index];
@@ -82,13 +81,13 @@ class RecentInvoicesCard extends GetView<DashboardController> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _getStatusColor('paid').withOpacity(0.1),
+                        color: _getStatusColor(invoice.status.toString()).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        'paid',
+                        invoice.status.toString(),
                         style: TextStyle(
-                          color: _getStatusColor('paid'),
+                          color: _getStatusColor(invoice.status.toString()),
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -96,7 +95,9 @@ class RecentInvoicesCard extends GetView<DashboardController> {
                     ),
                   ],
                 ),
-                onTap: () => controller.viewInvoiceDetails(invoice.invoiceId.toString()),
+                onTap: () {
+                  controller.viewInvoiceDetails(invoice);
+                },
               );
             },
           ),

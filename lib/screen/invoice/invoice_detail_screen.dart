@@ -1,124 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-
+import 'package:shimmer/shimmer.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 
+///3-10
 // class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
 //   static const String pageId = '/invoiceDetails';
 //
-//   const InvoiceDetailsScreen({super.key});
+//   const InvoiceDetailsScreen({Key? key}) : super(key: key);
 //
 //   @override
 //   Widget build(BuildContext context) {
 //     Get.lazyPut(() => InvoiceDetailsController());
+//
 //     return Scaffold(
 //       appBar: AppBar(
-//         title: Text('Invoice Details'),
+//         title: const Text('Invoice Details'),
 //         backgroundColor: Colors.blue.shade700,
 //         foregroundColor: Colors.white,
-//         // actions: [
-//         //   IconButton(
-//         //     icon: Icon(Icons.edit),
-//         //     onPressed: controller.editInvoice,
-//         //     tooltip: 'Edit Invoice',
-//         //   ),
-//         //   PopupMenuButton(
-//         //     itemBuilder: (context) => [
-//         //       PopupMenuItem(
-//         //         value: 'share',
-//         //         child: Row(
-//         //           children: [
-//         //             Icon(Icons.share, size: 20),
-//         //             SizedBox(width: 8),
-//         //             Text('Share'),
-//         //           ],
-//         //         ),
-//         //       ),
-//         //       PopupMenuItem(
-//         //         value: 'download',
-//         //         child: Row(
-//         //           children: [
-//         //             Icon(Icons.download, size: 20),
-//         //             SizedBox(width: 8),
-//         //             Text('Download'),
-//         //           ],
-//         //         ),
-//         //       ),
-//         //       PopupMenuItem(
-//         //         value: 'delete',
-//         //         child: Row(
-//         //           children: [
-//         //             Icon(Icons.delete, size: 20, color: Colors.red),
-//         //             SizedBox(width: 8),
-//         //             Text('Delete', style: TextStyle(color: Colors.red)),
-//         //           ],
-//         //         ),
-//         //       ),
-//         //     ],
-//         //     onSelected: (value) {
-//         //       switch (value) {
-//         //         case 'share':
-//         //           controller.shareInvoice();
-//         //           break;
-//         //         case 'download':
-//         //           controller.downloadInvoice();
-//         //           break;
-//         //         case 'delete':
-//         //           controller.deleteInvoice();
-//         //           break;
-//         //       }
-//         //     },
-//         //   ),
-//         // ],
+//         actions: [
+//           // Edit button - navigates to NewInvoiceScreen for editing
+//           IconButton(
+//             icon: const Icon(Icons.edit),
+//             tooltip: 'Edit Invoice',
+//             onPressed: () => controller.navigateToEditMode(),
+//           ),
+//           // Manual refresh button
+//           Obx(() => controller.isLoadingItems.value
+//               ? const SizedBox(
+//               width: 20,
+//               height: 20,
+//               child: CircularProgressIndicator(
+//                 strokeWidth: 2,
+//                 color: Colors.white,
+//               ))
+//               : IconButton(
+//             icon: const Icon(Icons.refresh, size: 20),
+//             onPressed: () async {
+//               print("🔄 MANUAL REFRESH TRIGGERED");
+//               await controller.loadInvoiceItems(
+//                   controller.invoice.value!.invoiceId!);
+//               Get.snackbar('Success', 'Items refreshed from server');
+//             },
+//             tooltip: 'Force Refresh Items',
+//           )),
+//         ],
 //       ),
-//       body: Obx(() {
-//         final invoice = controller.invoice.value;
-//         if (invoice == null) {
-//           return Center(
+//       body: SafeArea(
+//         child: Obx(() {
+//           final inv = controller.invoice.value;
+//           if (inv == null) {
+//             return Center(
+//               child: Column(
+//                 mainAxisAlignment: MainAxisAlignment.center,
+//                 children: [
+//                   Icon(Icons.error_outline,
+//                       size: 64, color: Colors.grey.shade400),
+//                   const SizedBox(height: 16),
+//                   Text('Invoice not found',
+//                       style: TextStyle(
+//                           fontSize: 18, color: Colors.grey.shade600)),
+//                 ],
+//               ),
+//             );
+//           }
+//
+//           return SingleChildScrollView(
+//             padding: const EdgeInsets.all(16),
 //             child: Column(
-//               mainAxisAlignment: MainAxisAlignment.center,
+//               crossAxisAlignment: CrossAxisAlignment.start,
 //               children: [
-//                 Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
-//                 SizedBox(height: 16),
-//                 Text(
-//                   'Invoice not found',
-//                   style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-//                 ),
+//                 _buildInvoiceHeader(inv),
+//                 const SizedBox(height: 24),
+//                 _buildCustomerInfo(inv),
+//                 const SizedBox(height: 24),
+//                 _buildInvoiceItems(inv),
+//                 const SizedBox(height: 24),
+//                 _buildPaymentInfo(inv),
 //               ],
 //             ),
 //           );
-//         }
-//
-//         return SingleChildScrollView(
-//           padding: EdgeInsets.all(16),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               // Invoice Header
-//               _buildInvoiceHeader(invoice),
-//               SizedBox(height: 24),
-//
-//               // Customer Information
-//               _buildCustomerInfo(invoice),
-//               SizedBox(height: 24),
-//
-//               // Invoice Items
-//               _buildInvoiceItems(invoice),
-//               SizedBox(height: 24),
-//
-//               // Payment Information
-//               _buildPaymentInfo(invoice),
-//               //SizedBox(height: 32),
-//
-//               /// Action Buttons
-//               //_buildActionButtons(),
-//             ],
-//           ),
-//         );
-//       }),
+//         }),
+//       ),
 //     );
 //   }
 //
@@ -126,49 +92,43 @@ import '../../model/model.dart';
 //     return Card(
 //       elevation: 2,
 //       child: Padding(
-//         padding: EdgeInsets.all(16),
+//         padding: const EdgeInsets.all(16),
 //         child: Column(
 //           crossAxisAlignment: CrossAxisAlignment.start,
 //           children: [
 //             Row(
 //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
 //               children: [
-//                 Text(
-//                   'Invoice ${invoice.invoiceId ?? 'N/A'}',
-//                   style: TextStyle(
-//                     fontSize: 24,
-//                     fontWeight: FontWeight.bold,
-//                   ),
-//                 ),
+//                 Text('Invoice ${invoice.invoiceId ?? 'N/A'}',
+//                     style: const TextStyle(
+//                         fontSize: 24, fontWeight: FontWeight.bold)),
 //                 Container(
-//                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+//                   padding:
+//                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
 //                   decoration: BoxDecoration(
-//                     color: _getStatusColor(invoice.status),
-//                     borderRadius: BorderRadius.circular(20),
-//                   ),
-//                   child: Text(
-//                     invoice.status ?? 'Unknown',
-//                     style: TextStyle(
-//                       color: Colors.white,
-//                       fontWeight: FontWeight.bold,
-//                       fontSize: 12,
-//                     ),
-//                   ),
+//                       color: _getStatusColor(invoice.status),
+//                       borderRadius: BorderRadius.circular(20)),
+//                   child: Text(invoice.status ?? 'Unknown',
+//                       style: const TextStyle(
+//                           color: Colors.white,
+//                           fontWeight: FontWeight.bold,
+//                           fontSize: 12)),
 //                 ),
 //               ],
 //             ),
-//             SizedBox(height: 16),
+//             const SizedBox(height: 16),
 //             Row(
 //               children: [
 //                 Expanded(
 //                   child: Column(
 //                     crossAxisAlignment: CrossAxisAlignment.start,
 //                     children: [
-//                       Text('Issue Date:', style: TextStyle(color: Colors.grey.shade600)),
+//                       Text('Issue Date:',
+//                           style: TextStyle(color: Colors.grey.shade600)),
 //                       Text(
-//                         DateFormat('MMM dd, yyyy').format(invoice.issueDate ?? DateTime.now()),
-//                         style: TextStyle(fontWeight: FontWeight.w500),
-//                       ),
+//                           DateFormat('MMM dd, yyyy')
+//                               .format(invoice.issueDate ?? DateTime.now()),
+//                           style: const TextStyle(fontWeight: FontWeight.w500)),
 //                     ],
 //                   ),
 //                 ),
@@ -176,11 +136,12 @@ import '../../model/model.dart';
 //                   child: Column(
 //                     crossAxisAlignment: CrossAxisAlignment.start,
 //                     children: [
-//                       Text('Due Date:', style: TextStyle(color: Colors.grey.shade600)),
+//                       Text('Due Date:',
+//                           style: TextStyle(color: Colors.grey.shade600)),
 //                       Text(
-//                         DateFormat('MMM dd, yyyy').format(invoice.dueDate ?? DateTime.now()),
-//                         style: TextStyle(fontWeight: FontWeight.w500),
-//                       ),
+//                           DateFormat('MMM dd, yyyy')
+//                               .format(invoice.dueDate ?? DateTime.now()),
+//                           style: const TextStyle(fontWeight: FontWeight.w500)),
 //                     ],
 //                   ),
 //                 ),
@@ -196,19 +157,16 @@ import '../../model/model.dart';
 //     return Card(
 //       elevation: 2,
 //       child: Padding(
-//         padding: EdgeInsets.all(16),
+//         padding: const EdgeInsets.all(16),
 //         child: Column(
 //           crossAxisAlignment: CrossAxisAlignment.start,
 //           children: [
-//             Text(
-//               'Customer Information',
-//               style: TextStyle(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.bold,
-//                 color: Colors.blue.shade700,
-//               ),
-//             ),
-//             SizedBox(height: 12),
+//             Text('Customer Information',
+//                 style: TextStyle(
+//                     fontSize: 18,
+//                     fontWeight: FontWeight.bold,
+//                     color: Colors.blue.shade700)),
+//             const SizedBox(height: 12),
 //             _buildInfoRow('Name:', invoice.customerName ?? 'N/A'),
 //             _buildInfoRow('Email:', invoice.customerEmail ?? 'N/A'),
 //             _buildInfoRow('Phone:', invoice.mobile ?? 'N/A'),
@@ -223,175 +181,161 @@ import '../../model/model.dart';
 //     return Card(
 //       elevation: 2,
 //       child: Padding(
-//         padding: EdgeInsets.all(16),
+//         padding: const EdgeInsets.all(16),
 //         child: Column(
 //           crossAxisAlignment: CrossAxisAlignment.start,
 //           children: [
 //             Row(
 //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
 //               children: [
-//                 Text(
-//                   'Invoice Items',
-//                   style: TextStyle(
-//                     fontSize: 18,
-//                     fontWeight: FontWeight.bold,
-//                     color: Colors.blue.shade700,
-//                   ),
-//                 ),
+//                 Text('Invoice Items',
+//                     style: TextStyle(
+//                         fontSize: 18,
+//                         fontWeight: FontWeight.bold,
+//                         color: Colors.blue.shade700)),
 //                 Obx(() => controller.isLoadingItems.value
-//                     ? SizedBox(
-//                   width: 20,
-//                   height: 20,
-//                   child: CircularProgressIndicator(strokeWidth: 2),
-//                 )
+//                     ? const SizedBox(
+//                     width: 20,
+//                     height: 20,
+//                     child: CircularProgressIndicator(strokeWidth: 2))
 //                     : IconButton(
-//                   icon: Icon(Icons.refresh, size: 20),
-//                   onPressed: controller.refreshInvoiceItems,
-//                   tooltip: 'Refresh Items',
-//                 ),
-//                 ),
+//                     icon: const Icon(Icons.refresh, size: 20),
+//                     onPressed: controller.refreshInvoiceItems,
+//                     tooltip: 'Refresh Items')),
 //               ],
 //             ),
-//             SizedBox(height: 12),
+//             const SizedBox(height: 12),
 //
-//             // Items List
 //             Obx(() {
 //               if (controller.isLoadingItems.value) {
-//                 return Center(
-//                   child: Padding(
-//                     padding: EdgeInsets.all(20),
-//                     child: CircularProgressIndicator(),
-//                   ),
-//                 );
+//                 return const Center(
+//                     child: Padding(
+//                         padding: EdgeInsets.all(20),
+//                         child: CircularProgressIndicator()));
 //               }
 //
 //               if (controller.invoiceItems.isEmpty) {
 //                 return Container(
-//                   padding: EdgeInsets.all(20),
-//                   child: Column(
-//                     children: [
-//                       Icon(Icons.inbox, size: 48, color: Colors.grey.shade400),
-//                       SizedBox(height: 8),
-//                       Text(
-//                         'No items found',
-//                         style: TextStyle(color: Colors.grey.shade600),
-//                       ),
-//                     ],
-//                   ),
+//                   padding: const EdgeInsets.all(20),
+//                   child: Column(children: [
+//                     Icon(Icons.inbox, size: 48, color: Colors.grey.shade400),
+//                     const SizedBox(height: 8),
+//                     Text('No items found',
+//                         style: TextStyle(color: Colors.grey.shade600))
+//                   ]),
 //                 );
 //               }
 //
-//               // Calculate correct subtotal
-//               final double itemsSubtotal = controller.invoiceItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+//               final itemsSubtotal = controller.invoiceItems.fold(
+//                   0.0, (s, it) => s + ((it.quantity ?? 0) * (it.rate ?? 0.0)));
 //
 //               return Column(
 //                 children: [
-//                   // Items Header
 //                   Container(
-//                     padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+//                     padding: const EdgeInsets.symmetric(
+//                         vertical: 8, horizontal: 12),
 //                     decoration: BoxDecoration(
-//                       color: Colors.grey.shade100,
-//                       borderRadius: BorderRadius.circular(8),
-//                     ),
-//                     child: Row(
-//                       children: [
-//                         Expanded(flex: 3, child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
-//                         Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-//                         Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-//                         Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-//                       ],
-//                     ),
+//                         color: Colors.grey.shade100,
+//                         borderRadius: BorderRadius.circular(8)),
+//                     child: Row(children: const [
+//                       Expanded(
+//                           flex: 3,
+//                           child: Text('Item',
+//                               style: TextStyle(fontWeight: FontWeight.bold))),
+//                       Expanded(
+//                           flex: 1,
+//                           child: Text('Qty',
+//                               style: TextStyle(fontWeight: FontWeight.bold),
+//                               textAlign: TextAlign.center)),
+//                       Expanded(
+//                           flex: 2,
+//                           child: Text('Price',
+//                               style: TextStyle(fontWeight: FontWeight.bold),
+//                               textAlign: TextAlign.right)),
+//                       Expanded(
+//                           flex: 2,
+//                           child: Text('Total',
+//                               style: TextStyle(fontWeight: FontWeight.bold),
+//                               textAlign: TextAlign.right))
+//                     ]),
 //                   ),
-//                   SizedBox(height: 8),
+//                   const SizedBox(height: 8),
 //
-//                   // Items List
 //                   ...controller.invoiceItems.map((item) => Container(
-//                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-//                     margin: EdgeInsets.only(bottom: 8),
+//                     padding: const EdgeInsets.symmetric(
+//                         vertical: 12, horizontal: 12),
+//                     margin: const EdgeInsets.only(bottom: 8),
 //                     decoration: BoxDecoration(
-//                       color: Colors.grey.shade50,
-//                       borderRadius: BorderRadius.circular(8),
-//                       border: Border.all(color: Colors.grey.shade200),
-//                     ),
-//                     child: Row(
-//                       children: [
-//                         Expanded(
+//                         color: Colors.grey.shade50,
+//                         borderRadius: BorderRadius.circular(8),
+//                         border: Border.all(color: Colors.grey.shade200)),
+//                     child: Row(children: [
+//                       Expanded(
 //                           flex: 3,
 //                           child: Column(
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               Text(
-//                                 item.description.isNotEmpty ? item.description : item.itemName,
-//                                 style: TextStyle(fontWeight: FontWeight.w500),
-//                               ),
-//                               if (item.itemId.isNotEmpty)
+//                               crossAxisAlignment: CrossAxisAlignment.start,
+//                               children: [
 //                                 Text(
-//                                   'ID: ${item.itemId}',
-//                                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-//                                 ),
-//                             ],
-//                           ),
-//                         ),
-//                         Expanded(
+//                                     item.itemName?.isNotEmpty == true
+//                                         ? item.itemName!
+//                                         : (item.description?.isNotEmpty ==
+//                                         true
+//                                         ? item.description!
+//                                         : 'Unnamed Item'),
+//                                     style: const TextStyle(
+//                                         fontWeight: FontWeight.w500)),
+//                                 // if (item.itemId?.isNotEmpty == true)
+//                                 //   Text('ID: ${item.itemId}',
+//                                 //       style: TextStyle(
+//                                 //           fontSize: 12,
+//                                 //           color: Colors.grey.shade600)),
+//                               ])),
+//                       Expanded(
 //                           flex: 1,
-//                           child: Text(
-//                             '${item.quantity}',
-//                             textAlign: TextAlign.center,
-//                             style: TextStyle(fontWeight: FontWeight.w500),
-//                           ),
-//                         ),
-//                         Expanded(
+//                           child: Text('${item.quantity}',
+//                               textAlign: TextAlign.center,
+//                               style: const TextStyle(
+//                                   fontWeight: FontWeight.w500))),
+//                       Expanded(
 //                           flex: 2,
 //                           child: Text(
-//                             '₹${item.rate.toStringAsFixed(2)}',
-//                             textAlign: TextAlign.right,
-//                             style: TextStyle(fontWeight: FontWeight.w500),
-//                           ),
-//                         ),
-//                         Expanded(
+//                               '${(item.rate ?? 0.0).toStringAsFixed(2)}',
+//                               textAlign: TextAlign.right,
+//                               style: const TextStyle(
+//                                   fontWeight: FontWeight.w500))),
+//                       Expanded(
 //                           flex: 2,
 //                           child: Text(
-//                             '₹${item.totalPrice.toStringAsFixed(2)}',
-//                             textAlign: TextAlign.right,
-//                             style: TextStyle(
-//                               fontWeight: FontWeight.bold,
-//                               color: Colors.green.shade700,
-//                             ),
-//                           ),
-//                         ),
-//                       ],
-//                     ),
+//                               '${((item.quantity ?? 0) * (item.rate ?? 0.0)).toStringAsFixed(2)}',
+//                               textAlign: TextAlign.right,
+//                               style: TextStyle(
+//                                   fontWeight: FontWeight.bold,
+//                                   color: Colors.green.shade700)))
+//                     ]),
 //                   )).toList(),
 //
-//                   // Items Summary
-//                   SizedBox(height: 12),
+//                   const SizedBox(height: 12),
 //                   Container(
-//                     padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+//                     padding: const EdgeInsets.symmetric(
+//                         vertical: 8, horizontal: 12),
 //                     decoration: BoxDecoration(
-//                       color: Colors.blue.shade50,
-//                       borderRadius: BorderRadius.circular(8),
-//                       border: Border.all(color: Colors.blue.shade200),
-//                     ),
+//                         color: Colors.blue.shade50,
+//                         borderRadius: BorderRadius.circular(8),
+//                         border: Border.all(color: Colors.blue.shade200)),
 //                     child: Row(
-//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                       children: [
-//                         Text(
-//                           'Items Subtotal (${controller.invoiceItems.length} items):',
-//                           style: TextStyle(
-//                             fontWeight: FontWeight.bold,
-//                             color: Colors.blue.shade700,
-//                           ),
-//                         ),
-//                         Text(
-//                           '₹${itemsSubtotal.toStringAsFixed(2)}',
-//                           style: TextStyle(
-//                             fontWeight: FontWeight.bold,
-//                             color: Colors.blue.shade700,
-//                             fontSize: 16,
-//                           ),
-//                         ),
-//                       ],
-//                     ),
+//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                         children: [
+//                           Text(
+//                               'Items Subtotal (${controller.invoiceItems.length} items):',
+//                               style: TextStyle(
+//                                   fontWeight: FontWeight.bold,
+//                                   color: Colors.blue.shade700)),
+//                           Text('₹${itemsSubtotal.toStringAsFixed(2)}',
+//                               style: TextStyle(
+//                                   fontWeight: FontWeight.bold,
+//                                   color: Colors.blue.shade700,
+//                                   fontSize: 16))
+//                         ]),
 //                   ),
 //                 ],
 //               );
@@ -403,52 +347,81 @@ import '../../model/model.dart';
 //   }
 //
 //   Widget _buildPaymentInfo(Invoice invoice) {
-//     // Calculate the correct values
-//     final double subtotal = invoice.totalAmount ?? 0.0;
-//     final double tax = invoice.taxAmount ?? 0.0;
-//     final double discount = invoice.discountAmount ?? 0.0;
-//     final double total = subtotal + tax - discount;
-//
 //     return Card(
 //       elevation: 2,
 //       child: Padding(
-//         padding: EdgeInsets.all(16),
+//         padding: const EdgeInsets.all(16),
 //         child: Column(
 //           crossAxisAlignment: CrossAxisAlignment.start,
 //           children: [
-//             Text(
-//               'Payment Summary',
-//               style: TextStyle(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.bold,
-//                 color: Colors.blue.shade700,
-//               ),
-//             ),
-//             SizedBox(height: 12),
-//             _buildInfoRow('Subtotal:', '₹${subtotal.toStringAsFixed(2)}'),
-//             _buildInfoRow('Tax:', '₹${tax.toStringAsFixed(2)}'),
-//             _buildInfoRow('Discount:', '-₹${discount.toStringAsFixed(2)}'),
-//             Divider(thickness: 2),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   'Total Amount:',
-//                   style: TextStyle(
-//                     fontSize: 16,
+//             Text('Payment Summary',
+//                 style: TextStyle(
+//                     fontSize: 18,
 //                     fontWeight: FontWeight.bold,
+//                     color: Colors.blue.shade700)),
+//             const SizedBox(height: 12),
+//
+//             Obx(() {
+//               double subtotal = 0.0;
+//               double totalGst = 0.0;  // ✅ Calculate from items
+//
+//               // Calculate from actual loaded items
+//               for (var item in controller.invoiceItems) {
+//                 final qty = item.quantity ?? 0.0;
+//                 final rate = item.rate ?? 0.0;
+//                 final itemTotal = qty * rate;
+//
+//                 subtotal += itemTotal;
+//
+//                 // ✅ Calculate GST for each item
+//                 if (AppConstants.withGST.value) {
+//                   final gstRate = item.gstRate ?? 0.0;
+//                   final itemGst = (itemTotal * gstRate) / 100;
+//                   totalGst += itemGst;
+//
+//                   print("Item: ${item.itemName}");
+//                   print("  Qty: $qty, Rate: $rate");
+//                   print("  Item Total: $itemTotal");
+//                   print("  GST Rate: $gstRate%");
+//                   print("  Item GST: $itemGst");
+//                 }
+//               }
+//
+//               final double discount = invoice.discountAmount ?? 0.0;
+//               final double total = subtotal + totalGst - discount;
+//
+//               print("=== PAYMENT SUMMARY ===");
+//               print("Subtotal: $subtotal");
+//               print("Total GST: $totalGst");
+//               print("Discount: $discount");
+//               print("Grand Total: $total");
+//
+//               return Column(
+//                 children: [
+//                   _buildInfoRow('Subtotal:', '₹${subtotal.toStringAsFixed(2)}'),
+//                   if (AppConstants.withGST.value) ...[
+//                     _buildInfoRow('CGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
+//                     _buildInfoRow('SGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
+//                   ],
+//                   if (discount > 0)
+//                     _buildInfoRow('Discount:', '-₹${discount.toStringAsFixed(2)}'),
+//                   const Divider(thickness: 2),
+//                   Row(
+//                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                     children: [
+//                       const Text('Total Amount:',
+//                           style: TextStyle(
+//                               fontSize: 16, fontWeight: FontWeight.bold)),
+//                       Text('₹${total.toStringAsFixed(2)}',
+//                           style: TextStyle(
+//                               fontSize: 20,
+//                               fontWeight: FontWeight.bold,
+//                               color: Colors.green.shade700))
+//                     ],
 //                   ),
-//                 ),
-//                 Text(
-//                   '₹${total.toStringAsFixed(2)}',
-//                   style: TextStyle(
-//                     fontSize: 20,
-//                     fontWeight: FontWeight.bold,
-//                     color: Colors.green.shade700,
-//                   ),
-//                 ),
-//               ],
-//             ),
+//                 ],
+//               );
+//             }),
 //           ],
 //         ),
 //       ),
@@ -457,73 +430,21 @@ import '../../model/model.dart';
 //
 //   Widget _buildInfoRow(String label, String value) {
 //     return Padding(
-//       padding: EdgeInsets.symmetric(vertical: 4),
+//       padding: const EdgeInsets.symmetric(vertical: 4),
 //       child: Row(
 //         crossAxisAlignment: CrossAxisAlignment.start,
 //         children: [
 //           SizedBox(
-//             width: 80,
-//             child: Text(
-//               label,
-//               style: TextStyle(color: Colors.grey.shade600),
-//             ),
-//           ),
+//               width: 80,
+//               child: Text(label,
+//                   style: TextStyle(color: Colors.grey.shade600))),
 //           Expanded(
-//             child: Text(
-//               value,
-//               style: TextStyle(fontWeight: FontWeight.w500),
-//             ),
-//           ),
+//               child: Text(value,
+//                   style: const TextStyle(fontWeight: FontWeight.w500)))
 //         ],
 //       ),
 //     );
 //   }
-//
-//   // Widget _buildActionButtons() {
-//   //   return Column(
-//   //     children: [
-//   //       SizedBox(
-//   //         width: double.infinity,
-//   //         child: ElevatedButton.icon(
-//   //           onPressed: controller.editInvoice,
-//   //           icon: Icon(Icons.edit),
-//   //           label: Text('Edit Invoice'),
-//   //           style: ElevatedButton.styleFrom(
-//   //             backgroundColor: Colors.blue.shade700,
-//   //             foregroundColor: Colors.white,
-//   //             padding: EdgeInsets.symmetric(vertical: 12),
-//   //           ),
-//   //         ),
-//   //       ),
-//   //       SizedBox(height: 12),
-//   //       Row(
-//   //         children: [
-//   //           Expanded(
-//   //             child: OutlinedButton.icon(
-//   //               onPressed: controller.shareInvoice,
-//   //               icon: Icon(Icons.share),
-//   //               label: Text('Share'),
-//   //               style: OutlinedButton.styleFrom(
-//   //                 padding: EdgeInsets.symmetric(vertical: 12),
-//   //               ),
-//   //             ),
-//   //           ),
-//   //           SizedBox(width: 12),
-//   //           Expanded(
-//   //             child: OutlinedButton.icon(
-//   //               onPressed: controller.downloadInvoice,
-//   //               icon: Icon(Icons.download),
-//   //               label: Text('Download'),
-//   //               style: OutlinedButton.styleFrom(
-//   //                 padding: EdgeInsets.symmetric(vertical: 12),
-//   //               ),
-//   //             ),
-//   //           ),
-//   //         ],
-//   //       ),
-//   //     ],
-//   //   );
-//   // }
 //
 //   Color _getStatusColor(String? status) {
 //     switch (status?.toLowerCase()) {
@@ -537,9 +458,10 @@ import '../../model/model.dart';
 //         return Colors.grey;
 //     }
 //   }
-//
-//
 // }
+
+
+
 class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
   static const String pageId = '/invoiceDetails';
 
@@ -556,19 +478,24 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         foregroundColor: Colors.white,
         actions: [
           // Edit button - navigates to NewInvoiceScreen for editing
-          IconButton(
+          Obx(() => controller.isLoading.value
+              ? const SizedBox.shrink()
+              : IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Edit Invoice',
             onPressed: () => controller.navigateToEditMode(),
-          ),
+          )),
           // Manual refresh button
           Obx(() => controller.isLoadingItems.value
-              ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
+              ? const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ))
               : IconButton(
             icon: const Icon(Icons.refresh, size: 20),
@@ -576,7 +503,6 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
               print("🔄 MANUAL REFRESH TRIGGERED");
               await controller.loadInvoiceItems(
                   controller.invoice.value!.invoiceId!);
-              Get.snackbar('Success', 'Items refreshed from server');
             },
             tooltip: 'Force Refresh Items',
           )),
@@ -584,6 +510,25 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
       ),
       body: SafeArea(
         child: Obx(() {
+          // Main loading state with shimmer
+          if (controller.isLoading.value && controller.invoice.value == null) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildShimmerInvoiceHeader(),
+                  const SizedBox(height: 24),
+                  _buildShimmerCustomerInfo(),
+                  const SizedBox(height: 24),
+                  _buildShimmerInvoiceItems(),
+                  const SizedBox(height: 24),
+                  _buildShimmerPaymentInfo(),
+                ],
+              ),
+            );
+          }
+
           final inv = controller.invoice.value;
           if (inv == null) {
             return Center(
@@ -596,6 +541,16 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                   Text('Invoice not found',
                       style: TextStyle(
                           fontSize: 18, color: Colors.grey.shade600)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Go Back'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -621,6 +576,336 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     );
   }
 
+  // Shimmer for Invoice Header
+  Widget _buildShimmerInvoiceHeader() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 150,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Container(
+                    width: 80,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 100,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 100,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Shimmer for Customer Info
+  Widget _buildShimmerCustomerInfo() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 180,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...List.generate(
+                4,
+                    (index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 150,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Shimmer for Invoice Items
+  Widget _buildShimmerInvoiceItems() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 120,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(flex: 3, child: Container(width: 60, height: 14, color: Colors.white)),
+                    Expanded(flex: 1, child: Container(width: 30, height: 14, color: Colors.white)),
+                    Expanded(flex: 2, child: Container(width: 50, height: 14, color: Colors.white)),
+                    Expanded(flex: 2, child: Container(width: 50, height: 14, color: Colors.white)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...List.generate(
+                3,
+                    (index) => Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Shimmer for Payment Info
+  Widget _buildShimmerPaymentInfo() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 150,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...List.generate(
+                4,
+                    (index) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      Container(
+                        width: 80,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(thickness: 2),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Container(
+                    width: 100,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInvoiceHeader(Invoice invoice) {
     return Card(
       elevation: 2,
@@ -632,9 +917,11 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Invoice ${invoice.invoiceId ?? 'N/A'}',
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text('Invoice ${invoice.invoiceId ?? 'N/A'}',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
+                ),
                 Container(
                   padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -701,8 +988,11 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                     color: Colors.blue.shade700)),
             const SizedBox(height: 12),
             _buildInfoRow('Name:', invoice.customerName ?? 'N/A'),
-            _buildInfoRow('Email:', invoice.customerEmail ?? 'N/A'),
-            _buildInfoRow('Phone:', invoice.mobile ?? 'N/A'),
+            if(invoice.customerEmail!.isNotEmpty)
+              _buildInfoRow('Email:', invoice.customerEmail ?? 'N/A'),
+            if(invoice.mobile.isNotEmpty)
+             _buildInfoRow('Phone:', invoice.mobile ?? 'N/A'),
+            if(invoice.customerAddress!.isNotEmpty)
             _buildInfoRow('Address:', invoice.customerAddress ?? 'N/A'),
           ],
         ),
@@ -740,21 +1030,25 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
             const SizedBox(height: 12),
 
             Obx(() {
+              // Loading items with shimmer
               if (controller.isLoadingItems.value) {
-                return const Center(
-                    child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator()));
+                return _buildShimmerItemsList();
               }
 
+              // Empty state
               if (controller.invoiceItems.isEmpty) {
                 return Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(40),
                   child: Column(children: [
                     Icon(Icons.inbox, size: 48, color: Colors.grey.shade400),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text('No items found',
-                        style: TextStyle(color: Colors.grey.shade600))
+                        style: TextStyle(
+                            fontSize: 16, color: Colors.grey.shade600)),
+                    const SizedBox(height: 8),
+                    Text('Try refreshing or add items in edit mode',
+                        style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade500))
                   ]),
                 );
               }
@@ -764,6 +1058,7 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
 
               return Column(
                 children: [
+                  // Header row
                   Container(
                     padding: const EdgeInsets.symmetric(
                         vertical: 8, horizontal: 12),
@@ -794,60 +1089,62 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                   ),
                   const SizedBox(height: 8),
 
-                  ...controller.invoiceItems.map((item) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 12),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200)),
-                    child: Row(children: [
-                      Expanded(
-                          flex: 3,
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                    item.itemName?.isNotEmpty == true
-                                        ? item.itemName!
-                                        : (item.description?.isNotEmpty ==
-                                        true
-                                        ? item.description!
-                                        : 'Unnamed Item'),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w500)),
-                                if (item.itemId?.isNotEmpty == true)
-                                  Text('ID: ${item.itemId}',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600)),
-                              ])),
-                      Expanded(
-                          flex: 1,
-                          child: Text('${item.quantity}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500))),
-                      Expanded(
-                          flex: 2,
-                          child: Text(
-                              '₹${(item.rate ?? 0.0).toStringAsFixed(2)}',
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500))),
-                      Expanded(
-                          flex: 2,
-                          child: Text(
-                              '₹${((item.quantity ?? 0) * (item.rate ?? 0.0)).toStringAsFixed(2)}',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade700)))
-                    ]),
-                  )).toList(),
+                  // Item rows
+                  ...controller.invoiceItems.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 12),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200)),
+                      child: Row(children: [
+                        Expanded(
+                            flex: 3,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      item.itemName?.isNotEmpty == true
+                                          ? item.itemName!
+                                          : (item.description?.isNotEmpty ==
+                                          true
+                                          ? item.description!
+                                          : 'Item ${index + 1}'),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500)),
+                                ])),
+                        Expanded(
+                            flex: 1,
+                            child: Text('${item.quantity ?? 0}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(
+                                '${(item.rate ?? 0.0).toStringAsFixed(2)}',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(
+                                '${((item.quantity ?? 0) * (item.rate ?? 0.0)).toStringAsFixed(2)}',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700)))
+                      ]),
+                    );
+                  }).toList(),
 
                   const SizedBox(height: 12),
+                  // Subtotal
                   Container(
                     padding: const EdgeInsets.symmetric(
                         vertical: 8, horizontal: 12),
@@ -879,6 +1176,75 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     );
   }
 
+  // Shimmer for loading items list only
+  Widget _buildShimmerItemsList() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Column(
+        children: List.generate(
+          3,
+              (index) => Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaymentInfo(Invoice invoice) {
     return Card(
       elevation: 2,
@@ -895,8 +1261,13 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
             const SizedBox(height: 12),
 
             Obx(() {
+              // Show shimmer while calculating
+              if (controller.isLoadingItems.value) {
+                return _buildShimmerPaymentSummary();
+              }
+
               double subtotal = 0.0;
-              double totalGst = 0.0;  // ✅ Calculate from items
+              double totalGst = 0.0;
 
               // Calculate from actual loaded items
               for (var item in controller.invoiceItems) {
@@ -906,38 +1277,29 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
 
                 subtotal += itemTotal;
 
-                // ✅ Calculate GST for each item
+                // Calculate GST for each item
                 if (AppConstants.withGST.value) {
                   final gstRate = item.gstRate ?? 0.0;
                   final itemGst = (itemTotal * gstRate) / 100;
                   totalGst += itemGst;
-
-                  print("Item: ${item.itemName}");
-                  print("  Qty: $qty, Rate: $rate");
-                  print("  Item Total: $itemTotal");
-                  print("  GST Rate: $gstRate%");
-                  print("  Item GST: $itemGst");
                 }
               }
 
               final double discount = invoice.discountAmount ?? 0.0;
               final double total = subtotal + totalGst - discount;
 
-              print("=== PAYMENT SUMMARY ===");
-              print("Subtotal: $subtotal");
-              print("Total GST: $totalGst");
-              print("Discount: $discount");
-              print("Grand Total: $total");
-
               return Column(
                 children: [
                   _buildInfoRow('Subtotal:', '₹${subtotal.toStringAsFixed(2)}'),
                   if (AppConstants.withGST.value) ...[
-                    _buildInfoRow('CGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
-                    _buildInfoRow('SGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
+                    _buildInfoRow(
+                        'CGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
+                    _buildInfoRow(
+                        'SGST:', '₹${(totalGst / 2).toStringAsFixed(2)}'),
                   ],
                   if (discount > 0)
-                    _buildInfoRow('Discount:', '-₹${discount.toStringAsFixed(2)}'),
+                    _buildInfoRow(
+                        'Discount:', '-₹${discount.toStringAsFixed(2)}'),
                   const Divider(thickness: 2),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -961,6 +1323,69 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     );
   }
 
+  // Shimmer for payment summary only
+  Widget _buildShimmerPaymentSummary() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Column(
+        children: [
+          ...List.generate(
+            4,
+                (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  Container(
+                    width: 80,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(thickness: 2),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 120,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Container(
+                width: 100,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -968,12 +1393,14 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-              width: 80,
+              width: 100,
               child: Text(label,
-                  style: TextStyle(color: Colors.grey.shade600))),
+                  style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500))),
           Expanded(
               child: Text(value,
-                  style: const TextStyle(fontWeight: FontWeight.w500)))
+                  style: const TextStyle(fontWeight: FontWeight.w600)))
         ],
       ),
     );
@@ -992,486 +1419,3 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     }
   }
 }
-
-/// 29-090 Mornig 10:39
-// class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
-//   static const String pageId = '/invoiceDetails';
-//
-//   const InvoiceDetailsScreen({Key? key}) : super(key: key);
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     Get.lazyPut(() => InvoiceDetailsController());
-//
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('Invoice Details'),
-//         backgroundColor: Colors.blue.shade700,
-//         foregroundColor: Colors.white,
-//         actions: [
-//           Obx(() => IconButton(
-//             icon: Icon(controller.isEditMode.value ? Icons.check : Icons.edit),
-//             onPressed: () {
-//               if (controller.isEditMode.value) {
-//                 controller.updateInvoice();
-//               } else {
-//                 controller.enterEditMode();
-//               }
-//             },
-//           )),
-//         ],
-//       ),
-//       body: SafeArea(
-//         child: Obx(() {
-//           final inv = controller.invoice.value;
-//           if (inv == null) {
-//             return Center(
-//               child: Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
-//                   const SizedBox(height: 16),
-//                   Text('Invoice not found', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
-//                 ],
-//               ),
-//             );
-//           }
-//
-//           return SingleChildScrollView(
-//             padding: const EdgeInsets.all(16),
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 _buildInvoiceHeader(inv),
-//                 const SizedBox(height: 24),
-//                 _buildCustomerInfo(inv),
-//                 const SizedBox(height: 24),
-//                 _buildInvoiceItems(inv),
-//                 const SizedBox(height: 24),
-//                 _buildPaymentInfo(inv),
-//               ],
-//             ),
-//           );
-//         }),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildInvoiceHeader(Invoice invoice) {
-//     return Card(
-//       elevation: 2,
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text('Invoice ${invoice.invoiceId ?? 'N/A'}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-//                 // Container(
-//                 //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-//                 //   decoration: BoxDecoration(color: _getStatusColor(invoice.status), borderRadius: BorderRadius.circular(20)),
-//                 //   child: Text(invoice.status ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-//                 // ),
-//
-//                 Obx(() {
-//                   if (controller.isEditMode.value) {
-//                     return DropdownButton<String>(
-//                       value: controller.selectedStatus.value,
-//                       items: controller.statusOptions.map((status) {
-//                         return DropdownMenuItem(
-//                           value: status,
-//                           child: Text(status),
-//                         );
-//                       }).toList(),
-//                       onChanged: (val) {
-//                         if (val != null) {
-//                           controller.selectedStatus.value = val;
-//                         }
-//                       },
-//                     );
-//                   }
-//
-//                   // Normal display mode
-//                   return Container(
-//                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-//                     decoration: BoxDecoration(
-//                       color: _getStatusColor(invoice.status),
-//                       borderRadius: BorderRadius.circular(20),
-//                     ),
-//                     child: Text(
-//                       invoice.status ?? 'Unknown',
-//                       style: const TextStyle(
-//                         color: Colors.white,
-//                         fontWeight: FontWeight.bold,
-//                         fontSize: 12,
-//                       ),
-//                     ),
-//                   );
-//                 }),
-//
-//               ],
-//             ),
-//             const SizedBox(height: 16),
-//             Row(
-//               children: [
-//                 Expanded(
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text('Issue Date:', style: TextStyle(color: Colors.grey.shade600)),
-//                       Text(DateFormat('MMM dd, yyyy').format(invoice.issueDate ?? DateTime.now()), style: const TextStyle(fontWeight: FontWeight.w500)),
-//                     ],
-//                   ),
-//                 ),
-//                 Expanded(
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text('Due Date:', style: TextStyle(color: Colors.grey.shade600)),
-//                       Text(DateFormat('MMM dd, yyyy').format(invoice.dueDate ?? DateTime.now()), style: const TextStyle(fontWeight: FontWeight.w500)),
-//                     ],
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildCustomerInfo(Invoice invoice) {
-//     return Card(
-//       elevation: 2,
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text('Customer Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-//             const SizedBox(height: 12),
-//
-//             Obx(() {
-//               if (controller.isEditMode.value) {
-//                 return Column(
-//                   children: [
-//                     TextField(controller: controller.customerNameCtrl, decoration: const InputDecoration(labelText: 'Customer Name')),
-//                     TextField(controller: controller.customerEmailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-//                     TextField(controller: controller.customerPhoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
-//                     TextField(controller: controller.customerAddressCtrl, decoration: const InputDecoration(labelText: 'Address')),
-//                   ],
-//                 );
-//               }
-//
-//               return Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   _buildInfoRow('Name:', invoice.customerName ?? 'N/A'),
-//                   _buildInfoRow('Email:', invoice.customerEmail ?? 'N/A'),
-//                   _buildInfoRow('Phone:', invoice.mobile ?? 'N/A'),
-//                   _buildInfoRow('Address:', invoice.customerAddress ?? 'N/A'),
-//                 ],
-//               );
-//             }),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildInvoiceItems(Invoice invoice) {
-//     return Card(
-//       elevation: 2,
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text('Invoice Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-//                 Obx(() => controller.isLoadingItems.value
-//                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-//                     : IconButton(icon: const Icon(Icons.refresh, size: 20), onPressed: controller.refreshInvoiceItems, tooltip: 'Refresh Items')),
-//               ],
-//             ),
-//             const SizedBox(height: 12),
-//
-//             Obx(() {
-//               if (controller.isLoadingItems.value) {
-//                 return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
-//               }
-//
-//               if (controller.isEditMode.value) {
-//                 final editable = controller.editableItems;
-//
-//                 return Column(
-//                   children: [
-//                     // header
-//                     Container(
-//                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-//                       decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-//                       child: Row(
-//                         children: const [
-//                           Expanded(flex: 3, child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
-//                           Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-//                           Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-//                           Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-//                           Expanded(flex: 1, child: SizedBox(width: 40)),
-//                         ],
-//                       ),
-//                     ),
-//                     const SizedBox(height: 8),
-//
-//                     // editable rows
-//                     ...List.generate(editable.length, (index) {
-//                       final ctrls = editable[index];
-//                       final itemTotal = controller.calculateItemTotal(index);
-//
-//                       return Container(
-//                         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-//                         margin: const EdgeInsets.only(bottom: 8),
-//                         decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
-//                         child: Row(
-//                           children: [
-//                             Expanded(
-//                               flex: 3,
-//                               child: TextField(
-//                                 controller: ctrls['itemName'],
-//                                 decoration: const InputDecoration(hintText: 'Item name', border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 8), filled: true, fillColor: Colors.white),
-//                                 style: const TextStyle(fontWeight: FontWeight.w500),
-//                                 onChanged: (_) => controller.editableItems.refresh(),
-//                               ),
-//                             ),
-//                             const SizedBox(width: 8),
-//                             Expanded(
-//                               flex: 1,
-//                               child: TextField(
-//                                 controller: ctrls['qty'],
-//                                 keyboardType: TextInputType.number,
-//                                 textAlign: TextAlign.center,
-//                                 decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 8), filled: true, fillColor: Colors.white),
-//                                 style: const TextStyle(fontWeight: FontWeight.w500),
-//                                 onChanged: (_) => controller.editableItems.refresh(),
-//                               ),
-//                             ),
-//                             const SizedBox(width: 8),
-//                             Expanded(
-//                               flex: 2,
-//                               child: TextField(
-//                                 controller: ctrls['rate'],
-//                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-//                                 textAlign: TextAlign.right,
-//                                 decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 8), filled: true, fillColor: Colors.white, prefixText: '₹'),
-//                                 style: const TextStyle(fontWeight: FontWeight.w500),
-//                                 onChanged: (_) => controller.editableItems.refresh(),
-//                               ),
-//                             ),
-//                             const SizedBox(width: 8),
-//                             Expanded(
-//                               flex: 2,
-//                               child: Text('₹${itemTotal.toStringAsFixed(2)}', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-//                             ),
-//                             const SizedBox(width: 8),
-//                             Expanded(
-//                               flex: 1,
-//                               child: editable.length > 1
-//                                   ? IconButton(icon: Icon(Icons.delete, color: Colors.red.shade700, size: 20), onPressed: () => controller.removeItem(index), tooltip: 'Remove item')
-//                                   : const SizedBox(width: 40),
-//                             ),
-//                           ],
-//                         ),
-//                       );
-//                     }),
-//
-//                     const SizedBox(height: 12),
-//                     ElevatedButton.icon(
-//                       onPressed: controller.addNewItem,
-//                       icon: const Icon(Icons.add, size: 18),
-//                       label: const Text('Add Item'),
-//                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade50, foregroundColor: Colors.blue.shade700, elevation: 1),
-//                     ),
-//
-//                     const SizedBox(height: 16),
-//                     Container(
-//                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-//                       decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.shade200)),
-//                       child: Row(
-//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                         children: [
-//                           Text('Items Subtotal (${editable.length} items):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-//                           Text('₹${controller.calculatedTotal.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700, fontSize: 16)),
-//                         ],
-//                       ),
-//                     ),
-//                   ],
-//                 );
-//               }
-//
-//               // DISPLAY mode
-//               if (controller.invoiceItems.isEmpty) {
-//                 return Container(
-//                   padding: const EdgeInsets.all(20),
-//                   child: Column(children: [Icon(Icons.inbox, size: 48, color: Colors.grey.shade400), const SizedBox(height: 8), Text('No items found', style: TextStyle(color: Colors.grey.shade600))]),
-//                 );
-//               }
-//
-//               final itemsSubtotal = controller.invoiceItems.fold(0.0, (s, it) => s + (it.totalPrice ?? 0.0));
-//
-//               return Column(
-//                   children: [
-//               Container(
-//               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-//               decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-//               child: Row(children: const [Expanded(flex: 3, child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))), Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)), Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right)), Expanded(flex: 2, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right))]),
-//               ),
-//               const SizedBox(height: 8),
-//
-//               ...controller.invoiceItems.map((item) => Container(
-//               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-//               margin: const EdgeInsets.only(bottom: 8),
-//               decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
-//               child: Row(children: [
-//               Expanded(
-//               flex: 3,
-//               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-//               Text(item.itemName?.isNotEmpty == true ? item.itemName! : (item.description?.isNotEmpty == true ? item.description! : 'Unnamed Item'), style: const TextStyle(fontWeight: FontWeight.w500)),
-//               if (item.itemId?.isNotEmpty == true) Text('ID: ${item.itemId}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-//               ])),
-//               Expanded(flex: 1, child: Text('${item.quantity}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500))),
-//               Expanded(flex: 2, child: Text('₹${(item.rate ?? 0.0).toStringAsFixed(2)}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w500))),
-//               Expanded(flex: 2, child: Text('₹${(item.quantity * item.rate ?? 0.0).toStringAsFixed(2)}', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700)))]),
-//               )).toList(),
-//
-//               const SizedBox(height: 12),
-//               Container(
-//               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-//               decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.shade200)),
-//               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Items Subtotal (${controller.invoiceItems.length} items):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)), Text('₹${itemsSubtotal.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700, fontSize: 16))]),
-//               ),
-//               ],
-//               );
-//             }),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   // Widget _buildPaymentInfo(Invoice invoice) {
-//   //   final double subtotal = controller.isEditMode.value ? controller.calculatedTotal : (invoice.totalAmount ?? 0.0);
-//   //   final double tax = invoice.taxAmount ?? 0.0;
-//   //   final double discount = invoice.discountAmount ?? 0.0;
-//   //   final double total = subtotal + tax - discount;
-//   //
-//   //   return Card(
-//   //     elevation: 2,
-//   //     child: Padding(
-//   //       padding: const EdgeInsets.all(16),
-//   //       child: Column(
-//   //         crossAxisAlignment: CrossAxisAlignment.start,
-//   //         children: [
-//   //           Text('Payment Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-//   //           const SizedBox(height: 12),
-//   //           _buildInfoRow('Subtotal:', '₹${subtotal.toStringAsFixed(2)}'),
-//   //           _buildInfoRow('Tax:', '₹${tax.toStringAsFixed(2)}'),
-//   //           _buildInfoRow('Discount:', '-₹${discount.toStringAsFixed(2)}'),
-//   //           const Divider(thickness: 2),
-//   //           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Total Amount:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), Text('₹${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700))]),
-//   //         ],
-//   //       ),
-//   //     ),
-//   //   );
-//   // }
-//
-//   Widget _buildPaymentInfo(Invoice invoice) {
-//     return Card(
-//       elevation: 2,
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text('Payment Summary',
-//                 style: TextStyle(
-//                     fontSize: 18,
-//                     fontWeight: FontWeight.bold,
-//                     color: Colors.blue.shade700)),
-//             const SizedBox(height: 12),
-//
-//             Obx(() {
-//               double subtotal = 0.0;
-//
-//               if (controller.isEditMode.value) {
-//                 // Edit mode → use calculated
-//                 subtotal = controller.calculatedTotal;
-//               } else {
-//                 // View mode → calculate qty * rate
-//                 for (var item in controller.invoiceItems) {
-//                   final qty = (item.quantity ?? 0).toDouble();
-//                   final rate = item.rate ?? 0.0;
-//                   subtotal += (qty * rate);
-//                 }
-//               }
-//
-//               // GST amount from invoice (already stored in sheet)
-//               final double gstAmount = invoice.gstAmount ?? 0.0;
-//               final double discount = invoice.discountAmount ?? 0.0;
-//               final double total = subtotal + gstAmount - discount;
-//
-//               return Column(
-//                 children: [
-//                   _buildInfoRow('Subtotal:', '${subtotal.toStringAsFixed(2)}'),
-//                   _buildInfoRow('GST:',
-//                       '${gstAmount.toStringAsFixed(2)}'),
-//                   _buildInfoRow('Discount:',
-//                       '-${discount.toStringAsFixed(2)}'),
-//                   const Divider(thickness: 2),
-//                   Row(
-//                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                     children: [
-//                       const Text('Total Amount:',
-//                           style: TextStyle(
-//                               fontSize: 16, fontWeight: FontWeight.bold)),
-//                       Text('₹${total.toStringAsFixed(2)}',
-//                           style: TextStyle(
-//                               fontSize: 20,
-//                               fontWeight: FontWeight.bold,
-//                               color: Colors.green.shade700))
-//                     ],
-//                   ),
-//                 ],
-//               );
-//             }),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//
-//
-//
-//   Widget _buildInfoRow(String label, String value) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 4),
-//       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 80, child: Text(label, style: TextStyle(color: Colors.grey.shade600))), Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)))]),
-//     );
-//   }
-//
-//   Color _getStatusColor(String? status) {
-//     switch (status?.toLowerCase()) {
-//       case 'paid':
-//         return Colors.green;
-//       case 'pending':
-//         return Colors.orange;
-//       case 'overdue':
-//         return Colors.red;
-//       default:
-//         return Colors.grey;
-//     }
-//   }
-// }

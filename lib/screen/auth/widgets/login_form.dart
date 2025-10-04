@@ -19,20 +19,27 @@ class LoginForm extends GetView<AuthController> {
               children: [
                 const Text(
                   "Login",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: controller.loginUsernameController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: "User Name",
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    labelText: "Email Address",
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Obx(
-                  ()=> TextFormField(
+                      () => TextFormField(
                     controller: controller.loginPasswordController,
                     obscureText: controller.isPasswordHidden.value,
                     decoration: InputDecoration(
@@ -40,38 +47,43 @@ class LoginForm extends GetView<AuthController> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          controller.isPasswordHidden.value ? Icons.visibility_off : Icons.visibility,
+                          controller.isPasswordHidden.value
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: controller.togglePasswordVisibility,
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 30),
-                Obx(() =>
-                    CustomButton(
-                      text: "Login",
-                      backgroundColor: Colors.deepPurple,
-                      isLoading: controller.isLoading.value,
-                      onPressed: controller.handleLogin,
-                    ),
-                //     ElevatedButton(
-                //   onPressed: controller.isLoading.value ? null : controller.handleLogin,
-                //   style: ElevatedButton.styleFrom(
-                //     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
-                //     backgroundColor: Colors.deepPurple,
-                //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                //   ),
-                //   child: controller.isLoading.value
-                //       ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                //       : const Text("Login", style: TextStyle(fontSize: 18)),
-                // )
+                Obx(
+                      () => CustomButton(
+                    text: "Login",
+                    backgroundColor: Colors.deepPurple,
+                    isLoading: controller.isLoading.value,
+                    onPressed: controller.handleLogin,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 TextButton(
-                  onPressed: (){},//controller.isLoading.value ? null : controller.authenticateWithMobile,
-                  child: const Text("Forget Password?", style: TextStyle(color: Colors.pinkAccent)),
+                  onPressed: controller.isLoading.value
+                      ? null
+                      : () {
+                    // TODO: Implement forgot password functionality
+                    Get.snackbar(
+                      "Coming Soon",
+                      "Password reset feature will be available soon",
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  },
+                  child: const Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Colors.pinkAccent),
+                  ),
                 ),
               ],
             ),

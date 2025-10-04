@@ -28,6 +28,8 @@ class InvoiceHelper {
       String userName,
       String phoneNumber,
       String customerEmail,
+      String customerPAN,
+      String customerGST,
       String customerAddress,
       double subtotal,
       String invoiceDate,
@@ -119,11 +121,11 @@ class InvoiceHelper {
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                          pw.Text("GST: $companyGst",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("PAN: $companyPan",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                        ],
+                          pw.Text("GST: $companyGst",
+                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                         ],
                       ),
                     ),
 
@@ -185,6 +187,12 @@ class InvoiceHelper {
                         style: pw.TextStyle(fontSize: 9)),
                     if (customerEmail.isNotEmpty)
                       pw.Text('Email: $customerEmail',
+                          style: pw.TextStyle(fontSize: 9)),
+                    if (customerPAN.isNotEmpty)
+                      pw.Text('PAN: $customerPAN',
+                          style: pw.TextStyle(fontSize: 9)),
+                    if (customerGST.isNotEmpty)
+                      pw.Text('GST: $customerGST',
                           style: pw.TextStyle(fontSize: 9)),
                   ],
                 ),
@@ -457,6 +465,8 @@ class InvoiceHelper {
       String userName,
       String phoneNumber,
       String customerEmail,
+      String customerPAN,
+      String customerGST,
       String customerAddress,
       double subtotal,
       double taxAmount,
@@ -546,11 +556,12 @@ class InvoiceHelper {
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                          pw.Text("GST: $companyGst",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("PAN: $companyPan",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                        ],
+
+                          pw.Text("GST: $companyGst",
+                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                           ],
                       ),
                     ),
 
@@ -615,10 +626,18 @@ class InvoiceHelper {
                           if (customerAddress.isNotEmpty)
                             pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
                           pw.SizedBox(height: 3),
-                          pw.Text('Phone: $phoneNumber',
+                          if (phoneNumber.isNotEmpty)
+                            pw.Text('Phone: $phoneNumber',
                               style: pw.TextStyle(fontSize: 9)),
                           if (customerEmail.isNotEmpty)
                             pw.Text('Email: $customerEmail',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (customerPAN.isNotEmpty)
+                            pw.Text('PAN: $customerPAN',
+                                style: pw.TextStyle(fontSize: 9)),
+
+                          if (customerGST.isNotEmpty)
+                            pw.Text('GST: $customerGST',
                                 style: pw.TextStyle(fontSize: 9)),
                         ],
                       ),
@@ -949,6 +968,8 @@ class InvoiceHelper {
       String userName,
       String phoneNumber,
       String customerEmail,
+      String customerPan,
+      String customerGst,
       String customerAddress,
       double subtotal,
       String challanDate,
@@ -986,6 +1007,7 @@ class InvoiceHelper {
       String companyPhone = companyData['phone'] ?? '+91 XXXXXXXXXX';
       String companyEmail = companyData['userEmail'] ?? 'company@email.com';
       String companyGst = companyData['gst'] ?? 'XXXXXXXXXXXXXXX';
+      String companyPan = companyData['pan'] ?? 'PAN Number';
 
       // Neutral colors (same as invoice)
       final PdfColor primaryColor = PdfColors.grey800;
@@ -1033,6 +1055,8 @@ class InvoiceHelper {
                           pw.Text("Phone: $companyPhone",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
+                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                          pw.Text("PAN: $companyPan",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("GST: $companyGst",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
@@ -1098,6 +1122,12 @@ class InvoiceHelper {
                         style: pw.TextStyle(fontSize: 9)),
                     if (customerEmail.isNotEmpty)
                       pw.Text('Email: $customerEmail',
+                          style: pw.TextStyle(fontSize: 9)),
+                    if (customerPan.isNotEmpty)
+                      pw.Text('PAN: $customerPan',
+                          style: pw.TextStyle(fontSize: 9)),
+                    if (customerGst.isNotEmpty)
+                      pw.Text('GST: $customerGst',
                           style: pw.TextStyle(fontSize: 9)),
                   ],
                 ),
@@ -2985,6 +3015,8 @@ class InvoiceHelper {
         : (invoice!.customerAddress ?? '');
     final customerPhone = isChallan ? challan!.customerMobile : invoice!.mobile;
     final customerEmail = !isChallan ? (invoice!.customerEmail ?? '') : '';
+    final customerPAN = !isChallan ? (invoice!.customerPan ?? '') : '';
+    final customerGST = !isChallan ? (invoice!.customerGst ?? '') : '';
 
     // Calculate totals
     double subtotal = isChallan ? (challan!.subtotal ?? 0.0) : (invoice!.subtotal ?? 0.0);
@@ -3032,9 +3064,9 @@ class InvoiceHelper {
                             style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                         pw.Text("Email: $companyEmail",
                             style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                        pw.Text("GST: $companyGst",
-                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                         pw.Text("PAN: $companyPan",
+                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                        pw.Text("GST: $companyGst",
                             style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                       ],
                     ),
@@ -3105,6 +3137,14 @@ class InvoiceHelper {
                         if (customerEmail.isNotEmpty)
                           pw.Text('Email: $customerEmail',
                               style: pw.TextStyle(fontSize: 9)),
+                        if (customerPAN.isNotEmpty)
+                          pw.Text('PAN: $customerPAN',
+                              style: pw.TextStyle(fontSize: 9)),
+
+                        if (customerGST.isNotEmpty)
+                          pw.Text('GST: $customerGST',
+                              style: pw.TextStyle(fontSize: 9)),
+
                       ],
                     ),
                   ),
@@ -4377,8 +4417,10 @@ class InvoiceHelper {
             ),
           ),
           pw.Text(
-            formatted ? AppUtil.formatCurrency(amount) : amount.toStringAsFixed(2),
-            style: pw.TextStyle(
+            formatted
+                ? "₹${AppUtil.formatCurrency(amount)}"
+                : "₹${amount.toStringAsFixed(2)}",
+           style: pw.TextStyle(
               fontSize: isTotal ? 11 : 10,
               fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: primaryColor ?? PdfColors.grey800,

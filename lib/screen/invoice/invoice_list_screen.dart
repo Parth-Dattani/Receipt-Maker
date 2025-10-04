@@ -386,25 +386,27 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           ),
         ],
       ),
-      body: Obx((){
-        if(controller.isLoading.value){
-          return _buildFullShimmer();
-        }
-        return Column(
-          children: [
-            /// Search and Filter Section
-            _buildSearchFilterSection(),
-            /// Statistics Section
-            _buildStatisticsSection(),
-
-            Expanded(
-              child: controller.filteredInvoiceList.isEmpty
-                  ? _buildEmptyState()
-                  : _buildInvoiceList(),
-            ),
-          ],
-        );
-      }),
+      body: SafeArea(
+        child: Obx((){
+          if(controller.isLoading.value){
+            return _buildFullShimmer();
+          }
+          return Column(
+            children: [
+              /// Search and Filter Section
+              _buildSearchFilterSection(),
+              /// Statistics Section
+              _buildStatisticsSection(),
+        
+              Expanded(
+                child: controller.filteredInvoiceList.isEmpty
+                    ? _buildEmptyState()
+                    : _buildInvoiceList(),
+              ),
+            ],
+          );
+        }),
+      ),
     );
   }
 

@@ -61,19 +61,21 @@ class ItemScreen extends GetView<ItemController> {
           const SizedBox(width: 12),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return _buildShimmerLoader();
-        }
-
-        final items = controller.filteredItemList;
-
-        if (items.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return _buildItemList(items);
-      }),
+      body: SafeArea(
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return _buildShimmerLoader();
+          }
+        
+          final items = controller.filteredItemList;
+        
+          if (items.isEmpty) {
+            return _buildEmptyState();
+          }
+        
+          return _buildItemList(items);
+        }),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.tealColor,
         icon: const Icon(Icons.add, color: Colors.white),

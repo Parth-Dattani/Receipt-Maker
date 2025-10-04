@@ -10,6 +10,7 @@ import '../constant/constant.dart';
 import '../screen/screen.dart';
 import '../widgets/custom_snackbar.dart';
 
+
 class AuthController extends BaseController with GetSingleTickerProviderStateMixin {
   // Observable variables
   var currentTabIndex = 0.obs;
@@ -422,112 +423,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     }
   }
 
-  // // ✅ Registration -> Phone Authentication
-  // void handleRegistrationotp() async {
-  //   if (!_validateRegistrationForm()) return;
-  //
-  //   final phone = regMobile1Controller.text.trim();
-  //   try {
-  //     isLoading.value = true;
-  //
-  //     await _auth.verifyPhoneNumber(
-  //       phoneNumber: phone,
-  //       timeout: const Duration(seconds: 60),
-  //       verificationCompleted: (PhoneAuthCredential credential) async {
-  //         // Auto verification
-  //         await _auth.signInWithCredential(credential);
-  //         _onLoginSuccess();
-  //       },
-  //       verificationFailed: (FirebaseAuthException e) {
-  //         showCustomSnackbar(
-  //           title: "Error",
-  //           message: "Verification failed: ${e.message}",
-  //           baseColor: AppColors.errorColor,
-  //         );
-  //       },
-  //       codeSent: (String verificationId, int? resendToken) {
-  //         _verificationId = verificationId;
-  //         _showOtpDialog(phone);
-  //       },
-  //       codeAutoRetrievalTimeout: (String verificationId) {
-  //         _verificationId = verificationId;
-  //       },
-  //     );
-  //
-  //   } catch (e) {
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "Registration failed: $e",
-  //       baseColor: AppColors.errorColor,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
-  //
-  // // ✅ Login with OTP
-  // void verifyOtp(String otp) async {
-  //   try {
-  //     isLoading.value = true;
-  //     PhoneAuthCredential credential = PhoneAuthProvider.credential(
-  //       verificationId: _verificationId,
-  //       smsCode: otp,
-  //     );
-  //
-  //     await _auth.signInWithCredential(credential);
-  //     _onLoginSuccess();
-  //
-  //   } catch (e) {
-  //     showCustomSnackbar(
-  //       title: "Error",
-  //       message: "OTP verification failed: $e",
-  //       baseColor: AppColors.errorColor,
-  //     );
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
-  //
-  // void _onLoginSuccess() {
-  //   final user = _auth.currentUser;
-  //   if (user != null) {
-  //     showCustomSnackbar(
-  //       title: "Success",
-  //       message: "Welcome ${user.phoneNumber}",
-  //       baseColor: AppColors.greenColor2,
-  //       icon: Icons.done_all,
-  //     );
-  //     Get.offAllNamed(CustomerRegistrationScreen.pageId);
-  //   }
-  // }
-  //
-  // void _showOtpDialog(String phone) {
-  //   TextEditingController otpController = TextEditingController();
-  //
-  //   Get.defaultDialog(
-  //     title: "Enter OTP",
-  //     content: Column(
-  //       children: [
-  //         Text("OTP sent to $phone"),
-  //         TextField(
-  //           controller: otpController,
-  //           keyboardType: TextInputType.number,
-  //           decoration: const InputDecoration(labelText: "OTP"),
-  //         ),
-  //       ],
-  //     ),
-  //     confirm: ElevatedButton(
-  //       onPressed: () {
-  //         final otp = otpController.text.trim();
-  //         if (otp.isNotEmpty) verifyOtp(otp);
-  //         Get.back();
-  //       },
-  //       child: const Text("Verify"),
-  //     ),
-  //   );
-  // }
-
-// Add proper error handling to the handleRegistration method
   void handleRegistration() async {
     if (!_validateRegistrationForm()) return;
 

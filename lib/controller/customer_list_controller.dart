@@ -1,16 +1,30 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../constant/constant.dart';
 import '../screen/screen.dart';
 import '../utils/shared_preferences_helper.dart';
+import '../widgets/widgets.dart';
 import 'controller.dart';
 
-///04/09 working Code
 class CustomerListController extends BaseController {
   var customers = <Map<String, dynamic>>[].obs;
+  var filteredCustomers = <Map<String, dynamic>>[].obs;
   var customerCount = 0.obs;
+  var searchQuery = ''.obs;
+  var showInactiveCustomers = false.obs;
+
+  // Pagination variables
+  var currentPage = 1.obs;
+  var itemsPerPage = 20;
+  var totalPages = 1.obs;
+  var isLoadingMore = false.obs;
+  DocumentSnapshot? lastDocument;
+  var hasMore = true.obs;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,20 +35,48 @@ class CustomerListController extends BaseController {
     loadCustomers();
   }
 
-  Future<void> loadCustomers() async {
+  // Computed getter for filtered customers based on active/inactive filter
+  List<Map<String, dynamic>> get filteredCustomerList {
+    if (showInactiveCustomers.value) {
+      return filteredCustomers;
+    }
+    return filteredCustomers.where((customer) => customer['isActive'] ?? true).toList();
+  }
+
+  void toggleShowInactive() {
+    showInactiveCustomers.value = !showInactiveCustomers.value;
+    Get.snackbar(
+      showInactiveCustomers.value ? 'Showing All' : 'Showing Active Only',
+      showInactiveCustomers.value
+          ? 'Inactive customers are now visible'
+          : 'Inactive customers are hidden',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: Duration(seconds: 2),
+      backgroundColor: AppColors.tealColor,
+      colorText: Colors.white,
+    );
+  }
+
+  Future<void> loadCustomers({bool loadMore = false}) async {
     try {
-      isLoading.value = true;
+      if (loadMore) {
+        if (!hasMore.value || isLoadingMore.value) return;
+        isLoadingMore.value = true;
+      } else {
+        isLoading.value = true;
+        customers.clear();
+        lastDocument = null;
+        hasMore.value = true;
+        currentPage.value = 1;
+      }
 
       final user = _auth.currentUser;
       if (user == null) return;
 
-      // Get current company ID from SharedPreferences or arguments
       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
       print("Company ID: $companyId");
 
-      print("--------CL----Cmpny ID: ${companyId}");
       if (companyId.isEmpty) {
-        // No company selected, show message
         Get.snackbar(
           'Company Required',
           'Please register a company first',
@@ -45,25 +87,72 @@ class CustomerListController extends BaseController {
         return;
       }
 
-      // Load customers from Firebase
-      final customersSnapshot = await _firestore
+      // Build query with pagination
+      Query query = _firestore
           .collection("users")
           .doc(user.uid)
           .collection("companies")
           .doc(companyId)
           .collection("customers")
-          //.where('isActive', isEqualTo: true)
           .orderBy('createdAt', descending: true)
-          .get();
+          .limit(itemsPerPage);
 
-      customers.clear();
+      // If loading more, start after last document
+      if (loadMore && lastDocument != null) {
+        query = query.startAfterDocument(lastDocument!);
+      }
+
+      final customersSnapshot = await query.get();
+
+      if (customersSnapshot.docs.isEmpty) {
+        hasMore.value = false;
+        if (loadMore) {
+          Get.snackbar(
+            'End of List',
+            'No more customers to load',
+            snackPosition: SnackPosition.BOTTOM,
+            duration: Duration(seconds: 2),
+          );
+        }
+        return;
+      }
+
+      // Store last document for next pagination
+      if (customersSnapshot.docs.isNotEmpty) {
+        lastDocument = customersSnapshot.docs.last;
+      }
+
+      // Check if there are more documents
+      if (customersSnapshot.docs.length < itemsPerPage) {
+        hasMore.value = false;
+      }
+
       for (var doc in customersSnapshot.docs) {
-        final customerData = doc.data();
+        final customerData = doc.data() as Map<String, dynamic>;
         customerData['id'] = doc.id;
         customers.add(customerData);
       }
 
-      customerCount.value = customers.length;
+      // Get total count (only on first load)
+      if (!loadMore) {
+        final countSnapshot = await _firestore
+            .collection("users")
+            .doc(user.uid)
+            .collection("companies")
+            .doc(companyId)
+            .collection("customers")
+            .count()
+            .get();
+
+        customerCount.value = countSnapshot.count ?? 0;
+        totalPages.value = (customerCount.value / itemsPerPage).ceil();
+      }
+
+      filteredCustomers.value = customers;
+
+      if (loadMore) {
+        currentPage.value++;
+      }
 
     } catch (e) {
       print("Error loading customers: $e");
@@ -76,249 +165,411 @@ class CustomerListController extends BaseController {
       );
     } finally {
       isLoading.value = false;
+      isLoadingMore.value = false;
     }
   }
 
+  Future<void> loadMoreCustomers() async {
+    await loadCustomers(loadMore: true);
+  }
+
   Future<void> refreshCustomers() async {
-    await loadCustomers();
+    await loadCustomers(loadMore: false);
+  }
+
+  void searchCustomers(String query) {
+    searchQuery.value = query;
+
+    if (query.isEmpty) {
+      filteredCustomers.value = customers;
+      return;
+    }
+
+    final lowercaseQuery = query.toLowerCase();
+    filteredCustomers.value = customers.where((customer) {
+      final name = (customer['name'] ?? '').toLowerCase();
+      final mobile = (customer['mobile1'] ?? '').toLowerCase();
+      final email = (customer['email'] ?? '').toLowerCase();
+      final city = (customer['city'] ?? '').toLowerCase();
+      final businessName = (customer['businessName'] ?? '').toLowerCase();
+
+      return name.contains(lowercaseQuery) ||
+          mobile.contains(lowercaseQuery) ||
+          email.contains(lowercaseQuery) ||
+          city.contains(lowercaseQuery) ||
+          businessName.contains(lowercaseQuery);
+    }).toList();
+  }
+
+  void clearSearch() {
+    searchQuery.value = '';
+    filteredCustomers.value = customers;
+  }
+
+  void sortCustomers(String sortType) {
+    List<Map<String, dynamic>> sortedList = List.from(filteredCustomers);
+
+    switch (sortType) {
+      case 'name_asc':
+        sortedList.sort((a, b) {
+          final nameA = (a['name'] ?? '').toString().toLowerCase();
+          final nameB = (b['name'] ?? '').toString().toLowerCase();
+          return nameA.compareTo(nameB);
+        });
+        Get.snackbar(
+          'Sorted',
+          'Customers sorted A-Z',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: Duration(seconds: 1),
+        );
+        break;
+
+      case 'name_desc':
+        sortedList.sort((a, b) {
+          final nameA = (a['name'] ?? '').toString().toLowerCase();
+          final nameB = (b['name'] ?? '').toString().toLowerCase();
+          return nameB.compareTo(nameA);
+        });
+        Get.snackbar(
+          'Sorted',
+          'Customers sorted Z-A',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: Duration(seconds: 1),
+        );
+        break;
+
+      case 'recent':
+        sortedList.sort((a, b) {
+          final dateA = a['createdAt'] as Timestamp?;
+          final dateB = b['createdAt'] as Timestamp?;
+          if (dateA == null || dateB == null) return 0;
+          return dateB.compareTo(dateA);
+        });
+        Get.snackbar(
+          'Sorted',
+          'Showing recently added first',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: Duration(seconds: 1),
+        );
+        break;
+    }
+
+    filteredCustomers.value = sortedList;
   }
 
   void navigateToAddNewCustomer() {
-    // Navigate to company selection screen first
     Get.toNamed(CompanySelectionScreen.pageId);
   }
 
   void viewCustomerDetails(Map<String, dynamic> customer) {
-    // Navigate to customer details screen
-    // Get.toNamed(CustomerDetailsScreen.pageId, arguments: customer);
-
-    // For now, show customer info
     Get.dialog(
       Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Customer Details',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+          padding: EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: AppColors.tealColor.withOpacity(0.15),
+                      child: Text(
+                        (customer['name'] ?? 'U')[0].toUpperCase(),
+                        style: TextStyle(
+                          color: AppColors.tealColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            customer['name'] ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (customer['businessName'] != null &&
+                              customer['businessName'].isNotEmpty)
+                            Text(
+                              customer['businessName'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(height: 16),
-              Text('Name: ${customer['name'] ?? 'N/A'}'),
-              Text('Mobile: ${customer['mobile1'] ?? 'N/A'}'),
-              Text('Email: ${customer['email'] ?? 'N/A'}'),
-              Text('Address: ${customer['address'] ?? 'N/A'}'),
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: Text('Close'),
-                  ),
-                ],
-              ),
-            ],
+                Divider(height: 32),
+
+                _buildDetailSection('Contact Information', [
+                  _buildDetailRow(Icons.phone, 'Mobile', customer['mobile1']),
+                  if (customer['mobile2'] != null && customer['mobile2'].isNotEmpty)
+                    _buildDetailRow(Icons.phone_android, 'Secondary', customer['mobile2']),
+                  if (customer['email'] != null && customer['email'].isNotEmpty)
+                    _buildDetailRow(Icons.email, 'Email', customer['email']),
+                  if (customer['website'] != null && customer['website'].isNotEmpty)
+                    _buildDetailRow(Icons.language, 'Website', customer['website']),
+                ]),
+
+                if (customer['address'] != null && customer['address'].isNotEmpty)
+                  _buildDetailSection('Address', [
+                    _buildDetailRow(Icons.home, 'Address', customer['address']),
+                    _buildDetailRow(Icons.location_city, 'City', customer['city']),
+                    _buildDetailRow(Icons.map, 'State', customer['state']),
+                    _buildDetailRow(Icons.flag, 'Country', customer['country']),
+                    _buildDetailRow(Icons.pin_drop, 'Pincode', customer['pincode']),
+                  ]),
+
+                if ((customer['gst'] != null && customer['gst'].isNotEmpty) ||
+                    (customer['pan'] != null && customer['pan'].isNotEmpty))
+                  _buildDetailSection('Business Information', [
+                    if (customer['gst'] != null && customer['gst'].isNotEmpty)
+                      _buildDetailRow(Icons.receipt_long, 'GST', customer['gst']),
+                    if (customer['pan'] != null && customer['pan'].isNotEmpty)
+                      _buildDetailRow(Icons.badge, 'PAN', customer['pan']),
+                    if (customer['businessType'] != null && customer['businessType'].isNotEmpty)
+                      _buildDetailRow(Icons.category, 'Business Type', customer['businessType']),
+                  ]),
+
+                if (customer['notes'] != null && customer['notes'].isNotEmpty)
+                  _buildDetailSection('Notes', [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        customer['notes'],
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ]),
+
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text('Close'),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Get.back();
+                        editCustomer(customer);
+                      },
+                      icon: Icon(Icons.edit, size: 18),
+                      label: Text('Edit'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.tealColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void editCustomer(Map<String, dynamic> customer) {
-    // Navigate to edit customer screen
-    Get.snackbar(
-      'Info',
-      'Edit customer feature coming soon!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
+  Widget _buildDetailSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.tealColor,
+          ),
+        ),
+        SizedBox(height: 12),
+        ...children,
+        SizedBox(height: 20),
+      ],
     );
   }
 
-    // Alternative: Direct edit in dialog (simpler approach)
-  void editCustomerDialog(Map<String, dynamic> customer) {
-    final nameController = TextEditingController(text: customer['name'] ?? '');
-    final mobileController = TextEditingController(text: customer['mobile1'] ?? '');
-    final emailController = TextEditingController(text: customer['email'] ?? '');
-    final addressController = TextEditingController(text: customer['address'] ?? '');
+  Widget _buildDetailRow(IconData icon, String label, String? value) {
+    if (value == null || value.isEmpty) return SizedBox.shrink();
 
-    Get.dialog(
-      Dialog(
-        child: Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Edit Customer',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 12),
-              TextField(
-                controller: mobileController,
-                decoration: InputDecoration(
-                  labelText: 'Mobile',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              SizedBox(height: 12),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              SizedBox(height: 12),
-              TextField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    child: Text('Cancel'),
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade600),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
                   ),
-                  SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await _performUpdateCustomer(
-                        customer['id'],
-                        nameController.text,
-                        mobileController.text,
-                        emailController.text,
-                        addressController.text,
-                      );
-                      Get.back();
-                    },
-                    child: Text('Save'),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-    Future<void> _performUpdateCustomer(
-      String customerId,
-      String name,
-      String mobile,
-      String email,
-      String address,
-      ) async {
-    try {
-      if (name.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Name is required',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
+  void editCustomer(Map<String, dynamic> customer) async {
+    String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
 
-      final user = _auth.currentUser;
-      if (user == null) return;
+    final user = _auth.currentUser;
+    Map<String, dynamic>? companyData;
 
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-
-      final updatedData = {
-        'name': name,
-        'mobile1': mobile,
-        'email': email,
-        'address': address,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      await _firestore
+    if (user != null && companyId.isNotEmpty) {
+      final companyDoc = await _firestore
           .collection("users")
           .doc(user.uid)
           .collection("companies")
           .doc(companyId)
-          .collection("customers")
-          .doc(customerId)
-          .update(updatedData);
+          .get();
 
-      // Update local list
-      final index = customers.indexWhere((c) => c['id'] == customerId);
-      if (index != -1) {
-        customers[index] = {
-          ...customers[index],
-          ...updatedData,
-        };
-        customers.refresh(); // Notify listeners
+      if (companyDoc.exists) {
+        companyData = companyDoc.data();
       }
+    }
 
-      Get.snackbar(
-        'Success',
-        'Customer updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      print("Error updating customer: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to update customer',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+    final result = await Get.toNamed(
+      CustomerRegistrationScreen.pageId,
+      arguments: {
+        'isEdit': true,
+        'customerData': customer,
+        'companyId': companyId,
+        'companyData': companyData,
+      },
+    );
+
+    if (result == true) {
+      await refreshCustomers();
     }
   }
 
   void createInvoiceForCustomer(Map<String, dynamic> customer) {
-    // Navigate to create invoice with pre-selected customer
-    Get.toNamed(ItemScreen.pageId, arguments: {'customerId': customer['id']});
+    Get.toNamed(NewInvoiceScreen.pageId, arguments: {'customerId': customer['id']});
   }
 
   void deleteCustomer(Map<String, dynamic> customer) {
     Get.dialog(
       AlertDialog(
-        title: Text('Delete Customer'),
-        content: Text('Are you sure you want to delete ${customer['name']}?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Delete Customer'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete this customer?'),
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.tealColor.withOpacity(0.15),
+                    child: Text(
+                      (customer['name'] ?? 'U')[0].toUpperCase(),
+                      style: TextStyle(
+                        color: AppColors.tealColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer['name'] ?? 'Unknown',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (customer['mobile1'] != null)
+                          Text(
+                            customer['mobile1'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'This will mark the customer as inactive. You can restore it later.',
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
             child: Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               Get.back();
               await _performDeleteCustomer(customer);
             },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -330,7 +581,7 @@ class CustomerListController extends BaseController {
       final user = _auth.currentUser;
       if (user == null) return;
 
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId").toString();
+      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
 
       await _firestore
           .collection("users")
@@ -341,15 +592,42 @@ class CustomerListController extends BaseController {
           .doc(customer['id'])
           .update({'isActive': false});
 
-      customers.removeWhere((c) => c['id'] == customer['id']);
-      customerCount.value = customers.length;
+      // Update local data
+      final index = customers.indexWhere((c) => c['id'] == customer['id']);
+      if (index != -1) {
+        customers[index]['isActive'] = false;
+      }
+
+      final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
+      if (filteredIndex != -1) {
+        filteredCustomers[filteredIndex]['isActive'] = false;
+      }
+
+      // Trigger UI update
+      filteredCustomers.refresh();
+      customers.refresh();
 
       Get.snackbar(
-        'Success',
-        'Customer deleted successfully',
+        'Customer Deleted',
+        'Customer marked as inactive',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.orange,
         colorText: Colors.white,
+        icon: Icon(Icons.info, color: Colors.white),
+        duration: Duration(seconds: 4),
+        mainButton: TextButton(
+          onPressed: () {
+            Get.back(); // Close snackbar
+            restoreCustomer(customer);
+          },
+          child: Text(
+            'RESTORE',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       );
     } catch (e) {
       print("Error deleting customer: $e");
@@ -359,370 +637,61 @@ class CustomerListController extends BaseController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        icon: Icon(Icons.error, color: Colors.white),
+      );
+    }
+  }
+
+  Future<void> restoreCustomer(Map<String, dynamic> customer) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+
+      await _firestore
+          .collection("users")
+          .doc(user.uid)
+          .collection("companies")
+          .doc(companyId)
+          .collection("customers")
+          .doc(customer['id'])
+          .update({'isActive': true});
+
+      // Update local data
+      final index = customers.indexWhere((c) => c['id'] == customer['id']);
+      if (index != -1) {
+        customers[index]['isActive'] = true;
+      }
+
+      final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
+      if (filteredIndex != -1) {
+        filteredCustomers[filteredIndex]['isActive'] = true;
+      }
+
+      // Trigger UI update
+      filteredCustomers.refresh();
+      customers.refresh();
+
+      Get.snackbar(
+        'Success',
+        'Customer restored successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: Icon(Icons.check_circle, color: Colors.white),
+      );
+    } catch (e) {
+      print("Error restoring customer: $e");
+      Get.snackbar(
+        'Error',
+        'Failed to restore customer',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: Icon(Icons.error, color: Colors.white),
       );
     }
   }
 }
 
-
-///new Code not Workig update
-// class CustomerListController extends BaseController {
-//   var customers = <Map<String, dynamic>>[].obs;
-//   var customerCount = 0.obs;
-//
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-//
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     loadCustomers();
-//   }
-//
-//   Future<void> loadCustomers() async {
-//     try {
-//       isLoading.value = true;
-//
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       // Get current company ID from SharedPreferences or arguments
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//       print("Company ID: $companyId");
-//
-//       print("--------CL----Cmpny ID: ${companyId}");
-//       if (companyId.isEmpty) {
-//         // No company selected, show message
-//         Get.snackbar(
-//           'Company Required',
-//           'Please register a company first',
-//           snackPosition: SnackPosition.BOTTOM,
-//           backgroundColor: Colors.orange,
-//           colorText: Colors.white,
-//         );
-//         return;
-//       }
-//
-//       // Load customers from Firebase
-//       final customersSnapshot = await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers")
-//           .where('isActive', isEqualTo: true)
-//           .orderBy('createdAt', descending: true)
-//           .get();
-//
-//       customers.clear();
-//       for (var doc in customersSnapshot.docs) {
-//         final customerData = doc.data();
-//         customerData['id'] = doc.id;
-//         customers.add(customerData);
-//       }
-//
-//       customerCount.value = customers.length;
-//
-//     } catch (e) {
-//       print("Error loading customers: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to load customers',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   Future<void> refreshCustomers() async {
-//     await loadCustomers();
-//   }
-//
-//   void navigateToAddNewCustomer() {
-//     // Navigate to company selection screen first
-//     Get.toNamed(CompanySelectionScreen.pageId);
-//   }
-//
-//   void viewCustomerDetails(Map<String, dynamic> customer) {
-//     // Navigate to customer details screen
-//     // Get.toNamed(CustomerDetailsScreen.pageId, arguments: customer);
-//
-//     // For now, show customer info
-//     Get.dialog(
-//       Dialog(
-//         child: Container(
-//           padding: EdgeInsets.all(20),
-//           child: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Text(
-//                 'Customer Details',
-//                 style: TextStyle(
-//                   fontSize: 20,
-//                   fontWeight: FontWeight.bold,
-//                 ),
-//               ),
-//               SizedBox(height: 16),
-//               Text('Name: ${customer['name'] ?? 'N/A'}'),
-//               Text('Mobile: ${customer['mobile'] ?? 'N/A'}'),
-//               Text('Email: ${customer['email'] ?? 'N/A'}'),
-//               Text('Address: ${customer['address'] ?? 'N/A'}'),
-//               SizedBox(height: 16),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.end,
-//                 children: [
-//                   TextButton(
-//                     onPressed: () => Get.back(),
-//                     child: Text('Close'),
-//                   ),
-//                 ],
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void editCustomer(Map<String, dynamic> customer) {
-//     // Navigate to edit customer screen with customer data
-//     Get.toNamed(
-//       AddEditCustomerScreen.pageId, // You'll need to create this screen
-//       arguments: {
-//         'customer': customer,
-//         'isEditing': true,
-//       },
-//     )?.then((result) {
-//       // Refresh customers list after editing
-//       if (result == true) {
-//         loadCustomers();
-//       }
-//     });
-//   }
-//
-//   // Alternative: Direct edit in dialog (simpler approach)
-//   void editCustomerDialog(Map<String, dynamic> customer) {
-//     final nameController = TextEditingController(text: customer['name'] ?? '');
-//     final mobileController = TextEditingController(text: customer['mobile'] ?? '');
-//     final emailController = TextEditingController(text: customer['email'] ?? '');
-//     final addressController = TextEditingController(text: customer['address'] ?? '');
-//
-//     Get.dialog(
-//       Dialog(
-//         child: Container(
-//           padding: EdgeInsets.all(20),
-//           child: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               Text(
-//                 'Edit Customer',
-//                 style: TextStyle(
-//                   fontSize: 20,
-//                   fontWeight: FontWeight.bold,
-//                 ),
-//               ),
-//               SizedBox(height: 16),
-//               TextField(
-//                 controller: nameController,
-//                 decoration: InputDecoration(
-//                   labelText: 'Name',
-//                   border: OutlineInputBorder(),
-//                 ),
-//               ),
-//               SizedBox(height: 12),
-//               TextField(
-//                 controller: mobileController,
-//                 decoration: InputDecoration(
-//                   labelText: 'Mobile',
-//                   border: OutlineInputBorder(),
-//                 ),
-//                 keyboardType: TextInputType.phone,
-//               ),
-//               SizedBox(height: 12),
-//               TextField(
-//                 controller: emailController,
-//                 decoration: InputDecoration(
-//                   labelText: 'Email',
-//                   border: OutlineInputBorder(),
-//                 ),
-//                 keyboardType: TextInputType.emailAddress,
-//               ),
-//               SizedBox(height: 12),
-//               TextField(
-//                 controller: addressController,
-//                 decoration: InputDecoration(
-//                   labelText: 'Address',
-//                   border: OutlineInputBorder(),
-//                 ),
-//                 maxLines: 3,
-//               ),
-//               SizedBox(height: 20),
-//               Row(
-//                 mainAxisAlignment: MainAxisAlignment.end,
-//                 children: [
-//                   TextButton(
-//                     onPressed: () => Get.back(),
-//                     child: Text('Cancel'),
-//                   ),
-//                   SizedBox(width: 10),
-//                   ElevatedButton(
-//                     onPressed: () async {
-//                       await _performUpdateCustomer(
-//                         customer['id'],
-//                         nameController.text,
-//                         mobileController.text,
-//                         emailController.text,
-//                         addressController.text,
-//                       );
-//                       Get.back();
-//                     },
-//                     child: Text('Save'),
-//                   ),
-//                 ],
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Future<void> _performUpdateCustomer(
-//       String customerId,
-//       String name,
-//       String mobile,
-//       String email,
-//       String address,
-//       ) async {
-//     try {
-//       if (name.isEmpty) {
-//         Get.snackbar(
-//           'Error',
-//           'Name is required',
-//           snackPosition: SnackPosition.BOTTOM,
-//           backgroundColor: Colors.red,
-//           colorText: Colors.white,
-//         );
-//         return;
-//       }
-//
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//
-//       final updatedData = {
-//         'name': name,
-//         'mobile': mobile,
-//         'email': email,
-//         'address': address,
-//         'updatedAt': FieldValue.serverTimestamp(),
-//       };
-//
-//       await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers")
-//           .doc(customerId)
-//           .update(updatedData);
-//
-//       // Update local list
-//       final index = customers.indexWhere((c) => c['id'] == customerId);
-//       if (index != -1) {
-//         customers[index] = {
-//           ...customers[index],
-//           ...updatedData,
-//         };
-//         customers.refresh(); // Notify listeners
-//       }
-//
-//       Get.snackbar(
-//         'Success',
-//         'Customer updated successfully',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.green,
-//         colorText: Colors.white,
-//       );
-//     } catch (e) {
-//       print("Error updating customer: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to update customer',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     }
-//   }
-//
-//   void createInvoiceForCustomer(Map<String, dynamic> customer) {
-//     // Navigate to create invoice with pre-selected customer
-//     Get.toNamed(ItemScreen.pageId, arguments: {'customerId': customer['id']});
-//   }
-//
-//   void deleteCustomer(Map<String, dynamic> customer) {
-//     Get.dialog(
-//       AlertDialog(
-//         title: Text('Delete Customer'),
-//         content: Text('Are you sure you want to delete ${customer['name']}?'),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Get.back(),
-//             child: Text('Cancel'),
-//           ),
-//           TextButton(
-//             onPressed: () async {
-//               Get.back();
-//               await _performDeleteCustomer(customer);
-//             },
-//             child: Text('Delete', style: TextStyle(color: Colors.red)),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
-//     try {
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId").toString();
-//
-//       await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers")
-//           .doc(customer['id'])
-//           .update({'isActive': false});
-//
-//       customers.removeWhere((c) => c['id'] == customer['id']);
-//       customerCount.value = customers.length;
-//
-//       Get.snackbar(
-//         'Success',
-//         'Customer deleted successfully',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.green,
-//         colorText: Colors.white,
-//       );
-//     } catch (e) {
-//       print("Error deleting customer: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to delete customer',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     }
-//   }
-// }

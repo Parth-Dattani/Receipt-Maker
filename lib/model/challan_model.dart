@@ -9,6 +9,8 @@ class Challan {
   final String customerName;
   final String customerMobile;
   final String customerEmail;
+  final String customerPan;
+  final String customerGst;
   final String customerAddress;
   final String? itemId;
   final String? itemName;
@@ -32,6 +34,8 @@ class Challan {
     required this.customerName,
     required this.customerMobile,
     this.customerEmail = '',
+    this.customerPan = '',
+    this.customerGst = '',
     this.customerAddress = '',
      this.itemId,
      this.itemName,
@@ -60,6 +64,8 @@ class Challan {
       'customerName': customerName,
       'customerMobile': customerMobile,
       'customerEmail': customerEmail,
+      'customerPan': customerPan,
+      'customerGst': customerGst,
       'customerAddress': customerAddress,
       'itemId': itemId,
       'itemName': itemName,
@@ -100,6 +106,8 @@ class Challan {
       customerName: map['customerName'] ?? '',
       customerMobile: map['customerMobile'] ?? '',
       customerEmail: map['customerEmail'] ?? '',
+      customerGst: map['customerGst'] ?? '',
+      customerPan: map['customerPan'] ?? '',
       customerAddress: map['customerAddress'] ?? '',
       itemId: map['itemId'] ?? '',
       itemName: map['itemName'] ?? '',
@@ -143,6 +151,8 @@ class Challan {
       customerName: json['customerName']?.toString() ?? '',
       customerMobile: json['customerMobile']?.toString() ?? '',
       customerEmail: json['customerEmail']?.toString() ?? '',
+      customerPan: json['customerPan']?.toString() ?? '',
+      customerGst: json['customerGst']?.toString() ?? '',
       customerAddress: json['customerAddress']?.toString() ?? '',
       itemId: json['itemId']?.toString() ?? '',
       itemName: json['itemName']?.toString() ?? '',
@@ -167,6 +177,8 @@ class Challan {
     DateTime? challanDate,
     String? customerId,
     String? customerName,
+    String? customerPan,
+    String? customerGst,
     String? customerMobile,
     String? customerEmail,
     String? customerAddress,
@@ -187,6 +199,7 @@ class Challan {
       challanDate: challanDate ?? this.challanDate,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
+      customerPan: customerPan ?? this.customerPan,
       customerMobile: customerMobile ?? this.customerMobile,
       customerEmail: customerEmail ?? this.customerEmail,
       customerAddress: customerAddress ?? this.customerAddress,

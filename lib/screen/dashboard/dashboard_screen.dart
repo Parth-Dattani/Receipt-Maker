@@ -35,122 +35,184 @@ class DashboardScreen extends GetView<DashboardController> {
           ),
         ],
       ),
-      body: Obx(() => controller.isLoading.value
-          ? const DashboardShimmer()
-          : RefreshIndicator(
-        onRefresh: () async => controller.refreshDashboard(),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          physics: AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Section
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade700, Colors.blue.shade500],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: SafeArea(
+        child: Obx(() => controller.isLoading.value
+            ? const DashboardShimmer()
+            : RefreshIndicator(
+          onRefresh: () async => controller.refreshDashboard(),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            physics: AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome Section
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade700, Colors.blue.shade500],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Here\'s your business overview',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
+
+                SizedBox(height: 20),
+
+                // Statistics Cards
+                DashboardStatsCard(),
+
+                SizedBox(height: 20),
+
+                // Quick Actions
+                QuickActionsGrid(),
+
+                SizedBox(height: 20),
+
+                // Charts Section
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Welcome back!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    // Chart on the left
+                    Expanded(
+                      flex: 1,
+                      child: InvoiceStatusChart(),
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Here\'s your business overview',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 16,
+
+                    const SizedBox(width: 16),
+
+                    // Export + Summary cards on the right
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        children: [
+                          InkWell(
+                            onTap: () => showReportDialog(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              //height: 120,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.summarize, size: 32, color: Colors.blue.shade700),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Summary Report",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    "Get your summary report",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          InkWell(
+                            onTap: () => showExportDialog(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              //height: 120,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.file_download, size: 32, color: Colors.blue.shade700),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Export Invoice Data",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    "For auditing report",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
 
-              SizedBox(height: 20),
+                const SizedBox(height: 14),
 
-              // Statistics Cards
-              DashboardStatsCard(),
+                SizedBox(height: 20),
 
-              SizedBox(height: 20),
-
-              // Quick Actions
-              QuickActionsGrid(),
-
-              SizedBox(height: 20),
-
-              // Charts Section
-              Row(
-                children: [
-                  // Expanded(child: RevenueChartCard()),
-                  // SizedBox(width: 10),
-                  Expanded(
-                      flex: 1,
-                      child: InvoiceStatusChart()),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        showExportDialog(context);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 120, // ⬅️ increase height here
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey.shade300, width: 1),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.15),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.download, size: 36, color: Colors.blue.shade700),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Export",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                ],
-              ),
-
-              SizedBox(height: 20),
-
-              // Recent Invoices
-              RecentInvoicesCard(),
-            ],
+                // Recent Invoices
+                RecentInvoicesCard(),
+              ],
+            ),
           ),
-        ),
-      )),
+        )),
+      ),
       // floatingActionButton: FloatingActionButton(
       //   onPressed: controller.exportInvoiceData,
       //   backgroundColor: Colors.blue.shade700,
@@ -357,6 +419,236 @@ class DashboardScreen extends GetView<DashboardController> {
 
                                 Navigator.pop(context);
                                 await controller.exportInvoiceDataWithDateFilter(
+                                  fromDate!,
+                                  toDate!,
+                                );
+                              },
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.download_rounded, size: 24),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    "Export to Excel",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> showReportDialog(BuildContext context) async {
+    DateTime? fromDate;
+    DateTime? toDate;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade600, Colors.blue.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.file_download_outlined,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Export Invoices",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Select date range to export",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          // From Date Card
+                          _buildDateCard(
+                            context: context,
+                            icon: Icons.calendar_today,
+                            label: "From Date",
+                            date: fromDate,
+                            color: Colors.green,
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: fromDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => fromDate = picked);
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Arrow indicator
+                          Icon(
+                            Icons.arrow_downward_rounded,
+                            color: Colors.grey.shade400,
+                            size: 24,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // To Date Card
+                          _buildDateCard(
+                            context: context,
+                            icon: Icons.event,
+                            label: "To Date",
+                            date: toDate,
+                            color: Colors.orange,
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: toDate ?? DateTime.now(),
+                                firstDate: fromDate ?? DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => toDate = picked);
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Info box
+                          if (fromDate != null && toDate != null)
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      color: Colors.blue.shade700, size: 20),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      "Exporting ${_calculateDays(fromDate!, toDate!)} days of data",
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          const SizedBox(height: 24),
+
+                          // Export Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (fromDate == null || toDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text("Please select both dates"),
+                                      backgroundColor: Colors.red.shade600,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                Navigator.pop(context);
+                                await controller.exportGSTReportWithDateFilter(
                                   fromDate!,
                                   toDate!,
                                 );
@@ -683,19 +975,7 @@ class DashboardScreen extends GetView<DashboardController> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                ListTile(
-                  leading: Icon(Icons.dashboard, color: Colors.blue.shade700),
-                  title: Text("Dashboard"),
-                  onTap: () => Get.back(),
-                ),
-                ListTile(
-                  leading: Icon(Icons.person_add, color: Colors.green),
-                  title: Text("Add Customer"),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToAddNewCustomer();
-                  },
-                ),
+
                 ListTile(
                   leading: Icon(Icons.receipt_long, color: Colors.blue),
                   title: Text("Create Invoice"),
@@ -706,13 +986,30 @@ class DashboardScreen extends GetView<DashboardController> {
                 ),
                 ListTile(
                   leading: Icon(Icons.people, color: Colors.orange),
-                  title: Text("View Customers"),
+                  title: Text("Customers"),
                   onTap: () {
                     Get.back();
                     controller.navigateToCustomerList();
                   },
                 ),
 
+                ListTile(
+                  leading: Icon(Icons.analytics, color: Colors.purple),
+                  title: Text("Challans"),
+                  onTap: () {
+                    Get.back();
+                    controller.navigateToChallanList();
+                  },
+                ),
+
+                ListTile(
+                  leading: Icon(Icons.receipt_outlined, color: Colors.indigoAccent),
+                  title: Text("Quotations"),
+                  onTap: () {
+                    Get.back();
+                    controller.navigateToQuotList();
+                  },
+                ),
                 // 🔹 Challan Toggle
                 Obx(() => ListTile(
                   leading: Icon(Icons.list_alt, color: Colors.green),
@@ -760,23 +1057,6 @@ class DashboardScreen extends GetView<DashboardController> {
                 )),
 
 
-                ListTile(
-                  leading: Icon(Icons.analytics, color: Colors.purple),
-                  title: Text("challans"),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToChallanList();
-                  },
-                ),
-
-                ListTile(
-                  leading: Icon(Icons.analytics, color: Colors.purple),
-                  title: Text("quotations"),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToQuotList();
-                  },
-                ),
 
                 Divider(),
 

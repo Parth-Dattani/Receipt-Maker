@@ -1,6 +1,7 @@
 import 'package:demo_prac_getx/routes.dart';
 import 'package:demo_prac_getx/screen/screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -13,7 +14,22 @@ import 'utils/shared_preferences_helper.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await sharedPreferencesHelper.getSharedPreferencesInstance();
-  await Firebase.initializeApp();
+  //await Firebase.initializeApp();
+  /// Initialize Firebase with platform-specific options
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyBTWh86tWbhygufUosvn7OQwYdrMycCPzA",
+        authDomain: "getyourinvoice-8f128.firebaseapp.com",
+        projectId: "getyourinvoice-8f128",
+        storageBucket: "getyourinvoice-8f128.firebasestorage.app",
+        messagingSenderId: "134369591951",
+        appId: "1:134369591951:web:5cf271caa468b073d8a6fa",
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
   // await Supabase.initialize(
   //   url: 'https://dwhvrupyeeknfwnusjdr.supabase.co',
   //   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3aHZydXB5ZWVrbmZ3bnVzamRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NDc5NzYsImV4cCI6MjA3MjIyMzk3Nn0.yFCtlbH7lkLk79e0zte-JzjkUikESZCm4HFTWC7IKIA',

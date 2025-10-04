@@ -9,6 +9,8 @@ class Invoice {
   final String customerId;
   final String customerName;
   final String? customerEmail;
+  final String? customerPan;
+  final String? customerGst;
   final String? customerAddress;
   final DateTime? issueDate;
   final DateTime? dueDate;
@@ -34,6 +36,8 @@ class Invoice {
     required this.customerName,
     this.customerId = '',
     this.customerEmail,
+    this.customerPan,
+    this.customerGst,
     this.customerAddress,
     this.issueDate,
     this.dueDate,
@@ -62,6 +66,8 @@ class Invoice {
       'customerId': customerId,
       'customerName': customerName,
       'customerEmail': customerEmail,
+      'customerGst': customerGst,
+      'customerPan': customerPan,
       'customerAddress': customerAddress,
       'issueDate': issueDate?.toIso8601String(),
       'dueDate': dueDate?.toIso8601String(),
@@ -107,6 +113,8 @@ class Invoice {
       customerId: map['customerId'] ?? '',
       customerName: map['customerName'] ?? '',
       customerEmail: map['customerEmail'],
+      customerPan: map['customerPan'],
+      customerGst: map['customerGst'],
       customerAddress: map['customerAddress'],
       // 🔹 FIX: Handle both DateTime objects and String dates
       issueDate: _parseDateField(map['issueDate']),
@@ -167,6 +175,8 @@ class Invoice {
     String? mobile,
     String? customerName,
     String? customerEmail,
+    String? customerPan,
+    String? customerGst,
     String? customerAddress,
     DateTime? issueDate,
     DateTime? dueDate,
@@ -188,6 +198,8 @@ class Invoice {
       price: price ?? this.price,
       mobile: mobile ?? this.mobile,
       customerName: customerName ?? this.customerName,
+      customerPan: customerPan ?? this.customerPan,
+      customerGst: customerGst ?? this.customerGst,
       customerEmail: customerEmail ?? this.customerEmail,
       customerAddress: customerAddress ?? this.customerAddress,
       issueDate: issueDate ?? this.issueDate,

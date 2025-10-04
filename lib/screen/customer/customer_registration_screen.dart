@@ -57,11 +57,6 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
 
                         const SizedBox(height: 25),
 
-                        /// Profile Image Section
-                       // _buildProfileImageSection(),
-                       //
-                       //  const SizedBox(height: 20),
-
                         /// Personal Info Section
                         _buildSectionCard(
                           title: "Personal Information",
@@ -82,54 +77,6 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                               isRequired: true,
                               maxLines: 3,
                             ),
-                            // Row(
-                            //   children: [
-                            //
-                            //     Obx(() => _customDropdown(
-                            //       label: "Country *",
-                            //       prefixIcon: Icons.flag,
-                            //       value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
-                            //       items: controller.countries.map((country) {
-                            //         return DropdownMenuItem<String>(
-                            //           value: country,
-                            //           child: Text(country),
-                            //         );
-                            //       }).toList(),
-                            //       onChanged: (value) {
-                            //         controller.selectedCountry.value = value ?? '';
-                            //         controller.selectedState.value = ''; // Reset state when country changes
-                            //       },
-                            //       isRequired: true,
-                            //       hint: "Select Country",
-                            //     )),
-                            //     const SizedBox(width: 12),
-                            //
-                            //     Obx(() {
-                            //       if (controller.selectedCountry.value.isNotEmpty) {
-                            //         return _customDropdown(
-                            //           label: "State *",
-                            //           prefixIcon: Icons.map,
-                            //           value: controller.selectedState.value.isEmpty
-                            //               ? null
-                            //               : controller.selectedState.value,
-                            //           items: controller.getStatesForCountry().map((state) {
-                            //             return DropdownMenuItem<String>(
-                            //               value: state,
-                            //               child: Text(state),
-                            //             );
-                            //           }).toList(),
-                            //           onChanged: (value) {
-                            //             controller.selectedState.value = value ?? '';
-                            //           },
-                            //           isRequired: true,
-                            //           hint: "Select State",
-                            //         );
-                            //       } else {
-                            //         return Container(); // Hide state dropdown when no country is selected
-                            //       }
-                            //     }),
-                            //   ],
-                            // ),
                             Row(
                               children: [
                                 // Country Dropdown
@@ -148,7 +95,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                                     }).toList(),
                                     onChanged: (value) {
                                       controller.selectedCountry.value = value ?? '';
-                                      controller.selectedState.value = ''; // Reset state when country changes
+                                      controller.selectedState.value = '';
                                     },
                                     isRequired: true,
                                     hint: "Select Country",
@@ -156,7 +103,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                                 ),
                                 const SizedBox(width: 12),
 
-                                // State Dropdown (always visible, disabled until country selected)
+                                // State Dropdown
                                 Expanded(
                                   child: Obx(() => _customDropdown(
                                     label: "State *",
@@ -172,7 +119,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                                     ))
                                         .toList(),
                                     onChanged: controller.selectedCountry.value.isEmpty
-                                        ? null // 👈 disables the dropdown
+                                        ? null
                                         : (value) => controller.selectedState.value = value ?? '',
                                     isRequired: true,
                                     hint: "Select State",
@@ -181,10 +128,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                               ],
                             ),
 
-
                             Row(
                               children: [
-
                                 Expanded(
                                   child: _buildTextField(
                                     controller.cityController,
@@ -352,13 +297,13 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
             ),
           ),
           const Spacer(),
-          Text(
-            "New Customer",
+          Obx(() => Text(
+            controller.isEditMode.value ? "Edit Customer" : "New Customer",
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
-          ),
+          )),
           const Spacer(),
           Container(
             decoration: BoxDecoration(
@@ -428,16 +373,18 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
-            child: Column(
+            child: Obx(() => Column(
               children: [
-                const Icon(
-                  Icons.person_add,
+                Icon(
+                  controller.isEditMode.value ? Icons.edit : Icons.person_add,
                   color: Colors.white,
                   size: 40,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  "Register New Customer",
+                  controller.isEditMode.value
+                      ? "Update Customer Details"
+                      : "Register New Customer",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -445,7 +392,9 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Fill in the details to add a new customer to your database",
+                  controller.isEditMode.value
+                      ? "Update the details to modify customer information"
+                      : "Fill in the details to add a new customer to your database",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
@@ -453,63 +402,10 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                   ),
                 ),
               ],
-            ),
+            )),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildProfileImageSection() {
-    return Center(
-      child: GestureDetector(
-        onTap: () => controller.pickProfileImage(),
-        child: Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 2,
-                blurRadius: 10,
-              ),
-            ],
-          ),
-          child: Obx(() => controller.profileImage.value != null
-              ? ClipRRect(
-            borderRadius: BorderRadius.circular(50),
-            child: Image.file(
-              controller.profileImage.value!,
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          )
-              : const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_a_photo,
-                color: Color(0xFF6A11CB),
-                size: 30,
-              ),
-              SizedBox(height: 4),
-              Text(
-                "Add Photo",
-                style: TextStyle(
-                  color: Color(0xFF6A11CB),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -665,7 +561,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     required IconData prefixIcon,
     required List<DropdownMenuItem<String>> items,
     String? value,
-    required void Function(String?)? onChanged, // 👈 nullable now
+    required void Function(String?)? onChanged,
     bool isRequired = false,
     String? hint,
     String section = "",
@@ -713,7 +609,6 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     );
   }
 
-
   Widget _buildActionButtons() {
     return Column(
       children: [
@@ -740,20 +635,25 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               width: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-                : const Row(
+                : Obx(() => Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.person_add, size: 24),
-                SizedBox(width: 12),
+                Icon(
+                  controller.isEditMode.value ? Icons.update : Icons.person_add,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  "Register Customer",
-                  style: TextStyle(
+                  controller.isEditMode.value
+                      ? "Update Customer"
+                      : "Register Customer",
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
-            ),
+            )),
           )),
         ),
 
@@ -762,22 +662,6 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         // Secondary Actions
         Row(
           children: [
-            // Expanded(
-            //   child: OutlinedButton.icon(
-            //     onPressed: controller.saveAsDraft,
-            //     style: OutlinedButton.styleFrom(
-            //       padding: const EdgeInsets.symmetric(vertical: 12),
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(16),
-            //       ),
-            //       side: const BorderSide(color: Colors.white),
-            //       foregroundColor: Colors.white,
-            //     ),
-            //     icon: const Icon(Icons.save_outlined, size: 18),
-            //     label: const Text("Save Draft"),
-            //   ),
-            // ),
-            // const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: controller.clearForm,
@@ -846,4 +730,4 @@ class UpperCaseTextFormatter extends TextInputFormatter {
   }
 }
 
-// Enhanced Controller (additions needed)
+

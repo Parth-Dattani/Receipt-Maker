@@ -8,6 +8,9 @@ import 'package:demo_prac_getx/screen/item_screen.dart';
 import 'package:demo_prac_getx/screen/setting/setting_screen.dart';
 import 'package:excel/excel.dart' show Excel, Sheet, TextCellValue, IntCellValue, DoubleCellValue;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/widgets.dart' show Font;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +23,7 @@ import '../screen/screen.dart';
 import '../screen/setting/widgets/widgets.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
+import '../utils/utils.dart';
 import '../widgets/widgets.dart';
 import 'controller.dart';
 import 'package:path_provider/path_provider.dart';
@@ -1524,6 +1528,13 @@ class DashboardController extends BaseController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isInitializing = true;
 
+  // Method to check if company is registered
+  bool get isCompanyRegistered => companyId.value.isNotEmpty;
+
+  // Method to get company name for display
+  String get companyName => currentCompany.value?['companyName'] ?? 'No Company';
+
+
   @override
   void onInit() {
     super.onInit();
@@ -1819,7 +1830,7 @@ class DashboardController extends BaseController {
 
       // Try Google Sheets first
       try {
-        invoices = await GoogleSheetService.getInvoices();
+        invoices = await GoogleSheetService.getInvoices(type: "INV");
       } catch (e) {
         print("Google Sheets failed: $e");
         invoices = await GoogleSheetService.getInvoices();
@@ -2779,8 +2790,404 @@ class DashboardController extends BaseController {
     return "${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}";
   }
 
-  void viewInvoiceDetails(String invoiceId) {
-    Get.toNamed('/invoice-details/$invoiceId');
+
+  Future<void> exportGSTReportWithDateFilter(DateTime fromDate, DateTime toDate) async {
+    try {
+      // Get invoices and items
+      final invoices = await GoogleSheetService.getInvoices(type: "INV");
+      final items = await GoogleSheetService.getInvoiceItems();
+
+      if (invoices.isEmpty) {
+        Get.snackbar('No Data', 'No invoices found to export',
+            backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      // Normalize dates
+      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      final end = DateTime(toDate.year, toDate.month, toDate.day);
+
+      print("📅 Generating GST Report from ${_formatDate(start)} to ${_formatDate(end)}");
+
+      // Filter invoices by date range
+      final filteredInvoices = invoices.where((inv) {
+        if (inv.issueDate == null) return false;
+
+        final issueDate = DateTime(
+          inv.issueDate!.year,
+          inv.issueDate!.month,
+          inv.issueDate!.day,
+        );
+
+        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
+            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
+      }).toList();
+
+      if (filteredInvoices.isEmpty) {
+        Get.snackbar('No Data', 'No invoices found in selected date range',
+            backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      print("✅ Found ${filteredInvoices.length} invoices");
+
+      // Create PDF document
+      final pdf = pw.Document();
+
+      // Calculate totals
+      double grandSubtotal = 0;
+      double grandCGST = 0;
+      double grandSGST = 0;
+      double grandTotal = 0;
+      int rowCount = 0;
+
+      // Group by GST Rate for summary
+      Map<double, Map<String, double>> gstRateSummary = {};
+
+      for (var inv in filteredInvoices) {
+        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
+
+        for (var item in invItems) {
+          double qty = item.quantity ?? 0;
+          double rate = item.rate ?? 0;
+          double subtotal = rate * qty;
+          double gstRate = item.gstRate ?? 0;
+          double totalGST = subtotal * gstRate / 100;
+          double cgst = totalGST / 2;
+          double sgst = totalGST / 2;
+          double total = subtotal + totalGST;
+
+          grandSubtotal += subtotal;
+          grandCGST += cgst;
+          grandSGST += sgst;
+          grandTotal += total;
+          rowCount++;
+
+          if (!gstRateSummary.containsKey(gstRate)) {
+            gstRateSummary[gstRate] = {
+              'subtotal': 0,
+              'cgst': 0,
+              'sgst': 0,
+              'total': 0,
+            };
+          }
+
+          gstRateSummary[gstRate]!['subtotal'] =
+              (gstRateSummary[gstRate]!['subtotal'] ?? 0) + subtotal;
+          gstRateSummary[gstRate]!['cgst'] =
+              (gstRateSummary[gstRate]!['cgst'] ?? 0) + cgst;
+          gstRateSummary[gstRate]!['sgst'] =
+              (gstRateSummary[gstRate]!['sgst'] ?? 0) + sgst;
+          gstRateSummary[gstRate]!['total'] =
+              (gstRateSummary[gstRate]!['total'] ?? 0) + total;
+        }
+      }
+
+      // ========== PAGE 1: GST SUMMARY ==========
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header
+                pw.Container(
+                  padding: pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.blue900,
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        companyName.isNotEmpty
+                            ? companyName
+                            :
+                        'GST SUMMARY REPORT',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text(
+                        'Period: ${_formatDate(start)} to ${_formatDate(end)}',
+                        style: pw.TextStyle(fontSize: 12, color: PdfColors.white),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+
+                // Report Info
+                pw.Container(
+                  padding: pw.EdgeInsets.all(15),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey400),
+                    borderRadius: pw.BorderRadius.circular(5),
+                  ),
+                  child: pw.Column(
+                    children: [
+                      _buildInfoRow('Total Invoices:', '${filteredInvoices.length}'),
+                      _buildInfoRow('Total Items:', '$rowCount'),
+                      _buildInfoRow(
+                        'Invoice Range:',
+                        '${filteredInvoices.first.invoiceId ?? "N/A"} to ${filteredInvoices.last.invoiceId ?? "N/A"}',
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+
+                // GST Rate-wise Summary Table
+                pw.Text(
+                  'GST Rate-wise Summary',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey400),
+                  children: [
+                    // Header
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                      children: [
+                        _buildTableCell('GST Rate (%)', isHeader: true),
+                        _buildTableCell('Taxable Amount', isHeader: true),
+                        _buildTableCell('CGST', isHeader: true),
+                        _buildTableCell('SGST', isHeader: true),
+                        _buildTableCell('Total Amount', isHeader: true),
+                      ],
+                    ),
+                    // Data rows
+                    ...(gstRateSummary.keys.toList()..sort()).map((gstRate) {
+                      var data = gstRateSummary[gstRate]!;
+                      return pw.TableRow(
+                        children: [
+                          _buildTableCell('${gstRate.toStringAsFixed(2)}%'),
+                          _buildTableCell(AppUtil.formatCurrency(data['subtotal']!)),
+                          _buildTableCell(AppUtil.formatCurrency(data['cgst']!)),
+                          _buildTableCell(AppUtil.formatCurrency(data['sgst']!)),
+                          _buildTableCell(AppUtil.formatCurrency(data['total']!)),
+                        ],
+                      );
+                    }).toList(),
+                    // Total row
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey200),
+                      children: [
+                        _buildTableCell('TOTAL', isHeader: true),
+                        _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true),
+                        _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true),
+                        _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true),
+                        _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // ========== PAGE 2+: DETAILED INVOICE REPORT ==========
+      List<pw.TableRow> detailRows = [];
+
+      // Header
+      detailRows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColors.grey300),
+          children: [
+            _buildTableCell('Invoice ID', isHeader: true, fontSize: 8),
+            _buildTableCell('Customer', isHeader: true, fontSize: 8),
+            _buildTableCell('Date', isHeader: true, fontSize: 8),
+            _buildTableCell('Item', isHeader: true, fontSize: 8),
+            _buildTableCell('Qty', isHeader: true, fontSize: 8),
+            _buildTableCell('Rate', isHeader: true, fontSize: 8),
+            _buildTableCell('Subtotal', isHeader: true, fontSize: 8),
+            _buildTableCell('GST%', isHeader: true, fontSize: 8),
+            _buildTableCell('CGST', isHeader: true, fontSize: 8),
+            _buildTableCell('SGST', isHeader: true, fontSize: 8),
+            _buildTableCell('Total', isHeader: true, fontSize: 8),
+          ],
+        ),
+      );
+
+      // Data rows
+      for (var inv in filteredInvoices) {
+        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
+        String dateStr = _formatDate(inv.issueDate);
+
+        if (invItems.isEmpty) {
+          detailRows.add(
+            pw.TableRow(
+              children: [
+                _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
+                _buildTableCell(inv.customerName ?? "", fontSize: 7),
+                _buildTableCell(dateStr, fontSize: 7),
+                _buildTableCell("No Items", fontSize: 7),
+                _buildTableCell("0", fontSize: 7),
+                _buildTableCell("0.00", fontSize: 7),
+                _buildTableCell("0.00", fontSize: 7),
+                _buildTableCell("0", fontSize: 7),
+                _buildTableCell("0.00", fontSize: 7),
+                _buildTableCell("0.00", fontSize: 7),
+                _buildTableCell("0.00", fontSize: 7),
+              ],
+            ),
+          );
+        } else {
+          for (var item in invItems) {
+            double qty = item.quantity ?? 0;
+            double rate = item.rate ?? 0;
+            double subtotal = rate * qty;
+            double gstRate = item.gstRate ?? 0;
+            double totalGST = subtotal * gstRate / 100;
+            double cgst = totalGST / 2;
+            double sgst = totalGST / 2;
+            double total = subtotal + totalGST;
+
+            detailRows.add(
+              pw.TableRow(
+                children: [
+                  _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
+                  _buildTableCell(inv.customerName ?? "", fontSize: 7),
+                  _buildTableCell(dateStr, fontSize: 7),
+                  _buildTableCell(item.itemName ?? "", fontSize: 7),
+                  _buildTableCell(qty.toStringAsFixed(0), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(rate), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(subtotal), fontSize: 7),
+                  _buildTableCell('${gstRate.toStringAsFixed(0)}%', fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(cgst), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(sgst), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(total), fontSize: 7),
+                ],
+              ),
+            );
+          }
+        }
+      }
+
+      // Total row
+      detailRows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8),
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8),
+            _buildTableCell('', fontSize: 7),
+            _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8),
+            _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8),
+            _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8),
+          ],
+        ),
+      );
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          build: (pw.Context context) => [
+            pw.Text(
+              'Detailed Invoice Report',
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              columnWidths: {
+                0: pw.FixedColumnWidth(60),
+                1: pw.FixedColumnWidth(70),
+                2: pw.FixedColumnWidth(50),
+                3: pw.FlexColumnWidth(2),
+                4: pw.FixedColumnWidth(30),
+                5: pw.FixedColumnWidth(45),
+                6: pw.FixedColumnWidth(50),
+                7: pw.FixedColumnWidth(35),
+                8: pw.FixedColumnWidth(45),
+                9: pw.FixedColumnWidth(45),
+                10: pw.FixedColumnWidth(50),
+              },
+              children: detailRows,
+            ),
+          ],
+        ),
+      );
+
+      // Save PDF file
+      final dir = await getApplicationDocumentsDirectory();
+      String fromDateStr = _formatDateForFilename(start);
+      String toDateStr = _formatDateForFilename(end);
+      String fileName = "${companyName.isNotEmpty ? companyName : 'SUMMARY'}_Report_${fromDateStr}_to_${toDateStr}.pdf";
+
+      String outputFile = "${dir.path}/$fileName";
+
+      final file = File(outputFile);
+      await file.writeAsBytes(await pdf.save());
+
+      print("✅ GST Report PDF saved at $outputFile");
+
+      Get.snackbar(
+        'Success',
+        'GST Report PDF exported successfully',
+        backgroundColor: Colors.green.shade100,
+        icon: Icon(Icons.check_circle, color: Colors.green),
+      );
+
+      OpenFile.open(outputFile);
+
+    } catch (e, st) {
+      print("❌ Error generating GST report: $e");
+      print(st);
+      Get.snackbar(
+        'Error',
+        'Failed to generate report: $e',
+        backgroundColor: Colors.red.shade100,
+      );
+    }
+  }
+
+// Helper function to build table cells
+  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10}) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.all(4),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: fontSize,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+// Helper function to build info rows
+  pw.Widget _buildInfoRow(String label, String value) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(value),
+        ],
+      ),
+    );
+  }
+
+
+  void viewInvoiceDetails(Invoice invoice) {
+
+    Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
+    Get.to(() => InvoiceDetailsScreen(), arguments: invoice);
   }
 
   // Method to get customer count for dashboard display
@@ -2805,11 +3212,6 @@ class DashboardController extends BaseController {
     }
   }
 
-  // Method to check if company is registered
-  bool get isCompanyRegistered => companyId.value.isNotEmpty;
-
-  // Method to get company name for display
-  String get companyName => currentCompany.value?['companyName'] ?? 'No Company';
 
   Future<void> logout() async {
     try {
