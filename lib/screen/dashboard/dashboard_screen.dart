@@ -3,6 +3,7 @@ import 'package:demo_prac_getx/screen/dashboard/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -20,204 +21,228 @@ class DashboardScreen extends GetView<DashboardController> {
     return Scaffold(
       key: controller.scaffoldKey,
       appBar: AppBar(
-        leading: IconButton(onPressed: (){
-          controller.scaffoldKey.currentState?.openDrawer();
-        },
-            icon: Icon(Icons.menu)),
-        title: Text('Invoice Dashboard'),
-        backgroundColor: Colors.blue.shade700,
+        leading: IconButton(
+          onPressed: () {
+            controller.scaffoldKey.currentState?.openDrawer();
+          },
+          icon: Icon(Icons.menu),
+        ),
+        title: Text('dashboard'.tr),
+        backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
+          // 🆕 Show loading indicator in AppBar when refreshing
+          Obx(() => controller.isLoading.value
+              ? Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          )
+              : IconButton(
             icon: Icon(Icons.refresh),
             onPressed: controller.refreshDashboard,
-          ),
+          )),
         ],
       ),
       body: SafeArea(
-        child: Obx(() => controller.isLoading.value
-            ? const DashboardShimmer()
-            : RefreshIndicator(
-          onRefresh: () async => controller.refreshDashboard(),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            physics: AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Welcome Section
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade700, Colors.blue.shade500],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+        child: Obx(() {
+          if (controller.isLoading.value && controller.invoiceList.isEmpty) {
+            return const DashboardShimmer();
+          }
+          // 🆕 Show content even if loading (for refresh)
+          return RefreshIndicator(
+            onRefresh: () async => await controller.refreshDashboard(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              physics: AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome Section
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.tealColor,
+                          AppColors.tealColor.withOpacity(0.7)
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    borderRadius: BorderRadius.circular(15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'welcome_back'.tr,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'business_overview'.tr,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
+
+                  SizedBox(height: 20),
+
+                  // Statistics Cards
+                  DashboardStatsCard(),
+
+                  SizedBox(height: 20),
+
+                  // Quick Actions
+                  QuickActionsGrid(),
+
+                  SizedBox(height: 20),
+
+                  // Charts Section
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Welcome back!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      // Chart on the left
+                      Expanded(
+                        flex: 1,
+                        child: InvoiceStatusChart(),
                       ),
-                      SizedBox(height: 5),
-                      Text(
-                        'Here\'s your business overview',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 16,
+
+                      const SizedBox(width: 16),
+
+                      // Export + Summary cards on the right
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          children: [
+                            InkWell(
+                              onTap: () => showReportDialog(context),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(
+                                      color: Colors.grey.shade300, width: 1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.15),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.summarize,
+                                        size: 32, color: AppColors.tealColor),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "summary_report".tr,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.tealColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      "get_summary_report".tr,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            InkWell(
+                              onTap: () => showExportDialog(context),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(
+                                      color: Colors.grey.shade300, width: 1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.15),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.file_download,
+                                        size: 32, color: AppColors.tealColor),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "Export Invoice Data",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.tealColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      "for_auditing_report".tr,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
 
-                SizedBox(height: 20),
+                  const SizedBox(height: 14),
+                  SizedBox(height: 20),
 
-                // Statistics Cards
-                DashboardStatsCard(),
-
-                SizedBox(height: 20),
-
-                // Quick Actions
-                QuickActionsGrid(),
-
-                SizedBox(height: 20),
-
-                // Charts Section
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Chart on the left
-                    Expanded(
-                      flex: 1,
-                      child: InvoiceStatusChart(),
-                    ),
-
-                    const SizedBox(width: 16),
-
-                    // Export + Summary cards on the right
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        children: [
-                          InkWell(
-                            onTap: () => showReportDialog(context),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              //height: 120,
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey.shade300, width: 1),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.15),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.summarize, size: 32, color: Colors.blue.shade700),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    "Summary Report",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    "Get your summary report",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          InkWell(
-                            onTap: () => showExportDialog(context),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              //height: 120,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey.shade300, width: 1),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.15),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.file_download, size: 32, color: Colors.blue.shade700),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    "Export Invoice Data",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    "For auditing report",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                SizedBox(height: 20),
-
-                // Recent Invoices
-                RecentInvoicesCard(),
-              ],
+                  // Recent Invoices
+                  RecentInvoicesCard(),
+                ],
+              ),
             ),
-          ),
-        )),
+          );
+        }),
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: controller.exportInvoiceData,
-      //   backgroundColor: Colors.blue.shade700,
-      //   child: Icon(Icons.download, color: Colors.white),
-      // ),
       drawer: buildDrawer(),
     );
   }
@@ -247,7 +272,10 @@ class DashboardScreen extends GetView<DashboardController> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.blue.shade600, Colors.blue.shade400],
+                          colors: [
+                            AppColors.tealColor,
+                            AppColors.tealColor.withOpacity(0.7)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -271,12 +299,12 @@ class DashboardScreen extends GetView<DashboardController> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Export Invoices",
+                                  "export_invoices".tr,
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 22,
@@ -285,7 +313,7 @@ class DashboardScreen extends GetView<DashboardController> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  "Select date range to export",
+                                  "select_date_range_to_export".tr,
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 14,
@@ -311,9 +339,9 @@ class DashboardScreen extends GetView<DashboardController> {
                           _buildDateCard(
                             context: context,
                             icon: Icons.calendar_today,
-                            label: "From Date",
+                            label: "from_date".tr,
                             date: fromDate,
-                            color: Colors.green,
+                            color: AppColors.tealColor,
                             onTap: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -342,9 +370,9 @@ class DashboardScreen extends GetView<DashboardController> {
                           _buildDateCard(
                             context: context,
                             icon: Icons.event,
-                            label: "To Date",
+                            label: "to_date".tr,
                             date: toDate,
-                            color: Colors.orange,
+                            color: AppColors.tealColor,
                             onTap: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -365,20 +393,21 @@ class DashboardScreen extends GetView<DashboardController> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
+                                color: AppColors.tealColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blue.shade200),
+                                border: Border.all(
+                                    color: AppColors.tealColor.withOpacity(0.3)),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.info_outline,
-                                      color: Colors.blue.shade700, size: 20),
+                                      color: AppColors.tealColor, size: 20),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
                                       "Exporting ${_calculateDays(fromDate!, toDate!)} days of data",
                                       style: TextStyle(
-                                        color: Colors.blue.shade700,
+                                        color: AppColors.tealColor,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -395,7 +424,7 @@ class DashboardScreen extends GetView<DashboardController> {
                             height: 56,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade600,
+                                backgroundColor: AppColors.tealColor,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -406,7 +435,8 @@ class DashboardScreen extends GetView<DashboardController> {
                                 if (fromDate == null || toDate == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Text("Please select both dates"),
+                                      content:
+                                      const Text("Please select both dates"),
                                       backgroundColor: Colors.red.shade600,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(
@@ -423,13 +453,13 @@ class DashboardScreen extends GetView<DashboardController> {
                                   toDate!,
                                 );
                               },
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.download_rounded, size: 24),
                                   SizedBox(width: 12),
                                   Text(
-                                    "Export to Excel",
+                                    "export_to_excel".tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -477,7 +507,10 @@ class DashboardScreen extends GetView<DashboardController> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.blue.shade600, Colors.blue.shade400],
+                          colors: [
+                            AppColors.tealColor,
+                            AppColors.tealColor.withOpacity(0.7)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -501,12 +534,12 @@ class DashboardScreen extends GetView<DashboardController> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Export Invoices",
+                                  "export_invoices".tr,
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 22,
@@ -541,9 +574,9 @@ class DashboardScreen extends GetView<DashboardController> {
                           _buildDateCard(
                             context: context,
                             icon: Icons.calendar_today,
-                            label: "From Date",
+                            label: "from_date".tr,
                             date: fromDate,
-                            color: Colors.green,
+                            color: AppColors.tealColor,
                             onTap: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -572,9 +605,9 @@ class DashboardScreen extends GetView<DashboardController> {
                           _buildDateCard(
                             context: context,
                             icon: Icons.event,
-                            label: "To Date",
+                            label: "to_date",
                             date: toDate,
-                            color: Colors.orange,
+                            color: AppColors.tealColor,
                             onTap: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -595,20 +628,21 @@ class DashboardScreen extends GetView<DashboardController> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
+                                color: AppColors.tealColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blue.shade200),
+                                border: Border.all(
+                                    color: AppColors.tealColor.withOpacity(0.3)),
                               ),
                               child: Row(
                                 children: [
                                   Icon(Icons.info_outline,
-                                      color: Colors.blue.shade700, size: 20),
+                                      color: AppColors.tealColor, size: 20),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
                                       "Exporting ${_calculateDays(fromDate!, toDate!)} days of data",
                                       style: TextStyle(
-                                        color: Colors.blue.shade700,
+                                        color: AppColors.tealColor,
                                         fontSize: 14,
                                       ),
                                     ),
@@ -625,7 +659,7 @@ class DashboardScreen extends GetView<DashboardController> {
                             height: 56,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade600,
+                                backgroundColor: AppColors.tealColor,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -636,7 +670,8 @@ class DashboardScreen extends GetView<DashboardController> {
                                 if (fromDate == null || toDate == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Text("Please select both dates"),
+                                      content:
+                                      const Text("Please select both dates"),
                                       backgroundColor: Colors.red.shade600,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(
@@ -653,13 +688,13 @@ class DashboardScreen extends GetView<DashboardController> {
                                   toDate!,
                                 );
                               },
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.download_rounded, size: 24),
                                   SizedBox(width: 12),
                                   Text(
-                                    "Export to Excel",
+                                    "export_to_excel".tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -699,7 +734,8 @@ class DashboardScreen extends GetView<DashboardController> {
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: date != null ? color.withOpacity(0.5) : Colors.grey.shade300,
+            color:
+            date != null ? color.withOpacity(0.5) : Colors.grey.shade300,
             width: 2,
           ),
         ),
@@ -729,10 +765,11 @@ class DashboardScreen extends GetView<DashboardController> {
                   const SizedBox(height: 4),
                   Text(
                     date == null
-                        ? "Select date"
+                        ? "select_date".tr
                         : "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}",
                     style: TextStyle(
-                      color: date != null ? Colors.black87 : Colors.grey.shade400,
+                      color:
+                      date != null ? Colors.black87 : Colors.grey.shade400,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -755,142 +792,11 @@ class DashboardScreen extends GetView<DashboardController> {
     return to.difference(from).inDays + 1;
   }
 
-  // Add these methods to your Dashboard screen widget
-  Widget _buildQuickActionsSection() {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.flash_on, color: Colors.blue, size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'Quick Actions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.person_add,
-                    title: 'Add Customer',
-                    subtitle: 'Register new customer',
-                    color: Colors.green,
-                    onTap: () => controller.navigateToAddNewCustomer(),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.receipt_long,
-                    title: 'New Invoice',
-                    subtitle: 'Create invoice',
-                    color: Colors.blue,
-                    onTap: () => controller.navigateToCreateInvoice(),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.people,
-                    title: 'View Customers',
-                    subtitle: 'Manage customers',
-                    color: Colors.orange,
-                    onTap: () => controller.navigateToCustomerList(),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.analytics,
-                    title: 'Reports',
-                    subtitle: 'View analytics',
-                    color: Colors.purple,
-                    onTap: () => controller.navigateToItems(),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-// Add this to your floating action button or main action area
+  // Add this to your floating action button or main action area
   Widget _buildFloatingActionButton() {
     return FloatingActionButton.extended(
       onPressed: () => controller.navigateToAddNewCustomer(),
-      backgroundColor: Colors.green,
+      backgroundColor: AppColors.tealColor,
       icon: Icon(Icons.person_add),
       label: Text('Add Customer'),
     );
@@ -904,7 +810,8 @@ class DashboardScreen extends GetView<DashboardController> {
           Obx(() => DrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue.shade700, Colors.blue.shade500],
+                colors: [  AppColors.tealColor,
+                  AppColors.tealColor.withOpacity(0.7)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -978,15 +885,15 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.receipt_long, color: Colors.blue),
-                  title: Text("Create Invoice"),
+                  title: Text("create_invoice".tr),
                   onTap: () {
                     Get.back();
-                    controller.navigateToCreateInvoice();
+                    controller.navigateToInventory();
                   },
                 ),
                 ListTile(
                   leading: Icon(Icons.people, color: Colors.orange),
-                  title: Text("Customers"),
+                  title: Text("customers".tr),
                   onTap: () {
                     Get.back();
                     controller.navigateToCustomerList();
@@ -995,7 +902,7 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.analytics, color: Colors.purple),
-                  title: Text("Challans"),
+                  title: Text("challans".tr),
                   onTap: () {
                     Get.back();
                     controller.navigateToChallanList();
@@ -1004,16 +911,27 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.receipt_outlined, color: Colors.indigoAccent),
-                  title: Text("Quotations"),
+                  title: Text("quotations".tr),
                   onTap: () {
                     Get.back();
                     controller.navigateToQuotList();
                   },
                 ),
-                // 🔹 Challan Toggle
+
+                ListTile(
+                  leading: Icon(Icons.cases_outlined, color: Colors.indigoAccent),
+                  title: Text("payment".tr),
+                  onTap: () {
+                    Get.back();
+                    controller.navigateToPaymentDetails();
+                  },
+                ),
+
+
+                /// 🔹 Challan Toggle
                 Obx(() => ListTile(
                   leading: Icon(Icons.list_alt, color: Colors.green),
-                  title: Text("Enable Challan Feature"),
+                  title: Text("enable_challan".tr),
                   trailing: Switch(
                     value: AppConstants.isChallan.value,
                     onChanged: (value) async {
@@ -1036,7 +954,7 @@ class DashboardScreen extends GetView<DashboardController> {
 // 🔹 GST Toggle
                 Obx(() => ListTile(
                   leading: Icon(Icons.attach_money, color: Colors.teal),
-                  title: Text("Enable GST Feature"),
+                  title: Text("enable_gst".tr),
                   trailing: Switch(
                     value: AppConstants.withGST.value,
                     onChanged: (value) async {
@@ -1057,6 +975,29 @@ class DashboardScreen extends GetView<DashboardController> {
                 )),
 
 
+                ///Language
+                Obx(() => ListTile(
+                  leading: Icon(Icons.language, color: Colors.teal),
+                  title: Text('enable_gujarati'.tr), // 🔹 Use .tr for translation
+                  trailing: Switch(
+                    value: AppConstants.isGujarati.value,
+                    onChanged: (value) async {
+                      await controller.updateLanguagePreference(value);
+                    },
+                    activeColor: Colors.white,
+                    activeTrackColor: Colors.teal.shade600,
+                    inactiveThumbColor: Colors.white,
+                    inactiveTrackColor: Colors.grey.shade400,
+                    splashRadius: 28,
+                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Icon(Icons.check, color: Colors.teal);
+                      }
+                      return Icon(Icons.close, color: Colors.grey);
+                    }),
+                  ),
+                )),
+
 
                 Divider(),
 
@@ -1073,7 +1014,7 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.add_business, color: Colors.teal),
-                  title: Text("Edit Company Info"),
+                  title: Text("edit_company".tr),
                   onTap: () {
                     // ✅ Use currentCompany instead of companyData
                     final data = controller.currentCompany.value;
@@ -1104,7 +1045,7 @@ class DashboardScreen extends GetView<DashboardController> {
                 ListTile(
                   leading: Icon(Icons.logout, color: Colors.red),
                   title: Text(
-                    "Logout",
+                    "logout".tr,
                     style: TextStyle(
                       color: Colors.red.shade700,
                       fontWeight: FontWeight.bold,
@@ -1118,16 +1059,16 @@ class DashboardScreen extends GetView<DashboardController> {
                           children: [
                             Icon(Icons.logout, color: Colors.red),
                             SizedBox(width: 8),
-                            Text("Confirm Logout"),
+                            Text("confirm_logout".tr),
                           ],
                         ),
                         content: Text(
-                          "Are you sure you want to log out?",
+                          "logout_message".tr,
                           style: TextStyle(fontSize: 15),
                         ),
                         actions: [
                           TextButton(
-                            child: Text("Cancel", style: TextStyle(color: Colors.grey)),
+                            child: Text("cancel".tr, style: TextStyle(color: Colors.grey)),
                             onPressed: () => Get.back(),
                           ),
                           ElevatedButton(
@@ -1138,7 +1079,7 @@ class DashboardScreen extends GetView<DashboardController> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Text("Logout"),
+                            child: Text("logout".tr),
                             onPressed: () async {
                               Get.back(); // close dialog
                               await controller.logout();

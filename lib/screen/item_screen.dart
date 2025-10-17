@@ -66,13 +66,13 @@ class ItemScreen extends GetView<ItemController> {
           if (controller.isLoading.value) {
             return _buildShimmerLoader();
           }
-        
+
           final items = controller.filteredItemList;
-        
+
           if (items.isEmpty) {
             return _buildEmptyState();
           }
-        
+
           return _buildItemList(items);
         }),
       ),
@@ -1012,6 +1012,5 @@ class ItemScreen extends GetView<ItemController> {
     );
   }
 }
-
 
 

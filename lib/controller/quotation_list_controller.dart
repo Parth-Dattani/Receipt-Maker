@@ -626,9 +626,24 @@ class QuotationListController extends BaseController {
     try {
       isLoading.value = true;
 
+      print("Fetching quotation items for PDF: ${quotation.invoiceId}");
+
+      // Fetch items from Google Sheets
       List<InvoiceItem> fetchedQuotationItems =
       await GoogleSheetService.getInvoiceItemsByInvoiceId(quotation.invoiceId);
 
+      if (fetchedQuotationItems.isEmpty) {
+        Get.snackbar(
+          'Warning',
+          'No items found for this quotation',
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+        );
+        isLoading.value = false;
+        return;
+      }
+
+      // ✅ Clean item names (fallback to description if blank)
       final cleanedItems = fetchedQuotationItems.map((item) {
         final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
             ? item.itemName
@@ -647,6 +662,13 @@ class QuotationListController extends BaseController {
         );
       }).toList();
 
+      // ✅ Debug output
+      print("Found ${cleanedItems.length} items for quotation ${quotation.invoiceId}");
+      for (var item in cleanedItems) {
+        print("PDF Item -> name: ${item.itemName}, qty: ${item.quantity}, rate: ${item.rate}, gst: ${item.gstAmount}");
+      }
+
+      // ✅ Generate PDF using the same method as InvoiceListScreen
       final pdfFile = await InvoiceHelper.generateDocument(
         isChallan: false,
         invoice: quotation,
@@ -654,21 +676,28 @@ class QuotationListController extends BaseController {
         companyData: companyData.value,
       );
 
-      await Share.shareXFiles([XFile(pdfFile.path)], text: 'Quotation - ${quotation.invoiceId}');
+      // ✅ Share PDF
+      await Share.shareXFiles(
+          [XFile(pdfFile.path)],
+          text: 'Quotation - ${quotation.invoiceId}'
+      );
 
       Get.snackbar(
         'Success',
         'Quotation exported as PDF',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        icon: Icon(Icons.check_circle, color: Colors.green.shade700),
       );
+
     } catch (e) {
       print("Error exporting PDF: $e");
       Get.snackbar(
         'Error',
         'Failed to export PDF: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+        icon: Icon(Icons.error_outline, color: Colors.red.shade700),
       );
     } finally {
       isLoading.value = false;

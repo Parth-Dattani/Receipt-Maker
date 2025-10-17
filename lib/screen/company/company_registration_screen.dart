@@ -1,5 +1,6 @@
 import 'package:country_pickers/country.dart';
 import 'package:country_pickers/country_picker_dropdown.dart';
+import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -19,14 +20,14 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
-          Icon(icon, color: Colors.teal, size: 22),
+          Icon(icon, color: AppColors.tealColor, size: 22),
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.teal,
+              color: AppColors.tealColor,
             ),
           ),
         ],
@@ -34,7 +35,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
     );
   }
 
-  // Custom Dropdown Widget
   // Custom Dropdown Widget
   Widget _customDropdown({
     required String label,
@@ -55,9 +55,13 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       value: safeValue,
       decoration: InputDecoration(
         labelText: isRequired ? '$label *' : label,
-        prefixIcon: Icon(prefixIcon),
+        prefixIcon: Icon(prefixIcon, color: AppColors.tealColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
         ),
       ),
       items: items,
@@ -80,35 +84,24 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title:  Obx(()=> Text(controller.isEditMode.value ? "Edit Company" : "Company Registration",)),
+        backgroundColor: AppColors.tealColor,
+        title: Obx(() => Text(
+          controller.isEditMode.value ? "Edit Company" : "Company Registration",
+          style: const TextStyle(color: Colors.white),
+        )),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Get.back(),
+        ),
         centerTitle: true,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.tealAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        actions: [
-          // Add edit mode indicator or action if needed
-          Obx(() => controller.isEditMode.value
-              ? IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Get.back(),
-          )
-              : Container(),
-          ),
-        ],
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: Obx((){
-          if(controller.isLoading.value){
+        child: Obx(() {
+          if (controller.isLoading.value) {
             return CompanyFormShimmer();
-          }
-          else{
+          } else {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(
@@ -119,15 +112,15 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- Company Info Section ---
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
                             _sectionTitle("Company Info", Icons.business),
                             Obx(
-                                  ()=> CustomTextFormField(
+                                  () => CustomTextFormField(
                                 controller: controller.companyCodeController,
                                 label: "Company Code *",
                                 prefixIcon: Icons.qr_code,
@@ -149,16 +142,14 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 
                             // 📞 Phone Number Field
                             CustomTextFormField(
-                              controller: controller.phoneController,  // <-- Create this controller in your controller class
+                              controller: controller.phoneController,
                               label: "Phone Number *",
                               prefixIcon: Icons.phone,
                               keyboardType: TextInputType.phone,
                               isRequired: true,
                             ),
 
-                            // Add this in your CompanyRegistrationScreen, after phoneController field
-
-// 📊 Invoice Starting Number Field
+                            // 📊 Invoice Starting Number Field
                             CustomTextFormField(
                               controller: controller.invoiceStartingNumberController,
                               label: "Invoice Starting Number",
@@ -183,31 +174,13 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             ),
                             const SizedBox(height: 12),
 
-                            /// Country Dropdown
-                            // Obx(() => _customDropdown(
-                            //   label: "Country *",
-                            //   prefixIcon: Icons.flag,
-                            //   value: controller.selectedCountry.value.isEmpty
-                            //       ? null
-                            //       : controller.selectedCountry.value,
-                            //   items: controller.countries.map((country) {
-                            //     return DropdownMenuItem<String>(
-                            //       value: country,
-                            //       child: Text(country),
-                            //     );
-                            //   }).toList(),
-                            //   onChanged: (value) {
-                            //     controller.selectedCountry.value = value ?? '';
-                            //     controller.selectedState.value = ''; // Reset state when country changes
-                            //   },
-                            //   isRequired: true,
-                            //   hint: "Select Country",
-                            // )),
-        // Country Dropdown
+                            // Country Dropdown
                             Obx(() => _customDropdown(
                               label: "Country *",
                               prefixIcon: Icons.flag,
-                              value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
+                              value: controller.selectedCountry.value.isEmpty
+                                  ? null
+                                  : controller.selectedCountry.value,
                               items: controller.countries.map((country) {
                                 return DropdownMenuItem<String>(
                                   value: country,
@@ -216,15 +189,13 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                               }).toList(),
                               onChanged: (value) {
                                 controller.selectedCountry.value = value ?? '';
-                                controller.selectedState.value = ''; // Reset state when country changes
+                                controller.selectedState.value = ''; // Reset state
                               },
                               isRequired: true,
                               hint: "Select Country",
                             )),
 
                             const SizedBox(height: 16),
-
-
 
                             // State Dropdown (only shows when country is selected)
                             Obx(() {
@@ -235,7 +206,9 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                                   value: controller.selectedState.value.isEmpty
                                       ? null
                                       : controller.selectedState.value,
-                                  items: controller.getStatesForCountry().map((state) {
+                                  items: controller
+                                      .getStatesForCountry()
+                                      .map((state) {
                                     return DropdownMenuItem<String>(
                                       value: state,
                                       child: Text(state),
@@ -248,7 +221,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                                   hint: "Select State",
                                 );
                               } else {
-                                return Container(); // Hide state dropdown when no country is selected
+                                return Container();
                               }
                             }),
 
@@ -276,12 +249,13 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                                 ),
                               ],
                             ),
-                            CustomTextFormField(
-                              controller: controller.logoController,
-                              label: "Logo",
-                              prefixIcon: Icons.image,
-                              hintText: "Upload company logo",
-                            ),
+
+                            // CustomTextFormField(
+                            //   controller: controller.logoController,
+                            //   label: "Logo",
+                            //   prefixIcon: Icons.image,
+                            //   hintText: "Upload company logo",
+                            // ),
                           ],
                         ),
                       ),
@@ -290,14 +264,36 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- Business Info Section ---
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
                             _sectionTitle("Business Info", Icons.pie_chart),
+                            const SizedBox(height: 16),
+
+                            // Business Type Dropdown
+                            Obx(() => _customDropdown(
+                              label: "Business Type *",
+                              prefixIcon: Icons.business_center,
+                              value: controller.selectedBusinessType.value.isEmpty
+                                  ? null
+                                  : controller.selectedBusinessType.value,
+                              items: controller.businessTypes.map((type) {
+                                return DropdownMenuItem<String>(
+                                  value: type,
+                                  child: Text(type),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                controller.selectedBusinessType.value =
+                                    value ?? '';
+                              },
+                              isRequired: true,
+                              hint: "Select Business Type",
+                            )),
                             CustomTextFormField(
                               controller: controller.businessCategoryController,
                               label: "Business Category *",
@@ -322,8 +318,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- Bank Info Section ---
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -363,8 +359,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- Authorisation Section ---
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -372,9 +368,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             _sectionTitle("Authorisation", Icons.edit_document),
                             CustomTextFormField(
                               controller: controller.authorisedSignatureController,
-                              label: "Authorised Signature ",
+                              label: "Authorised Signature",
                               prefixIcon: Icons.person,
-                              //isRequired: true,
                             ),
                           ],
                         ),
@@ -384,8 +379,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- Features Section with Challan Option ---
                     Card(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -394,7 +389,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             _sectionTitle("Features", Icons.featured_play_list),
                             Row(
                               children: [
-                                Icon(Icons.list_alt, color: Colors.green, size: 24),
+                                Icon(Icons.list_alt,
+                                    color: AppColors.tealColor, size: 24),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -409,9 +405,10 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                                 Obx(() => Checkbox(
                                   value: controller.isChallanEnabled.value,
                                   onChanged: (value) {
-                                    controller.isChallanEnabled.value = value ?? false;
+                                    controller.isChallanEnabled.value =
+                                        value ?? false;
                                   },
-                                  activeColor: Colors.teal,
+                                  activeColor: AppColors.tealColor,
                                 )),
                               ],
                             ),
@@ -432,9 +429,9 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     // --- GST Section Option ---
                     Card(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 4,
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -447,7 +444,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                                 controller.isGstEnabled.value = value;
                               },
                               activeColor: Colors.white,
-                              activeTrackColor: Colors.teal,
+                              activeTrackColor: AppColors.tealColor,
                               inactiveThumbColor: Colors.grey,
                               title: const Text(
                                 "Enable GST",
@@ -458,15 +455,16 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                               ),
                               subtitle: const Text(
                                 "Enable this if invoices should include GST calculation",
-                                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                                style: TextStyle(
+                                    fontSize: 12, fontStyle: FontStyle.italic),
                               ),
-                              secondary: const Icon(Icons.receipt_long, color: Colors.teal),
+                              secondary: Icon(Icons.receipt_long,
+                                  color: AppColors.tealColor),
                             )),
                           ],
                         ),
                       ),
                     ),
-
 
                     const SizedBox(height: 25),
 
@@ -474,7 +472,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                     Center(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
+                          backgroundColor: AppColors.tealColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 36, vertical: 14),
@@ -484,10 +482,12 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                           elevation: 5,
                         ),
                         icon: Icon(controller.isEditMode.value
-                            ? Icons.update : Icons.check_circle_outline),
+                            ? Icons.update
+                            : Icons.check_circle_outline),
                         label: Text(
                           controller.isEditMode.value
-                              ? "Update Company" : "Register Company",
+                              ? "Update Company"
+                              : "Register Company",
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold),
                         ),
@@ -502,7 +502,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             );
           }
         }),
-      )
+      ),
     );
   }
 }
@@ -592,8 +592,8 @@ class CompanyFormShimmer extends StatelessWidget {
 
   Widget _buildSectionShimmer(String title, IconData icon) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -634,8 +634,8 @@ class CompanyFormShimmer extends StatelessWidget {
 
   Widget _buildCheckboxShimmer() {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -671,327 +671,5 @@ class CompanyFormShimmer extends StatelessWidget {
   }
 }
 
-// class CompanyRegistrationScreen extends GetView<CompanyController> {
-//   static const pageId = "/CompanyRegistrationScreen";
-//
-//   const CompanyRegistrationScreen({super.key});
-//
-//   Widget _sectionTitle(String title, IconData icon) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 10.0),
-//       child: Row(
-//         children: [
-//           Icon(icon, color: Colors.teal, size: 22),
-//           const SizedBox(width: 8),
-//           Text(
-//             title,
-//             style: const TextStyle(
-//               fontSize: 18,
-//               fontWeight: FontWeight.bold,
-//               color: Colors.teal,
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.grey.shade100,
-//       appBar: AppBar(
-//         title: const Text("Company Registration"),
-//         centerTitle: true,
-//         elevation: 0,
-//         flexibleSpace: Container(
-//           decoration: const BoxDecoration(
-//             gradient: LinearGradient(
-//               colors: [
-//                 Colors.teal, Colors.tealAccent],
-//               begin: Alignment.topLeft,
-//               end: Alignment.bottomRight,
-//             ),
-//           ),
-//         ),
-//       ),
-//       body: SingleChildScrollView(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Form(
-//           key: controller.formKey,
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               // --- Company Info Section ---
-//               Card(
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(16)),
-//                 elevation: 4,
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _sectionTitle("Company Info", Icons.business),
-//                       CustomTextFormField(
-//                         controller: controller.companyCodeController,
-//                         label: "Company Code *",
-//                         prefixIcon: Icons.qr_code,
-//                         isRequired: true,
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.companyNameController,
-//                         label: "Company Name *",
-//                         prefixIcon: Icons.apartment,
-//                         isRequired: true,
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.addressController,
-//                         label: "Address",
-//                         prefixIcon: Icons.location_on,
-//                       ),
-//                       Row(
-//                         children: [
-//                           Expanded(
-//                             child: CustomTextFormField(
-//                               controller: controller.cityController,
-//                               label: "City *",
-//                               prefixIcon: Icons.location_city,
-//                               isRequired: true,
-//                             ),
-//                           ),
-//                           const SizedBox(width: 10),
-//                           Expanded(
-//                             child: CustomTextFormField(
-//                               controller: controller.stateController,
-//                               label: "State *",
-//                               prefixIcon: Icons.map,
-//                               isRequired: true,
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                       Row(
-//                         children: [
-//                           Expanded(
-//                             child:
-//                             CountryPickerDropdown(
-//                               itemBuilder: (Country country) => Row(
-//                                 children: [
-//                                   CountryPickerUtils.getDefaultFlagImage(country),
-//                                   SizedBox(width: 8),
-//                                   Text("+${country.phoneCode}"),
-//                                   SizedBox(width: 8),
-//                                   Text(country.name),
-//                                 ],
-//                               ),
-//                               onValuePicked: (Country country) {
-//                                 print("${country.name}");
-//                               },
-//                             ),
-//                             // CustomTextFormField(
-//                             //   controller: controller.countryController,
-//                             //   label: "Country *",
-//                             //   prefixIcon: Icons.flag,
-//                             //   isRequired: true,
-//                             // ),
-//                           ),
-//                           const SizedBox(width: 10),
-//                           Expanded(
-//                             child: CustomTextFormField(
-//                               controller: controller.pincodeController,
-//                               label: "Pincode *",
-//                               prefixIcon: Icons.pin,
-//                               keyboardType: TextInputType.number,
-//                               isRequired: true,
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.logoController,
-//                         label: "Logo",
-//                         prefixIcon: Icons.image,
-//                         hintText: "Upload company logo",
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//
-//               // --- Business Info Section ---
-//               Card(
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(16)),
-//                 elevation: 4,
-//                 margin: const EdgeInsets.symmetric(vertical: 12),
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _sectionTitle("Business Info", Icons.pie_chart),
-//                       CustomTextFormField(
-//                         controller: controller.businessCategoryController,
-//                         label: "Business Category *",
-//                         prefixIcon: Icons.category,
-//                         isRequired: true,
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.gstController,
-//                         label: "G.S.T. Number",
-//                         prefixIcon: Icons.confirmation_number,
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.panController,
-//                         label: "PAN No",
-//                         prefixIcon: Icons.credit_card,
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//
-//               // --- Bank Info Section ---
-//               Card(
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(16)),
-//                 elevation: 4,
-//                 margin: const EdgeInsets.symmetric(vertical: 12),
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _sectionTitle("Bank Info", Icons.account_balance),
-//                       Row(
-//                         children: [
-//                           Expanded(
-//                             child: CustomTextFormField(
-//                               controller: controller.bankNameController,
-//                               label: "Bank Name",
-//                               prefixIcon: Icons.account_balance_wallet,
-//                             ),
-//                           ),
-//                           const SizedBox(width: 10),
-//                           Expanded(
-//                             child: CustomTextFormField(
-//                               controller: controller.ifscController,
-//                               label: "IFSC Code",
-//                               prefixIcon: Icons.code,
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                       CustomTextFormField(
-//                         controller: controller.accountNumberController,
-//                         label: "Account Number",
-//                         prefixIcon: Icons.numbers,
-//                         keyboardType: TextInputType.number,
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//
-//               // --- Authorisation Section ---
-//               Card(
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(16)),
-//                 elevation: 4,
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _sectionTitle("Authorisation", Icons.edit_document),
-//                       CustomTextFormField(
-//                         controller: controller.authorisedSignatureController,
-//                         label: "Authorised Signature *",
-//                         prefixIcon: Icons.person,
-//                         isRequired: true,
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//
-//               // --- Features Section with Challan Option ---
-//               Card(
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(16)),
-//                 elevation: 4,
-//                 margin: const EdgeInsets.symmetric(vertical: 12),
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _sectionTitle("Features", Icons.featured_play_list),
-//                       Row(
-//                         children: [
-//                           Icon(Icons.list_alt, color: Colors.green, size: 24),
-//                           const SizedBox(width: 12),
-//                           Expanded(
-//                             child: Text(
-//                               "Enable Challan Feature",
-//                               style: TextStyle(
-//                                 fontSize: 16,
-//                                 fontWeight: FontWeight.w500,
-//                                 color: Colors.grey.shade700,
-//                               ),
-//                             ),
-//                           ),
-//                           Obx(() => Checkbox(
-//                             value: controller.isChallanEnabled.value,
-//                             onChanged: (value) {
-//                               controller.isChallanEnabled.value = value ?? false;
-//                             },
-//                             activeColor: Colors.teal,
-//                           )),
-//                         ],
-//                       ),
-//                       const SizedBox(height: 8),
-//                       Text(
-//                         "Allows creating and managing delivery challans",
-//                         style: TextStyle(
-//                           fontSize: 12,
-//                           color: Colors.grey.shade600,
-//                           fontStyle: FontStyle.italic,
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//
-//               const SizedBox(height: 25),
-//
-//               // --- Register Button ---
-//               Center(
-//                 child: ElevatedButton.icon(
-//                   style: ElevatedButton.styleFrom(
-//                     backgroundColor: Colors.teal,
-//                     foregroundColor: Colors.white,
-//                     padding: const EdgeInsets.symmetric(
-//                         horizontal: 36, vertical: 14),
-//                     shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(30),
-//                     ),
-//                     elevation: 5,
-//                   ),
-//                   icon: const Icon(Icons.check_circle_outline),
-//                   label: const Text(
-//                     "Register Company",
-//                     style: TextStyle(
-//                         fontSize: 16, fontWeight: FontWeight.bold),
-//                   ),
-//                   onPressed: () => controller.registerCompany(),
-//                 ),
-//               ),
-//
-//               const SizedBox(height: 30),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 

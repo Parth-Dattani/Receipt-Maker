@@ -1,4 +1,6 @@
 
+import 'dart:ui';
+
 import 'package:get/get.dart';
 
 import '../utils/shared_preferences_helper.dart';
@@ -10,8 +12,10 @@ class AppConstants{
    static String appId = "";
    static String spreadsheetId = "";
    static String accessKey = "";
+   static String businessType = "Trading";
    static final isChallan = false.obs; //isChallanEnabled
    static final withGST = false.obs; //isGstEnabled
+   static final isGujarati = false.obs; //Language toggle
 
 
    /// 🔹 Load everything from SharedPreferences into memory
@@ -21,11 +25,32 @@ class AppConstants{
       appId = await sharedPreferencesHelper.getPrefData("appId") ?? "";
       spreadsheetId = await sharedPreferencesHelper.getPrefData("spreadsheetId") ?? "";
       accessKey = await sharedPreferencesHelper.getPrefData("accessKey") ?? "";
+      businessType = await sharedPreferencesHelper.getPrefData("businessType") ?? "Trading"; // 🆕 Load businessType
 
       isChallan.value = await sharedPreferencesHelper.retrievePrefBoolData("isChallanEnabled") ?? false;
       withGST.value = await sharedPreferencesHelper.retrievePrefBoolData("isGstEnabled") ?? false;
+      isGujarati.value = await sharedPreferencesHelper.retrievePrefBoolData("isGujarati") ?? false;
 
+      // 🔹 Apply saved language
+      if (isGujarati.value) {
+         Get.updateLocale(const Locale('gu', 'IN'));
+      } else {
+         Get.updateLocale(const Locale('en', 'US'));
+      }
 
+   }
+
+   /// Toggle and persist language
+   static Future<void> setLanguage(bool isGuj) async {
+      isGujarati.value = isGuj;
+      await sharedPreferencesHelper.storeBoolPrefData("isGujarati", isGuj);
+
+      // Update GetX locale
+      if (isGuj) {
+         Get.updateLocale(const Locale('gu', 'IN'));
+      } else {
+         Get.updateLocale(const Locale('en', 'US'));
+      }
    }
 
    /// 🔹 Update + persist userId
@@ -38,6 +63,12 @@ class AppConstants{
    static Future<void> setCompanyId(String id) async {
       companyId = id;
       await sharedPreferencesHelper.storePrefData("companyId", id);
+   }
+
+   /// 🔹 Update + persist businessType
+   static Future<void> setBusinessType(String type) async {
+      businessType = type;
+      await sharedPreferencesHelper.storePrefData("businessType", type);
    }
 
    /// 🔹 Update + persist isChallanEnabled

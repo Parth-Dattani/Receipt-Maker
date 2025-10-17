@@ -540,7 +540,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "country": selectedCountry.value,
           "altEmail": regAltEmailController.text.trim(),
           "createdAt": FieldValue.serverTimestamp(),
-          "appId":""
+          "appId":"",
+          "spreadsheetId":""
         });
 
         // If successful, break out of retry loop

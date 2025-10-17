@@ -44,6 +44,10 @@ class CompanyController extends BaseController {
   var isEditMode = false.obs;
   String? existingCompanyId;
 
+  var selectedBusinessType = ''.obs;
+  final List<String> businessTypes = ['Trading', 'Service', 'Client'];
+
+
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -89,6 +93,8 @@ class CompanyController extends BaseController {
         currentCompany.value!['id'] = companyDocs.docs.first.id;
         _populateFields(currentCompany.value!);
 
+        await AppConstants.setBusinessType(currentCompany.value!['businessType'] ?? 'Trading');
+
         Get.offNamed(
           CustomerRegistrationScreen.pageId,
           arguments: {
@@ -115,6 +121,7 @@ class CompanyController extends BaseController {
     pincodeController.text = companyData['pincode'] ?? '';
     logoController.text = companyData['logo'] ?? '';
     businessCategoryController.text = companyData['businessCategory'] ?? '';
+    selectedBusinessType.value = companyData['businessType'] ?? '';
     gstController.text = companyData['gst'] ?? '';
     panController.text = companyData['pan'] ?? '';
     phoneController.text = companyData['phone'] ?? '';
@@ -238,6 +245,7 @@ class CompanyController extends BaseController {
         'phone': phoneController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
+        'businessType': selectedBusinessType.value,
         'gst': gstController.text.trim().toUpperCase(),
         'pan': panController.text.trim().toUpperCase(),
         'bankName': bankNameController.text.trim(),
@@ -269,6 +277,9 @@ class CompanyController extends BaseController {
 
       AppConstants.isChallan.value = isChallanEnabled.value;
       AppConstants.withGST.value = isGstEnabled.value;
+      await AppConstants.setChallanEnabled(isChallanEnabled.value);
+      await AppConstants.setGstEnabled(isGstEnabled.value);
+      await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
 
       Get.offNamed(
         CustomerRegistrationScreen.pageId,
@@ -340,6 +351,7 @@ class CompanyController extends BaseController {
         'phone': phoneController.text.trim(),
         'logo': logoController.text.trim(),
         'businessCategory': businessCategoryController.text.trim(),
+        'businessType': selectedBusinessType.value,
         'gst': gstController.text.trim().toUpperCase(),
         'pan': panController.text.trim().toUpperCase(),
         'bankName': bankNameController.text.trim(),
@@ -390,6 +402,9 @@ class CompanyController extends BaseController {
           // Also update AppConstants
           AppConstants.isChallan.value = isChallanEnabled.value;
           AppConstants.withGST.value = isGstEnabled.value;
+          await AppConstants.setChallanEnabled(isChallanEnabled.value);
+          await AppConstants.setGstEnabled(isGstEnabled.value);
+          await AppConstants.setBusinessType(selectedBusinessType.value);
         }
       }
 
@@ -402,6 +417,10 @@ class CompanyController extends BaseController {
 
       AppConstants.isChallan.value = isChallanEnabled.value;
       AppConstants.withGST.value = isGstEnabled.value;
+      await AppConstants.setChallanEnabled(isChallanEnabled.value);
+      await AppConstants.setGstEnabled(isGstEnabled.value);
+      await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
+
 
       Future.delayed(const Duration(milliseconds: 500), () {
         if (Get.isOverlaysOpen) {

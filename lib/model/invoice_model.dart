@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Invoice {
   final String invoiceId;
   final String? itemId;
@@ -24,6 +26,8 @@ class Invoice {
   final List<InvoiceItem>? items;
   final String? userId;
   final String? challanId;
+  final double? receivedAmount;
+  final double? pendingAmount;
 
   Invoice({
     required this.invoiceId,
@@ -51,6 +55,8 @@ class Invoice {
     this.items,
     this.userId,
     this.challanId,
+    this.receivedAmount,
+    this.pendingAmount,
   });
 
   Map<String, dynamic> toMap() {
@@ -78,6 +84,8 @@ class Invoice {
       'status': status,
       'userId': userId,
       'challanId': challanId,
+      'receivedAmount': receivedAmount,
+      'pendingAmount': pendingAmount,
     };
   }
 
@@ -101,6 +109,7 @@ class Invoice {
       };
     }).toList();
   }
+
   factory Invoice.fromMap(Map<String, dynamic> map) {
     return Invoice(
       invoiceId: map['invoiceId'] ?? map['InvoiceId'] ?? '',
@@ -129,6 +138,8 @@ class Invoice {
       userId: map['userId'],
       challanId: map['challanId'],
       items: [],
+      receivedAmount: double.tryParse(map['receivedAmount']?.toString() ?? '0') ?? 0.0,
+      pendingAmount: double.tryParse(map['pendingAmount']?.toString() ?? '0') ?? 0.0,
     );
   }
 
@@ -166,6 +177,7 @@ class Invoice {
 
     return null;
   }
+
   Invoice copyWith({
     String? invoiceId,
     String? itemId,
@@ -189,6 +201,8 @@ class Invoice {
     String? status,
     List<InvoiceItem>? items,
     String? challanId,
+    double? receivedAmount,
+    double? pendingAmount,
   }) {
     return Invoice(
       invoiceId: invoiceId ?? this.invoiceId,
@@ -213,6 +227,8 @@ class Invoice {
       status: status ?? this.status,
       items: items ?? this.items,
       challanId: challanId ?? this.challanId,
+      receivedAmount: receivedAmount ?? this.receivedAmount,
+      pendingAmount: pendingAmount ?? this.pendingAmount,
     );
   }
 
@@ -236,6 +252,8 @@ class InvoiceItem {
   final double? amountWithGst;  // ✅ Make this a stored field
   final double? totalPrice;    // ✅ Make this a stored field
   final String? unit; // info only (comes from Item, not editable)
+  TextEditingController? descriptionController;
+
 
   InvoiceItem({
     this.invoiceId,
@@ -251,6 +269,7 @@ class InvoiceItem {
     this.amountWithGst,  // ✅ Accept from data
     this.totalPrice,     // ✅ Accept from data
     this.unit,
+    this.descriptionController
   });
 
   /// ✅ Computed getters as fallback
@@ -405,80 +424,4 @@ class InvoiceItem {
   }
 
 }
-
-// class InvoiceItem {
-//   final String description;
-//   final int quantity;
-//   final double rate;
-//   final String itemId;
-//   final String itemName;
-//   final String? challanId;
-//   final double gstRate; // % GST
-//
-//   InvoiceItem({
-//     required this.description,
-//     required this.quantity,
-//     required this.rate,
-//     required this.itemId,
-//     required this.itemName,
-//     this.challanId,
-//     this.gstRate = 0.0,
-//   });
-
-  /// ✅ always computed
-  // double get totalPrice => quantity * rate;
-  // double get gstAmount => (totalPrice * gstRate) / 100;
-  // double get amountWithGst => totalPrice + gstAmount;
-
-  // Map<String, dynamic> toMap() {
-  //   return {
-  //     'itemId': itemId,
-  //     'itemName': itemName,
-  //     'description': description,
-  //     'quantity': quantity,
-  //     'rate': rate,
-  //     'totalPrice': totalPrice,
-  //     'gstRate': gstRate,
-  //     'gstAmount': gstAmount,
-  //     'amountWithGst': amountWithGst,
-  //     'challanId': challanId,
-  //   };
-  // }
-
-  // factory InvoiceItem.fromJson(Map<String, dynamic> map) {
-  //   double qty = double.tryParse(map['quantity']?.toString() ?? '0') ?? 0;
-  //   double price = double.tryParse(map['price']?.toString() ?? '0') ?? 0;
-  //   double gstRate = double.tryParse(map['gstRate']?.toString() ?? '') ?? 18.0; // ✅ default GST if missing
-  //
-  //   return InvoiceItem(
-  //     description: map['description']?.toString() ?? '',
-  //     quantity: qty.toInt(),
-  //     rate: price,
-  //     itemId: map['itemId']?.toString() ?? '',
-  //     itemName: map['itemName']?.toString() ?? '',
-  //     gstRate: gstRate,
-  //     challanId: map['challanId'],
-  //   );
-  // }
-
-
-  // InvoiceItem copyWith({
-  //   String? description,
-  //   int? quantity,
-  //   double? rate,
-  //   String? itemId,
-  //   String? itemName,
-  //   double? gstRate,
-  //   String? challanId,
-  // }) {
-  //   return InvoiceItem(
-  //     description: description ?? this.description,
-  //     quantity: quantity ?? this.quantity,
-  //     rate: rate ?? this.rate,
-  //     itemId: itemId ?? this.itemId,
-  //     itemName: itemName ?? this.itemName,
-  //     gstRate: gstRate ?? this.gstRate,
-  //     challanId: challanId ?? this.challanId,
-  //   );
-  // }
 

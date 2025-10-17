@@ -8,6 +8,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'constant/constant.dart';
 import 'controller/controller.dart';
 import 'utils/shared_preferences_helper.dart';
 
@@ -34,6 +35,9 @@ Future<void> main() async {
   //   url: 'https://dwhvrupyeeknfwnusjdr.supabase.co',
   //   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3aHZydXB5ZWVrbmZ3bnVzamRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NDc5NzYsImV4cCI6MjA3MjIyMzk3Nn0.yFCtlbH7lkLk79e0zte-JzjkUikESZCm4HFTWC7IKIA',
   //);
+
+  /// 🔹 Load language before app starts
+  await AppConstants.loadFromPrefs();
   runApp(const MyApp());
 }
 
@@ -50,6 +54,11 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: SplashScreen.pageId,
       getPages: appPages,
+      translations: Messages(),
+      locale: AppConstants.isGujarati.value
+          ? const Locale('gu', 'IN')
+          : const Locale('en', 'US'), // Load saved language or device language
+      fallbackLocale: const Locale('en', 'US'),
       debugShowCheckedModeBanner: false,
     );
   }

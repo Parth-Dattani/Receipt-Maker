@@ -23,6 +23,7 @@ import '../services/service.dart';
 
 
 class InvoiceHelper {
+
   static Future<void> generateAndShareInvoice(
       List<Invoice> invoices,
       String userName,
@@ -38,6 +39,7 @@ class InvoiceHelper {
       Map<String, dynamic> companyData,
       InvoiceType invoiceType,
       double gstAmount,
+      String dueDate,  // ✅ ADD THIS PARAMETER
       ) async {
     try {
       final pdf = pw.Document();
@@ -125,11 +127,11 @@ class InvoiceHelper {
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("GST: $companyGst",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                         ],
+                        ],
                       ),
                     ),
 
-                    /// Invoice Badge
+                    /// Invoice Badge - ✅ UPDATED WITH DUE DATE
                     pw.Container(
                       padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       decoration: pw.BoxDecoration(
@@ -138,6 +140,7 @@ class InvoiceHelper {
                         border: pw.Border.all(color: borderColor, width: 1),
                       ),
                       child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text(documentTitle,
                               style: pw.TextStyle(
@@ -148,9 +151,36 @@ class InvoiceHelper {
                           pw.Text('#$invoiceId',
                               style: pw.TextStyle(
                                   color: PdfColors.grey600, fontSize: 10)),
-                          pw.Text(invoiceDate,
-                              style: pw.TextStyle(
-                                  color: PdfColors.grey500, fontSize: 9)),
+                          pw.SizedBox(height: 6),
+                          // ✅ Invoice Date
+                          pw.Row(
+                            children: [
+                              pw.Text('Date: ',
+                                  style: pw.TextStyle(
+                                      fontSize: 9,
+                                      color: PdfColors.grey600,
+                                      fontWeight: pw.FontWeight.bold)),
+                              pw.Text(invoiceDate,
+                                  style: pw.TextStyle(
+                                      color: PdfColors.grey700, fontSize: 9)),
+                            ],
+                          ),
+                          pw.SizedBox(height: 2),
+                          // ✅ Due Date
+                          pw.Row(
+                            children: [
+                              pw.Text('Due: ',
+                                  style: pw.TextStyle(
+                                      fontSize: 9,
+                                      color: PdfColors.grey600,
+                                      fontWeight: pw.FontWeight.bold)),
+                              pw.Text(dueDate,
+                                  style: pw.TextStyle(
+                                      color: PdfColors.red700,
+                                      fontSize: 9,
+                                      fontWeight: pw.FontWeight.bold)),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -200,7 +230,7 @@ class InvoiceHelper {
 
               pw.SizedBox(height: 25),
 
-              /// Items Table - FIXED COLUMN WIDTHS
+              /// Items Table
               pw.Container(
                 decoration: pw.BoxDecoration(
                   borderRadius: pw.BorderRadius.circular(8),
@@ -211,23 +241,22 @@ class InvoiceHelper {
                     horizontalInside: pw.BorderSide(color: borderColor, width: 0.5),
                     verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
                   ),
-                  // 🔥 FIXED: Proper column width distribution
                   columnWidths: AppConstants.withGST.value
                       ? {
-                    0: pw.FixedColumnWidth(25),       // # - Fixed width
-                    1: pw.FlexColumnWidth(3.5),       // DESCRIPTION - Flexible
-                    2: pw.FixedColumnWidth(50),       // QTY - Fixed
-                    3: pw.FixedColumnWidth(70),       // PRICE - Fixed
-                    4: pw.FixedColumnWidth(85),       // AMOUNT - Fixed
-                    5: pw.FixedColumnWidth(70),       // GST - Fixed
-                    6: pw.FixedColumnWidth(85),       // NET - Fixed
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FlexColumnWidth(3.5),
+                    2: pw.FixedColumnWidth(50),
+                    3: pw.FixedColumnWidth(70),
+                    4: pw.FixedColumnWidth(85),
+                    5: pw.FixedColumnWidth(70),
+                    6: pw.FixedColumnWidth(85),
                   }
                       : {
-                    0: pw.FixedColumnWidth(25),       // #
-                    1: pw.FlexColumnWidth(4),         // DESCRIPTION
-                    2: pw.FixedColumnWidth(60),       // QTY
-                    3: pw.FixedColumnWidth(85),       // PRICE
-                    4: pw.FixedColumnWidth(95),       // AMOUNT
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FlexColumnWidth(4),
+                    2: pw.FixedColumnWidth(60),
+                    3: pw.FixedColumnWidth(85),
+                    4: pw.FixedColumnWidth(95),
                   },
                   children: [
                     /// Header Row
@@ -256,14 +285,61 @@ class InvoiceHelper {
                       double gstValue = baseAmount * (item.gst ?? 0) / 100;
                       double netAmount = baseAmount + gstValue;
 
+                      InvoiceItem? actualItem;
+                      if (item.items != null && item.items!.isNotEmpty) {
+                        actualItem = item.items!.first;
+                      }
+                      // ✅ FIX: Use actualItem.itemName for the main name
+                      String displayItemName = actualItem?.itemName ?? item.itemName ?? '';
+
+
+                      // ✅ FIX: Check if there's a DIFFERENT description (not the same as item name)
+                      bool hasServiceDescription = actualItem != null &&
+                          actualItem.description.isNotEmpty &&
+                          actualItem.description != actualItem.itemName &&
+                          actualItem.description.trim() != displayItemName.trim();
+
                       return pw.TableRow(
                         decoration: pw.BoxDecoration(
                           color: isEven ? PdfColors.white : rowAlt,
                         ),
                         children: [
                           _tableCell('${index + 1}', align: pw.TextAlign.center),
-                          _tableCell(item.itemName ?? '', align: pw.TextAlign.left),
-                          _tableCell(item.qty!.toStringAsFixed(1), align: pw.TextAlign.right),
+
+                          // ✅ FIXED: Show item name + optional description
+                          pw.Padding(
+                            padding: pw.EdgeInsets.all(8),
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                // Main item name in bold
+                                pw.Text(
+                                  displayItemName,
+                                  style: pw.TextStyle(
+                                    fontSize: 9,
+                                    color: primaryColor,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                                // Description below in italic (ONLY if different from item name)
+                                if (hasServiceDescription) ...[
+                                  pw.SizedBox(height: 3),
+                                  pw.Text(
+                                    actualItem!.description,
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      color: PdfColors.grey700,
+                                      fontStyle: pw.FontStyle.italic,
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 3,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          //_tableCell(item.itemName ?? '', align: pw.TextAlign.left),
+                          _tableCell(item.qty!.toStringAsFixed(3), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
@@ -410,7 +486,6 @@ class InvoiceHelper {
                 ),
               ),
 
-              /// Spacer pushes footer to bottom
               pw.Spacer(),
 
               /// Advertise Footer
@@ -475,6 +550,7 @@ class InvoiceHelper {
       Map<String, dynamic> companyData,
       InvoiceType invoiceType,
       double gstAmount,
+      String dueDate,  // ✅ ADD THIS PARAMETER
       ) async {
     try {
       final pdf = pw.Document();
@@ -558,14 +634,13 @@ class InvoiceHelper {
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("PAN: $companyPan",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-
                           pw.Text("GST: $companyGst",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                           ],
+                        ],
                       ),
                     ),
 
-                    /// Invoice Badge
+                    /// Invoice Badge - ✅ UPDATED WITH DUE DATE
                     pw.Container(
                       padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       decoration: pw.BoxDecoration(
@@ -574,6 +649,7 @@ class InvoiceHelper {
                         border: pw.Border.all(color: borderColor, width: 1),
                       ),
                       child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text(documentTitle,
                               style: pw.TextStyle(
@@ -584,9 +660,36 @@ class InvoiceHelper {
                           pw.Text('#$invoiceId',
                               style: pw.TextStyle(
                                   color: PdfColors.grey600, fontSize: 10)),
-                          pw.Text(invoiceDate,
-                              style: pw.TextStyle(
-                                  color: PdfColors.grey500, fontSize: 9)),
+                          pw.SizedBox(height: 6),
+                          // ✅ Invoice Date
+                          pw.Row(
+                            children: [
+                              pw.Text('Date: ',
+                                  style: pw.TextStyle(
+                                      fontSize: 9,
+                                      color: PdfColors.grey600,
+                                      fontWeight: pw.FontWeight.bold)),
+                              pw.Text(invoiceDate,
+                                  style: pw.TextStyle(
+                                      color: PdfColors.grey700, fontSize: 9)),
+                            ],
+                          ),
+                          pw.SizedBox(height: 2),
+                          // ✅ Due Date
+                          pw.Row(
+                            children: [
+                              pw.Text('Due: ',
+                                  style: pw.TextStyle(
+                                      fontSize: 9,
+                                      color: PdfColors.grey600,
+                                      fontWeight: pw.FontWeight.bold)),
+                              pw.Text(dueDate,
+                                  style: pw.TextStyle(
+                                      color: PdfColors.red700,
+                                      fontSize: 9,
+                                      fontWeight: pw.FontWeight.bold)),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -628,14 +731,13 @@ class InvoiceHelper {
                           pw.SizedBox(height: 3),
                           if (phoneNumber.isNotEmpty)
                             pw.Text('Phone: $phoneNumber',
-                              style: pw.TextStyle(fontSize: 9)),
+                                style: pw.TextStyle(fontSize: 9)),
                           if (customerEmail.isNotEmpty)
                             pw.Text('Email: $customerEmail',
                                 style: pw.TextStyle(fontSize: 9)),
                           if (customerPAN.isNotEmpty)
                             pw.Text('PAN: $customerPAN',
                                 style: pw.TextStyle(fontSize: 9)),
-
                           if (customerGST.isNotEmpty)
                             pw.Text('GST: $customerGST',
                                 style: pw.TextStyle(fontSize: 9)),
@@ -676,25 +778,24 @@ class InvoiceHelper {
                     horizontalInside: pw.BorderSide(color: borderColor, width: 0.5),
                     verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
                   ),
-                  // 🔥 FIXED: Proper column width distribution
                   columnWidths: AppConstants.withGST.value
                       ? {
-                    0: pw.FixedColumnWidth(25),       // # - Fixed
-                    1: pw.FixedColumnWidth(70),       // CHALLAN - Fixed
-                    2: pw.FlexColumnWidth(3),         // ITEM - Flexible
-                    3: pw.FixedColumnWidth(45),       // QTY - Fixed
-                    4: pw.FixedColumnWidth(60),       // RATE - Fixed
-                    5: pw.FixedColumnWidth(70),       // AMOUNT - Fixed
-                    6: pw.FixedColumnWidth(60),       // GST - Fixed
-                    7: pw.FixedColumnWidth(75),       // NET - Fixed
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FixedColumnWidth(70),
+                    2: pw.FlexColumnWidth(3),
+                    3: pw.FixedColumnWidth(45),
+                    4: pw.FixedColumnWidth(60),
+                    5: pw.FixedColumnWidth(70),
+                    6: pw.FixedColumnWidth(60),
+                    7: pw.FixedColumnWidth(75),
                   }
                       : {
-                    0: pw.FixedColumnWidth(25),       // #
-                    1: pw.FixedColumnWidth(75),       // CHALLAN
-                    2: pw.FlexColumnWidth(3.5),       // ITEM
-                    3: pw.FixedColumnWidth(50),       // QTY
-                    4: pw.FixedColumnWidth(70),       // RATE
-                    5: pw.FixedColumnWidth(85),       // AMOUNT
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FixedColumnWidth(75),
+                    2: pw.FlexColumnWidth(3.5),
+                    3: pw.FixedColumnWidth(50),
+                    4: pw.FixedColumnWidth(70),
+                    5: pw.FixedColumnWidth(85),
                   },
                   children: [
                     /// Header Row
@@ -769,15 +870,20 @@ class InvoiceHelper {
                         ),
                         children: [
                           _tableCell('${index + 1}', align: pw.TextAlign.center),
-                          _tableCell(challanId.isNotEmpty ? challanId : '-', align: pw.TextAlign.center),
+                          _tableCell(challanId.isNotEmpty ? challanId : '-',
+                              align: pw.TextAlign.center),
                           _tableCell(itemName, align: pw.TextAlign.left),
-                          _tableCell(qty.toStringAsFixed(1), align: pw.TextAlign.right),
-                          _tableCell(AppUtil.formatCurrency(rate), align: pw.TextAlign.right),
-                          _tableCell(AppUtil.formatCurrency(amount), align: pw.TextAlign.right),
+                          _tableCell(qty.toStringAsFixed(3), align: pw.TextAlign.right),
+                          _tableCell(AppUtil.formatCurrency(rate),
+                              align: pw.TextAlign.right),
+                          _tableCell(AppUtil.formatCurrency(amount),
+                              align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableCell(AppUtil.formatCurrency(gstValue), align: pw.TextAlign.right),
+                            _tableCell(AppUtil.formatCurrency(gstValue),
+                                align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableCell(AppUtil.formatCurrency(netAmount), align: pw.TextAlign.right),
+                            _tableCell(AppUtil.formatCurrency(netAmount),
+                                align: pw.TextAlign.right),
                         ],
                       );
                     }).toList(),
@@ -918,7 +1024,6 @@ class InvoiceHelper {
                 ),
               ),
 
-              /// Spacer pushes footer to bottom
               pw.Spacer(),
 
               /// Advertise Footer
@@ -962,6 +1067,10 @@ class InvoiceHelper {
       print("❌ Error generating PDF: $e");
     }
   }
+
+
+
+
 
   static Future<void> generateAndShareChallan(
       List<Challan> challans,
@@ -1198,7 +1307,7 @@ class InvoiceHelper {
                         children: [
                           _tableCell('${index + 1}', align: pw.TextAlign.center),
                           _tableCell(item.itemName ?? '', align: pw.TextAlign.left),
-                          _tableCell(item.qty!.toStringAsFixed(1), align: pw.TextAlign.right),
+                          _tableCell(item.qty!.toStringAsFixed(3), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
@@ -4364,6 +4473,8 @@ class InvoiceHelper {
     await file.writeAsBytes(await pdf.save());
     return file;
   }
+
+
 
 
   // Helper methods (add these if not already present)

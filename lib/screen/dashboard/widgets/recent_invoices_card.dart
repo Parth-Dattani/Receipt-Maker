@@ -31,7 +31,7 @@ class RecentInvoicesCard extends GetView<DashboardController> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Invoices',
+                  'recent_invoices'.tr,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -40,7 +40,7 @@ class RecentInvoicesCard extends GetView<DashboardController> {
                 ),
                 TextButton(
                   onPressed: controller.navigateToInvoiceList,
-                  child: Text('View All'),
+                  child: Text('view_all'.tr),
                 ),
               ],
             ),

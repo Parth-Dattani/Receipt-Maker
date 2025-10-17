@@ -27,10 +27,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
       appBar: AppBar(
         title: Obx(() => Text(
           controller.isEditMode.value
-              ? 'Edit Invoice'
+              ? 'edit_invoice'.tr
               : controller.invoiceType.value == InvoiceType.invoice
-              ? 'New Invoice'
-              : 'New Quotation',
+              ? 'new_invoice'.tr
+              : 'new_quotation'.tr,
         )),
         backgroundColor: controller.isEditMode.value
             ? Colors.orange.shade700
@@ -54,7 +54,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Obx(() {
-                      if (!controller.isEditMode.value) {
+                      if (!controller.isEditMode.value  && !controller.isFromQuotation.value) {
                         return Column(
                           children: [
                             _buildChallanToInvoiceSection(),
@@ -140,6 +140,147 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     );
   }
 
+  // Widget _buildInvoiceDetailsCard() {
+  //   return Card(
+  //     elevation: 4,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //     child: Padding(
+  //       padding: EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Row(
+  //             children: [
+  //               Obx(() => Text(
+  //                 controller.isEditMode.value ? 'invoice_details'.tr : '${controller.invoiceType.value.name} Details'.tr,
+  //                 style: TextStyle(
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: controller.isEditMode.value
+  //                       ? Colors.orange.shade700
+  //                       : Colors.blue.shade700,
+  //                 ),
+  //               )),
+  //               Spacer(),
+  //               Obx(() => controller.isEditMode.value
+  //                   ? Container(
+  //                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  //                 decoration: BoxDecoration(
+  //                   color: Colors.orange.shade100,
+  //                   borderRadius: BorderRadius.circular(12),
+  //                   border: Border.all(color: Colors.orange.shade300),
+  //                 ),
+  //                 child: Text(
+  //                   'edit_mode'.tr,
+  //                   style: TextStyle(
+  //                     color: Colors.orange.shade800,
+  //                     fontSize: 12,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //               )
+  //                   : SizedBox()
+  //               ),
+  //             ],
+  //           ),
+  //           SizedBox(height: 16),
+  //
+  //           Obx(() {
+  //             if (!controller.isEditMode.value && !controller.createFromChallan.value && !controller.isFromQuotation.value) {
+  //               return Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   Text(
+  //                     'invoice_type'.tr,
+  //                     style: TextStyle(
+  //                       fontSize: 16,
+  //                       fontWeight: FontWeight.bold,
+  //                       color: Colors.blue.shade700,
+  //                     ),
+  //                   ),
+  //                   SizedBox(height: 8),
+  //                   _buildDocumentTypeSelection(),
+  //                   SizedBox(height: 16),
+  //                 ],
+  //               );
+  //             }
+  //             return SizedBox();
+  //           }),
+  //
+  //           Row(
+  //             children: [
+  //               Expanded(
+  //                 child: Obx(() => TextFormField(
+  //                   controller: controller.invoiceNumberController,
+  //                   decoration: InputDecoration(
+  //                     labelText: controller.isEditMode.value
+  //                         ? 'Invoice Number'
+  //                         : '${controller.invoiceType.value.name} Number',
+  //                     prefixIcon: Icon(Icons.receipt_long),
+  //                     border: OutlineInputBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                   ),
+  //                   readOnly: true,
+  //                   style: TextStyle(
+  //                     color: controller.isEditMode.value ? Colors.grey.shade600 : Colors.black87,
+  //                   ),
+  //                 )),
+  //               ),
+  //               SizedBox(width: 16),
+  //               Expanded(
+  //                 child: TextFormField(
+  //                   controller: controller.dueDateController,
+  //                   decoration: InputDecoration(
+  //                     labelText: 'Invoice Date',
+  //                     prefixIcon: Icon(Icons.calendar_today),
+  //                     border: OutlineInputBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                   ),
+  //                   readOnly: true,
+  //                   onTap: controller.selectDueDate,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //
+  //           Obx(() {
+  //             if (controller.isEditMode.value && controller.originalInvoiceData != null) {
+  //               return Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   SizedBox(height: 12),
+  //                   Divider(),
+  //                   Text(
+  //                     'original_invoice_information:'.tr,
+  //                     style: TextStyle(
+  //                       fontWeight: FontWeight.bold,
+  //                       color: Colors.grey.shade600,
+  //                       fontSize: 14,
+  //                     ),
+  //                   ),
+  //                   SizedBox(height: 8),
+  //                   Text(
+  //                     'Date: ${controller.formatOriginalInvoiceDate()}',
+  //                     style: TextStyle(
+  //                       color: Colors.grey.shade600,
+  //                       fontSize: 12,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               );
+  //             }
+  //             return SizedBox();
+  //           }),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // Replace the date fields section in _buildInvoiceDetailsCard method
+
   Widget _buildInvoiceDetailsCard() {
     return Card(
       elevation: 4,
@@ -152,7 +293,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             Row(
               children: [
                 Obx(() => Text(
-                  controller.isEditMode.value ? 'Invoice Details' : '${controller.invoiceType.value.name} Details',
+                  controller.isEditMode.value ? 'invoice_details'.tr : '${controller.invoiceType.value.name} Details'.tr,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -171,7 +312,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     border: Border.all(color: Colors.orange.shade300),
                   ),
                   child: Text(
-                    'Edit Mode',
+                    'edit_mode'.tr,
                     style: TextStyle(
                       color: Colors.orange.shade800,
                       fontSize: 12,
@@ -186,12 +327,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             SizedBox(height: 16),
 
             Obx(() {
-              if (!controller.isEditMode.value && !controller.createFromChallan.value) {
+              if (!controller.isEditMode.value && !controller.createFromChallan.value && !controller.isFromQuotation.value) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Invoice Type',
+                      'invoice_type'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -207,43 +348,106 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               return SizedBox();
             }),
 
+            // Invoice Number
+            Obx(() => TextFormField(
+              controller: controller.invoiceNumberController,
+              decoration: InputDecoration(
+                labelText: controller.isEditMode.value
+                    ? 'Invoice Number'
+                    : '${controller.invoiceType.value.name} Number',
+                prefixIcon: Icon(Icons.receipt_long),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              readOnly: true,
+              style: TextStyle(
+                color: controller.isEditMode.value ? Colors.grey.shade600 : Colors.black87,
+              ),
+            )),
+
+            SizedBox(height: 16),
+
+            // ✅ NEW: Invoice Date and Payment Due Date in Row
             Row(
               children: [
-                Expanded(
-                  child: Obx(() => TextFormField(
-                    controller: controller.invoiceNumberController,
-                    decoration: InputDecoration(
-                      labelText: controller.isEditMode.value
-                          ? 'Invoice Number'
-                          : '${controller.invoiceType.value.name} Number',
-                      prefixIcon: Icon(Icons.receipt_long),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    readOnly: true,
-                    style: TextStyle(
-                      color: controller.isEditMode.value ? Colors.grey.shade600 : Colors.black87,
-                    ),
-                  )),
-                ),
-                SizedBox(width: 16),
+                // Invoice Date
                 Expanded(
                   child: TextFormField(
-                    controller: controller.dueDateController,
+                    controller: controller.invoiceDateController,
                     decoration: InputDecoration(
                       labelText: 'Invoice Date',
-                      prefixIcon: Icon(Icons.calendar_today),
+                      prefixIcon: Icon(Icons.calendar_today, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                     readOnly: true,
-                    onTap: controller.selectDueDate,
+                    onTap: controller.selectInvoiceDate,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+
+                SizedBox(width: 12),
+
+                // Payment Due Date
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: controller.paymentDueDateController,
+                        decoration: InputDecoration(
+                          labelText: 'Due Date',
+                          prefixIcon: Icon(Icons.event_available, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        ),
+                        readOnly: true,
+                        onTap: controller.selectPaymentDueDate,
+                        style: TextStyle(fontSize: 14),
+                      ),
+
+                    ],
                   ),
                 ),
               ],
             ),
+
+            // ✅ Show days until due (optional info)
+            Obx(() {
+              if (!controller.isEditMode.value && !controller.isFromQuotation.value) {
+                final daysUntilDue = controller.paymentDueDate.value.difference(controller.invoiceDate.value).inDays;
+                return Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.info_outline, size: 14, color: Colors.blue.shade700),
+                        SizedBox(width: 6),
+                        Text(
+                          'Payment due in $daysUntilDue days',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            }),
 
             Obx(() {
               if (controller.isEditMode.value && controller.originalInvoiceData != null) {
@@ -253,7 +457,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     SizedBox(height: 12),
                     Divider(),
                     Text(
-                      'Original Invoice Information:',
+                      'original_invoice_information:'.tr,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade600,
@@ -330,13 +534,21 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               Row(
                 children: [
                   Text(
-                    'Customer Information',
+                    'customer_information'.tr,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
                           : Colors.blue.shade700,
+                    ),
+                  ),
+                  Text(
+                    ' *', // ✅ Required indicator
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
                     ),
                   ),
                   Spacer(),
@@ -372,7 +584,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         SizedBox(height: 12),
                         ElevatedButton(
                           onPressed: controller.toggleCustomerForm,
-                          child: Text('Add New Customer'),
+                          child: Text('add_new_customer'.tr),
                         ),
                       ],
                     );
@@ -388,12 +600,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                             ? null
                             : controller.selectedCustomerId.value,
                         isExpanded: true,
-                        hint: Text('Select Customer'),
+                        hint: Text('select_customer'.tr),
                         underline: SizedBox(),
                         items: [
                           DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('Select Customer'),
+                            child: Text('select_customer'.tr),
                           ),
                           ...controller.customers.map((customer) {
                             return DropdownMenuItem<String?>(
@@ -429,33 +641,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     return Column(
       children: [
         if (controller.originalInvoiceData != null) ...[
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Customer:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text('Name: ${controller.customerNameController.text}'),
-                Text('Phone: ${controller.customerMobileController.text}'),
-                Text('Email: ${controller.customerEmailController.text}'),
-                if (controller.customerAddressController.text.isNotEmpty)
-                  Text('Address: ${controller.customerAddressController.text}'),
-              ],
-            ),
-          ),
-          SizedBox(height: 12),
+
         ],
         _buildNewCustomerForm(),
       ],
@@ -468,7 +654,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         if (!controller.isEditMode.value) ...[
           SizedBox(height: 12),
           Text(
-            'Add New Customer',
+            'add_new_customer',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.orange.shade700,
@@ -479,7 +665,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         TextFormField(
           controller: controller.customerNameController,
           decoration: InputDecoration(
-            labelText: 'Customer Name *',
+            labelText: 'customer_name'.tr,
             prefixIcon: Icon(Icons.person),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -499,7 +685,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               child: TextFormField(
                 controller: controller.customerMobileController,
                 decoration: InputDecoration(
-                  labelText: 'Mobile Number',
+                  labelText: 'mobile_number'.tr,
                   prefixIcon: Icon(Icons.phone),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -513,7 +699,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               child: TextFormField(
                 controller: controller.customerEmailController,
                 decoration: InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'email'.tr,
                   prefixIcon: Icon(Icons.email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -528,7 +714,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         TextFormField(
           controller: controller.customerAddressController,
           decoration: InputDecoration(
-            labelText: 'Address',
+            labelText: 'address'.tr,
             prefixIcon: Icon(Icons.location_on),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -540,10 +726,591 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     );
   }
 
+  /// working But i want some Chamges user Interface and Also update Headers
+  // Widget _buildItemsSection() {
+  //   return Obx(() {
+  //     final isFromChallan = controller.createFromChallan.value &&
+  //         controller.selectedCustomerForInvoice.value.isNotEmpty;
+  //
+  //     // ✅ Check Business Type
+  //     final businessType = AppConstants.businessType?.toLowerCase() ?? '';
+  //
+  //     return Card(
+  //       elevation: 4,
+  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //       child: Padding(
+  //         padding: EdgeInsets.all(16),
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Row(
+  //               children: [
+  //                 Text(
+  //                   'invoice_items'.tr,
+  //                   style: TextStyle(
+  //                     fontSize: 18,
+  //                     fontWeight: FontWeight.bold,
+  //                     color: controller.isEditMode.value
+  //                         ? Colors.orange.shade700
+  //                         : Colors.blue.shade700,
+  //                   ),
+  //                 ),
+  //                 Spacer(),
+  //                 if (isFromChallan)
+  //                   Chip(
+  //                     label: Text('from_challan'.tr, style: TextStyle(color: Colors.white)),
+  //                     backgroundColor: Colors.purple.shade700,
+  //                   )
+  //               ],
+  //             ),
+  //             SizedBox(height: 16),
+  //
+  //             Obx(() {
+  //               if (controller.isEditMode.value && controller.originalItemsCount > 0) {
+  //                 return Container(
+  //                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.orange.shade50,
+  //                     borderRadius: BorderRadius.circular(8),
+  //                     border: Border.all(color: Colors.orange.shade200),
+  //                   ),
+  //                   child: Row(
+  //                     children: [
+  //                       Icon(Icons.history, size: 16, color: Colors.orange.shade700),
+  //                       SizedBox(width: 8),
+  //                       Text(
+  //                         'Originally had ${controller.originalItemsCount} items',
+  //                         style: TextStyle(
+  //                           color: Colors.orange.shade800,
+  //                           fontSize: 12,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 );
+  //               }
+  //               return SizedBox();
+  //             }),
+  //             SizedBox(height: 12),
+  //
+  //             Container(
+  //               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //               decoration: BoxDecoration(
+  //                 color: controller.isEditMode.value
+  //                     ? Colors.orange.shade50
+  //                     : Colors.blue.shade50,
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //               child: Row(
+  //                 children: [
+  //                   Expanded(
+  //                     flex: 3,
+  //                     child: Text(
+  //                       'item_description'.tr,
+  //                       style: TextStyle(
+  //                         fontWeight: FontWeight.bold,
+  //                         color: controller.isEditMode.value
+  //                             ? Colors.orange.shade800
+  //                             : Colors.blue.shade800,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   Expanded(
+  //                     flex: 2,
+  //                     child: Text(
+  //                       'price_inr'.tr,
+  //                       style: TextStyle(
+  //                         fontWeight: FontWeight.bold,
+  //                         color: controller.isEditMode.value
+  //                             ? Colors.orange.shade800
+  //                             : Colors.blue.shade800,
+  //                       ),
+  //                       textAlign: TextAlign.start,
+  //                     ),
+  //                   ),
+  //                   Expanded(
+  //                     flex: 1,
+  //                     child: Text(
+  //                       'quantity'.tr,
+  //                       style: TextStyle(
+  //                         fontWeight: FontWeight.bold,
+  //                         color: controller.isEditMode.value
+  //                             ? Colors.orange.shade800
+  //                             : Colors.blue.shade800,
+  //                       ),
+  //                       textAlign: TextAlign.start,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //             SizedBox(height: 12),
+  //
+  //             Obx(() => Column(
+  //               children: [
+  //                 if (controller.itemList.isEmpty && !isFromChallan)
+  //                   Container(
+  //                     padding: EdgeInsets.all(16),
+  //                     margin: EdgeInsets.only(bottom: 16),
+  //                     decoration: BoxDecoration(
+  //                       color: Colors.orange.shade50,
+  //                       borderRadius: BorderRadius.circular(8),
+  //                       border: Border.all(color: Colors.orange.shade200),
+  //                     ),
+  //                     child: Row(
+  //                       children: [
+  //                         Icon(Icons.info, color: Colors.orange.shade700),
+  //                         SizedBox(width: 12),
+  //                         Expanded(
+  //                           child: Text(
+  //                             'no_items_available'.tr,
+  //                             style: TextStyle(color: Colors.orange.shade800),
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ),
+  //
+  //                 ...controller.invoiceItems.asMap().entries.map((entry) {
+  //                   int index = entry.key;
+  //                   InvoiceItem item = entry.value;
+  //
+  //                   return Container(
+  //                     margin: EdgeInsets.only(bottom: 12),
+  //                     padding: EdgeInsets.all(12),
+  //                     decoration: BoxDecoration(
+  //                       color: Colors.white,
+  //                       border: Border.all(color: Colors.grey.shade200),
+  //                       borderRadius: BorderRadius.circular(8),
+  //                       boxShadow: [
+  //                         BoxShadow(
+  //                           color: Colors.black12,
+  //                           blurRadius: 2,
+  //                           offset: Offset(0, 1),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                     child: Column(
+  //                       crossAxisAlignment: CrossAxisAlignment.start,
+  //                       children: [
+  //                         // ✅ TOP ROW: Item Selector (50%) + Description (50%)
+  //                         Row(
+  //                           crossAxisAlignment: CrossAxisAlignment.start,
+  //                           children: [
+  //                             // ✅ Item Selector - 50% width
+  //                             Expanded(
+  //                               flex: 5,
+  //                               child: Column(
+  //                                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                                 children: [
+  //                                   Text(
+  //                                     'item ${index + 1}'.tr,
+  //                                     style: TextStyle(
+  //                                       fontWeight: FontWeight.bold,
+  //                                       color: Colors.grey.shade700,
+  //                                       fontSize: 12,
+  //                                     ),
+  //                                   ),
+  //                                   SizedBox(height: 8),
+  //
+  //                                   // Item Dropdown/TextField
+  //                                   if (controller.itemList.isNotEmpty)
+  //                                     Builder(
+  //                                       builder: (context) {
+  //                                         final isFromChallan = controller.createFromChallan.value &&
+  //                                             controller.selectedCustomerForInvoice.value.isNotEmpty;
+  //
+  //                                         Item? currentItem;
+  //                                         try {
+  //                                           currentItem = controller.itemList.firstWhere(
+  //                                                   (i) => i.itemId == item.itemId
+  //                                           );
+  //                                         } catch (e) {
+  //                                           currentItem = null;
+  //                                         }
+  //
+  //                                         final isInactive = currentItem != null && !(currentItem.isActive ?? true);
+  //
+  //                                         if (isFromChallan && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
+  //                                           return Container(
+  //                                             height: 40,
+  //                                             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  //                                             decoration: BoxDecoration(
+  //                                               border: Border.all(color: Colors.grey.shade300),
+  //                                               borderRadius: BorderRadius.circular(6),
+  //                                             ),
+  //                                             child: Row(
+  //                                               children: [
+  //                                                 Expanded(
+  //                                                   child: Text(
+  //                                                     item.itemName,
+  //                                                     style: TextStyle(fontSize: 14),
+  //                                                   ),
+  //                                                 ),
+  //                                               ],
+  //                                             ),
+  //                                           );
+  //                                         }
+  //
+  //                                         final activeItems = controller.itemList.where((i) => i.isActive ?? true).toList();
+  //                                         Item? selectedItem;
+  //                                         try {
+  //                                           selectedItem = activeItems.firstWhere((element) => element.itemId == item.itemId);
+  //                                         } catch (e) {
+  //                                           selectedItem = null;
+  //                                         }
+  //
+  //                                         return Container(
+  //                                           height: 40,
+  //                                           padding: EdgeInsets.symmetric(horizontal: 8),
+  //                                           decoration: BoxDecoration(
+  //                                             border: Border.all(color: Colors.grey.shade300),
+  //                                             borderRadius: BorderRadius.circular(6),
+  //                                           ),
+  //                                           child: DropdownButton<Item>(
+  //                                             value: selectedItem,
+  //                                             isExpanded: true,
+  //                                             hint: Padding(
+  //                                               padding: EdgeInsets.symmetric(horizontal: 8),
+  //                                               child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
+  //                                             ),
+  //                                             underline: SizedBox(),
+  //                                             icon: Padding(
+  //                                               padding: EdgeInsets.only(right: 8),
+  //                                               child: Icon(Icons.arrow_drop_down, size: 20),
+  //                                             ),
+  //                                             items: [
+  //                                               DropdownMenuItem(
+  //                                                 value: null,
+  //                                                 child: Padding(
+  //                                                   padding: EdgeInsets.symmetric(horizontal: 8),
+  //                                                   child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
+  //                                                 ),
+  //                                               ),
+  //                                               ...activeItems.map((item) {
+  //                                                 return DropdownMenuItem(
+  //                                                   value: item,
+  //                                                   child: Padding(
+  //                                                     padding: EdgeInsets.symmetric(horizontal: 8),
+  //                                                     child: Text('${item.itemName}', style: TextStyle(fontSize: 14)),
+  //                                                   ),
+  //                                                 );
+  //                                               }).toList(),
+  //                                             ],
+  //                                             onChanged: (selectedItem) {
+  //                                               if (selectedItem != null) {
+  //                                                 controller.selectRemoteItemForIndex(index, selectedItem);
+  //                                               }
+  //                                             },
+  //                                           ),
+  //                                         );
+  //                                       },
+  //                                     ),
+  //
+  //                                   if (controller.itemList.isEmpty)
+  //                                     TextFormField(
+  //                                       initialValue: item.description,
+  //                                       decoration: InputDecoration(
+  //                                         labelText: 'Item Description',
+  //                                         border: OutlineInputBorder(
+  //                                           borderRadius: BorderRadius.circular(6),
+  //                                         ),
+  //                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  //                                       ),
+  //                                       onChanged: (value) {
+  //                                         controller.updateItem(index, description: value);
+  //                                       },
+  //                                     ),
+  //                                 ],
+  //                               ),
+  //                             ),
+  //
+  //                             SizedBox(width: 12),
+  //
+  //                             // ✅ Service Description - 50% width (only for service/client business type)
+  //                             if (businessType == 'service' || businessType == 'client')
+  //                               Expanded(
+  //                                 flex: 5,
+  //                                 child: Column(
+  //                                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                                   children: [
+  //                                     Text(
+  //                                       'Service Details',
+  //                                       style: TextStyle(
+  //                                         fontWeight: FontWeight.bold,
+  //                                         color: Colors.grey.shade700,
+  //                                         fontSize: 12,
+  //                                       ),
+  //                                     ),
+  //                                     SizedBox(height: 8),
+  //                                     TextFormField(
+  //                                       key: ValueKey('desc_${item.itemId}_$index'),
+  //                                       initialValue: item.descriptionController == null ? (item.description ?? '') : null,
+  //                                       controller: item.descriptionController,
+  //                                       decoration: InputDecoration(
+  //                                         labelText: 'Service Description',
+  //                                         border: OutlineInputBorder(
+  //                                           borderRadius: BorderRadius.circular(6),
+  //                                         ),
+  //                                         filled: true,
+  //                                         fillColor: Colors.white,
+  //                                         alignLabelWithHint: true,
+  //                                         hintText: item.itemName.isEmpty
+  //                                             ? 'Select an item first'
+  //                                             : 'Add detailed description',
+  //                                         hintStyle: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+  //                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  //                                       ),
+  //                                       maxLines: 3,
+  //                                       minLines: 1,
+  //                                       style: TextStyle(fontSize: 13),
+  //                                       onChanged: (value) {
+  //                                         controller.updateItemDescription(index, value);
+  //                                       },
+  //                                     ),
+  //                                   ],
+  //                                 ),
+  //                               ),
+  //
+  //                             // Delete Button
+  //                             if (!isFromChallan && controller.invoiceItems.length > 1)
+  //                               SizedBox(
+  //                                 width: 20,
+  //                                 child: Padding(
+  //                                   padding: EdgeInsets.only(top: 20, left: 5),
+  //                                   child: IconButton(
+  //                                     onPressed: () => controller.removeItem(index),
+  //                                     icon: Icon(Icons.delete, color: Colors.red, size: 20),
+  //                                     padding: EdgeInsets.zero,
+  //                                     constraints: BoxConstraints(),
+  //                                   ),
+  //                                 ),
+  //                               ),
+  //                           ],
+  //                         ),
+  //
+  //                         SizedBox(height: 12),
+  //
+  //                         // ✅ BOTTOM ROW: Price and Quantity
+  //                         Row(
+  //                           children: [
+  //                             // Price Column
+  //                             Expanded(
+  //                               flex: 2,
+  //                               child: Column(
+  //                                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                                 children: [
+  //                                   Text(
+  //                                     'price'.tr,
+  //                                     style: TextStyle(
+  //                                       fontSize: 12,
+  //                                       color: Colors.grey.shade600,
+  //                                     ),
+  //                                   ),
+  //                                   SizedBox(height: 4),
+  //                                   Container(
+  //                                     height: 40,
+  //                                     child: TextFormField(
+  //                                       controller: controller.getPriceController(index, initialValue: item.rate),
+  //                                       textAlign: TextAlign.center,
+  //                                       decoration: InputDecoration(
+  //                                         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                         border: OutlineInputBorder(
+  //                                           borderRadius: BorderRadius.circular(6),
+  //                                         ),
+  //                                       ),
+  //                                       keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                                       onChanged: (value) {
+  //                                         double? price = double.tryParse(value);
+  //                                         if (price != null && price >= 0) {
+  //                                           controller.updateItem(index, rate: price);
+  //                                         }
+  //                                       },
+  //                                     ),
+  //                                   ),
+  //                                 ],
+  //                               ),
+  //                             ),
+  //
+  //                             // ✅ Only show Quantity field if NOT client type
+  //                             if (businessType != 'client') ...[
+  //                               SizedBox(width: 12),
+  //
+  //                               // Quantity Column
+  //                               Expanded(
+  //                                 flex: 1,
+  //                                 child: Column(
+  //                                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                                   children: [
+  //                                     Text(
+  //                                       'Qty',
+  //                                       style: TextStyle(
+  //                                         fontSize: 12,
+  //                                         color: Colors.grey.shade600,
+  //                                       ),
+  //                                     ),
+  //                                     SizedBox(height: 4),
+  //                                     Obx(() {
+  //                                       if (controller.isEditMode.value) {
+  //                                         return Container(
+  //                                           height: 40,
+  //                                           child: TextFormField(
+  //                                             key: ValueKey('qty_edit_${item.itemId}_$index'),
+  //                                             controller: controller.getQuantityController(index, initialValue: item.quantity),
+  //                                             textAlign: TextAlign.center,
+  //                                             decoration: InputDecoration(
+  //                                               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                               border: OutlineInputBorder(
+  //                                                 borderRadius: BorderRadius.circular(6),
+  //                                               ),
+  //                                             ),
+  //                                             keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                                             onChanged: (value) {
+  //                                               double? qty = double.tryParse(value);
+  //                                               if (qty == null || qty <= 0) return;
+  //
+  //                                               if (item.unit?.toLowerCase() == "pcs") {
+  //                                                 if (qty % 1 != 0) {
+  //                                                   Get.snackbar(
+  //                                                     "Invalid Qty",
+  //                                                     "You can only enter whole numbers for PCS items.",
+  //                                                     snackPosition: SnackPosition.BOTTOM,
+  //                                                   );
+  //                                                   return;
+  //                                                 }
+  //                                               }
+  //
+  //                                               controller.updateItem(
+  //                                                 index,
+  //                                                 quantity: qty,
+  //                                                 rate: item.rate,
+  //                                                 unit: item.unit,
+  //                                               );
+  //                                             },
+  //                                           ),
+  //                                         );
+  //                                       } else {
+  //                                         final showQuantity = (controller.createFromChallan.value &&
+  //                                             controller.selectedCustomerForInvoice.value.isNotEmpty) ||
+  //                                             controller.isFromQuotation.value;
+  //
+  //                                         return Container(
+  //                                           height: 40,
+  //                                           child: TextFormField(
+  //                                             key: ValueKey('qty_create_$index'),
+  //                                             initialValue: showQuantity ? item.quantity.toString() : null,
+  //                                             textAlign: TextAlign.center,
+  //                                             decoration: InputDecoration(
+  //                                               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                               border: OutlineInputBorder(
+  //                                                 borderRadius: BorderRadius.circular(6),
+  //                                               ),
+  //                                             ),
+  //                                             keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                                             onChanged: (value) {
+  //                                               double? qty = double.tryParse(value);
+  //                                               if (qty == null || qty <= 0) return;
+  //
+  //                                               if (item.unit?.toLowerCase() == "pcs") {
+  //                                                 if (qty % 1 != 0) {
+  //                                                   Get.snackbar(
+  //                                                     "Invalid Qty",
+  //                                                     "You can only enter whole numbers for PCS items.",
+  //                                                     snackPosition: SnackPosition.BOTTOM,
+  //                                                   );
+  //                                                   return;
+  //                                                 }
+  //                                               }
+  //
+  //                                               controller.updateItem(
+  //                                                 index,
+  //                                                 quantity: qty,
+  //                                                 rate: item.rate,
+  //                                                 unit: item.unit,
+  //                                               );
+  //                                             },
+  //                                           ),
+  //                                         );
+  //                                       }
+  //                                     }),
+  //                                   ],
+  //                                 ),
+  //                               ),
+  //                             ],
+  //
+  //                             // Spacer to balance the layout (adjust based on whether qty is shown)
+  //                             Spacer(flex: businessType == 'client' ? 3 : 2),
+  //                           ],
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   );
+  //                 }).toList(),
+  //
+  //                 if (!isFromChallan) ...[
+  //                   SizedBox(height: 16),
+  //                   Container(
+  //                     width: double.infinity,
+  //                     child: ElevatedButton.icon(
+  //                       onPressed: controller.addNewItem,
+  //                       icon: Icon(Icons.add_circle_outline, size: 20),
+  //                       label: Text('add_another_item'.tr),
+  //                       style: ElevatedButton.styleFrom(
+  //                         backgroundColor: Colors.blue.shade600,
+  //                         foregroundColor: Colors.white,
+  //                         padding: EdgeInsets.symmetric(vertical: 12),
+  //                         shape: RoundedRectangleBorder(
+  //                           borderRadius: BorderRadius.circular(8),
+  //                         ),
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //
+  //                 SizedBox(height: 16),
+  //                 Container(
+  //                   padding: EdgeInsets.all(12),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.green.shade50,
+  //                     borderRadius: BorderRadius.circular(8),
+  //                     border: Border.all(color: Colors.green.shade200),
+  //                   ),
+  //                   child: Row(
+  //                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //                     children: [
+  //                       Text(
+  //                         'Total Items:',
+  //                         style: TextStyle(
+  //                           fontWeight: FontWeight.bold,
+  //                           color: Colors.green.shade800,
+  //                         ),
+  //                       ),
+  //                       Text(
+  //                         '${controller.invoiceItems.length}',
+  //                         style: TextStyle(
+  //                           fontWeight: FontWeight.bold,
+  //                           color: Colors.green.shade800,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //             )),
+  //           ],
+  //         ),
+  //       ),
+  //     );
+  //   });
+  // }
+
   Widget _buildItemsSection() {
     return Obx(() {
       final isFromChallan = controller.createFromChallan.value &&
           controller.selectedCustomerForInvoice.value.isNotEmpty;
+
+      // ✅ Check Business Type
+      final businessType = AppConstants.businessType?.toLowerCase() ?? '';
 
       return Card(
         elevation: 4,
@@ -556,7 +1323,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               Row(
                 children: [
                   Text(
-                    'Invoice Items',
+                    'invoice_items'.tr,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -568,19 +1335,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                   Spacer(),
                   if (isFromChallan)
                     Chip(
-                      label: Text('From Challan', style: TextStyle(color: Colors.white)),
+                      label: Text('from_challan'.tr, style: TextStyle(color: Colors.white)),
                       backgroundColor: Colors.purple.shade700,
                     )
-                  // else
-                  //   Obx(() => Text(
-                  //     'Total: ₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
-                  //     style: TextStyle(
-                  //       fontWeight: FontWeight.bold,
-                  //       color: controller.isEditMode.value
-                  //           ? Colors.orange.shade700
-                  //           : Colors.green.shade700,
-                  //     ),
-                  //   )),
                 ],
               ),
               SizedBox(height: 16),
@@ -613,58 +1370,101 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               }),
               SizedBox(height: 12),
 
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: controller.isEditMode.value
-                      ? Colors.orange.shade50
-                      : Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Item Description',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: controller.isEditMode.value
-                              ? Colors.orange.shade800
-                              : Colors.blue.shade800,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'Price (₹)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: controller.isEditMode.value
-                              ? Colors.orange.shade800
-                              : Colors.blue.shade800,
-                        ),
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Text(
-                        'Qty',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: controller.isEditMode.value
-                              ? Colors.orange.shade800
-                              : Colors.blue.shade800,
-                        ),
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
+              ///temparory Close items Header
+              // Container(
+              //   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              //   decoration: BoxDecoration(
+              //     gradient: LinearGradient(
+              //       colors: controller.isEditMode.value
+              //           ? [Colors.orange.shade100, Colors.orange.shade50]
+              //           : [Colors.blue.shade100, Colors.blue.shade50],
+              //       begin: Alignment.topLeft,
+              //       end: Alignment.bottomRight,
+              //     ),
+              //     borderRadius: BorderRadius.circular(8),
+              //     border: Border.all(
+              //       color: controller.isEditMode.value
+              //           ? Colors.orange.shade200
+              //           : Colors.blue.shade200,
+              //       width: 1.5,
+              //     ),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       Expanded(
+              //         flex: 5,
+              //         child: Text(
+              //           businessType == 'trading' ? 'Item Name' :
+              //           'Service',
+              //           style: TextStyle(
+              //             fontWeight: FontWeight.w700,
+              //             fontSize: 13,
+              //             color: controller.isEditMode.value
+              //                 ? Colors.orange.shade900
+              //                 : Colors.blue.shade900,
+              //             letterSpacing: 0.5,
+              //           ),
+              //         ),
+              //       ),
+              //       if (businessType == 'service' || businessType == 'client')
+              //         Expanded(
+              //           flex: 5,
+              //           child: Text(
+              //             'Service Description',
+              //             style: TextStyle(
+              //               fontWeight: FontWeight.w700,
+              //               fontSize: 13,
+              //               color: controller.isEditMode.value
+              //                   ? Colors.orange.shade900
+              //                   : Colors.blue.shade900,
+              //               letterSpacing: 0.5,
+              //             ),
+              //           ),
+              //         ),
+              //     ],
+              //   ),
+              // ),
+              //
+              // SizedBox(height: 8),
+              //
+              // // Sub-header for Price & Quantity
+              // Container(
+              //   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              //   decoration: BoxDecoration(
+              //     color: Colors.grey.shade100,
+              //     borderRadius: BorderRadius.circular(6),
+              //     border: Border.all(color: Colors.grey.shade300),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       Expanded(
+              //         flex: 2,
+              //         child: Text(
+              //           'Price (₹)',
+              //           style: TextStyle(
+              //             fontWeight: FontWeight.w600,
+              //             fontSize: 12,
+              //             color: Colors.grey.shade700,
+              //           ),
+              //         ),
+              //       ),
+              //       if (businessType != 'client')
+              //         Expanded(
+              //           flex: 1,
+              //           child: Text(
+              //             'Quantity',
+              //             style: TextStyle(
+              //               fontWeight: FontWeight.w600,
+              //               fontSize: 12,
+              //               color: Colors.grey.shade700,
+              //             ),
+              //           ),
+              //         ),
+              //       Spacer(flex: businessType == 'client' ? 3 : 2),
+              //     ],
+              //   ),
+              // ),
+              // SizedBox(height: 12),
 
               Obx(() => Column(
                 children: [
@@ -683,7 +1483,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'No items available. Please add items in your inventory first.',
+                              'no_items_available'.tr,
                               style: TextStyle(color: Colors.orange.shade800),
                             ),
                           ),
@@ -696,315 +1496,417 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     InvoiceItem item = entry.value;
 
                     return Container(
-                      margin: EdgeInsets.only(bottom: 12),
-                      padding: EdgeInsets.all(12),
+                      margin: EdgeInsets.only(bottom: 16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 2,
-                            offset: Offset(0, 1),
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Item ${index + 1}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade700,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                if (controller.itemList.isNotEmpty)
-                                  Builder(
-                                    builder: (context) {
-                                      // Check if we're creating from challan
-                                      final isFromChallan = controller.createFromChallan.value &&
-                                          controller.selectedCustomerForInvoice.value.isNotEmpty;
-
-                                      // Try to find the item in the list (safe version)
-                                      Item? currentItem;
-                                      try {
-                                        currentItem = controller.itemList.firstWhere(
-                                                (i) => i.itemId == item.itemId
-                                        );
-                                      } catch (e) {
-                                        currentItem = null;
-                                      }
-
-                                      // Check if item exists but is inactive
-                                      final isInactive = currentItem != null && !(currentItem.isActive ?? true);
-
-                                      // If from challan and item is inactive/deleted, show as read-only
-                                      if (isFromChallan && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
-                                        return Container(
-                                          height: 40,
-                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          // ✅ TOP ROW: Item Selector (50%) + Description (50%)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ✅ Item Selector - 50% width
+                              Expanded(
+                                flex: 5,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.grey.shade300),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: Colors.blue.shade600,
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
-                                          child: Row(
-                                            children: [
-
-                                              Expanded(
-                                                child: Text(
-                                                  item.itemName,
-                                                  style: TextStyle(fontSize: 14, ),
-                                                ),
-                                              ),
-
-                                            ],
-                                          ),
-                                        );
-                                      }
-
-                                      // Get active items and find matching item
-                                      final activeItems = controller.itemList.where((i) => i.isActive ?? true).toList();
-                                      Item? selectedItem;
-                                      try {
-                                        selectedItem = activeItems.firstWhere((element) => element.itemId == item.itemId);
-                                      } catch (e) {
-                                        selectedItem = null;
-                                      }
-
-                                      // Normal dropdown for active items
-                                      return Container(
-                                        height: 40,
-                                        padding: EdgeInsets.symmetric(horizontal: 8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: DropdownButton<Item>(
-                                          value: selectedItem,
-                                          isExpanded: true,
-                                          hint: Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 8),
-                                            child: Text('Select Item', style: TextStyle(fontSize: 14)),
-                                          ),
-                                          underline: SizedBox(),
-                                          icon: Padding(
-                                            padding: EdgeInsets.only(right: 8),
-                                            child: Icon(Icons.arrow_drop_down, size: 20),
-                                          ),
-                                          items: [
-                                            DropdownMenuItem(
-                                              value: null,
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                                child: Text('Select Item', style: TextStyle(fontSize: 14)),
-                                              ),
+                                          child: Text(
+                                            '#${index + 1}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              fontSize: 11,
                                             ),
-                                            ...activeItems.map((item) {
-                                              return DropdownMenuItem(
-                                                value: item,
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8),
-                                                  child: Text('${item.itemName}', style: TextStyle(fontSize: 14)),
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          businessType == 'trading' ? 'Item' : 'Service',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey.shade600,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+
+                                    // Item Dropdown/TextField
+                                    if (controller.itemList.isNotEmpty)
+                                      Builder(
+                                        builder: (context) {
+                                          final isFromChallan = controller.createFromChallan.value &&
+                                              controller.selectedCustomerForInvoice.value.isNotEmpty;
+
+                                          Item? currentItem;
+                                          try {
+                                            currentItem = controller.itemList.firstWhere(
+                                                    (i) => i.itemId == item.itemId
+                                            );
+                                          } catch (e) {
+                                            currentItem = null;
+                                          }
+
+                                          final isInactive = currentItem != null && !(currentItem.isActive ?? true);
+
+                                          if (isFromChallan && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
+                                            return Container(
+                                              height: 40,
+                                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(color: Colors.grey.shade300),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      item.itemName,
+                                                      style: TextStyle(fontSize: 14),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+
+                                          final activeItems = controller.itemList.where((i) => i.isActive ?? true).toList();
+                                          Item? selectedItem;
+                                          try {
+                                            selectedItem = activeItems.firstWhere((element) => element.itemId == item.itemId);
+                                          } catch (e) {
+                                            selectedItem = null;
+                                          }
+
+                                          return Container(
+                                            height: 45,
+                                            padding: EdgeInsets.symmetric(horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: DropdownButton<Item>(
+                                              value: selectedItem,
+                                              isExpanded: true,
+                                              hint: Padding(
+                                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                                child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
+                                              ),
+                                              underline: SizedBox(),
+                                              icon: Padding(
+                                                padding: EdgeInsets.only(right: 8),
+                                                child: Icon(Icons.arrow_drop_down, size: 20),
+                                              ),
+                                              items: [
+                                                DropdownMenuItem(
+                                                  value: null,
+                                                  child: Padding(
+                                                    padding: EdgeInsets.symmetric(horizontal: 8),
+                                                    child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
+                                                  ),
                                                 ),
-                                              );
-                                            }).toList(),
-                                          ],
-                                          onChanged: (selectedItem) {
-                                            if (selectedItem != null) {
-                                              controller.selectRemoteItemForIndex(index, selectedItem);
-                                            }
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                if (controller.itemList.isEmpty)
-                                  TextFormField(
-                                    initialValue: item.description,
-                                    decoration: InputDecoration(
-                                      labelText: 'Item Description',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    ),
-                                    onChanged: (value) {
-                                      controller.updateItem(index, description: value);
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(width: 12),
-
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Price',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Container(
-                                  height: 40,
-                                  child: TextFormField(
-                                    controller: controller.getPriceController(index, initialValue: item.rate),
-                                    textAlign: TextAlign.center,
-                                    decoration: InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                    onChanged: (value) {
-                                      double? price = double.tryParse(value);
-                                      if (price != null && price >= 0) {
-                                        controller.updateItem(index, rate: price);
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(width: 12),
-
-                          // Replace the quantity TextField section with this conditional approach:
-
-                          Expanded(
-                            flex: 1,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Qty',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                // Use Obx to reactively switch between controller and initialValue
-                                Obx(() {
-                                  // In Edit Mode: Use controller for proper data binding
-                                  if (controller.isEditMode.value) {
-                                    return Container(
-                                      height: 40,
-                                      child: TextFormField(
-                                        key: ValueKey('qty_edit_${item.itemId}_$index'),
-                                        controller: controller.getQuantityController(index, initialValue: item.quantity),
-                                        textAlign: TextAlign.center,
-                                        decoration: InputDecoration(
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                        ),
-                                        keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                        onChanged: (value) {
-                                          double? qty = double.tryParse(value);
-                                          if (qty == null || qty <= 0) return;
-
-                                          if (item.unit?.toLowerCase() == "pcs") {
-                                            if (qty % 1 != 0) {
-                                              Get.snackbar(
-                                                "Invalid Qty",
-                                                "You can only enter whole numbers for PCS items.",
-                                                snackPosition: SnackPosition.BOTTOM,
-                                              );
-                                              return;
-                                            }
-                                          }
-
-                                          controller.updateItem(
-                                            index,
-                                            quantity: qty,
-                                            rate: item.rate,
-                                            unit: item.unit,
+                                                ...activeItems.map((item) {
+                                                  return DropdownMenuItem(
+                                                    value: item,
+                                                    child: Padding(
+                                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                                      child: Text('${item.itemName}', style: TextStyle(fontSize: 14)),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ],
+                                              onChanged: (selectedItem) {
+                                                if (selectedItem != null) {
+                                                  controller.selectRemoteItemForIndex(index, selectedItem);
+                                                }
+                                              },
+                                            ),
                                           );
                                         },
                                       ),
-                                    );
-                                  }
-                                  // In Create Mode: Use initialValue (lighter, no controller overhead)
-                                  else {
-                                    // Only show quantity if creating from challan
-                                    final showQuantity = controller.createFromChallan.value &&
-                                        controller.selectedCustomerForInvoice.value.isNotEmpty;
 
-                                    return Container(
-                                      height: 40,
-                                      child: TextFormField(
-                                        key: ValueKey('qty_create_$index'),
-                                        initialValue: showQuantity ? item.quantity.toString() : null,
-                                        textAlign: TextAlign.center,
+                                    if (controller.itemList.isEmpty)
+                                      TextFormField(
+                                        initialValue: item.description,
                                         decoration: InputDecoration(
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          labelText: 'Item Description',
                                           border: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(6),
                                           ),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                         ),
-                                        keyboardType: TextInputType.numberWithOptions(decimal: true),
                                         onChanged: (value) {
-                                          double? qty = double.tryParse(value);
-                                          if (qty == null || qty <= 0) return;
-
-                                          if (item.unit?.toLowerCase() == "pcs") {
-                                            if (qty % 1 != 0) {
-                                              Get.snackbar(
-                                                "Invalid Qty",
-                                                "You can only enter whole numbers for PCS items.",
-                                                snackPosition: SnackPosition.BOTTOM,
-                                              );
-                                              return;
-                                            }
-                                          }
-
-                                          controller.updateItem(
-                                            index,
-                                            quantity: qty,
-                                            rate: item.rate,
-                                            unit: item.unit,
-                                          );
+                                          controller.updateItem(index, description: value);
                                         },
                                       ),
-                                    );
-                                  }
-                                }),
-                              ],
-                            ),
-                          ),
-
-                          if (!isFromChallan && controller.invoiceItems.length > 1)
-                            SizedBox(
-                              width: 20,
-                              child: Padding(
-                                padding: EdgeInsets.only(top: 20, left: 5),
-                                child: IconButton(
-                                  onPressed: () => controller.removeItem(index),
-                                  icon: Icon(Icons.delete, color: Colors.red, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
+                                  ],
                                 ),
                               ),
-                            ),
+
+                              SizedBox(width: 12),
+
+                              // ✅ Service Description - 50% width (only for service/client business type)
+                              if (businessType == 'service' || businessType == 'client')
+                                Expanded(
+                                  flex: 5,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.description_outlined, size: 14, color: Colors.blue.shade600),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Service Details',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey.shade600,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 8),
+                                      TextFormField(
+                                        key: ValueKey('desc_${item.itemId}_$index'),
+                                        initialValue: item.descriptionController == null ? (item.description ?? '') : null,
+                                        controller: item.descriptionController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Service Description',
+                                          labelStyle: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: Colors.blue.shade300, width: 1.5),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: Colors.blue.shade500, width: 2),
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.blue.shade50.withOpacity(0.3),
+                                          alignLabelWithHint: true,
+                                          hintText: item.itemName.isEmpty
+                                              ? 'Select an item first'
+                                              : 'Add detailed description',
+                                          hintStyle: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        ),
+                                        maxLines: 3,
+                                        minLines: 1,
+                                        style: TextStyle(fontSize: 13),
+                                        onChanged: (value) {
+                                          controller.updateItemDescription(index, value);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              // Delete Button
+                              if (!isFromChallan && controller.invoiceItems.length > 1)
+                                Container(
+                                  margin: EdgeInsets.only(top: 30),
+                                  child: IconButton(
+                                    onPressed: () => controller.removeItem(index),
+                                    icon: Container(
+                                      padding: EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.red.shade200),
+                                      ),
+                                      child: Icon(Icons.delete_outline, color: Colors.red.shade700, size: 20),
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    tooltip: 'Remove Item',
+                                  ),
+                                ),
+                            ],
+                          ),
+
+                          SizedBox(height: 12),
+
+                          // ✅ BOTTOM ROW: Price and Quantity
+                          Row(
+                            children: [
+                              // Price Column
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'price'.tr,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Container(
+                                      height: 40,
+                                      child: TextFormField(
+                                        controller: controller.getPriceController(index, initialValue: item.rate),
+                                        textAlign: TextAlign.center,
+                                        decoration: InputDecoration(
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                        ),
+                                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                        onChanged: (value) {
+                                          double? price = double.tryParse(value);
+                                          if (price != null && price >= 0) {
+                                            controller.updateItem(index, rate: price);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              Spacer(),
+                              // ✅ Only show Quantity field if NOT client type
+                              if (businessType != 'client') ...[
+                                SizedBox(width: 12),
+
+                                // Quantity Column
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Qty',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Obx(() {
+                                        if (controller.isEditMode.value) {
+                                          return Container(
+                                            height: 40,
+                                            child: TextFormField(
+                                              key: ValueKey('qty_edit_${item.itemId}_$index'),
+                                              controller: controller.getQuantityController(index, initialValue: item.quantity),
+                                              textAlign: TextAlign.center,
+                                              decoration: InputDecoration(
+                                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                              ),
+                                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                              onChanged: (value) {
+                                                double? qty = double.tryParse(value);
+                                                if (qty == null || qty <= 0) return;
+
+                                                if (item.unit?.toLowerCase() == "pcs") {
+                                                  if (qty % 1 != 0) {
+                                                    Get.snackbar(
+                                                      "Invalid Qty",
+                                                      "You can only enter whole numbers for PCS items.",
+                                                      snackPosition: SnackPosition.BOTTOM,
+                                                    );
+                                                    return;
+                                                  }
+                                                }
+
+                                                controller.updateItem(
+                                                  index,
+                                                  quantity: qty,
+                                                  rate: item.rate,
+                                                  unit: item.unit,
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        } else {
+                                          final showQuantity = (controller.createFromChallan.value &&
+                                              controller.selectedCustomerForInvoice.value.isNotEmpty) ||
+                                              controller.isFromQuotation.value;
+
+                                          return Container(
+                                            height: 40,
+                                            child: TextFormField(
+                                              key: ValueKey('qty_create_$index'),
+                                              initialValue: showQuantity ? item.quantity.toString() : null,
+                                              textAlign: TextAlign.center,
+                                              decoration: InputDecoration(
+                                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                              ),
+                                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                              onChanged: (value) {
+                                                double? qty = double.tryParse(value);
+                                                if (qty == null || qty <= 0) return;
+
+                                                if (item.unit?.toLowerCase() == "pcs") {
+                                                  if (qty % 1 != 0) {
+                                                    Get.snackbar(
+                                                      "Invalid Qty",
+                                                      "You can only enter whole numbers for PCS items.",
+                                                      snackPosition: SnackPosition.BOTTOM,
+                                                    );
+                                                    return;
+                                                  }
+                                                }
+
+                                                controller.updateItem(
+                                                  index,
+                                                  quantity: qty,
+                                                  rate: item.rate,
+                                                  unit: item.unit,
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        }
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ],
+
+                              /// Spacer to balance the layout (adjust based on whether qty is shown)
+                              //Spacer(flex: businessType == 'client' ? 3 : 2),
+                            ],
+                          ),
                         ],
                       ),
                     );
@@ -1017,7 +1919,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       child: ElevatedButton.icon(
                         onPressed: controller.addNewItem,
                         icon: Icon(Icons.add_circle_outline, size: 20),
-                        label: Text('Add Another Item'),
+                        label: Text('add_another_item'.tr),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue.shade600,
                           foregroundColor: Colors.white,
@@ -1077,7 +1979,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Calculations',
+              'calculations'.tr,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1100,7 +2002,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             )),
             SizedBox(height: 20),
             Divider(),
-            Text("Payment Status"),
+            Text("payment_status".tr),
             Row(
               children: [
                 Expanded(
@@ -1129,6 +2031,161 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 ),
               ],
             ),
+            Obx(() {
+              if (controller.paymentStatus.value == 'Partial') {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 16),
+                    Text(
+                      "Received Amount",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: controller.receivedAmountController,
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.currency_rupee, size: 20),
+                        hintText: 'Enter received amount',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      validator: (value) {
+                        if (controller.paymentStatus.value == 'Partial') {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter received amount';
+                          }
+                          double? amount = double.tryParse(value);
+                          if (amount == null || amount <= 0) {
+                            return 'Please enter a valid amount';
+                          }
+                          if (amount > controller.totalAmount.value) {
+                            return 'Cannot exceed total amount';
+                          }
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        controller.updateReceivedAmount(value);
+                      },
+                    ),
+                    SizedBox(height: 12),
+
+                    // Pending Amount Display
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Pending Amount:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                          Obx(() => Text(
+                            '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.orange.shade800,
+                            ),
+                          )),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
+
+            // Show summary for Paid/Pending status
+            Obx(() {
+              if (controller.paymentStatus.value == 'Paid') {
+                return Column(
+                  children: [
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Fully Paid',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else if (controller.paymentStatus.value == 'Pending') {
+                return Column(
+                  children: [
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.pending, color: Colors.red.shade700, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Pending Amount:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.red.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
+
           ],
         ),
       ),
@@ -1176,7 +2233,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Additional Notes',
+              'additional_notes'.tr,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1189,7 +2246,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             TextFormField(
               controller: controller.notesController,
               decoration: InputDecoration(
-                hintText: 'Add any additional notes or terms...',
+                hintText: 'add_notes_hint'.tr,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1229,10 +2286,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             ),
             child: Text(
               controller.isEditMode.value
-                  ? 'Update Invoice'
+                  ? 'update_invoice'.tr
                   : controller.invoiceType.value == InvoiceType.invoice
-                  ? 'Create Invoice'
-                  : 'Create Quotation',
+                  ? 'create_invoice'.tr
+                  : 'create_quotation'.tr,
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
@@ -1266,7 +2323,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     },
                   ),
                   Text(
-                    'Create Invoice from Challans',
+                    'create_invoice_from_challan'.tr,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1287,7 +2344,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 SizedBox(height: 16),
 
                 Text(
-                  'Select Date Range:',
+                  'select_date_range'.tr,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.purple.shade700,

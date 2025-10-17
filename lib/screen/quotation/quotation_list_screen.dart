@@ -1,8 +1,10 @@
+import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 
@@ -15,14 +17,14 @@ class QuotationListScreen extends GetView<QuotationListController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Quotations'),
-        backgroundColor: Colors.purple.shade700,
+        title: Text('quotations'.tr),
+        backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: controller.refreshQuotations,
-            tooltip: 'Refresh',
+            tooltip: 'refresh'.tr,
           ),
         ],
       ),
@@ -31,11 +33,11 @@ class QuotationListScreen extends GetView<QuotationListController> {
           if (controller.isLoadingQuotations.value) {
             return _buildFullShimmer();
           }
-        
+
           if (controller.filteredQuotationList.isEmpty) {
             return _buildEmptyState();
           }
-        
+
           return Column(
             children: [
               _buildSearchFilterSection(),
@@ -57,10 +59,10 @@ class QuotationListScreen extends GetView<QuotationListController> {
           : Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('Total', controller.totalQuotations.toString(), Colors.purple),
-          _buildStatItem('Accepted', controller.acceptedQuotations.toString(), Colors.green),
-          _buildStatItem('Pending', controller.pendingQuotations.toString(), Colors.orange),
-          _buildStatItem('Value', '₹${controller.totalValue.toStringAsFixed(2)}', Colors.blue),
+          _buildStatItem('total'.tr, controller.totalQuotations.toString(), AppColors.tealColor),
+          _buildStatItem('accepted'.tr, controller.acceptedQuotations.toString(), Colors.green),
+          _buildStatItem('pending'.tr, controller.pendingQuotations.toString(), Colors.orange),
+          _buildStatItem('value'.tr, '₹${AppUtil.formatCurrency(controller.totalValue)}', Colors.blue),
         ],
       ),
     ));
@@ -96,7 +98,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
         children: [
           TextField(
             decoration: InputDecoration(
-              hintText: 'Search quotations...',
+              hintText: 'search_quotations'.tr,
               prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -111,13 +113,13 @@ class QuotationListScreen extends GetView<QuotationListController> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip('All', controller.selectedFilter.value == 'All'),
+                _buildFilterChip('all'.tr, controller.selectedFilter.value == 'All'),
                 SizedBox(width: 8),
-                _buildFilterChip('Accepted', controller.selectedFilter.value == 'Accepted'),
+                _buildFilterChip('accepted'.tr, controller.selectedFilter.value == 'Accepted'),
                 SizedBox(width: 8),
-                _buildFilterChip('Pending', controller.selectedFilter.value == 'Pending'),
+                _buildFilterChip('pending'.tr, controller.selectedFilter.value == 'Pending'),
                 SizedBox(width: 8),
-                _buildFilterChip('Rejected', controller.selectedFilter.value == 'Rejected'),
+                _buildFilterChip('rejected'.tr, controller.selectedFilter.value == 'Rejected'),
               ],
             ),
           )),
@@ -131,7 +133,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
       label: Text(label),
       selected: selected,
       onSelected: (_) => controller.filterByStatus(label),
-      selectedColor: Colors.purple.shade700,
+      selectedColor: AppColors.tealColor,
       labelStyle: TextStyle(
         color: selected ? Colors.white : Colors.black87,
       ),
@@ -146,18 +148,22 @@ class QuotationListScreen extends GetView<QuotationListController> {
           Icon(Icons.request_quote, size: 64, color: Colors.grey.shade400),
           SizedBox(height: 16),
           Text(
-            'No quotations found',
+            'no_quotations_found'.tr,
             style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
           ),
           SizedBox(height: 8),
           Text(
-            'Create your first quotation to get started',
+            'create_first_quotation'.tr,
             style: TextStyle(color: Colors.grey.shade500),
           ),
           SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => Get.toNamed('/new-quotation'),
-            child: Text('Create Quotation'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.tealColor,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('create_quotation'.tr),
           ),
         ],
       ),
@@ -179,29 +185,22 @@ class QuotationListScreen extends GetView<QuotationListController> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Colors.grey.shade50,
-          ],
-        ),
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: AppColors.tealColor.withOpacity(0.1),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
         ],
       ),
       child: Material(
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.transparent,
         child: InkWell(
           onTap: () => controller.viewQuotationDetails(quotation),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: EdgeInsets.all(16),
             child: Row(
@@ -214,32 +213,36 @@ class QuotationListScreen extends GetView<QuotationListController> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                SizedBox(width: 16),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "${quotation.invoiceId} - ${quotation.customerName}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.purple.shade800,
+                          Expanded(
+                            child: Text(
+                              "${quotation.invoiceId} - ${quotation.customerName}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.tealColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
+                          SizedBox(width: 8),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(quotation.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
+                              color: _getStatusColor(quotation.status).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              quotation.status?.toUpperCase() ?? 'PENDING',
+                              _getStatusText(quotation.status).toUpperCase(),
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                                 color: _getStatusColor(quotation.status),
                               ),
@@ -247,7 +250,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 4),
+                      SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -259,11 +262,11 @@ class QuotationListScreen extends GetView<QuotationListController> {
                             ),
                           ),
                           Text(
-                            '₹${quotation.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                            '₹${AppUtil.formatCurrency(quotation.totalAmount!.toDouble()) ?? '0.00'}',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.purple.shade700,
+                              color: AppColors.tealColor,
                             ),
                           ),
                         ],
@@ -271,6 +274,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                     ],
                   ),
                 ),
+                SizedBox(width: 8),
                 PopupMenuButton(
                   icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
                   shape: RoundedRectangleBorder(
@@ -281,21 +285,20 @@ class QuotationListScreen extends GetView<QuotationListController> {
                       value: 'view',
                       child: Row(
                         children: [
-                          Icon(Icons.visibility, size: 20, color: Colors.purple.shade700),
+                          Icon(Icons.visibility, size: 20, color: AppColors.tealColor),
                           SizedBox(width: 12),
-                          Text('View Details', style: TextStyle(color: Colors.purple.shade700)),
+                          Text('view_details'.tr, style: TextStyle(color: AppColors.tealColor)),
                         ],
                       ),
                     ),
-                    // ✅ ADD THIS: Convert to Invoice option
-                    if (quotation.status?.toLowerCase() != 'converted')
+                    if (quotation.status?.toLowerCase() != 'accepted')
                       PopupMenuItem(
                         value: 'convert',
                         child: Row(
                           children: [
                             Icon(Icons.receipt_long, size: 20, color: Colors.green.shade700),
                             SizedBox(width: 12),
-                            Text('Convert to Invoice', style: TextStyle(color: Colors.green.shade700)),
+                            Text('convert_to_invoice'.tr, style: TextStyle(color: Colors.green.shade700)),
                           ],
                         ),
                       ),
@@ -305,7 +308,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                         children: [
                           Icon(Icons.picture_as_pdf, size: 20, color: Colors.orange.shade700),
                           SizedBox(width: 12),
-                          Text('Export as PDF', style: TextStyle(color: Colors.orange.shade700)),
+                          Text('export_as_pdf'.tr, style: TextStyle(color: Colors.orange.shade700)),
                         ],
                       ),
                     ),
@@ -315,7 +318,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                       case 'view':
                         controller.viewQuotationDetails(quotation);
                         break;
-                      case 'convert':  // ✅ ADD THIS CASE
+                      case 'convert':
                         controller.convertQuotationToInvoice(quotation);
                         break;
                       case 'export_pdf':
@@ -330,6 +333,21 @@ class QuotationListScreen extends GetView<QuotationListController> {
         ),
       ),
     );
+  }
+
+  String _getStatusText(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'accepted':
+      case 'approved':
+        return 'accepted'.tr;
+      case 'pending':
+        return 'pending'.tr;
+      case 'rejected':
+      case 'declined':
+        return 'rejected'.tr;
+      default:
+        return 'pending'.tr;
+    }
   }
 
   Color _getStatusColor(String? status) {
@@ -412,70 +430,76 @@ class QuotationListScreen extends GetView<QuotationListController> {
 
   Widget _buildShimmerQuotationListItem() {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
-      child: ListTile(
-        leading: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: const CircleAvatar(
-            backgroundColor: Colors.grey,
-          ),
-        ),
-        title: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 100,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            const SizedBox(height: 8),
             Shimmer.fromColors(
               baseColor: Colors.grey.shade300,
               highlightColor: Colors.grey.shade100,
               child: Container(
-                width: 150,
-                height: 14,
+                width: 4,
+                height: 60,
                 decoration: BoxDecoration(
                   color: Colors.grey,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: Container(
-                width: 200,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.grey,
-                  borderRadius: BorderRadius.circular(6),
-                ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey.shade300,
+                    highlightColor: Colors.grey.shade100,
+                    child: Container(
+                      width: double.infinity,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.grey,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey.shade300,
+                        highlightColor: Colors.grey.shade100,
+                        child: Container(
+                          width: 100,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                      Shimmer.fromColors(
+                        baseColor: Colors.grey.shade300,
+                        highlightColor: Colors.grey.shade100,
+                        child: Container(
+                          width: 60,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.grey,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-        trailing: Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(
-              color: Colors.grey,
-              shape: BoxShape.circle,
-            ),
-          ),
         ),
       ),
     );

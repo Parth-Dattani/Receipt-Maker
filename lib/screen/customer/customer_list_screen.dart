@@ -21,8 +21,8 @@ class CustomerListScreen extends GetView<CustomerListController> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
-        title: const Text(
-          'Customers',
+        title:  Text(
+          'customers'.tr,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -105,7 +105,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 child: TextField(
                   onChanged: (value) => controller.searchCustomers(value),
                   decoration: InputDecoration(
-                    hintText: 'Search by name, mobile, or email...',
+                    hintText: 'search_by_name_mobile_or_email'.tr,
                     prefixIcon: Icon(Icons.search, color: AppColors.tealColor),
                     suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
                         ? IconButton(
@@ -176,7 +176,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total Customers',
+                            'total_customers'.tr,
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
                               fontSize: 16,
@@ -215,7 +215,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
                   onPressed: controller.navigateToAddNewCustomer,
                   icon: Icon(Icons.person_add, color: Colors.white),
                   label: Text(
-                    'Add New Customer',
+                    'add_new_customer'.tr,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -391,7 +391,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
               Icon(Icons.check_circle, color: AppColors.tealColor, size: 20),
               SizedBox(width: 8),
               Text(
-                'All customers loaded',
+                'all_customers_loaded'.tr,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,

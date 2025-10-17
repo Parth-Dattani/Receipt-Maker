@@ -66,8 +66,10 @@ class SplashController extends BaseController {
       }
 
       final userData = userDoc.data() ?? {};
+      print("Company exists :---${userData}");
       final hasSpreadsheetId = userData['spreadsheetId'] != null;
 
+      print("Company exists :${hasSpreadsheetId}");
       if (hasSpreadsheetId) {
         await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
         AppConstants.spreadsheetId = userData['spreadsheetId'].toString();

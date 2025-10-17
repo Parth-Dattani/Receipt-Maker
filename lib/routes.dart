@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/screen/payment/payment_details_screen.dart';
 import 'package:demo_prac_getx/screen/screen.dart';
 import 'package:demo_prac_getx/screen/setting/setting_screen.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
@@ -98,5 +99,17 @@ List<GetPage> appPages = [
     name: QuotationListScreen.pageId,
     page: () =>  QuotationListScreen(),
     binding: QuotationListBinding(),
+  ),
+
+  GetPage(
+    name: PaymentDetailsScreen.pageId,
+    page: () =>  PaymentDetailsScreen(),
+    binding: PaymentDetailsBinding(),
+  ),
+
+  GetPage(
+    name: PurchaseEntryScreen.pageId,
+    page: () =>  PurchaseEntryScreen(),
+    binding: PurchaseEntryBinding(),
   ),
 ];

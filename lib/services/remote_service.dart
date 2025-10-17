@@ -1867,6 +1867,7 @@ class GoogleSheetService {
   static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
   static const challanSheetName = "Challan"; // your sheet/tab name
   static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
+  static const inventoryTransactionSheetName = "InventoryTransactions"; // Create this sheet in Google Sheets
 
 
   static List<String>? _cachedHeaders;
@@ -4323,14 +4324,6 @@ class GoogleSheetService {
   }
 
 
-////
-////
-////
-
-
-
-
-
   static Future<void> deleteItems(String userId, Item item) async {
     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
 
@@ -5031,5 +5024,1275 @@ class GoogleSheetService {
     }
   }
 
+
+  ///Inventeroty 16/10
+
+  // Add these Purchase-related methods to GoogleSheetService class
+
+  static const purchaseSheetName = "Purchase"; // your sheet/tab name
+  static const purchaseItemSheetName = "PurchaseItems"; // your sheet/tab name
+
+  /// Add a new purchase to Google Sheet
+  // Add these methods to your GoogleSheetService class
+
+  /// Add purchase with dynamic header creation
+  static Future<void> addPurchase(dynamic purchaseData, String userId) async {
+    print("🔄 Adding Purchase to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Try to get existing headers
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseSheetName!1:1",
+      );
+
+      List<dynamic> headers = [];
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("⚠️ No header row found in sheet '$purchaseSheetName'. Creating dynamically...");
+
+        // Create headers from your purchaseData keys
+        final sampleData = purchaseData is Map<String, dynamic>
+            ? purchaseData
+            : {
+          'purchaseId': '',
+          'vendorId': '',
+          'vendorName': '',
+          'vendorEmail': '',
+          'vendorMobile': '',
+          'vendorAddress': '',
+          'purchaseDate': '',
+          'subtotal': '',
+          'gstAmount': '',
+          'totalAmount': '',
+          'paymentStatus': '',
+          'notes': '',
+          'userId': '',
+        };
+
+        headers = sampleData.keys.toList();
+
+        // Add header row to sheet
+        final headerRange = ValueRange.fromJson({
+          "values": [headers],
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          headerRange,
+          spreadsheetId,
+          "$purchaseSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Header row created for '$purchaseSheetName'");
+      } else {
+        headers = headerResponse.values![0];
+      }
+
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+      String _formatDate(dynamic value) {
+        if (value == null || value.toString().isEmpty) return "";
+        try {
+          if (value is DateTime) {
+            return _dateFormatter.format(value);
+          } else {
+            return _dateFormatter.format(DateTime.parse(value.toString()));
+          }
+        } catch (e) {
+          return value.toString();
+        }
+      }
+
+      // Normalize keys
+      Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+        return {
+          for (var entry in data.entries)
+            entry.key.toString().trim().toLowerCase(): entry.value
+        };
+      }
+
+      List<Map<String, dynamic>> rowsToSend = [];
+
+      if (purchaseData is Map<String, dynamic>) {
+        if (purchaseData.containsKey('purchaseDate')) {
+          purchaseData['purchaseDate'] = _formatDate(purchaseData['purchaseDate']);
+        }
+        rowsToSend.add({...purchaseData, "userId": userId});
+      } else if (purchaseData is PurchaseEntry) {
+        final map = {
+          'purchaseId': purchaseData.purchaseId,
+          'vendorId': purchaseData.vendorId,
+          'vendorName': purchaseData.vendorName,
+          'vendorEmail': purchaseData.vendorEmail,
+          'vendorMobile': purchaseData.vendorMobile,
+          'vendorAddress': purchaseData.vendorAddress,
+          'purchaseDate': _formatDate(purchaseData.purchaseDate),
+          'subtotal': purchaseData.subtotal,
+          'gstAmount': purchaseData.gstAmount,
+          'totalAmount': purchaseData.totalAmount,
+          'paymentStatus': purchaseData.paymentStatus,
+          'notes': purchaseData.notes,
+          'userId': userId,
+        };
+        rowsToSend.add(map);
+      }
+
+      print("Prepared rows: ${jsonEncode(rowsToSend)}");
+
+      // Convert rows to ordered values matching headers
+      List<List<dynamic>> values = [];
+      for (var row in rowsToSend) {
+        final normalized = _normalize(row);
+        List<dynamic> rowData = [];
+        for (var header in headers) {
+          final key = header.toString().trim().toLowerCase();
+          rowData.add(normalized[key] ?? '');
+        }
+        values.add(rowData);
+      }
+
+      final valueRange = ValueRange.fromJson({
+        "values": values,
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$purchaseSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ Purchase(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+      } else {
+        print("✅ Purchase(s) added successfully.");
+      }
+    } catch (e) {
+      print("❌ Error adding Purchase: $e");
+      throw Exception("Failed to add Purchase: ${e.toString()}");
+    }
+  }
+
+  /// Add purchase items in batch with dynamic header creation
+  static Future<void> addPurchaseItemsBatch(
+      List<Map<String, dynamic>> itemsData, String userId) async {
+    print("🔄 Adding ${itemsData.length} purchase items in batch...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseItemSheetName!1:1",
+      );
+
+      List<dynamic> headers = [];
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("⚠️ No header row found in sheet '$purchaseItemSheetName'. Creating dynamically...");
+
+        // Create headers from first item's keys or default structure
+        final sampleData = itemsData.isNotEmpty
+            ? itemsData.first
+            : {
+          'purchaseId': '',
+          'vendorId': '',
+          'itemId': '',
+          'itemName': '',
+          'description': '',
+          'quantity': '',
+          'purchasePrice': '',
+          'purchaseDate': '',
+          'gstRate': '',
+          'totalPrice': '',
+          'unit': '',
+          'userId': '',
+        };
+
+        headers = sampleData.keys.toList();
+
+        // Add header row to sheet
+        final headerRange = ValueRange.fromJson({
+          "values": [headers],
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          headerRange,
+          spreadsheetId,
+          "$purchaseItemSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Header row created for '$purchaseItemSheetName' with columns: $headers");
+      } else {
+        headers = headerResponse.values![0];
+      }
+
+      print("PurchaseItems headers: $headers");
+
+      // Normalize key function
+      String _normalizeKey(String key) {
+        return key.toString().trim().toLowerCase();
+      }
+
+      // Prepare multiple rows
+      List<List<dynamic>> rows = [];
+
+      for (var itemData in itemsData) {
+        List<dynamic> rowData = [];
+
+        // Normalize itemData keys
+        Map<String, dynamic> normalizedItem = {};
+        for (var entry in itemData.entries) {
+          normalizedItem[_normalizeKey(entry.key)] = entry.value;
+        }
+
+        for (var header in headers) {
+          final headerNameLower = _normalizeKey(header.toString());
+
+          if (headerNameLower.contains('userid')) {
+            rowData.add(userId);
+          } else {
+            var value = normalizedItem[headerNameLower]?.toString() ?? '';
+            rowData.add(value);
+          }
+        }
+
+        rows.add(rowData);
+        print("📦 Prepared row: $rowData");
+      }
+
+      // Append all purchase items at once
+      final valueRange = ValueRange.fromJson({
+        "values": rows,
+      });
+
+      final response = await sheetsApi.spreadsheets.values.append(
+        valueRange,
+        spreadsheetId,
+        "$purchaseItemSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      if (response.updates?.updatedRows != null) {
+        print("✅ ${response.updates!.updatedRows} purchase items added successfully.");
+      } else {
+        print("✅ Purchase items batch added successfully.");
+      }
+    } catch (e) {
+      print("❌ Error adding purchase items batch: $e");
+      throw Exception("Failed to add purchase items batch: ${e.toString()}");
+    }
+  }
+
+  /// Get all purchases
+  static Future<List<PurchaseEntry>> getPurchasesList() async {
+    print("🔄 Fetching purchases from Google Sheets...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all purchase rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("❌ No purchases found in sheet.");
+        return <PurchaseEntry>[];
+      }
+
+      // Extract headers from first row
+      final headers =
+      response.values![0].map((h) => h.toString().trim()).toList();
+      print("✅ Headers: $headers");
+
+      List<PurchaseEntry> purchases = [];
+
+      // Iterate rows (skip header)
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        // Skip completely empty rows
+        if (row.isEmpty || row[0].toString().trim().isEmpty) {
+          continue;
+        }
+
+        // Build map header → value
+        Map<String, dynamic> purchaseMap = {};
+        for (int j = 0; j < headers.length && j < row.length; j++) {
+          purchaseMap[headers[j]] = row[j].toString();
+        }
+
+        try {
+          PurchaseEntry purchase = PurchaseEntry.fromJson(purchaseMap);
+          purchases.add(purchase);
+          print("Processed purchase: ${purchase.purchaseId} - ${purchase.vendorName}");
+        } catch (e) {
+          print("⚠️ Error parsing purchase row $i: $e");
+          print("Row data: $purchaseMap");
+        }
+      }
+
+      print("✅ Successfully parsed ${purchases.length} purchases from Google Sheets");
+      return purchases;
+    } catch (e) {
+      print("❌ Error in getPurchasesList(): $e");
+      rethrow;
+    }
+  }
+
+  /// Update purchase
+  static Future<void> updatePurchase(Map<String, dynamic> purchaseData, String userId) async {
+    print("🔄 Updating Purchase in Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all purchases
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        throw Exception("❌ Purchase sheet is empty");
+      }
+
+      final headers = response.values![0];
+      final purchaseIdIndex = headers.indexOf("purchaseId");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (purchaseIdIndex == -1 || userIdIndex == -1) {
+        throw Exception("❌ Missing purchaseId or userId column in sheet");
+      }
+
+      int? rowToUpdate;
+      List<Object?> existingRow = [];
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > purchaseIdIndex &&
+            row[purchaseIdIndex].toString() == purchaseData["purchaseId"].toString() &&
+            row[userIdIndex].toString() == userId) {
+          rowToUpdate = i + 1;
+          existingRow = row;
+          break;
+        }
+      }
+
+      if (rowToUpdate == null) {
+        throw Exception("❌ Purchase not found for update (id: ${purchaseData["purchaseId"]})");
+      }
+
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+      // Build normalized data with all required fields
+      Map<String, dynamic> normalized = {};
+
+      for (var header in headers) {
+        String key = header.toString().trim().toLowerCase();
+
+        switch (key) {
+          case 'purchaseid':
+            normalized[key] = purchaseData["purchaseId"] ?? '';
+            break;
+          case 'vendorid':
+            normalized[key] = purchaseData["vendorId"] ?? '';
+            break;
+          case 'vendorname':
+            normalized[key] = purchaseData["vendorName"] ?? '';
+            break;
+          case 'vendoremail':
+            normalized[key] = purchaseData["vendorEmail"] ?? '';
+            break;
+          case 'vendormobile':
+            normalized[key] = purchaseData["vendorMobile"] ?? '';
+            break;
+          case 'vendoraddress':
+            normalized[key] = purchaseData["vendorAddress"] ?? '';
+            break;
+          case 'purchasedate':
+            try {
+              if (purchaseData["purchaseDate"] is DateTime) {
+                normalized[key] =
+                    _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+              } else {
+                normalized[key] = purchaseData["purchaseDate"] ?? '';
+              }
+            } catch (e) {
+              normalized[key] = purchaseData["purchaseDate"] ?? '';
+            }
+            break;
+          case 'subtotal':
+            normalized[key] = purchaseData["subtotal"] ?? 0;
+            break;
+          case 'gstamount':
+            normalized[key] = purchaseData["gstAmount"] ?? 0;
+            break;
+          case 'totalamount':
+            normalized[key] = purchaseData["totalAmount"] ?? 0;
+            break;
+          case 'paymentstatus':
+            normalized[key] = purchaseData["paymentStatus"] ?? 'Pending';
+            break;
+          case 'notes':
+            normalized[key] = purchaseData["notes"] ?? '';
+            break;
+          case 'userid':
+            normalized[key] = userId;
+            break;
+          default:
+            int existingIndex =
+            headers.indexWhere((h) => h.toString().toLowerCase() == key);
+            if (existingIndex != -1 && existingRow.length > existingIndex) {
+              normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+            } else {
+              normalized[key] = '';
+            }
+            break;
+        }
+      }
+
+      // Build row data in the same order as headers
+      List<dynamic> rowData = [];
+      for (var header in headers) {
+        final key = header.toString().trim().toLowerCase();
+        rowData.add(normalized[key]?.toString() ?? '');
+      }
+
+      final range =
+          "$purchaseSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+
+      final valueRange = ValueRange(
+        values: [rowData],
+      );
+
+      await sheetsApi.spreadsheets.values.update(
+        valueRange,
+        spreadsheetId,
+        range,
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Purchase updated successfully at row $rowToUpdate");
+    } catch (e) {
+      print("❌ Error updating Purchase: $e");
+      rethrow;
+    }
+  }
+
+  /// Update purchase items with dynamic header handling
+  static Future<void> updatePurchaseItems(
+      String purchaseId, List<Map<String, dynamic>> items, String userId) async {
+    print("🔄 Updating Purchase Items in Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get current sheet data
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseItemSheetName!A:Z",
+      );
+
+      List<dynamic> headers = [];
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ Sheet is empty. Creating headers and adding new items...");
+
+        // Create headers from first item's keys or default structure
+        final sampleData = items.isNotEmpty
+            ? items.first
+            : {
+          'purchaseId': '',
+          'vendorId': '',
+          'itemId': '',
+          'itemName': '',
+          'description': '',
+          'quantity': '',
+          'purchasePrice': '',
+          'purchaseDate': '',
+          'gstRate': '',
+          'totalPrice': '',
+          'unit': '',
+          'userId': '',
+        };
+
+        headers = sampleData.keys.toList();
+
+        // Add header row
+        final headerRange = ValueRange.fromJson({
+          "values": [headers],
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          headerRange,
+          spreadsheetId,
+          "$purchaseItemSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Header row created for '$purchaseItemSheetName'");
+
+        // Now add the items
+        for (var item in items) {
+          item['purchaseId'] = purchaseId;
+        }
+        await addPurchaseItemsBatch(items, userId);
+        return;
+      }
+
+      headers = response.values![0];
+      print("Sheet headers: $headers");
+
+      final purchaseIdIndex = headers.indexOf("purchaseId");
+
+      if (purchaseIdIndex == -1) {
+        throw Exception("❌ Missing purchaseId column");
+      }
+
+      // Build new sheet data (keep all items except for this purchaseId)
+      List<List<Object?>> newSheetData = [];
+      newSheetData.add(headers); // Add headers first
+
+      // Add all rows that DON'T belong to our purchaseId
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length > purchaseIdIndex &&
+            row[purchaseIdIndex].toString() != purchaseId) {
+          newSheetData.add(row);
+        }
+      }
+
+      // Normalize key function
+      String _normalizeKey(String key) {
+        return key.toString().trim().toLowerCase();
+      }
+
+      // Add our new items to the data
+      for (var item in items) {
+        List<Object?> newRow = [];
+
+        // Normalize item keys
+        Map<String, dynamic> normalizedItem = {};
+        for (var entry in item.entries) {
+          normalizedItem[_normalizeKey(entry.key)] = entry.value;
+        }
+
+        for (var header in headers) {
+          String key = _normalizeKey(header.toString());
+
+          if (key.contains('purchaseid')) {
+            newRow.add(item['purchaseId'] ?? purchaseId);
+          } else if (key.contains('userid')) {
+            newRow.add(item['userId'] ?? userId);
+          } else {
+            newRow.add(normalizedItem[key]?.toString() ?? '');
+          }
+        }
+        newSheetData.add(newRow);
+        print("Added row: $newRow");
+      }
+
+      // Clear the entire sheet
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$purchaseItemSheetName!A:Z",
+      );
+
+      // Write all data back to sheet
+      if (newSheetData.length > 1) {
+        final range =
+            "$purchaseItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: newSheetData),
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+
+      print("✅ Successfully updated ${items.length} purchase items");
+    } catch (e, stackTrace) {
+      print("❌ Error updating Purchase items: $e");
+      print("Stack trace: $stackTrace");
+      rethrow;
+    }
+  }
+
+  /// Get purchase items by purchase ID
+  static Future<List<PurchaseItem>> getPurchaseItemsByPurchaseId(
+      String purchaseId) async {
+    print("🔄 Fetching items for purchase: $purchaseId");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get headers
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseItemSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("❌ No header row in purchase items sheet");
+        return [];
+      }
+
+      final headers =
+      headerResponse.values![0].map((h) => h.toString().trim()).toList();
+
+      // Fetch data rows
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseItemSheetName!A2:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("❌ No items found for purchase $purchaseId");
+        return [];
+      }
+
+      List<PurchaseItem> items = [];
+
+      for (int i = 0; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isEmpty) continue;
+
+        Map<String, dynamic> itemMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          itemMap[headers[j]] = j < row.length ? row[j] : "";
+        }
+
+        // Filter by purchaseId
+        final rowPurchaseId =
+            itemMap['purchaseId'] ?? itemMap['PurchaseId'] ?? itemMap['PURCHASEID'];
+
+        if (rowPurchaseId?.toString() == purchaseId) {
+          try {
+            PurchaseItem item = PurchaseItem.fromJson(itemMap);
+            items.add(item);
+            print("✅ Added item: ${item.itemName}");
+          } catch (e) {
+            print("❌ Error parsing purchase item: $e");
+            print("❌ Item data: $itemMap");
+          }
+        }
+      }
+
+      print("✅ Found ${items.length} items for purchase $purchaseId");
+      return items;
+    } catch (e) {
+      print("❌ Error getting purchase items: $e");
+      return [];
+    }
+  }
+
+  /// Update stock after purchase
+  static Future<void> updateStockAfterPurchase(List<PurchaseItem> purchaseItems) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Fetch all stock rows once
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ Stock sheet is empty - skipping stock update");
+        return;
+      }
+
+      final headers = response.values![0];
+      final itemIdIndex = headers.indexOf("itemId");
+      final stockIndex = headers.indexOf("currentStock");
+      final userIdIndex = headers.indexOf("userId");
+
+      if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+        print("⚠️ Missing required columns in Stock sheet - skipping update");
+        return;
+      }
+
+      for (var item in purchaseItems) {
+        // Skip items without itemId (manually entered items)
+        if (item.itemId == null || item.itemId!.isEmpty) {
+          print("⚠️ Skipping stock update for manually entered item: ${item.itemName}");
+          continue;
+        }
+
+        int? rowToUpdate;
+        int currentStock = 0;
+
+        // Find row for this itemId + userId
+        for (int i = 1; i < response.values!.length; i++) {
+          final row = response.values![i];
+          if (row.length > itemIdIndex &&
+              row[itemIdIndex].toString() == item.itemId.toString() &&
+              row[userIdIndex].toString() == AppConstants.userId) {
+            rowToUpdate = i + 1; // rows are 1-based
+            if (row.length > stockIndex) {
+              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+            }
+            break;
+          }
+        }
+
+        if (rowToUpdate == null) {
+          print("⚠️ Item ${item.itemId} not found in stock sheet.");
+          continue;
+        }
+
+        // Increase stock for purchase
+        final newStock = currentStock + item.quantity;
+
+        final range =
+            "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+        final valueRange = ValueRange.fromJson({
+          "values": [
+            [newStock]
+          ]
+        });
+
+        await sheetsApi.spreadsheets.values.update(
+          valueRange,
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
+
+        print("✅ Stock updated (Purchase): ${item.itemId} → $newStock (was $currentStock)");
+      }
+    } catch (e) {
+      print("❌ Error updating stock after purchase: $e");
+    }
+  }
+
+  /// Cache clear methods
+  static Future<void> updatePurchaseWithCacheClear(
+      Map<String, dynamic> purchaseData, String userId) async {
+    print("🔄 Updating purchase with cache clear...");
+
+    final purchaseId = purchaseData['purchaseId']?.toString();
+
+    try {
+      await updatePurchase(purchaseData, userId);
+
+      if (purchaseId != null) {
+        print("✅ Cleared cache for purchase: $purchaseId");
+      }
+    } catch (e) {
+      print("❌ Error updating purchase: $e");
+      rethrow;
+    }
+  }
+
+  static Future<void> updatePurchaseItemsWithCacheClear(
+      String purchaseId,
+      List<Map<String, dynamic>> items,
+      String userId) async {
+    print("🔄 Updating purchase items with cache clear...");
+
+    try {
+      await updatePurchaseItems(purchaseId, items, userId);
+      print("✅ Cleared all caches for purchase: $purchaseId");
+    } catch (e) {
+      print("❌ Error updating items: $e");
+      rethrow;
+    }
+  }
+
+  /// Add a single inventory transaction to Google Sheet
+  static Future<void> addInventoryTransaction(
+      String userId, InventoryTransaction transaction) async {
+    print("🔄 Adding inventory transaction to Google Sheet...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$inventoryTransactionSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("⚠️ Sheet empty, creating headers...");
+        // Create headers if sheet is empty
+        final headers = [
+          'transactionId',
+          'itemId',
+          'itemName',
+          'quantity',
+          'type',
+          'reason',
+          'timestamp',
+          'notes',
+          'userId',
+        ];
+
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange.fromJson({"values": [headers]}),
+          spreadsheetId,
+          "$inventoryTransactionSheetName!A1:I1",
+          valueInputOption: "RAW",
+        );
+
+        print("✅ Headers created");
+      }
+
+      final headers = headerResponse.values?[0] ?? [];
+
+      // Prepare row values based on header order
+      List<dynamic> rowData = [];
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+
+      for (var header in headers) {
+        final headerName = header.toString().toLowerCase();
+
+        switch (headerName) {
+          case 'transactionid':
+            rowData.add(transaction.transactionId);
+            break;
+          case 'itemid':
+            rowData.add(transaction.itemId);
+            break;
+          case 'itemname':
+            rowData.add(transaction.itemName);
+            break;
+          case 'quantity':
+            rowData.add(transaction.quantity.toString());
+            break;
+          case 'type':
+            rowData.add(transaction.type);
+            break;
+          case 'reason':
+            rowData.add(transaction.reason);
+            break;
+          case 'timestamp':
+            rowData.add(_dateFormatter.format(transaction.timestamp));
+            break;
+          case 'notes':
+            rowData.add(transaction.notes);
+            break;
+          case 'userid':
+            rowData.add(userId);
+            break;
+          default:
+            rowData.add('');
+        }
+      }
+
+      print("Prepared row: $rowData");
+
+      // Append row to sheet
+      await sheetsApi.spreadsheets.values.append(
+        ValueRange.fromJson({"values": [rowData]}),
+        spreadsheetId,
+        "$inventoryTransactionSheetName!A:I",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Inventory transaction added successfully");
+    } catch (e) {
+      print("❌ Error adding inventory transaction: $e");
+      rethrow;
+    }
+  }
+
+  /// Batch add multiple inventory transactions
+  static Future<void> addInventoryTransactionsBatch(
+      String userId, List<InventoryTransaction> transactions) async {
+    print("🔄 Adding ${transactions.length} inventory transactions...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get header row
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$inventoryTransactionSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        final headers = [
+          'transactionId',
+          'itemId',
+          'itemName',
+          'quantity',
+          'type',
+          'reason',
+          'timestamp',
+          'notes',
+          'userId',
+        ];
+
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange.fromJson({"values": [headers]}),
+          spreadsheetId,
+          "$inventoryTransactionSheetName!A1:I1",
+          valueInputOption: "RAW",
+        );
+      }
+
+      final headers = headerResponse.values?[0] ?? [];
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+
+      // Prepare all rows
+      List<List<dynamic>> rows = [];
+      for (var transaction in transactions) {
+        List<dynamic> rowData = [];
+
+        for (var header in headers) {
+          final headerName = header.toString().toLowerCase();
+
+          switch (headerName) {
+            case 'transactionid':
+              rowData.add(transaction.transactionId);
+              break;
+            case 'itemid':
+              rowData.add(transaction.itemId);
+              break;
+            case 'itemname':
+              rowData.add(transaction.itemName);
+              break;
+            case 'quantity':
+              rowData.add(transaction.quantity.toString());
+              break;
+            case 'type':
+              rowData.add(transaction.type);
+              break;
+            case 'reason':
+              rowData.add(transaction.reason);
+              break;
+            case 'timestamp':
+              rowData.add(_dateFormatter.format(transaction.timestamp));
+              break;
+            case 'notes':
+              rowData.add(transaction.notes);
+              break;
+            case 'userid':
+              rowData.add(userId);
+              break;
+            default:
+              rowData.add('');
+          }
+        }
+
+        rows.add(rowData);
+      }
+
+      print("Prepared ${rows.length} rows");
+
+      // Append all rows
+      await sheetsApi.spreadsheets.values.append(
+        ValueRange.fromJson({"values": rows}),
+        spreadsheetId,
+        "$inventoryTransactionSheetName!A:I",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ ${transactions.length} inventory transactions added successfully");
+    } catch (e) {
+      print("❌ Error adding inventory transactions batch: $e");
+      rethrow;
+    }
+  }
+
+  /// Fetch inventory transactions for a user
+  static Future<List<InventoryTransaction>> getInventoryTransactions({
+    String? userId,
+    String? itemId,
+    String? type,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    print("🔄 Fetching inventory transactions...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all transaction data
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$inventoryTransactionSheetName!A:I",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No transactions found");
+        return [];
+      }
+
+      // Extract headers
+      final headers = response.values![0]
+          .map((h) => h.toString().trim().toLowerCase())
+          .toList();
+
+      print("✅ Headers: $headers");
+
+      List<InventoryTransaction> transactions = [];
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+
+      // Iterate through rows
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.isEmpty) continue;
+
+        try {
+          Map<String, dynamic> txnMap = {};
+
+          // Map row values to headers
+          for (int j = 0; j < headers.length && j < row.length; j++) {
+            txnMap[headers[j]] = row[j];
+          }
+
+          // Parse transaction
+          final txn = InventoryTransaction(
+            transactionId: txnMap['transactionid']?.toString() ?? '',
+            itemId: txnMap['itemid']?.toString() ?? '',
+            itemName: txnMap['itemname']?.toString() ?? '',
+            quantity: int.tryParse(txnMap['quantity']?.toString() ?? '0') ?? 0,
+            type: txnMap['type']?.toString() ?? '',
+            reason: txnMap['reason']?.toString() ?? '',
+            timestamp: _parseTransactionDate(txnMap['timestamp']?.toString() ?? ''),
+            notes: txnMap['notes']?.toString() ?? '',
+          );
+
+          // Apply filters
+          if (userId != null && txnMap['userid'].toString() != userId) continue;
+          if (itemId != null && txn.itemId != itemId) continue;
+          if (type != null && txn.type != type) continue;
+          if (fromDate != null && txn.timestamp.isBefore(fromDate)) continue;
+          if (toDate != null && txn.timestamp.isAfter(toDate)) continue;
+
+          transactions.add(txn);
+        } catch (e) {
+          print("⚠️ Error parsing transaction at row ${i + 1}: $e");
+          continue;
+        }
+      }
+
+      print("✅ Found ${transactions.length} transactions");
+      return transactions;
+    } catch (e) {
+      print("❌ Error fetching transactions: $e");
+      rethrow;
+    }
+  }
+
+  /// Get transactions for a specific item
+  static Future<List<InventoryTransaction>> getItemTransactions(
+      String userId, String itemId) async {
+    return getInventoryTransactions(userId: userId, itemId: itemId);
+  }
+
+  /// Get transactions of specific type
+  static Future<List<InventoryTransaction>> getTransactionsByType(
+      String userId, String type) async {
+    return getInventoryTransactions(userId: userId, type: type);
+  }
+
+  /// Get transactions within date range
+  static Future<List<InventoryTransaction>> getTransactionsByDateRange(
+      String userId, DateTime fromDate, DateTime toDate) async {
+    return getInventoryTransactions(
+      userId: userId,
+      fromDate: fromDate,
+      toDate: toDate,
+    );
+  }
+
+  /// Get transaction statistics for inventory analysis
+  static Future<Map<String, dynamic>> getInventoryStats(String userId) async {
+    print("🔄 Calculating inventory statistics...");
+
+    try {
+      final transactions = await getInventoryTransactions(userId: userId);
+
+      if (transactions.isEmpty) {
+        return {
+          'totalTransactions': 0,
+          'totalAdded': 0,
+          'totalRemoved': 0,
+          'totalSales': 0,
+          'totalReturns': 0,
+          'totalAdjustments': 0,
+          'itemsAffected': 0,
+        };
+      }
+
+      int totalAdded = 0;
+      int totalRemoved = 0;
+      int totalSales = 0;
+      int totalReturns = 0;
+      int totalAdjustments = 0;
+      Set<String> itemIds = {};
+
+      for (var txn in transactions) {
+        itemIds.add(txn.itemId);
+
+        switch (txn.type) {
+          case 'add':
+            totalAdded += txn.quantity;
+            break;
+          case 'remove':
+            totalRemoved += txn.quantity;
+            break;
+          case 'sale':
+            totalSales += txn.quantity;
+            break;
+          case 'return':
+            totalReturns += txn.quantity;
+            break;
+          case 'adjustment':
+            totalAdjustments += txn.quantity;
+            break;
+        }
+      }
+
+      final stats = {
+        'totalTransactions': transactions.length,
+        'totalAdded': totalAdded,
+        'totalRemoved': totalRemoved,
+        'totalSales': totalSales,
+        'totalReturns': totalReturns,
+        'totalAdjustments': totalAdjustments,
+        'itemsAffected': itemIds.length,
+        'netChange': totalAdded - totalRemoved,
+      };
+
+      print("✅ Statistics: $stats");
+      return stats;
+    } catch (e) {
+      print("❌ Error calculating stats: $e");
+      return {};
+    }
+  }
+
+  /// Delete old transactions (for maintenance)
+  static Future<void> deleteOldTransactions(
+      String userId, DateTime beforeDate) async {
+    print("🗑️ Deleting transactions before $beforeDate for user $userId");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get all transactions
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$inventoryTransactionSheetName!A:I",
+      );
+
+      if (response.values == null || response.values!.length <= 1) {
+        print("⚠️ No data to delete");
+        return;
+      }
+
+      final headers = response.values![0];
+      final userIdIndex = headers.indexOf('userId');
+      final timestampIndex = headers.indexOf('timestamp');
+
+      if (userIdIndex == -1 || timestampIndex == -1) {
+        throw Exception("Required columns not found");
+      }
+
+      // Get sheet ID for batch delete
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      final sheet = spreadsheet.sheets!
+          .firstWhere((s) => s.properties?.title == inventoryTransactionSheetName);
+      final sheetId = sheet.properties!.sheetId!;
+
+      List<int> rowsToDelete = [];
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+
+        if (row.length > userIdIndex && row[userIdIndex].toString() == userId) {
+          if (row.length > timestampIndex) {
+            final timestamp = _parseTransactionDate(row[timestampIndex].toString());
+            if (timestamp.isBefore(beforeDate)) {
+              rowsToDelete.add(i);
+            }
+          }
+        }
+      }
+
+      if (rowsToDelete.isEmpty) {
+        print("ℹ️ No transactions to delete");
+        return;
+      }
+
+      // Delete rows in reverse order
+      List<Request> deleteRequests = [];
+      for (int rowIndex in rowsToDelete.reversed) {
+        deleteRequests.add(
+          Request()
+            ..deleteDimension = (DeleteDimensionRequest()
+              ..range = (DimensionRange()
+                ..sheetId = sheetId
+                ..dimension = 'ROWS'
+                ..startIndex = rowIndex
+                ..endIndex = rowIndex + 1)),
+        );
+      }
+
+      final batchRequest = BatchUpdateSpreadsheetRequest()..requests = deleteRequests;
+
+      await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+
+      print("✅ Deleted ${rowsToDelete.length} old transactions");
+    } catch (e) {
+      print("❌ Error deleting transactions: $e");
+      rethrow;
+    }
+  }
+
+  /// Helper function to parse transaction timestamps
+  static DateTime _parseTransactionDate(String dateString) {
+    if (dateString.isEmpty) return DateTime.now();
+
+    try {
+      // Try format: dd/MM/yyyy HH:mm:ss
+      final formats = [
+        'dd/MM/yyyy HH:mm:ss',
+        'dd/MM/yyyy',
+        'yyyy-MM-dd HH:mm:ss',
+        'yyyy-MM-dd',
+      ];
+
+      for (var format in formats) {
+        try {
+          return DateFormat(format).parseStrict(dateString);
+        } catch (_) {
+          continue;
+        }
+      }
+
+      // Fallback to parse ISO format
+      return DateTime.parse(dateString);
+    } catch (e) {
+      print("⚠️ Could not parse date '$dateString', using current time");
+      return DateTime.now();
+    }
+  }
 }
 

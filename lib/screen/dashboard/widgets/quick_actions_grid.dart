@@ -31,7 +31,7 @@ class QuickActionsGrid extends GetView<DashboardController> {
           children: [
             _buildActionCard(
               icon: Icons.add_circle,
-              label: 'New Invoice',
+              label: 'new_invoice'.tr,
               color: Colors.blue,
               onTap: controller.navigateToCreateInvoice,
             ),
@@ -44,19 +44,19 @@ class QuickActionsGrid extends GetView<DashboardController> {
             if (AppConstants.isChallan.value)
               _buildActionCard(
                 icon: Icons.list_alt,
-                label: 'New Challan',
+                label: 'new_challan'.tr,
                 color: Colors.green,
                 onTap: controller.navigateToNewChallan,
               ),
             _buildActionCard(
               icon: Icons.people,
-              label: 'Customers',
+              label: 'customers'.tr,
               color: Colors.purple,
               onTap: controller.navigateToCustomers,
             ),
             _buildActionCard(
               icon: Icons.production_quantity_limits,
-              label: 'Items',
+              label: 'items'.tr,
               color: Colors.orange,
               onTap: controller.navigateToItems,
             ),
