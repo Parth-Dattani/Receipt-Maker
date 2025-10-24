@@ -109,7 +109,6 @@ class DashboardScreen extends GetView<DashboardController> {
                   DashboardStatsCard(),
 
                   SizedBox(height: 20),
-
                   // Quick Actions
                   QuickActionsGrid(),
 
@@ -885,7 +884,7 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 ListTile(
                   leading: Icon(Icons.receipt_long, color: Colors.blue),
-                  title: Text("create_invoice".tr),
+                  title: Text("purchase".tr),
                   onTap: () {
                     Get.back();
                     controller.navigateToInventory();

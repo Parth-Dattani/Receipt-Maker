@@ -156,7 +156,7 @@ class CompanySelectionController extends GetxController {
     print("📋 Company ID: ${selectedCompany.value!['id']}");
     print("🔄 Navigating to CustomerRegistrationScreen...");
 
-    Get.offNamed(
+    Get.toNamed(
       CustomerRegistrationScreen.pageId,
       arguments: {
         'companyId': selectedCompany.value!['id'],

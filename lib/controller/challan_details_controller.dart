@@ -180,7 +180,8 @@ class ChallanDetailsController extends GetxController {
         await Future.delayed(Duration(milliseconds: 500));
 
         await forceRefreshChallanData();
-
+        // Force reload from server
+        await _reloadChallanFromServer(currentChallan.challanId!);
         Get.snackbar(
           'Success',
           'Challan updated successfully',
@@ -249,6 +250,40 @@ class ChallanDetailsController extends GetxController {
     }
   }
 
+  Future<void> _reloadChallanFromServer(String challanId) async {
+    try {
+      print("🔄 Reloading challan $challanId from server");
+
+      isLoadingItems.value = true;
+
+      // Clear cache
+      GoogleSheetService.clearChallanItemCache(challanId);
+
+      // Fetch fresh challan data
+      final List<Challan> challans = await GoogleSheetService.getChallansList();
+      final freshChallan = challans.firstWhereOrNull(
+              (c) => c.challanId == challanId
+      );
+
+      if (freshChallan != null) {
+        print("✅ Found updated challan data");
+        challan.value = freshChallan;
+
+        // Reload items
+        await loadChallanItems(challanId);
+
+        print("✅ Challan and items reloaded successfully");
+      } else {
+        print("⚠️ Could not find challan in fresh data");
+      }
+
+    } catch (e, stack) {
+      print("❌ Error reloading challan: $e");
+      print("Stack: $stack");
+    } finally {
+      isLoadingItems.value = false;
+    }
+  }
 
   /// Keep existing refreshChallanData for backward compatibility
   Future<void> refreshChallanData() async {

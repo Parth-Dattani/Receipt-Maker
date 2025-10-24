@@ -22,6 +22,16 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         title:  Text('invoice_details'.tr),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            // Refresh invoice list before going back
+            if (Get.isRegistered<InvoiceListController>()) {
+              Get.find<InvoiceListController>().loadInvoices();
+            }
+            Get.back();
+          },
+        ),
         actions: [
           // Edit button - navigates to NewInvoiceScreen for editing
           Obx(() {
@@ -38,7 +48,8 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                 color: isPaid ? Colors.grey.shade400 : Colors.white,
               ),
               tooltip: isPaid ? 'Cannot edit paid invoice' : 'Edit Invoice',
-              onPressed: isPaid ? null : () => controller.navigateToEditMode(),
+              onPressed: isPaid ? null
+                  : () => controller.navigateToEditMode(),
             );
           }),
 

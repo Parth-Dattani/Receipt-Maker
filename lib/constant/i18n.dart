@@ -225,6 +225,9 @@ class Messages extends Translations {
       'challan_not_found' : 'Challan not found',
       'payment_summary' : 'Payment Summary',
       'inventory' : 'Inventory',
+      'purchase' : 'Purchase',
+      'purchase_summary': 'Purchase Summary',
+      'total_purchases': 'Total Purchases',
     },
 
     gujaratiCode: {
@@ -453,7 +456,14 @@ class Messages extends Translations {
       'create_your_first_challan_to_get_started' : 'શરૂઆત કરવા માટે તમારું પહેલું ચલણ બનાવો',
       'challan_not_found' : 'ચલણ મળ્યું નથી',
       'payment_summary' : 'ચુકવણી સારાંશ',
-      'inventory' : 'ઇન્વેન્ટરી'
+      'inventory' : 'ઇન્વેન્ટરી',
+      'purchase' : 'ખરીદી',
+      'purchase_summary': 'ખરીદી સારાંશ',
+      'total_purchases': 'કુલ ખરીદી',
     },
   };
 }
+
+
+
+

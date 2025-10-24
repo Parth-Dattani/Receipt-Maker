@@ -4,7 +4,7 @@ class PurchaseItem {
   final String itemId;
   final String itemName;
   final String description;
-  final int quantity;
+  final double  quantity;
   final double purchasePrice;
   final String unit;
   final double gstRate;
@@ -78,7 +78,7 @@ class PurchaseItem {
     String? itemId,
     String? itemName,
     String? description,
-    int? quantity,
+    double? quantity,
     double? purchasePrice,
     String? unit,
     double? gstRate,
@@ -101,7 +101,6 @@ class PurchaseItem {
   }
 }
 
-
 class PurchaseEntry {
   final String? purchaseId;
   final String? vendorId;
@@ -110,9 +109,13 @@ class PurchaseEntry {
   final String? vendorMobile;
   final String? vendorAddress;
   final DateTime? purchaseDate;
+  final DateTime? dueDate;  // ✅ Added missing field
   final double? subtotal;
   final double? gstAmount;
+  final double? gstRate;  // ✅ Added missing field
   final double? totalAmount;
+  final double? paidAmount;  // ✅ Added missing field
+  final double? pendingAmount;  // ✅ Added missing field
   final String? paymentStatus;
   final String? notes;
   final String? userId;
@@ -127,9 +130,13 @@ class PurchaseEntry {
     this.vendorMobile,
     this.vendorAddress,
     this.purchaseDate,
+    this.dueDate,  // ✅ Added
     this.subtotal,
     this.gstAmount,
+    this.gstRate,  // ✅ Added
     this.totalAmount,
+    this.paidAmount,  // ✅ Added
+    this.pendingAmount,  // ✅ Added
     this.paymentStatus,
     this.notes,
     this.userId,
@@ -138,49 +145,50 @@ class PurchaseEntry {
   });
 
   /// Factory constructor - Convert from Map (Firebase, Google Sheets)
+
   factory PurchaseEntry.fromJson(Map<String, dynamic> json) {
+// Parse dates from dd/MM/yyyy format
+    DateTime? parseDate(String? dateString) {
+      if (dateString == null || dateString.isEmpty) return null;
+      try {
+        List<String> dateParts = dateString.split('/');
+        if (dateParts.length == 3) {
+          int day = int.parse(dateParts[0]);
+          int month = int.parse(dateParts[1]);
+          int year = int.parse(dateParts[2]);
+          return DateTime(year, month, day);
+        }
+      } catch (e) {
+        print("❌ Error parsing date '$dateString': $e");
+      }
+      return null;
+    }
+
+// Debug print to see what dates we're receiving
+    print("📅 Raw purchaseDate: ${json['purchaseDate']}");
+    print("📅 Raw dueDate: ${json['dueDate']}");
+
     return PurchaseEntry(
-      purchaseId: json['purchaseId'] as String?,
-      vendorId: json['vendorId'] as String?,
-      vendorName: json['vendorName'] as String?,
-      vendorEmail: json['vendorEmail'] as String?,
-      vendorMobile: json['vendorMobile'] as String?,
-      vendorAddress: json['vendorAddress'] as String?,
-      purchaseDate: json['purchaseDate'] != null
-          ? json['purchaseDate'] is DateTime
-          ? json['purchaseDate'] as DateTime
-          : DateTime.tryParse(json['purchaseDate'].toString())
-          : null,
-      subtotal: json['subtotal'] != null
-          ? (json['subtotal'] is double
-          ? json['subtotal'] as double
-          : double.tryParse(json['subtotal'].toString()) ?? 0.0)
-          : 0.0,
-      gstAmount: json['gstAmount'] != null
-          ? (json['gstAmount'] is double
-          ? json['gstAmount'] as double
-          : double.tryParse(json['gstAmount'].toString()) ?? 0.0)
-          : 0.0,
-      totalAmount: json['totalAmount'] != null
-          ? (json['totalAmount'] is double
-          ? json['totalAmount'] as double
-          : double.tryParse(json['totalAmount'].toString()) ?? 0.0)
-          : 0.0,
-      paymentStatus: json['paymentStatus'] as String? ?? 'Pending',
-      notes: json['notes'] as String?,
-      userId: json['userId'] as String?,
-      createdAt: json['createdAt'] != null
-          ? json['createdAt'] is DateTime
-          ? json['createdAt'] as DateTime
-          : DateTime.tryParse(json['createdAt'].toString())
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? json['updatedAt'] is DateTime
-          ? json['updatedAt'] as DateTime
-          : DateTime.tryParse(json['updatedAt'].toString())
-          : null,
+      purchaseId: json['purchaseId']?.toString() ?? '',
+      vendorId: json['vendorId']?.toString() ?? '',
+      vendorName: json['vendorName']?.toString() ?? '',
+      vendorEmail: json['vendorEmail']?.toString() ?? '',
+      vendorMobile: json['vendorMobile']?.toString() ?? '',
+      vendorAddress: json['vendorAddress']?.toString() ?? '',
+      purchaseDate: parseDate(json['purchaseDate']?.toString()),
+      dueDate: parseDate(json['dueDate']?.toString()),
+      subtotal: double.tryParse(json['subtotal']?.toString() ?? '0') ?? 0.0,
+      gstRate: double.tryParse(json['gstRate']?.toString() ?? '0') ?? 0.0,
+      gstAmount: double.tryParse(json['gstAmount']?.toString() ?? '0') ?? 0.0,
+      totalAmount: double.tryParse(json['totalAmount']?.toString() ?? '0') ?? 0.0,
+      paidAmount: double.tryParse(json['paidAmount']?.toString() ?? '0') ?? 0.0,
+      pendingAmount: double.tryParse(json['pendingAmount']?.toString() ?? '0') ?? 0.0,
+      paymentStatus: json['paymentStatus']?.toString() ?? '',
+      notes: json['notes']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
     );
   }
+
 
   /// Convert to Map (for saving to database)
   Map<String, dynamic> toJson() {
@@ -192,9 +200,13 @@ class PurchaseEntry {
       'vendorMobile': vendorMobile,
       'vendorAddress': vendorAddress,
       'purchaseDate': purchaseDate?.toIso8601String(),
+      'dueDate': dueDate?.toIso8601String(),  // ✅ Added
       'subtotal': subtotal,
       'gstAmount': gstAmount,
+      'gstRate': gstRate,  // ✅ Added
       'totalAmount': totalAmount,
+      'paidAmount': paidAmount,  // ✅ Added
+      'pendingAmount': pendingAmount,  // ✅ Added
       'paymentStatus': paymentStatus,
       'notes': notes,
       'userId': userId,
@@ -212,9 +224,13 @@ class PurchaseEntry {
     String? vendorMobile,
     String? vendorAddress,
     DateTime? purchaseDate,
+    DateTime? dueDate,  // ✅ Added
     double? subtotal,
     double? gstAmount,
+    double? gstRate,  // ✅ Added
     double? totalAmount,
+    double? paidAmount,  // ✅ Added
+    double? pendingAmount,  // ✅ Added
     String? paymentStatus,
     String? notes,
     String? userId,
@@ -229,9 +245,13 @@ class PurchaseEntry {
       vendorMobile: vendorMobile ?? this.vendorMobile,
       vendorAddress: vendorAddress ?? this.vendorAddress,
       purchaseDate: purchaseDate ?? this.purchaseDate,
+      dueDate: dueDate ?? this.dueDate,  // ✅ Added
       subtotal: subtotal ?? this.subtotal,
       gstAmount: gstAmount ?? this.gstAmount,
+      gstRate: gstRate ?? this.gstRate,  // ✅ Added
       totalAmount: totalAmount ?? this.totalAmount,
+      paidAmount: paidAmount ?? this.paidAmount,  // ✅ Added
+      pendingAmount: pendingAmount ?? this.pendingAmount,  // ✅ Added
       paymentStatus: paymentStatus ?? this.paymentStatus,
       notes: notes ?? this.notes,
       userId: userId ?? this.userId,
@@ -277,6 +297,12 @@ class PurchaseEntry {
     return '${purchaseDate!.day.toString().padLeft(2, '0')}/${purchaseDate!.month.toString().padLeft(2, '0')}/${purchaseDate!.year}';
   }
 
+  /// Get formatted due date  // ✅ Added helper method
+  String getFormattedDueDate() {
+    if (dueDate == null) return 'N/A';
+    return '${dueDate!.day.toString().padLeft(2, '0')}/${dueDate!.month.toString().padLeft(2, '0')}/${dueDate!.year}';
+  }
+
   /// Get payment status color (for UI)
   String getPaymentStatusColor() {
     switch (paymentStatus) {
@@ -289,5 +315,10 @@ class PurchaseEntry {
       default:
         return 'grey';
     }
+  }
+
+  /// Calculate pending amount if not provided  // ✅ Added helper method
+  double calculatePendingAmount() {
+    return pendingAmount ?? ((totalAmount ?? 0.0) - (paidAmount ?? 0.0));
   }
 }

@@ -35,7 +35,7 @@ class CustomerListController extends BaseController {
     loadCustomers();
   }
 
-  // Computed getter for filtered customers based on active/inactive filter
+  /// Computed getter for filtered customers based on active/inactive filter
   List<Map<String, dynamic>> get filteredCustomerList {
     if (showInactiveCustomers.value) {
       return filteredCustomers;
@@ -43,19 +43,7 @@ class CustomerListController extends BaseController {
     return filteredCustomers.where((customer) => customer['isActive'] ?? true).toList();
   }
 
-  void toggleShowInactive() {
-    showInactiveCustomers.value = !showInactiveCustomers.value;
-    Get.snackbar(
-      showInactiveCustomers.value ? 'Showing All' : 'Showing Active Only',
-      showInactiveCustomers.value
-          ? 'Inactive customers are now visible'
-          : 'Inactive customers are hidden',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: Duration(seconds: 2),
-      backgroundColor: AppColors.tealColor,
-      colorText: Colors.white,
-    );
-  }
+
 
   Future<void> loadCustomers({bool loadMore = false}) async {
     try {
@@ -258,7 +246,9 @@ class CustomerListController extends BaseController {
   }
 
   void navigateToAddNewCustomer() {
-    Get.toNamed(CompanySelectionScreen.pageId);
+
+    //Get.toNamed(CompanySelectionScreen.pageId);
+    Get.toNamed(CustomerRegistrationScreen.pageId);
   }
 
   void viewCustomerDetails(Map<String, dynamic> customer) {
@@ -578,11 +568,36 @@ class CustomerListController extends BaseController {
 
   Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
     try {
+      isLoading.value = true;
+
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        Get.snackbar(
+          'Error',
+          'User not authenticated',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          icon: Icon(Icons.error, color: Colors.white),
+        );
+        return;
+      }
 
       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
 
+      if (companyId.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Company ID not found',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          icon: Icon(Icons.error, color: Colors.white),
+        );
+        return;
+      }
+
+      // PERMANENTLY DELETE from Firebase
       await _firestore
           .collection("users")
           .doc(user.uid)
@@ -590,108 +605,176 @@ class CustomerListController extends BaseController {
           .doc(companyId)
           .collection("customers")
           .doc(customer['id'])
-          .update({'isActive': false});
+          .delete();
 
-      // Update local data
-      final index = customers.indexWhere((c) => c['id'] == customer['id']);
-      if (index != -1) {
-        customers[index]['isActive'] = false;
-      }
+      // Remove from local lists
+      customers.removeWhere((c) => c['id'] == customer['id']);
+      filteredCustomers.removeWhere((c) => c['id'] == customer['id']);
 
-      final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
-      if (filteredIndex != -1) {
-        filteredCustomers[filteredIndex]['isActive'] = false;
-      }
+      // Update customer count
+      customerCount.value = customers.length;
 
       // Trigger UI update
-      filteredCustomers.refresh();
       customers.refresh();
+      filteredCustomers.refresh();
 
       Get.snackbar(
         'Customer Deleted',
-        'Customer marked as inactive',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        icon: Icon(Icons.info, color: Colors.white),
-        duration: Duration(seconds: 4),
-        mainButton: TextButton(
-          onPressed: () {
-            Get.back(); // Close snackbar
-            restoreCustomer(customer);
-          },
-          child: Text(
-            'RESTORE',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      );
-    } catch (e) {
-      print("Error deleting customer: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to delete customer',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        icon: Icon(Icons.error, color: Colors.white),
-      );
-    }
-  }
-
-  Future<void> restoreCustomer(Map<String, dynamic> customer) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-
-      await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("customers")
-          .doc(customer['id'])
-          .update({'isActive': true});
-
-      // Update local data
-      final index = customers.indexWhere((c) => c['id'] == customer['id']);
-      if (index != -1) {
-        customers[index]['isActive'] = true;
-      }
-
-      final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
-      if (filteredIndex != -1) {
-        filteredCustomers[filteredIndex]['isActive'] = true;
-      }
-
-      // Trigger UI update
-      filteredCustomers.refresh();
-      customers.refresh();
-
-      Get.snackbar(
-        'Success',
-        'Customer restored successfully',
+        '${customer['name']} has been permanently deleted',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
         icon: Icon(Icons.check_circle, color: Colors.white),
+        duration: Duration(seconds: 3),
       );
+
     } catch (e) {
-      print("Error restoring customer: $e");
+      print("Error deleting customer: $e");
       Get.snackbar(
         'Error',
-        'Failed to restore customer',
+        'Failed to delete customer: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         icon: Icon(Icons.error, color: Colors.white),
+        duration: Duration(seconds: 4),
       );
+    } finally {
+      isLoading.value = false;
     }
   }
+
+  ///its temp Delete customer Iable TO restore Customer
+  // Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
+  //   try {
+  //     final user = _auth.currentUser;
+  //     if (user == null) return;
+  //
+  //     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+  //
+  //     await _firestore
+  //         .collection("users")
+  //         .doc(user.uid)
+  //         .collection("companies")
+  //         .doc(companyId)
+  //         .collection("customers")
+  //         .doc(customer['id'])
+  //         .update({'isActive': false});
+  //
+  //     // Update local data
+  //     final index = customers.indexWhere((c) => c['id'] == customer['id']);
+  //     if (index != -1) {
+  //       customers[index]['isActive'] = false;
+  //     }
+  //
+  //     final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
+  //     if (filteredIndex != -1) {
+  //       filteredCustomers[filteredIndex]['isActive'] = false;
+  //     }
+  //
+  //     // Trigger UI update
+  //     filteredCustomers.refresh();
+  //     customers.refresh();
+  //
+  //     Get.snackbar(
+  //       'Customer Deleted',
+  //       'Customer marked as inactive',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: Colors.orange,
+  //       colorText: Colors.white,
+  //       icon: Icon(Icons.info, color: Colors.white),
+  //       duration: Duration(seconds: 4),
+  //       mainButton: TextButton(
+  //         onPressed: () {
+  //           Get.back(); // Close snackbar
+  //           restoreCustomer(customer);
+  //         },
+  //         child: Text(
+  //           'RESTORE',
+  //           style: TextStyle(
+  //             color: Colors.white,
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print("Error deleting customer: $e");
+  //     Get.snackbar(
+  //       'Error',
+  //       'Failed to delete customer',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: Colors.red,
+  //       colorText: Colors.white,
+  //       icon: Icon(Icons.error, color: Colors.white),
+  //     );
+  //   }
+  // }
+
+  // Future<void> restoreCustomer(Map<String, dynamic> customer) async {
+  //   try {
+  //     final user = _auth.currentUser;
+  //     if (user == null) return;
+  //
+  //     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+  //
+  //     await _firestore
+  //         .collection("users")
+  //         .doc(user.uid)
+  //         .collection("companies")
+  //         .doc(companyId)
+  //         .collection("customers")
+  //         .doc(customer['id'])
+  //         .update({'isActive': true});
+  //
+  //     // Update local data
+  //     final index = customers.indexWhere((c) => c['id'] == customer['id']);
+  //     if (index != -1) {
+  //       customers[index]['isActive'] = true;
+  //     }
+  //
+  //     final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
+  //     if (filteredIndex != -1) {
+  //       filteredCustomers[filteredIndex]['isActive'] = true;
+  //     }
+  //
+  //     // Trigger UI update
+  //     filteredCustomers.refresh();
+  //     customers.refresh();
+  //
+  //     Get.snackbar(
+  //       'Success',
+  //       'Customer restored successfully',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: Colors.green,
+  //       colorText: Colors.white,
+  //       icon: Icon(Icons.check_circle, color: Colors.white),
+  //     );
+  //   } catch (e) {
+  //     print("Error restoring customer: $e");
+  //     Get.snackbar(
+  //       'Error',
+  //       'Failed to restore customer',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: Colors.red,
+  //       colorText: Colors.white,
+  //       icon: Icon(Icons.error, color: Colors.white),
+  //     );
+  //   }
+  // }
+
+  // void toggleShowInactive() {
+  //   showInactiveCustomers.value = !showInactiveCustomers.value;
+  //   Get.snackbar(
+  //     showInactiveCustomers.value ? 'Showing All' : 'Showing Active Only',
+  //     showInactiveCustomers.value
+  //         ? 'Inactive customers are now visible'
+  //         : 'Inactive customers are hidden',
+  //     snackPosition: SnackPosition.BOTTOM,
+  //     duration: Duration(seconds: 2),
+  //     backgroundColor: AppColors.tealColor,
+  //     colorText: Colors.white,
+  //   );
+  // }
 }
 

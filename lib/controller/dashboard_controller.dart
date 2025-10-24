@@ -1,4 +1,5 @@
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -75,6 +76,15 @@ class DashboardController extends BaseController {
   // Method to get company name for display
   String get companyName => currentCompany.value?['companyName'] ?? 'No Company';
 
+// Purchase data observables
+  var totalPurchases = 0.obs;
+  var paidPurchases = 0.obs;
+  var pendingPurchases = 0.obs;
+  var totalPurchaseAmount = 0.0.obs;
+  var pendingPurchaseAmount = 0.0.obs;
+  var purchaseList = <PurchaseEntry>[].obs;
+  var overduePurchases = 0.obs;
+  var overduePurchaseAmount = 0.0.obs;
 
   @override
   void onInit() {
@@ -94,6 +104,7 @@ class DashboardController extends BaseController {
       }
     });
     ///loadChallanPreference();
+    _startOverdueChecker();
   }
 
 
@@ -153,7 +164,100 @@ class DashboardController extends BaseController {
       print('Error saving challan preference to SharedPreferences: $e');
     }
   }
+// Add to DashboardController
+  void _startOverdueChecker() {
+    // Check once immediately
+    _updateOverdueInvoices();
+    _updateOverduePurchases(); // ← Add this line
 
+    // Then check every hour
+    Timer.periodic(Duration(hours: 1), (timer) {
+      _updateOverdueInvoices();
+      _updateOverduePurchases(); // ← Add this line
+    });
+  }
+
+  Future<void> _updateOverdueInvoices() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    bool hasChanges = false;
+
+    for (var invoice in invoiceList) {
+      final status = invoice.status?.toLowerCase().trim();
+
+      // Check if pending invoice is now overdue
+      if ((status == "pending" || status == "unpaid") && invoice.dueDate != null) {
+        final dueDate = DateTime(
+          invoice.dueDate!.year,
+          invoice.dueDate!.month,
+          invoice.dueDate!.day,
+        );
+
+        // 🔹 FIXED: Check if TODAY is AFTER due date (not before)
+        if (today.isAfter(dueDate) && status != "overdue") {
+          print("⚠️ Invoice ${invoice.invoiceId} is now overdue! "
+              "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
+          hasChanges = true;
+
+          // Optionally update status in Google Sheet
+          // await GoogleSheetService.updateInvoiceStatus(
+          //   invoice.invoiceId,
+          //   "overdue",
+          //   sheetName: "Invoice",
+          // );
+        }
+      }
+    }
+
+    if (hasChanges) {
+      // Recalculate stats
+      calculateStats();
+    }
+  }
+
+  Future<void> _updateOverduePurchases() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    bool hasChanges = false;
+
+    for (var purchase in purchaseList) {
+      final status = purchase.paymentStatus?.toLowerCase().trim();
+
+      // Check if pending purchase is now overdue
+      if ((status == "pending" || status == "unpaid") && purchase.dueDate != null) {
+        final dueDate = DateTime(
+          purchase.dueDate!.year,
+          purchase.dueDate!.month,
+          purchase.dueDate!.day,
+        );
+
+        if (today.isAfter(dueDate) && status != "overdue") {
+          print("⚠️ Purchase ${purchase.purchaseId ?? 'N/A'} is now overdue! "
+              "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
+          hasChanges = true;
+
+          // 🔹 OPTIONAL: Update status in Google Sheet
+          // Uncomment if you want to update the sheet status automatically
+          // try {
+          //   await GoogleSheetService.updatePurchaseStatus(
+          //     purchase.purchaseId ?? '',
+          //     "overdue",
+          //     sheetName: "Purchase",
+          //   );
+          // } catch (e) {
+          //   print("Error updating purchase status: $e");
+          // }
+        }
+      }
+    }
+
+    if (hasChanges) {
+      // Recalculate stats
+      _calculatePurchaseStats();
+    }
+  }
 
   Future<void> updateCompanyPreference(String key, bool value) async {
     // Update local cache
@@ -278,8 +382,6 @@ class DashboardController extends BaseController {
   }
 
 
-  // 🔹 REMOVED: Redundant _loadDashboardStatistics()
-  // All stats now come from invoiceList via calculateStats()
 
   Future<void> loadCompanySettings() async {
     try {
@@ -358,6 +460,8 @@ class DashboardController extends BaseController {
 
       // 🔹 FIXED: Load invoices FIRST, then calculate everything once
       await loadInvoices();
+
+      await loadPurchases();
 
       // 🔹 Now load other data in parallel (no invoice dependencies)
       await Future.wait([
@@ -439,6 +543,145 @@ class DashboardController extends BaseController {
     }
   }
 
+  Future<void> loadPurchases() async {
+    try {
+      print("=== ATTEMPTING TO FETCH PURCHASES ===");
+
+      final currentUserId = _auth.currentUser?.uid;
+      if (currentUserId == null) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "User not logged in",
+          baseColor: Colors.red.shade700,
+          icon: Icons.error_outline,
+        );
+        return;
+      }
+
+      // Fetch purchases from Google Sheets
+      List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
+
+      // Filter by user
+      List<PurchaseEntry> userPurchases = purchases
+          .where((purchase) => purchase.userId == currentUserId)
+          .toList();
+
+      if (userPurchases.isEmpty) {
+        purchaseList.clear();
+        totalPurchaseAmount.value = 0.0;
+        totalPurchases.value = 0;
+        paidPurchases.value = 0;
+        pendingPurchases.value = 0;
+        pendingPurchaseAmount.value = 0.0;
+        return;
+      }
+
+      purchaseList.assignAll(userPurchases);
+
+      // Calculate purchase stats
+      if (!_isInitializing) {
+        _calculatePurchaseStats();
+      }
+
+    } catch (e) {
+      print("Error in loadPurchases(): $e");
+      showCustomSnackbar(
+        title: "Error",
+        message: "Failed to load purchases: ${e.toString()}",
+        baseColor: Colors.red.shade700,
+        icon: Icons.error_outline,
+      );
+    }
+  }
+
+  // Replace the _calculatePurchaseStats() method in DashboardController with this:
+
+  void _calculatePurchaseStats() {
+    int totalCount = 0;
+    int paidCount = 0;
+    int pendingCount = 0;
+    int overdueCount = 0;
+
+    double totalAmount = 0.0;
+    double pendingAmount = 0.0;
+    double overdueAmount = 0.0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    print("🔍 PURCHASE STATS DEBUG:");
+    print("   Today: ${_formatDate(today)}");
+    print("   Total purchases: ${purchaseList.length}");
+
+    for (var purchase in purchaseList) {
+      totalCount++;
+      totalAmount += purchase.totalAmount ?? 0.0;
+
+      final status = purchase.paymentStatus?.toLowerCase().trim();
+      final amount = purchase.totalAmount ?? 0.0;
+      final pendingAmt = purchase.pendingAmount ?? amount;
+
+      print("\n📦 Processing: ${purchase.purchaseId} | Status: $status");
+      print("   Due Date: ${_formatDate(purchase.dueDate)}");
+      print("   Total Amount: ₹${amount.toStringAsFixed(2)}");
+      print("   Pending Amount: ₹${pendingAmt.toStringAsFixed(2)}");
+
+      if (status == "paid" || status == "completed") {
+        paidCount++;
+        print("   ✅ COUNTED AS PAID");
+      } else {
+        bool isOverdue = false;
+
+        // Check if purchase has a due date and is overdue
+        if (purchase.dueDate != null) {
+          final dueDate = DateTime(
+            purchase.dueDate!.year,
+            purchase.dueDate!.month,
+            purchase.dueDate!.day,
+          );
+
+          isOverdue = today.isAfter(dueDate);
+
+          if (isOverdue) {
+            overdueCount++;
+            overdueAmount += pendingAmt;
+            print("   🔴 COUNTED AS OVERDUE");
+          } else {
+            pendingCount++;
+            pendingAmount += pendingAmt;
+            print("   🟡 COUNTED AS PENDING (not overdue yet)");
+          }
+        } else {
+          // No due date, just count as pending
+          pendingCount++;
+          pendingAmount += pendingAmt;
+          print("   🟡 COUNTED AS PENDING (no due date)");
+        }
+
+        // 🔥 CRITICAL FIX: Overdue purchases should ALSO count toward pending amount
+        // because they are still pending payment, just overdue
+        if (isOverdue) {
+          pendingAmount += pendingAmt; // Add overdue amount to pending total
+          print("   💰 ADDED OVERDUE AMOUNT TO PENDING: ₹${pendingAmt.toStringAsFixed(2)}");
+        }
+      }
+    }
+
+    // Update observables
+    totalPurchases.value = totalCount;
+    paidPurchases.value = paidCount;
+    pendingPurchases.value = pendingCount;
+    totalPurchaseAmount.value = totalAmount;
+    pendingPurchaseAmount.value = pendingAmount;
+    overduePurchases.value = overdueCount;
+    overduePurchaseAmount.value = overdueAmount;
+
+    print("\n✅ FINAL Purchase Stats:");
+    print("   Total: $totalCount, Paid: $paidCount, Pending: $pendingCount, Overdue: $overdueCount");
+    print("   💰 Total Amount: ₹${totalAmount.toStringAsFixed(2)}");
+    print("   💰 Pending Amount: ₹${pendingAmount.toStringAsFixed(2)}");
+    print("   💰 Overdue Amount: ₹${overdueAmount.toStringAsFixed(2)}");
+  }
 
 
   void _clearStats() {
@@ -448,6 +691,14 @@ class DashboardController extends BaseController {
     totalRevenue.value = 0.0;
     pendingAmount.value = 0.0;
     overdueAmount.value = 0.0;
+
+    totalPurchases.value = 0;
+    paidPurchases.value = 0;
+    overduePurchases.value = 0;
+    pendingPurchases.value = 0;
+    totalPurchaseAmount.value = 0.0;
+    pendingPurchaseAmount.value = 0.0;
+    overduePurchaseAmount.value = 0.0;
     // 🔹 FIXED: Initialize with zero values instead of clearing
     invoiceStatusData.assignAll([
       ChartData("Paid", 0.0, Colors.green),
@@ -466,6 +717,10 @@ class DashboardController extends BaseController {
     double pendingAmt = 0.0;
     double overdueAmt = 0.0;
 
+    final now = DateTime.now();
+    // 🔹 FIXED: Use today at midnight for accurate date comparison
+    final today = DateTime(now.year, now.month, now.day);
+
     for (var invoice in invoiceList) {
       final status = invoice.status?.toLowerCase().trim();
       final amount = invoice.totalAmount ?? 0.0;
@@ -474,20 +729,48 @@ class DashboardController extends BaseController {
 
       if (status == "paid") {
         paidCnt++;
-      }
-      else if (status == "pending") {
-        pendingCnt++;
-        pendingAmt += amount;
-      }
-      else if (status == "overdue") {
-        overdueCnt++;
-        overdueAmt += amount;
-      }
+      } else {
+        // Check if invoice has a due date
+        bool isOverdue = false;
 
+        if (invoice.dueDate != null) {
+          final dueDate = DateTime(
+            invoice.dueDate!.year,
+            invoice.dueDate!.month,
+            invoice.dueDate!.day,
+          );
 
+          // 🔹 FIXED: Invoice is overdue if TODAY is AFTER the due date
+          // Example: Issue: 1-Oct, Due: 15-Oct
+          // - On 15-Oct (dueDate) → NOT overdue (isAfter returns false)
+          // - On 16-Oct and beyond → OVERDUE (isAfter returns true)
+          isOverdue = today.isAfter(dueDate);
+        }
+
+        if (isOverdue) {
+          // Count as overdue (regardless of pending/partial/unpaid status)
+          overdueCnt++;
+          overdueAmt += amount;
+
+          print("🔴 Overdue: ${invoice.invoiceId} | Status: $status | "
+              "Issue: ${_formatDate(invoice.issueDate)} | "
+              "Due: ${_formatDate(invoice.dueDate)} | "
+              "Amount: ₹$amount");
+        } else if (status == "pending" || status == "unpaid") {
+          // Not yet overdue, just pending
+          pendingCnt++;
+          pendingAmt += amount;
+        }
+
+        // Partial payments count as pending but also check if overdue
+        if (status == "partial" && !isOverdue) {
+          pendingCnt++;
+          pendingAmt += amount;
+        }
+      }
     }
 
-    // 🔹 Batch update all observables at once
+    // Update observables
     paidCount.value = paidCnt;
     pendingCount.value = pendingCnt;
     overdueCount.value = overdueCnt;
@@ -500,6 +783,11 @@ class DashboardController extends BaseController {
       ChartData("Pending", pendingCnt.toDouble(), Colors.orange),
       ChartData("Overdue", overdueCnt.toDouble(), Colors.red),
     ]);
+
+    print("✅ Stats: Paid=$paidCnt, Pending=$pendingCnt, Overdue=$overdueCnt");
+    print("   💰 Total Revenue: ₹${totalRev.toStringAsFixed(2)}");
+    print("   💰 Pending Amount: ₹${pendingAmt.toStringAsFixed(2)}");
+    print("   💰 Overdue Amount: ₹${overdueAmt.toStringAsFixed(2)}");
   }
 
   double calculateTotalRevenue() {
@@ -994,8 +1282,8 @@ class DashboardController extends BaseController {
 
   // Updated method to navigate to customer registration with company selection
   void navigateToCustomers() {
-    // Always show company selection screen
-    Get.toNamed(CompanySelectionScreen.pageId);
+    /// Always show company selection screen
+    Get.toNamed(CustomerRegistrationScreen.pageId);
   }
 
   /// New method specifically for adding a new customer

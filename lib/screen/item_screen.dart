@@ -149,7 +149,7 @@ class ItemScreen extends GetView<ItemController> {
   Widget _buildItemList(List<Item> items) {
     return ListView.builder(
       itemCount: items.length,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
       itemBuilder: (context, index) {
         final item = items[index];
         return Card(

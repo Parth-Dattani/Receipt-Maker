@@ -31,20 +31,19 @@ class CustomerListScreen extends GetView<CustomerListController> {
         ),
         centerTitle: true,
         actions: [
-          // Toggle inactive customers visibility
-          Obx(() => IconButton(
-            icon: Icon(
-              controller.showInactiveCustomers.value
-                  ? Icons.visibility_off
-                  : Icons.visibility,
-              color: Colors.white,
-            ),
-            onPressed: controller.toggleShowInactive,
-            tooltip: controller.showInactiveCustomers.value
-                ? 'Hide Inactive Customers'
-                : 'Show Inactive Customers',
-          )),
-          // Sort Menu
+          /// Toggle inactive customers visibility
+          // Obx(() => IconButton(
+          //   icon: Icon(
+          //     controller.showInactiveCustomers.value
+          //         ? Icons.visibility_off
+          //         : Icons.visibility,
+          //     color: Colors.white,
+          //   ),
+          //   onPressed: controller.toggleShowInactive,
+          //   tooltip: controller.showInactiveCustomers.value
+          //       ? 'Hide Inactive Customers'
+          //       : 'Show Inactive Customers',
+          // )),
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort, color: Colors.white),
             onSelected: (value) => controller.sortCustomers(value),
@@ -598,11 +597,14 @@ class CustomerListScreen extends GetView<CustomerListController> {
                     Icon(Icons.location_on,
                         size: 14, color: Colors.grey.shade600),
                     SizedBox(width: 6),
-                    Text(
-                      '${customer['city']}${customer['state'] != null && customer['state'].isNotEmpty ? ', ${customer['state']}' : ''}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 13,
+                    Expanded(
+                      child: Text(
+                        '${customer['city']}${customer['state'] != null && customer['state'].isNotEmpty ? ', ${customer['state']}' : ''}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -671,9 +673,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 case 'delete':
                   controller.deleteCustomer(customer);
                   break;
-                case 'restore':
-                  controller.restoreCustomer(customer);
-                  break;
+                // case 'restore':
+                //   controller.restoreCustomer(customer);
+                //   break;
               }
             },
           ),

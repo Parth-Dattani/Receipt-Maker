@@ -77,6 +77,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                               isRequired: true,
                               maxLines: 3,
                             ),
+                            _buildSundryTypeRadio(),
+
                             Row(
                               children: [
                                 // Country Dropdown
@@ -552,6 +554,129 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
           return null;
         },
         onChanged: (value) => this.controller.updateProgress(),
+      ),
+    );
+  }
+
+  Widget _buildSundryTypeRadio() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6A11CB).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.category_outlined,
+                    color: Color(0xFF6A11CB),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  "Sundry Type *",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  "*",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Radio Buttons Container
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Obx(() => Row(
+              children: [
+                // Debtors Radio
+                Expanded(
+                  child: _buildRadioOption(
+                    value: 'Debtors',
+                    label: 'Debtors',
+                    isSelected: controller.sundryType.value == 'Debtors',
+                    onChanged: (value) => controller.sundryType.value = value!,
+                  ),
+                ),
+                SizedBox(width: 15,),
+                // Creditors Radio
+                Expanded(
+                  child: _buildRadioOption(
+                    value: 'Creditors',
+                    label: 'Creditors',
+                    isSelected: controller.sundryType.value == 'Creditors',
+                    onChanged: (value) => controller.sundryType.value = value!,
+                  ),
+                ),
+              ],
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadioOption({
+    required String value,
+    required String label,
+    required bool isSelected,
+    required Function(String?) onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6A11CB).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF6A11CB) : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Radio<String>(
+              value: value,
+              groupValue: isSelected ? value : null,
+              onChanged: onChanged,
+              activeColor: const Color(0xFF6A11CB),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isSelected ? const Color(0xFF6A11CB) : Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

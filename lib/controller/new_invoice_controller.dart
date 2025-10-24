@@ -2117,21 +2117,23 @@ class NewInvoiceController extends GetxController {
           AppConstants.userId,
         );
 
-        _refreshParentControllers();
-
-        showCustomSnackbar(
-          title: "Success",
-          message: "Invoice updated successfully!",
-          baseColor: Colors.green.shade700,
-          icon: Icons.check_circle_outline,
-        );
 
         Get.back(result: true);
-        await Future.delayed(Duration(milliseconds: 100));
+        _refreshParentControllers();
+
+        await Future.delayed(Duration(milliseconds: 100), () {
+          showCustomSnackbar(
+            title: "Success",
+            message: "Invoice updated successfully!",
+            baseColor: Colors.green.shade700,
+            icon: Icons.check_circle_outline,
+          );
+        },);
 
         return true;
 
-      } else {
+      }
+      else {
         final actualInvoiceId = await incrementAndGetInvoiceNumber();
         invoiceNumberController.text = actualInvoiceId;
         invoiceData['invoiceId'] = actualInvoiceId;

@@ -1237,9 +1237,9 @@ class NewChallanController extends BaseController {
           itemsData,
           AppConstants.userId,
         );
+        isLoading.value = false;
 
         await _refreshParentControllersAsync();
-        await Future.delayed(const Duration(milliseconds: 300));
 
         // ✅ Generate challan PDF (same as 1st code)
         List<Challan> challanModel = challanItems.map((item) {
@@ -1265,7 +1265,8 @@ class NewChallanController extends BaseController {
           );
         }).toList();
 
-        await InvoiceHelper.generateAndShareChallan(
+        if(!isInEditMode)
+          await InvoiceHelper.generateAndShareChallan(
           challanModel,
           customerNameController.text.trim(),
           customerMobileController.text.trim(),
@@ -1282,17 +1283,20 @@ class NewChallanController extends BaseController {
           gstAmount.value,
         );
 
-        showCustomSnackbar(
-          title: "Success",
-          message: "Challan updated successfully!",
-          baseColor: Colors.green.shade700,
-          icon: Icons.check_circle_outline,
-        );
-
         Get.back(result: true);
+        await Future.delayed(const Duration(milliseconds: 100),() {
+          showCustomSnackbar(
+            title: "Success",
+            message: "Challan updated successfully!",
+            baseColor: Colors.green.shade700,
+            icon: Icons.check_circle_outline,
+          );
+        },);
+
         return true;
 
-      } else {
+      }
+      else {
         print("=== CREATING NEW CHALLAN ===");
 
         await GoogleSheetService.addChallan(challanData, AppConstants.userId);

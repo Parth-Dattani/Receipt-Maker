@@ -184,23 +184,67 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                   ),
                 ),
                 SizedBox(width: 16),
-                Expanded(
-                  child: TextFormField(
-                    controller: controller.purchaseDateController,
-                    decoration: InputDecoration(
-                      labelText: 'Purchase Date',
-                      prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
-                      ),
-                    ),
-                    readOnly: true,
-                    onTap: controller.selectPurchaseDate,
-                  ),
-                ),
+                // Expanded(
+                //   child: TextFormField(
+                //     controller: controller.purchaseDateController,
+                //     decoration: InputDecoration(
+                //       labelText: 'Purchase Date',
+                //       prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
+                //       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                //       focusedBorder: OutlineInputBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //         borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                //       ),
+                //     ),
+                //     readOnly: true,
+                //     onTap: controller.selectPurchaseDate,
+                //   ),
+                // ),
+
               ],
+            ),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.purchaseDateController,
+                          decoration: InputDecoration(
+                            labelText: 'Purchase Date',
+                            prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                          readOnly: true,
+                          onTap: controller.selectPurchaseDate,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller.paymentDueDateController,
+                          decoration: InputDecoration(
+                            labelText: 'Payment Due Date',
+                            prefixIcon: Icon(Icons.event, color: AppColors.tealColor),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                          readOnly: true,
+                          onTap: controller.selectPaymentDueDate,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -388,6 +432,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
     );
   }
 
+// Replace _buildItemsSection() in PurchaseEntryScreen with this updated version
+
   Widget _buildItemsSection() {
     return Card(
       elevation: 4,
@@ -402,16 +448,102 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                 Icon(Icons.inventory_2, color: AppColors.tealColor),
                 SizedBox(width: 8),
                 Text(
-                  'Purchase Items (Manual Entry)',
+                  'Purchase Items',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.tealColor,
                   ),
                 ),
+                Spacer(),
+                Obx(() => Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: controller.useItemMaster.value
+                        ? AppColors.tealColor.withOpacity(0.15)
+                        : Colors.orange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: controller.useItemMaster.value
+                          ? AppColors.tealColor.withOpacity(0.3)
+                          : Colors.orange.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        controller.useItemMaster.value
+                            ? Icons.arrow_drop_down_circle
+                            : Icons.edit,
+                        size: 16,
+                        color: controller.useItemMaster.value
+                            ? AppColors.tealColor
+                            : Colors.orange,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        controller.useItemMaster.value ? 'Dropdown' : 'Manual',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: controller.useItemMaster.value
+                              ? AppColors.tealColor
+                              : Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+                SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
+                  onPressed: controller.toggleItemEntryMode,
+                  tooltip: 'Toggle between dropdown and manual entry',
+                ),
               ],
             ),
             SizedBox(height: 16),
+            Obx(() => Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: controller.useItemMaster.value
+                    ? Colors.blue.shade50
+                    : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: controller.useItemMaster.value
+                      ? Colors.blue.shade200
+                      : Colors.orange.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    controller.useItemMaster.value ? Icons.info : Icons.edit_note,
+                    size: 16,
+                    color: controller.useItemMaster.value
+                        ? Colors.blue.shade700
+                        : Colors.orange.shade700,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      controller.useItemMaster.value
+                          ? 'Select items from your inventory'
+                          : 'Manually enter item details',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: controller.useItemMaster.value
+                            ? Colors.blue.shade700
+                            : Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+            SizedBox(height: 12),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -420,36 +552,9 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      'Item Name',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Purchase Price',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      'Quantity',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
-                      ),
-                    ),
-                  ),
+                  Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+                  Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
                   SizedBox(width: 30),
                 ],
               ),
@@ -457,6 +562,28 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
             SizedBox(height: 12),
             Obx(() => Column(
               children: [
+                if (controller.useItemMaster.value && controller.itemList.isEmpty)
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    margin: EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.orange.shade700),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No items available. Switch to manual entry or add items to your inventory first.',
+                            style: TextStyle(color: Colors.orange.shade800),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ...controller.purchaseItems.asMap().entries.map((entry) {
                   int index = entry.key;
                   PurchaseItem item = entry.value;
@@ -478,6 +605,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     ),
                     child: Column(
                       children: [
+                        // Row 1: Item Name + Price + Qty
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -495,67 +623,199 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                     ),
                                   ),
                                   SizedBox(height: 8),
-                                  Container(
-                                    height: 40,
-                                    child: TextFormField(
-                                      initialValue: item.itemName,
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter item name',
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
-                                        ),
-                                      ),
-                                      onChanged: (value) {
-                                        controller.updateItem(index, itemName: value);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Price',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Container(
-                                    height: 40,
-                                    child: TextFormField(
-                                      initialValue: item.purchasePrice.toStringAsFixed(2),
-                                      textAlign: TextAlign.center,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
-                                        ),
-                                      ),
-                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                      onChanged: (value) {
-                                        double? price = double.tryParse(value);
-                                        if (price != null && price >= 0) {
-                                          controller.updateItem(index, purchasePrice: price);
+                                  if (controller.useItemMaster.value)
+                                    Builder(
+                                      builder: (context) {
+                                        Item? currentItem;
+                                        try {
+                                          currentItem = controller.itemList.firstWhere(
+                                                  (i) => i.itemId == item.itemId);
+                                        } catch (e) {
+                                          currentItem = null;
                                         }
+
+                                        final isInactive = currentItem != null &&
+                                            !(currentItem.isActive ?? true);
+
+                                        if (controller.isEditMode.value &&
+                                            (isInactive || currentItem == null) &&
+                                            item.itemName.isNotEmpty) {
+                                          return Container(
+                                            height: 40,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 10),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                  color: Colors.grey.shade300),
+                                              borderRadius:
+                                              BorderRadius.circular(8),
+                                              color: Colors.grey.shade50,
+                                            ),
+                                            child: Text(
+                                              item.itemName,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade700,
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        final activeItems = controller.itemList
+                                            .where((i) => i.isActive == true)
+                                            .toList();
+
+                                        Item? selectedItem;
+                                        try {
+                                          selectedItem = activeItems.firstWhere(
+                                                  (element) =>
+                                              element.itemId == item.itemId);
+                                        } catch (e) {
+                                          selectedItem = null;
+                                        }
+
+                                        return Container(
+                                          height: 40,
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                                color: Colors.grey.shade300),
+                                            borderRadius:
+                                            BorderRadius.circular(8),
+                                          ),
+                                          child: DropdownButton<Item>(
+                                            value: selectedItem,
+                                            isExpanded: true,
+                                            hint: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 8),
+                                              child: Text('Select Item',
+                                                  style:
+                                                  TextStyle(fontSize: 14)),
+                                            ),
+                                            underline: SizedBox(),
+                                            icon: Padding(
+                                              padding: EdgeInsets.only(right: 8),
+                                              child: Icon(
+                                                  Icons.arrow_drop_down,
+                                                  size: 20),
+                                            ),
+                                            items: [
+                                              DropdownMenuItem(
+                                                value: null,
+                                                child: Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 8),
+                                                  child: Text('Select Item',
+                                                      style:
+                                                      TextStyle(fontSize: 14)),
+                                                ),
+                                              ),
+                                              ...activeItems.map((item) {
+                                                return DropdownMenuItem(
+                                                  value: item,
+                                                  child: Padding(
+                                                    padding: EdgeInsets.symmetric(
+                                                        horizontal: 8),
+                                                    child: Text(
+                                                      item.itemName,
+                                                      style:
+                                                      TextStyle(fontSize: 14),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ],
+                                            onChanged: (selectedItem) {
+                                              if (selectedItem != null) {
+                                                controller.selectItemForIndex(
+                                                    index, selectedItem);
+                                              }
+                                            },
+                                          ),
+                                        );
                                       },
                                     ),
-                                  ),
+                                  if (!controller.useItemMaster.value)
+                                    Container(
+                                      height: 40,
+                                      child: TextFormField(
+                                        initialValue: item.itemName,
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter item name',
+                                          contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          border: OutlineInputBorder(
+                                              borderRadius:
+                                              BorderRadius.circular(8)),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(8),
+                                            borderSide: BorderSide(
+                                                color: AppColors.tealColor,
+                                                width: 2),
+                                          ),
+                                        ),
+                                        onChanged: (value) {
+                                          controller.updateItem(
+                                            index,
+                                            itemName: value,
+                                            itemId: '',
+                                          );
+                                        },
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
                             SizedBox(width: 12),
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Price',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600),
+                            ),
+                            SizedBox(height: 4),
+                            Container(
+                              height: 40,
+                              child: TextFormField(
+                                controller: controller.getPriceController(index, initialValue: item.purchasePrice),
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 8),
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(8)),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                        color: AppColors.tealColor,
+                                        width: 2),
+                                  ),
+                                ),
+                                keyboardType: TextInputType
+                                    .numberWithOptions(decimal: true),
+                                onChanged: (value) {
+                                  double? price = double.tryParse(value);
+                                  if (price != null && price >= 0) {
+                                    controller.updateItem(index,
+                                        purchasePrice: price);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                            SizedBox(width: 12),
+
                             Expanded(
                               flex: 1,
                               child: Column(
@@ -572,22 +832,49 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                   Container(
                                     height: 40,
                                     child: TextFormField(
-                                      initialValue: item.quantity.toString(),
+                                      /// ✅ USE CONTROLLER (same as Challan screen)
+                                     // controller: controller.qtyControllers[index],
                                       textAlign: TextAlign.center,
                                       decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 8,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                          borderSide: BorderSide(
+                                            color: AppColors.tealColor,
+                                            width: 2,
+                                          ),
                                         ),
                                       ),
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                                       onChanged: (value) {
-                                        int? qty = int.tryParse(value);
-                                        if (qty != null && qty > 0) {
-                                          controller.updateItem(index, quantity: qty);
+                                        double? qty = double.tryParse(value);
+                                        if (qty == null || qty <= 0) {
+                                          return; // Don't show error on empty field
                                         }
+
+                                        // Validate quantity
+                                        final (isValid, errorMessage) =
+                                        controller.validateQuantity(item.unit, qty);
+
+                                        if (!isValid) {
+                                          Get.snackbar(
+                                            "Invalid Quantity",
+                                            errorMessage ?? "Invalid quantity value",
+                                            snackPosition: SnackPosition.BOTTOM,
+                                            backgroundColor: Colors.orange,
+                                            duration: Duration(seconds: 2),
+                                          );
+                                          return;
+                                        }
+
+                                        // ✅ Pass quantity as double
+                                        controller.updateItem(index, quantity: qty);
                                       },
                                     ),
                                   ),
@@ -600,8 +887,10 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                 child: Padding(
                                   padding: EdgeInsets.only(top: 20, left: 5),
                                   child: IconButton(
-                                    onPressed: () => controller.removeItem(index),
-                                    icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                                    onPressed: () =>
+                                        controller.removeItem(index),
+                                    icon: Icon(Icons.delete,
+                                        color: Colors.red, size: 20),
                                     padding: EdgeInsets.zero,
                                     constraints: BoxConstraints(),
                                   ),
@@ -609,24 +898,117 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               ),
                           ],
                         ),
-                        SizedBox(height: 8),
-                        Container(
-                          height: 40,
-                          child: TextFormField(
-                            initialValue: item.unit,
-                            decoration: InputDecoration(
-                              labelText: 'Unit (e.g., pcs, kg, ltr)',
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        SizedBox(height: 12),
+                        // Row 2: GST + Unit (on same row)
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'GST %',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Container(
+                                    height: 40,
+                                    child: TextFormField(
+                                      // key: ValueKey('gst_$index'),  // ✅ Important: Unique key
+                                      // initialValue: item.gstRate.toString(),
+                                      // focusNode: controller.gstFocusNodes[index],
+                                      controller: controller.getGstController(index, initialValue: item.gstRate),
+
+                                      textAlign: TextAlign.center,
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(8)),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                              color: AppColors.tealColor,
+                                              width: 2),
+                                        ),
+                                      ),
+                                      keyboardType: TextInputType
+                                          .numberWithOptions(decimal: true),
+                                      onChanged: (value) {
+                                        double? gst = double.tryParse(value);
+                                        if (gst != null &&
+                                            gst >= 0 &&
+                                            gst <= 100) {
+                                          controller.updateItem(index,
+                                              gstRate: gst);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            onChanged: (value) {
-                              controller.updateItem(index, unit: value);
-                            },
-                          ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Unit',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Container(
+                                    height: 40,
+                                    child: DropdownButtonFormField<String>(
+                                      value: item.unit.isNotEmpty &&
+                                          controller.unitOptions
+                                              .contains(item.unit)
+                                          ? item.unit
+                                          : controller.unitOptions.first,
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(8)),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                              color: AppColors.tealColor,
+                                              width: 2),
+                                        ),
+                                      ),
+                                      items: controller.unitOptions.map((unit) {
+                                        return DropdownMenuItem(
+                                          value: unit,
+                                          child: Text(unit,
+                                              style: TextStyle(fontSize: 12)),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          controller.updateItem(index,
+                                              unit: value);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -649,6 +1031,35 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     ),
                   ),
                 ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.tealColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.tealColor.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Items:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.tealColor,
+                        ),
+                      ),
+                      Text(
+                        '${controller.purchaseItems.length}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.tealColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             )),
           ],
@@ -656,6 +1067,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
       ),
     );
   }
+
+  // Replace the _buildCalculationsSection() method in PurchaseEntryScreen:
 
   Widget _buildCalculationsSection() {
     return Card(
@@ -680,6 +1093,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                 ),
               ],
             ),
+
             SizedBox(height: 16),
             Obx(() => Column(
               children: [
@@ -701,34 +1115,102 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               ),
             ),
             SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() => Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(12),
+
+            Obx(() => Container(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButton<String>(
+                value: controller.paymentStatus.value,
+                isExpanded: true,
+                underline: SizedBox(),
+                items: [
+                  DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                  DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                  DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    controller.updatePaymentStatus(value);
+                  }
+                },
+              ),
+            )),
+
+            // ✅ UPDATED: Changed "Received Amount" to "Paid Amount"
+            Obx(() {
+              if (controller.paymentStatus.value == 'Partial') {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 12),
+                    Text(
+                      "Paid Amount",  // ✅ CHANGED
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
+                        fontSize: 14,
+                      ),
                     ),
-                    child: DropdownButton<String>(
-                      value: controller.paymentStatus.value,
-                      isExpanded: true,
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                        DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                        DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          controller.updatePaymentStatus(value);
-                        }
-                      },
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: controller.paidAmountController,  // ✅ CHANGED
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        prefixText: "₹ ",
+                        hintText: "Enter paid amount",  // ✅ CHANGED
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onChanged: (value) => controller.updatePaidAmount(value),  // ✅ CHANGED
                     ),
-                  )),
-                ),
-              ],
-            ),
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("Paid:", style: TextStyle(fontWeight: FontWeight.w600)),  // ✅ CHANGED
+                              Text(
+                                "₹${AppUtil.formatCurrency(controller.paidAmount.value)}",  // ✅ CHANGED
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("Pending:", style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                "₹${AppUtil.formatCurrency(controller.pendingAmount.value)}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
           ],
         ),
       ),

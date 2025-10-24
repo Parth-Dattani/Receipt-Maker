@@ -1869,6 +1869,8 @@ class GoogleSheetService {
   static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
   static const inventoryTransactionSheetName = "InventoryTransactions"; // Create this sheet in Google Sheets
 
+  static const purchaseSheetName = "Purchase";
+  static const purchaseItemSheetName = "PurchaseItems";
 
   static List<String>? _cachedHeaders;
   static final Map<String, List<ChallanItem>> _challanCache = {};
@@ -2614,6 +2616,76 @@ class GoogleSheetService {
   }
 
 
+  ///it is Working 17-10 10:34 i just Change For inventory
+  // static Future<void> updateInvoice(
+  //     Map<String, dynamic> invoiceData, String userId) async {
+  //   print("🔄 Updating invoice in Google Sheet...");
+  //
+  //   try {
+  //     final client = await _getAuthClient();
+  //     final sheetsApi = SheetsApi(client);
+  //     const targetSheetName = "Invoice";
+  //
+  //     // 1. Get headers
+  //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$targetSheetName!1:1",
+  //     );
+  //     final headers = headerResponse.values![0];
+  //
+  //     // 2. Find row number
+  //     final allRows = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$targetSheetName!A:Z",
+  //     );
+  //
+  //     int rowIndex = -1;
+  //     List<dynamic>? oldRow;
+  //
+  //     for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+  //       final row = allRows.values![i];
+  //       if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
+  //         rowIndex = i + 1;
+  //         oldRow = row;
+  //         break;
+  //       }
+  //     }
+  //
+  //     if (rowIndex == -1) {
+  //       throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
+  //     }
+  //
+  //     // 3. Merge values
+  //     final mergedRow = _prepareInvoiceUpdateRow(
+  //       invoiceData,
+  //       userId,
+  //       headers,
+  //       oldRow ?? [],
+  //     );
+  //
+  //     // 4. Update row
+  //     final valueRange = ValueRange.fromJson({
+  //       "values": [mergedRow],
+  //     });
+  //
+  //     await sheetsApi.spreadsheets.values.update(
+  //       valueRange,
+  //       spreadsheetId,
+  //       "$targetSheetName!A$rowIndex:Z$rowIndex",
+  //       valueInputOption: "USER_ENTERED",
+  //     );
+  //
+  //     print("✅ Invoice updated at row $rowIndex");
+  //   } catch (e, st) {
+  //     print("❌ Error updating invoice: $e\n$st");
+  //     throw Exception("Failed to update invoice: ${e.toString()}");
+  //   }
+  // }
+
+
+
+
+
   static Future<void> updateInvoice(
       Map<String, dynamic> invoiceData, String userId) async {
     print("🔄 Updating invoice in Google Sheet...");
@@ -2628,7 +2700,13 @@ class GoogleSheetService {
         spreadsheetId,
         "$targetSheetName!1:1",
       );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No headers found in sheet");
+      }
+
       final headers = headerResponse.values![0];
+      print("📋 Sheet Headers: $headers");
 
       // 2. Find row number
       final allRows = await sheetsApi.spreadsheets.values.get(
@@ -2637,13 +2715,11 @@ class GoogleSheetService {
       );
 
       int rowIndex = -1;
-      List<dynamic>? oldRow;
 
       for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
         final row = allRows.values![i];
         if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
-          rowIndex = i + 1;
-          oldRow = row;
+          rowIndex = i + 1; // Google Sheets is 1-based
           break;
         }
       }
@@ -2652,17 +2728,82 @@ class GoogleSheetService {
         throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
       }
 
-      // 3. Merge values
-      final mergedRow = _prepareInvoiceUpdateRow(
-        invoiceData,
-        userId,
-        headers,
-        oldRow ?? [],
-      );
+      print("🎯 Found invoice at row $rowIndex");
+
+      // 3. Build complete row data
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+
+      List<dynamic> rowData = [];
+
+      for (var header in headers) {
+        String headerLower = header.toString().toLowerCase().trim();
+
+        // Map each header to the correct field
+        String? value;
+
+        if (headerLower.contains('invoiceid')) {
+          value = invoiceData['invoiceId']?.toString();
+        } else if (headerLower.contains('customerid')) {
+          value = invoiceData['customerId']?.toString();
+        } else if (headerLower.contains('customername')) {
+          value = invoiceData['customerName']?.toString();
+        } else if (headerLower.contains('customeremail')) {
+          value = invoiceData['customerEmail']?.toString();
+        } else if (headerLower == 'mobile') {
+          value = invoiceData['mobile']?.toString();
+        } else if (headerLower.contains('customeraddress')) {
+          value = invoiceData['customerAddress']?.toString();
+        } else if (headerLower.contains('issuedate')) {
+          if (invoiceData['issueDate'] != null) {
+            try {
+              DateTime date = invoiceData['issueDate'] is String
+                  ? DateTime.parse(invoiceData['issueDate'])
+                  : invoiceData['issueDate'] as DateTime;
+              value = _dateFormatter.format(date);
+            } catch (e) {
+              value = invoiceData['issueDate']?.toString();
+            }
+          }
+        } else if (headerLower.contains('duedate')) {
+          if (invoiceData['dueDate'] != null) {
+            try {
+              DateTime date = invoiceData['dueDate'] is String
+                  ? DateTime.parse(invoiceData['dueDate'])
+                  : invoiceData['dueDate'] as DateTime;
+              value = _dateFormatter.format(date);
+            } catch (e) {
+              value = invoiceData['dueDate']?.toString();
+            }
+          }
+        } else if (headerLower == 'subtotal') {
+          value = invoiceData['subtotal']?.toString();
+        } else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
+          value = invoiceData['gstAmount']?.toString();
+        } else if (headerLower.contains('totalamount')) {
+          value = invoiceData['totalAmount']?.toString();
+        } else if (headerLower.contains('receivedamount')) {
+          value = invoiceData['receivedAmount']?.toString();
+        } else if (headerLower.contains('pendingamount')) {
+          value = invoiceData['pendingAmount']?.toString();
+        } else if (headerLower == 'status') {
+          value = invoiceData['status']?.toString();
+        } else if (headerLower == 'notes') {
+          value = invoiceData['notes']?.toString();
+        } else if (headerLower.contains('userid')) {
+          value = userId;
+        } else {
+          // Try direct match
+          value = invoiceData[header.toString()]?.toString();
+        }
+
+        rowData.add(value ?? '');
+      }
+
+      print("📝 Prepared row data: $rowData");
 
       // 4. Update row
       final valueRange = ValueRange.fromJson({
-        "values": [mergedRow],
+        "values": [rowData],
       });
 
       await sheetsApi.spreadsheets.values.update(
@@ -2672,7 +2813,7 @@ class GoogleSheetService {
         valueInputOption: "USER_ENTERED",
       );
 
-      print("✅ Invoice updated at row $rowIndex");
+      print("✅ Invoice updated successfully at row $rowIndex");
     } catch (e, st) {
       print("❌ Error updating invoice: $e\n$st");
       throw Exception("Failed to update invoice: ${e.toString()}");
@@ -5027,15 +5168,15 @@ class GoogleSheetService {
 
   ///Inventeroty 16/10
 
-  // Add these Purchase-related methods to GoogleSheetService class
 
-  static const purchaseSheetName = "Purchase"; // your sheet/tab name
-  static const purchaseItemSheetName = "PurchaseItems"; // your sheet/tab name
 
   /// Add a new purchase to Google Sheet
   // Add these methods to your GoogleSheetService class
 
   /// Add purchase with dynamic header creation
+  // Add to or replace in GoogleSheetService class
+
+  /// Enhanced addPurchase with all fields (matching Invoice structure)
   static Future<void> addPurchase(dynamic purchaseData, String userId) async {
     print("🔄 Adding Purchase to Google Sheet...");
 
@@ -5043,7 +5184,28 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // Try to get existing headers
+      // Define complete headers matching Invoice structure
+      final expectedHeaders = [
+        'purchaseId',
+        'vendorId',
+        'vendorName',
+        'vendorEmail',
+        'vendorMobile',
+        'vendorAddress',
+        'purchaseDate',
+        'dueDate',  // ✅ NEW
+        'subtotal',
+        'gstRate',
+        'gstAmount',
+        'totalAmount',
+        'paidAmount',  // ✅ NEW
+        'pendingAmount',  // ✅ NEW
+        'paymentStatus',
+        'notes',
+        'userId',
+      ];
+
+      // Get or create headers
       final headerResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
         "$purchaseSheetName!1:1",
@@ -5052,42 +5214,17 @@ class GoogleSheetService {
       List<dynamic> headers = [];
 
       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
-        print("⚠️ No header row found in sheet '$purchaseSheetName'. Creating dynamically...");
-
-        // Create headers from your purchaseData keys
-        final sampleData = purchaseData is Map<String, dynamic>
-            ? purchaseData
-            : {
-          'purchaseId': '',
-          'vendorId': '',
-          'vendorName': '',
-          'vendorEmail': '',
-          'vendorMobile': '',
-          'vendorAddress': '',
-          'purchaseDate': '',
-          'subtotal': '',
-          'gstAmount': '',
-          'totalAmount': '',
-          'paymentStatus': '',
-          'notes': '',
-          'userId': '',
-        };
-
-        headers = sampleData.keys.toList();
-
-        // Add header row to sheet
-        final headerRange = ValueRange.fromJson({
-          "values": [headers],
-        });
+        print("⚠️ Creating headers for Purchase sheet...");
+        headers = expectedHeaders;
 
         await sheetsApi.spreadsheets.values.update(
-          headerRange,
+          ValueRange.fromJson({"values": [headers]}),
           spreadsheetId,
           "$purchaseSheetName!A1",
           valueInputOption: "USER_ENTERED",
         );
 
-        print("✅ Header row created for '$purchaseSheetName'");
+        print("✅ Headers created");
       } else {
         headers = headerResponse.values![0];
       }
@@ -5121,6 +5258,9 @@ class GoogleSheetService {
         if (purchaseData.containsKey('purchaseDate')) {
           purchaseData['purchaseDate'] = _formatDate(purchaseData['purchaseDate']);
         }
+        if (purchaseData.containsKey('dueDate')) {
+          purchaseData['dueDate'] = _formatDate(purchaseData['dueDate']);
+        }
         rowsToSend.add({...purchaseData, "userId": userId});
       } else if (purchaseData is PurchaseEntry) {
         final map = {
@@ -5131,17 +5271,19 @@ class GoogleSheetService {
           'vendorMobile': purchaseData.vendorMobile,
           'vendorAddress': purchaseData.vendorAddress,
           'purchaseDate': _formatDate(purchaseData.purchaseDate),
+          'dueDate': _formatDate(purchaseData.dueDate),  // ✅ NEW
           'subtotal': purchaseData.subtotal,
+          'gstRate': purchaseData.gstRate,
           'gstAmount': purchaseData.gstAmount,
           'totalAmount': purchaseData.totalAmount,
+          'paidAmount': purchaseData.paidAmount ?? 0.0,  // ✅ NEW
+          'pendingAmount': purchaseData.pendingAmount ?? purchaseData.totalAmount,  // ✅ NEW
           'paymentStatus': purchaseData.paymentStatus,
           'notes': purchaseData.notes,
           'userId': userId,
         };
         rowsToSend.add(map);
       }
-
-      print("Prepared rows: ${jsonEncode(rowsToSend)}");
 
       // Convert rows to ordered values matching headers
       List<List<dynamic>> values = [];
@@ -5150,14 +5292,12 @@ class GoogleSheetService {
         List<dynamic> rowData = [];
         for (var header in headers) {
           final key = header.toString().trim().toLowerCase();
-          rowData.add(normalized[key] ?? '');
+          rowData.add(normalized[key]?.toString() ?? '');
         }
         values.add(rowData);
       }
 
-      final valueRange = ValueRange.fromJson({
-        "values": values,
-      });
+      final valueRange = ValueRange.fromJson({"values": values});
 
       final response = await sheetsApi.spreadsheets.values.append(
         valueRange,
@@ -5166,11 +5306,7 @@ class GoogleSheetService {
         valueInputOption: "USER_ENTERED",
       );
 
-      if (response.updates?.updatedRows != null) {
-        print("✅ Purchase(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
-      } else {
-        print("✅ Purchase(s) added successfully.");
-      }
+      print("✅ Purchase added successfully");
     } catch (e) {
       print("❌ Error adding Purchase: $e");
       throw Exception("Failed to add Purchase: ${e.toString()}");
@@ -5351,8 +5487,12 @@ class GoogleSheetService {
   }
 
   /// Update purchase
+  // ✅ In your GoogleSheetService.updatePurchase method, ensure this mapping exists:
+
+// Around line 2800-2900 in your GoogleSheetService
   static Future<void> updatePurchase(Map<String, dynamic> purchaseData, String userId) async {
     print("🔄 Updating Purchase in Google Sheet...");
+    print("📋 Data to update: ${purchaseData.keys.toList()}");
 
     try {
       final client = await _getAuthClient();
@@ -5369,6 +5509,8 @@ class GoogleSheetService {
       }
 
       final headers = response.values![0];
+      print("📋 Sheet headers: $headers");
+
       final purchaseIdIndex = headers.indexOf("purchaseId");
       final userIdIndex = headers.indexOf("userId");
 
@@ -5386,6 +5528,7 @@ class GoogleSheetService {
             row[userIdIndex].toString() == userId) {
           rowToUpdate = i + 1;
           existingRow = row;
+          print("✅ Found purchase at row $rowToUpdate");
           break;
         }
       }
@@ -5423,27 +5566,81 @@ class GoogleSheetService {
             break;
           case 'purchasedate':
             try {
-              if (purchaseData["purchaseDate"] is DateTime) {
-                normalized[key] =
-                    _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+              if (purchaseData["purchaseDate"] != null) {
+                if (purchaseData["purchaseDate"] is DateTime) {
+                  normalized[key] = _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+                } else if (purchaseData["purchaseDate"] is String) {
+                  // Try to parse ISO string
+                  try {
+                    final date = DateTime.parse(purchaseData["purchaseDate"]);
+                    normalized[key] = _dateFormatter.format(date);
+                  } catch (e) {
+                    normalized[key] = purchaseData["purchaseDate"];
+                  }
+                } else {
+                  normalized[key] = purchaseData["purchaseDate"].toString();
+                }
               } else {
-                normalized[key] = purchaseData["purchaseDate"] ?? '';
+                normalized[key] = '';
               }
             } catch (e) {
-              normalized[key] = purchaseData["purchaseDate"] ?? '';
+              print("⚠️ Error formatting purchaseDate: $e");
+              normalized[key] = purchaseData["purchaseDate"]?.toString() ?? '';
+            }
+            break;
+          case 'duedate':
+            try {
+              if (purchaseData["dueDate"] != null) {
+                if (purchaseData["dueDate"] is DateTime) {
+                  normalized[key] = _dateFormatter.format(purchaseData["dueDate"] as DateTime);
+                } else if (purchaseData["dueDate"] is String) {
+                  try {
+                    final date = DateTime.parse(purchaseData["dueDate"]);
+                    normalized[key] = _dateFormatter.format(date);
+                  } catch (e) {
+                    normalized[key] = purchaseData["dueDate"];
+                  }
+                } else {
+                  normalized[key] = purchaseData["dueDate"].toString();
+                }
+              } else {
+                normalized[key] = '';
+              }
+            } catch (e) {
+              print("⚠️ Error formatting dueDate: $e");
+              normalized[key] = purchaseData["dueDate"]?.toString() ?? '';
             }
             break;
           case 'subtotal':
-            normalized[key] = purchaseData["subtotal"] ?? 0;
+            normalized[key] = purchaseData["subtotal"]?.toString() ?? '0';
+            print("   Subtotal: ${normalized[key]}");
+            break;
+          case 'gstrate':
+            normalized[key] = purchaseData["gstRate"]?.toString() ?? '0';
+            print("   GST Rate: ${normalized[key]}");
             break;
           case 'gstamount':
-            normalized[key] = purchaseData["gstAmount"] ?? 0;
+            normalized[key] = purchaseData["gstAmount"]?.toString() ?? '0';
+            print("   GST Amount: ${normalized[key]}");
             break;
           case 'totalamount':
-            normalized[key] = purchaseData["totalAmount"] ?? 0;
+            normalized[key] = purchaseData["totalAmount"]?.toString() ?? '0';
+            print("   Total Amount: ${normalized[key]}");
+            break;
+          case 'paidamount':
+          // ✅ CRITICAL: This must be updated
+            normalized[key] = purchaseData["paidAmount"]?.toString() ?? '0';
+            print("   ✅ NEW Paid Amount: ${normalized[key]}");
+            break;
+          case 'pendingamount':
+          // ✅ CRITICAL: This must be updated
+            normalized[key] = purchaseData["pendingAmount"]?.toString() ?? '0';
+            print("   ✅ NEW Pending Amount: ${normalized[key]}");
             break;
           case 'paymentstatus':
+          // ✅ CRITICAL: This must be updated
             normalized[key] = purchaseData["paymentStatus"] ?? 'Pending';
+            print("   ✅ NEW Status: ${normalized[key]}");
             break;
           case 'notes':
             normalized[key] = purchaseData["notes"] ?? '';
@@ -5470,6 +5667,8 @@ class GoogleSheetService {
         rowData.add(normalized[key]?.toString() ?? '');
       }
 
+      print("📤 Updating row with data: $rowData");
+
       final range =
           "$purchaseSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
 
@@ -5485,8 +5684,9 @@ class GoogleSheetService {
       );
 
       print("✅ Purchase updated successfully at row $rowToUpdate");
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("❌ Error updating Purchase: $e");
+      print("Stack trace: $stackTrace");
       rethrow;
     }
   }
