@@ -30,6 +30,7 @@ class Messages extends Translations {
       'to_date': 'To Date',
       'select_date': 'Select date',
       'export_to_excel': 'Export to Excel',
+      'export': 'Export',
       'no_company_selected': 'No Company Selected',
       'quick_actions': 'Quick Actions',
       'add_customer': 'Add Customer',
@@ -228,6 +229,11 @@ class Messages extends Translations {
       'purchase' : 'Purchase',
       'purchase_summary': 'Purchase Summary',
       'total_purchases': 'Total Purchases',
+
+      'inventory_management': 'Inventory Management',
+      'sales_orders': 'Sales & Orders',
+      'settings': 'Settings',
+      'company_management': 'Company Management',
     },
 
     gujaratiCode: {
@@ -254,6 +260,7 @@ class Messages extends Translations {
       'to_date': 'તારીખ સુધી',
       'select_date': 'તારીખ પસંદ કરો',
       'export_to_excel': 'Excel માં નિકાસ કરો',
+      'export': 'નિકાસ કરો',
       'no_company_selected': 'કોઈ કંપની પસંદ નથી',
       'quick_actions': 'ઝડપી ક્રિયાઓ',
       'add_customer': 'ગ્રાહક ઉમેરો',
@@ -460,6 +467,11 @@ class Messages extends Translations {
       'purchase' : 'ખરીદી',
       'purchase_summary': 'ખરીદી સારાંશ',
       'total_purchases': 'કુલ ખરીદી',
+
+      'inventory_management': 'ઇન્વેન્ટરી વ્યવસ્થાપન',
+      'sales_orders': 'વેચાણ અને ઓર્ડર',
+      'settings': 'સેટિંગ્સ',
+      'company_management': 'કંપની વ્યવસ્થાપન',
     },
   };
 }

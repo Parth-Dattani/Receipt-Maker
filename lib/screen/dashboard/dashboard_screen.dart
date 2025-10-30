@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
+import '../../utils/calculations.dart';
 import '../screen.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -693,7 +694,7 @@ class DashboardScreen extends GetView<DashboardController> {
                                   Icon(Icons.download_rounded, size: 24),
                                   SizedBox(width: 12),
                                   Text(
-                                    "export_to_excel".tr,
+                                    "export".tr,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -801,6 +802,310 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
+//   Widget buildDrawer() {
+//     return Drawer(
+//       child: Column(
+//         children: [
+//           // Drawer Header with Company Info
+//           Obx(() => DrawerHeader(
+//             decoration: BoxDecoration(
+//               gradient: LinearGradient(
+//                 colors: [  AppColors.tealColor,
+//                   AppColors.tealColor.withOpacity(0.7)],
+//                 begin: Alignment.topLeft,
+//                 end: Alignment.bottomRight,
+//               ),
+//             ),
+//             child: Container(
+//               width: double.infinity,
+//               child: Column(
+//                 crossAxisAlignment: CrossAxisAlignment.start,
+//                 children: [
+//                   CircleAvatar(
+//                     radius: 30,
+//                     backgroundColor: Colors.white.withOpacity(0.3),
+//                     child: Icon(
+//                       Icons.business,
+//                       size: 35,
+//                       color: Colors.white,
+//                     ),
+//                   ),
+//                   SizedBox(height: 12),
+//                   Text(
+//                     controller.companyName.isNotEmpty
+//                         ? controller.companyName
+//                         : "No Company Selected",
+//                     style: TextStyle(
+//                       color: Colors.white,
+//                       fontSize: 18,
+//                       fontWeight: FontWeight.bold,
+//                     ),
+//                   ),
+//                   if (controller.hasMultipleCompanies.value)
+//                     GestureDetector(
+//                       onTap: controller.showCompanySwitcher,
+//                       child: Container(
+//                         margin: EdgeInsets.only(top: 4),
+//                         padding: EdgeInsets.symmetric(
+//                             horizontal: 8, vertical: 4),
+//                         decoration: BoxDecoration(
+//                           color: Colors.white.withOpacity(0.2),
+//                           borderRadius: BorderRadius.circular(12),
+//                         ),
+//                         child: Row(
+//                           mainAxisSize: MainAxisSize.min,
+//                           children: [
+//                             Text(
+//                               "Switch Company",
+//                               style: TextStyle(
+//                                 color: Colors.white,
+//                                 fontSize: 12,
+//                               ),
+//                             ),
+//                             SizedBox(width: 4),
+//                             Icon(
+//                               Icons.swap_horiz,
+//                               color: Colors.white,
+//                               size: 16,
+//                             ),
+//                           ],
+//                         ),
+//                       ),
+//                     ),
+//                 ],
+//               ),
+//             ),
+//           )),
+//
+//           // Drawer Items
+//           Expanded(
+//             child: ListView(
+//               padding: EdgeInsets.zero,
+//               children: [
+//
+//                 ListTile(
+//                   leading: Icon(Icons.receipt_long, color: Colors.blue),
+//                   title: Text("purchase".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToInventory();
+//                   },
+//                 ),
+//                 ListTile(
+//                   leading: Icon(Icons.people, color: Colors.orange),
+//                   title: Text("customers".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToCustomerList();
+//                   },
+//                 ),
+//
+//                 ListTile(
+//                   leading: Icon(Icons.analytics, color: Colors.purple),
+//                   title: Text("challans".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToChallanList();
+//                   },
+//                 ),
+//                 ListTile(
+//                   leading: Icon(Icons.analytics, color: Colors.purple),
+//                   title: Text("Purchase List".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToPurchaseList();
+//                   },
+//                 ),
+//                 ListTile(
+//                   leading: Icon(Icons.receipt_outlined, color: Colors.indigoAccent),
+//                   title: Text("quotations".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToQuotList();
+//                   },
+//                 ),
+//
+//                 ListTile(
+//                   leading: Icon(Icons.cases_outlined, color: Colors.indigoAccent),
+//                   title: Text("payment".tr),
+//                   onTap: () {
+//                     Get.back();
+//                     controller.navigateToPaymentDetails();
+//                   },
+//                 ),
+//
+//
+//                 /// 🔹 Challan Toggle
+//                 Obx(() => ListTile(
+//                   leading: Icon(Icons.list_alt, color: Colors.green),
+//                   title: Text("enable_challan".tr),
+//                   trailing: Switch(
+//                     value: AppConstants.isChallan.value,
+//                     onChanged: (value) async {
+//                       await controller.updateCompanyPreference('isChallanEnabled', value);
+//                     },
+//                     activeColor: Colors.white,                // thumb when active
+//                     activeTrackColor: Colors.green.shade600,  // track when active
+//                     inactiveThumbColor: Colors.white,         // thumb when inactive
+//                     inactiveTrackColor: Colors.grey.shade400, // track when inactive
+//                     splashRadius: 28,                         // ripple effect
+//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+//                       if (states.contains(WidgetState.selected)) {
+//                         return Icon(Icons.check, color: Colors.green); // ✅ when ON
+//                       }
+//                       return Icon(Icons.close, color: Colors.grey);    // ❌ when OFF
+//                     }),
+//                   ),
+//                 )),
+//
+// // 🔹 GST Toggle
+//                 Obx(() => ListTile(
+//                   leading: Icon(Icons.attach_money, color: Colors.teal),
+//                   title: Text("enable_gst".tr),
+//                   trailing: Switch(
+//                     value: AppConstants.withGST.value,
+//                     onChanged: (value) async {
+//                       await controller.updateCompanyPreference('isGstEnabled', value);
+//                     },
+//                     activeColor: Colors.white,
+//                     activeTrackColor: Colors.teal.shade600,
+//                     inactiveThumbColor: Colors.white,
+//                     inactiveTrackColor: Colors.grey.shade400,
+//                     splashRadius: 28,
+//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+//                       if (states.contains(WidgetState.selected)) {
+//                         return Icon(Icons.check, color: Colors.teal);
+//                       }
+//                       return Icon(Icons.close, color: Colors.grey);
+//                     }),
+//                   ),
+//                 )),
+//
+//
+//                 ///Language
+//                 Obx(() => ListTile(
+//                   leading: Icon(Icons.language, color: Colors.teal),
+//                   title: Text('enable_gujarati'.tr), // 🔹 Use .tr for translation
+//                   trailing: Switch(
+//                     value: AppConstants.isGujarati.value,
+//                     onChanged: (value) async {
+//                       await controller.updateLanguagePreference(value);
+//                     },
+//                     activeColor: Colors.white,
+//                     activeTrackColor: Colors.teal.shade600,
+//                     inactiveThumbColor: Colors.white,
+//                     inactiveTrackColor: Colors.grey.shade400,
+//                     splashRadius: 28,
+//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+//                       if (states.contains(WidgetState.selected)) {
+//                         return Icon(Icons.check, color: Colors.teal);
+//                       }
+//                       return Icon(Icons.close, color: Colors.grey);
+//                     }),
+//                   ),
+//                 )),
+//
+//
+//                 Divider(),
+//
+//                 // Company Management Section
+//                 if (controller.hasMultipleCompanies.value)
+//                   ListTile(
+//                     leading: Icon(Icons.swap_horiz, color: Colors.indigo),
+//                     title: Text("Switch Company"),
+//                     onTap: () {
+//                       Get.back();
+//                       controller.showCompanySwitcher();
+//                     },
+//                   ),
+//
+//                 ListTile(
+//                   leading: Icon(Icons.add_business, color: Colors.teal),
+//                   title: Text("edit_company".tr),
+//                   onTap: () {
+//                     // ✅ Use currentCompany instead of companyData
+//                     final data = controller.currentCompany.value;
+//
+//                     if (data != null && controller.companyId.value.isNotEmpty) {
+//                       controller.navigateToEditCompany(data, controller.companyId.value);
+//                     } else {
+//                       Get.snackbar(
+//                         "Error",
+//                         "No active company found to edit.",
+//                         snackPosition: SnackPosition.BOTTOM,
+//                         backgroundColor: Colors.red.shade100,
+//                       );
+//                     }
+//                   },
+//                 ),
+//
+//                 Divider(),
+//
+//                 // ListTile(
+//                 //   leading: Icon(Icons.settings, color: Colors.grey),
+//                 //   title: Text("Settings"),
+//                 //   onTap: () {
+//                 //     Get.back();
+//                 //     controller.navigateToNewChallan();
+//                 //   },
+//                 // ),
+//                 ListTile(
+//                   leading: Icon(Icons.logout, color: Colors.red),
+//                   title: Text(
+//                     "logout".tr,
+//                     style: TextStyle(
+//                       color: Colors.red.shade700,
+//                       fontWeight: FontWeight.bold,
+//                     ),
+//                   ),
+//                   onTap: () async {
+//                     Get.dialog(
+//                       AlertDialog(
+//                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+//                         title: Row(
+//                           children: [
+//                             Icon(Icons.logout, color: Colors.red),
+//                             SizedBox(width: 8),
+//                             Text("confirm_logout".tr),
+//                           ],
+//                         ),
+//                         content: Text(
+//                           "logout_message".tr,
+//                           style: TextStyle(fontSize: 15),
+//                         ),
+//                         actions: [
+//                           TextButton(
+//                             child: Text("cancel".tr, style: TextStyle(color: Colors.grey)),
+//                             onPressed: () => Get.back(),
+//                           ),
+//                           ElevatedButton(
+//                             style: ElevatedButton.styleFrom(
+//                               backgroundColor: Colors.red.shade600,
+//                               foregroundColor: Colors.white,
+//                               shape: RoundedRectangleBorder(
+//                                 borderRadius: BorderRadius.circular(8),
+//                               ),
+//                             ),
+//                             child: Text("logout".tr),
+//                             onPressed: () async {
+//                               Get.back(); // close dialog
+//                               await controller.logout();
+//                             },
+//                           ),
+//                         ],
+//                       ),
+//                     );
+//                   },
+//                 ),
+//
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
   Widget buildDrawer() {
     return Drawer(
       child: Column(
@@ -809,8 +1114,10 @@ class DashboardScreen extends GetView<DashboardController> {
           Obx(() => DrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [  AppColors.tealColor,
-                  AppColors.tealColor.withOpacity(0.7)],
+                colors: [
+                  AppColors.tealColor,
+                  AppColors.tealColor.withOpacity(0.7)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -845,8 +1152,7 @@ class DashboardScreen extends GetView<DashboardController> {
                       onTap: controller.showCompanySwitcher,
                       child: Container(
                         margin: EdgeInsets.only(top: 4),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -876,198 +1182,240 @@ class DashboardScreen extends GetView<DashboardController> {
             ),
           )),
 
-          // Drawer Items
+          // 📋 Drawer Menu Items
           Expanded(
             child: ListView(
-              padding: EdgeInsets.zero,
+              padding: EdgeInsets.only(top: 8, bottom: 20),
               children: [
+                // 📦 Inventory Management Submenu
+                _buildExpansionTile(
+                  icon: Icons.inventory_2,
+                  iconColor: Colors.blue.shade600,
+                  title: "inventory_management".tr,
+                  children: [
+                    _buildSubMenuItem(
+                      icon: Icons.shopping_cart,
+                      iconColor: Colors.blue.shade700,
+                      title: "purchase".tr,
+                      onTap: () {
+                        Get.back();
+                        controller.navigateToInventory();
+                      },
+                    ),
+                    _buildSubMenuItem(
+                      icon: Icons.list_alt,
+                      iconColor: Colors.blue.shade700,
+                      title: "Purchase List",
+                      onTap: () {
+                        Get.back();
+                        controller.navigateToPurchaseList();
+                      },
+                    ),
+                  ],
+                ),
 
-                ListTile(
-                  leading: Icon(Icons.receipt_long, color: Colors.blue),
-                  title: Text("purchase".tr),
+                // 📋 Sales & Orders Submenu
+                _buildExpansionTile(
+                  icon: Icons.receipt_long,
+                  iconColor: Colors.purple.shade600,
+                  title: "sales_orders".tr,
+                  children: [
+                    _buildSubMenuItem(
+                      icon: Icons.note_alt,
+                      iconColor: Colors.purple.shade700,
+                      title: "challans".tr,
+                      onTap: () {
+                        Get.back();
+                        controller.navigateToChallanList();
+                      },
+                    ),
+                    _buildSubMenuItem(
+                      icon: Icons.receipt,
+                      iconColor: Colors.purple.shade700,
+                      title: "invoice".tr,
+                      onTap: () {
+                        Get.back();
+                        controller.navigateToInvoiceList();
+                      },
+                    ),
+                    _buildSubMenuItem(
+                      icon: Icons.request_quote,
+                      iconColor: Colors.purple.shade700,
+                      title: "quotations".tr,
+                      onTap: () {
+                        Get.back();
+                        controller.navigateToQuotList();
+                      },
+                    ),
+                  ],
+                ),
+
+                // 📊 Stock Report (Direct Item)
+                _buildMenuItem(
+                  icon: Icons.assessment,
+                  iconColor: Colors.purple.shade600,
+                  title: "Stock Report",
                   onTap: () {
                     Get.back();
-                    controller.navigateToInventory();
+                    controller.navigateToStockReport();
                   },
                 ),
-                ListTile(
-                  leading: Icon(Icons.people, color: Colors.orange),
-                  title: Text("customers".tr),
+                // 👥 Customers (Direct Item)
+                _buildMenuItem(
+                  icon: Icons.people,
+                  iconColor: Colors.orange.shade600,
+                  title: "customers".tr,
                   onTap: () {
                     Get.back();
                     controller.navigateToCustomerList();
                   },
                 ),
 
-                ListTile(
-                  leading: Icon(Icons.analytics, color: Colors.purple),
-                  title: Text("challans".tr),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToChallanList();
-                  },
-                ),
-
-                ListTile(
-                  leading: Icon(Icons.receipt_outlined, color: Colors.indigoAccent),
-                  title: Text("quotations".tr),
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToQuotList();
-                  },
-                ),
-
-                ListTile(
-                  leading: Icon(Icons.cases_outlined, color: Colors.indigoAccent),
-                  title: Text("payment".tr),
+                // 💰 Payment (Direct Item)
+                _buildMenuItem(
+                  icon: Icons.account_balance_wallet,
+                  iconColor: Colors.indigo.shade600,
+                  title: "payment".tr,
                   onTap: () {
                     Get.back();
                     controller.navigateToPaymentDetails();
                   },
                 ),
 
+                // ━━━━━━━━━━━━━━━━━━━━━
+                Divider(height: 32, thickness: 1),
 
-                /// 🔹 Challan Toggle
-                Obx(() => ListTile(
-                  leading: Icon(Icons.list_alt, color: Colors.green),
-                  title: Text("enable_challan".tr),
-                  trailing: Switch(
-                    value: AppConstants.isChallan.value,
-                    onChanged: (value) async {
-                      await controller.updateCompanyPreference('isChallanEnabled', value);
-                    },
-                    activeColor: Colors.white,                // thumb when active
-                    activeTrackColor: Colors.green.shade600,  // track when active
-                    inactiveThumbColor: Colors.white,         // thumb when inactive
-                    inactiveTrackColor: Colors.grey.shade400, // track when inactive
-                    splashRadius: 28,                         // ripple effect
-                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Icon(Icons.check, color: Colors.green); // ✅ when ON
-                      }
-                      return Icon(Icons.close, color: Colors.grey);    // ❌ when OFF
-                    }),
-                  ),
+                // ⚙️ Settings Section Header
+                _buildSectionHeader("settings".tr),
+
+                // 🔹 Challan Toggle
+                Obx(() => _buildSwitchTile(
+                  icon: Icons.list_alt,
+                  iconColor: Colors.green.shade600,
+                  title: "enable_challan".tr,
+                  value: AppConstants.isChallan.value,
+                  activeColor: Colors.green.shade600,
+                  onChanged: (value) async {
+                    await controller.updateCompanyPreference(
+                        'isChallanEnabled', value);
+                  },
                 )),
 
-// 🔹 GST Toggle
-                Obx(() => ListTile(
-                  leading: Icon(Icons.attach_money, color: Colors.teal),
-                  title: Text("enable_gst".tr),
-                  trailing: Switch(
-                    value: AppConstants.withGST.value,
-                    onChanged: (value) async {
-                      await controller.updateCompanyPreference('isGstEnabled', value);
-                    },
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.teal.shade600,
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: Colors.grey.shade400,
-                    splashRadius: 28,
-                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Icon(Icons.check, color: Colors.teal);
-                      }
-                      return Icon(Icons.close, color: Colors.grey);
-                    }),
-                  ),
+                // 💵 GST Toggle
+                Obx(() => _buildSwitchTile(
+                  icon: Icons.attach_money,
+                  iconColor: Colors.teal.shade600,
+                  title: "enable_gst".tr,
+                  value: AppConstants.withGST.value,
+                  activeColor: Colors.teal.shade600,
+                  onChanged: (value) async {
+                    await controller.updateCompanyPreference(
+                        'isGstEnabled', value);
+                  },
                 )),
 
-
-                ///Language
-                Obx(() => ListTile(
-                  leading: Icon(Icons.language, color: Colors.teal),
-                  title: Text('enable_gujarati'.tr), // 🔹 Use .tr for translation
-                  trailing: Switch(
-                    value: AppConstants.isGujarati.value,
-                    onChanged: (value) async {
-                      await controller.updateLanguagePreference(value);
-                    },
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.teal.shade600,
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: Colors.grey.shade400,
-                    splashRadius: 28,
-                    thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Icon(Icons.check, color: Colors.teal);
-                      }
-                      return Icon(Icons.close, color: Colors.grey);
-                    }),
-                  ),
+                // 🌐 Language Toggle
+                Obx(() => _buildSwitchTile(
+                  icon: Icons.language,
+                  iconColor: Colors.deepPurple.shade600,
+                  title: 'enable_gujarati'.tr,
+                  value: AppConstants.isGujarati.value,
+                  activeColor: Colors.deepPurple.shade600,
+                  onChanged: (value) async {
+                    await controller.updateLanguagePreference(value);
+                  },
                 )),
 
+                // ━━━━━━━━━━━━━━━━━━━━━
+                Divider(height: 32, thickness: 1),
 
-                Divider(),
+                // 🏢 Company Management Section Header
+                _buildSectionHeader("company_management".tr),
 
-                // Company Management Section
+                // Switch Company (Conditional)
                 if (controller.hasMultipleCompanies.value)
-                  ListTile(
-                    leading: Icon(Icons.swap_horiz, color: Colors.indigo),
-                    title: Text("Switch Company"),
+                  _buildMenuItem(
+                    icon: Icons.swap_horiz,
+                    iconColor: Colors.indigo.shade600,
+                    title: "Switch Company",
                     onTap: () {
                       Get.back();
                       controller.showCompanySwitcher();
                     },
                   ),
 
-                ListTile(
-                  leading: Icon(Icons.add_business, color: Colors.teal),
-                  title: Text("edit_company".tr),
+                // Edit Company
+                _buildMenuItem(
+                  icon: Icons.business,
+                  iconColor: Colors.teal.shade600,
+                  title: "edit_company".tr,
                   onTap: () {
-                    // ✅ Use currentCompany instead of companyData
                     final data = controller.currentCompany.value;
-
                     if (data != null && controller.companyId.value.isNotEmpty) {
-                      controller.navigateToEditCompany(data, controller.companyId.value);
+                      Get.back();
+                      controller.navigateToEditCompany(
+                          data, controller.companyId.value);
                     } else {
                       Get.snackbar(
                         "Error",
                         "No active company found to edit.",
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red.shade100,
+                        colorText: Colors.red.shade800,
                       );
                     }
                   },
                 ),
 
-                Divider(),
+                // ━━━━━━━━━━━━━━━━━━━━━
+                Divider(height: 32, thickness: 1),
 
-                // ListTile(
-                //   leading: Icon(Icons.settings, color: Colors.grey),
-                //   title: Text("Settings"),
-                //   onTap: () {
-                //     Get.back();
-                //     controller.navigateToNewChallan();
-                //   },
-                // ),
-                ListTile(
-                  leading: Icon(Icons.logout, color: Colors.red),
-                  title: Text(
-                    "logout".tr,
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // 🚪 Logout
+                _buildMenuItem(
+                  icon: Icons.logout,
+                  iconColor: Colors.red.shade600,
+                  title: "logout".tr,
+                  titleStyle: TextStyle(
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.w600,
                   ),
-                  onTap: () async {
+                  onTap: () {
                     Get.dialog(
                       AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         title: Row(
                           children: [
-                            Icon(Icons.logout, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text("confirm_logout".tr),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.logout,
+                                  color: Colors.red.shade600, size: 24),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              "confirm_logout".tr,
+                              style: TextStyle(fontSize: 18),
+                            ),
                           ],
                         ),
                         content: Text(
                           "logout_message".tr,
-                          style: TextStyle(fontSize: 15),
+                          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
                         ),
                         actions: [
                           TextButton(
-                            child: Text("cancel".tr, style: TextStyle(color: Colors.grey)),
+                            child: Text(
+                              "cancel".tr,
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 15,
+                              ),
+                            ),
                             onPressed: () => Get.back(),
                           ),
                           ElevatedButton(
@@ -1075,12 +1423,15 @@ class DashboardScreen extends GetView<DashboardController> {
                               backgroundColor: Colors.red.shade600,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
                             ),
-                            child: Text("logout".tr),
+                            child: Text("logout".tr,
+                                style: TextStyle(fontSize: 15)),
                             onPressed: () async {
-                              Get.back(); // close dialog
+                              Get.back();
                               await controller.logout();
                             },
                           ),
@@ -1090,6 +1441,8 @@ class DashboardScreen extends GetView<DashboardController> {
                   },
                 ),
 
+                // Extra padding at bottom for safe area
+                SizedBox(height: MediaQuery.of(Get.context!).padding.bottom + 16),
               ],
             ),
           ),
@@ -1098,7 +1451,166 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎨 HELPER WIDGETS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  /// Section Header
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade600,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  /// Expansion Tile (Submenu)
+  Widget _buildExpansionTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Theme(
+      data: ThemeData(
+        dividerColor: Colors.transparent,
+      ),
+      child: ExpansionTile(
+        leading: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        iconColor: AppColors.tealColor,
+        collapsedIconColor: Colors.grey.shade500,
+        tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: EdgeInsets.only(left: 16, bottom: 8),
+        children: children,
+      ),
+    );
+  }
+
+  /// Sub Menu Item (Inside Expansion Tile)
+  Widget _buildSubMenuItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.only(left: 60, right: 16),
+      leading: Icon(icon, color: iconColor, size: 20),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey.shade700,
+        ),
+      ),
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  /// Direct Menu Item
+  Widget _buildMenuItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required VoidCallback onTap,
+    TextStyle? titleStyle,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+      title: Text(
+        title,
+        style: titleStyle ??
+            TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade800,
+            ),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  /// Switch Toggle Item
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required bool value,
+    required Color activeColor,
+    required Function(bool) onChanged,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey.shade800,
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: Colors.white,
+        activeTrackColor: activeColor,
+        inactiveThumbColor: Colors.white,
+        inactiveTrackColor: Colors.grey.shade400,
+        thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Icon(Icons.check, color: activeColor, size: 16);
+          }
+          return Icon(Icons.close, color: Colors.grey, size: 16);
+        }),
+      ),
+    );
+  }
 }
 
 class DashboardShimmer extends StatelessWidget {

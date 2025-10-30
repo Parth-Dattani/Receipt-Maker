@@ -74,6 +74,30 @@ class SplashController extends BaseController {
         await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
         AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
 
+        print("✅ Spreadsheet found → ${AppConstants.spreadsheetId}");
+        // ✅ Test access first
+        print("🔧 Testing Google Sheets access...");
+        bool hasAccess = await GoogleSheetService.testSpreadsheetAccess();
+
+        if (!hasAccess) {
+          print("");
+          print("=" * 60);
+          print("⚠️ SETUP REQUIRED:");
+          print("=" * 60);
+          print("1. Open this URL:");
+          print("   https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
+          print("");
+          print("2. Click 'Share' button");
+          print("");
+          print("3. Add this email as Editor:");
+          print("   invoicesathi@invoicesathi.iam.gserviceaccount.com");
+          print("");
+          print("4. Restart the app");
+          print("=" * 60);
+        } else {
+          print("✅ Access confirmed, initializing sheets...");
+          await GoogleSheetService.initializeAllSheets();
+        }
         print("✅ Company + Spreadsheet found → Dashboard");
         Get.offAllNamed(DashboardScreen.pageId);
       } else {

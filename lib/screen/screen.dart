@@ -15,3 +15,6 @@ export 'challan/challan_list_screen.dart';
 export 'challan/challan_details_screen.dart';
 export 'quotation/quotation_list_screen.dart';
 export 'Inventory/purchase_entry_screen.dart';
+export 'Inventory/purchase_list_screen.dart';
+export 'Inventory/purchase_details_screen.dart';
+export 'Inventory/stock_report_screen.dart';

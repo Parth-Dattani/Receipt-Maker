@@ -321,7 +321,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                         ...controller.customers.map((customer) {
                           return DropdownMenuItem(
                             value: customer,
-                            child: Text(customer['name'] ?? 'Unknown Customer'),
+                            child: Text((customer['name'] ?? 'Unknown Customer').toString().toUpperCase()),
                           );
                         }).toList(),
                       ],
@@ -682,7 +682,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                                   child: Padding(
                                                     padding: EdgeInsets.symmetric(horizontal: 8),
                                                     child: Text(
-                                                      '${item.itemName}',
+                                                      ('${item.itemName}').toUpperCase(),
                                                       style: TextStyle(fontSize: 14),
                                                     ),
                                                   ),

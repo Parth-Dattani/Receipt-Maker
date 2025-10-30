@@ -923,7 +923,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
 
         SizedBox(height: 20),
 
-        // ✅ FINANCIAL METRICS (Changed: Removed duplicate Sales/Purchase)
+        // ✅ FINANCIAL METRICS
         _buildSectionTitle('Financial Metrics'),
         SizedBox(height: 12),
 
@@ -991,21 +991,21 @@ class DashboardStatsCard extends GetView<DashboardController> {
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 20,
+            width: 3,
+            height: 14,
             decoration: BoxDecoration(
               color: Colors.blue.shade600,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          SizedBox(width: 10),
+          SizedBox(width: 6),
           Text(
             title,
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Colors.grey.shade900,
-              letterSpacing: 0.3,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -1013,7 +1013,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
     );
   }
 
-  // ✅ Hero Profit Card (Large, Prominent)
+  // ✅ Hero Profit Card - SMALLER FONTS
   Widget _buildHeroProfitCard({
     required double salesTotal,
     required double purchaseTotal,
@@ -1023,7 +1023,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
     final percentage = ((netProfit / (purchaseTotal > 0 ? purchaseTotal : 1)) * 100).toStringAsFixed(1);
 
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isProfit
@@ -1049,70 +1049,70 @@ class DashboardStatsCard extends GetView<DashboardController> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       isProfit ? Icons.trending_up : Icons.trending_down,
                       color: Colors.white,
-                      size: 16,
+                      size: 13,
                     ),
-                    SizedBox(width: 6),
+                    SizedBox(width: 4),
                     Text(
                       isProfit ? 'PROFIT' : 'LOSS',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 11,
+                        fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   '$percentage%',
                   style: TextStyle(
                     color: isProfit ? Color(0xFF0F766E) : Color(0xFFB91C1C),
                     fontWeight: FontWeight.w800,
-                    fontSize: 16,
+                    fontSize: 13,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 14),
           Text(
             'Net ${isProfit ? 'Profit' : 'Loss'}',
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 3),
           Text(
             '₹${AppUtil.formatCurrency(netProfit.abs())}',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 36,
+              fontSize: 24,
               fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
+              letterSpacing: 0.3,
             ),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 14),
           Container(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
@@ -1128,9 +1128,9 @@ class DashboardStatsCard extends GetView<DashboardController> {
                 ),
                 Container(
                   width: 1,
-                  height: 40,
+                  height: 32,
                   color: Colors.white.withOpacity(0.3),
-                  margin: EdgeInsets.symmetric(horizontal: 12),
+                  margin: EdgeInsets.symmetric(horizontal: 8),
                 ),
                 Expanded(
                   child: _buildProfitDetail(
@@ -1157,24 +1157,24 @@ class DashboardStatsCard extends GetView<DashboardController> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white.withOpacity(0.8), size: 14),
-            SizedBox(width: 6),
+            Icon(icon, color: Colors.white.withOpacity(0.8), size: 11),
+            SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-        SizedBox(height: 4),
+        SizedBox(height: 3),
         Text(
           '₹${AppUtil.formatCurrency(amount)}',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1182,7 +1182,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
     );
   }
 
-  // ✅ Modern Financial Card
+  // ✅ Modern Financial Card - ICON AND TEXT IN SAME ROW
   Widget _buildModernCard({
     required String title,
     required String value,
@@ -1191,58 +1191,64 @@ class DashboardStatsCard extends GetView<DashboardController> {
     required Color bgColor,
   }) {
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
             spreadRadius: 0,
-            blurRadius: 10,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsets.all(9),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 26),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
-          SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade900,
+                    letterSpacing: 0.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.grey.shade900,
-              letterSpacing: 0.2,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  // ✅ IMPROVED Count Card with Better Overdue Display
+  // ✅ Count Card - ICON AND TEXT IN SAME ROW
   Widget _buildCountCard({
     required String title,
     required int count,
@@ -1251,10 +1257,10 @@ class DashboardStatsCard extends GetView<DashboardController> {
     required Color color,
   }) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: overdue > 0 ? Colors.red.shade200 : Colors.grey.shade200,
           width: overdue > 0 ? 2 : 1,
@@ -1265,125 +1271,90 @@ class DashboardStatsCard extends GetView<DashboardController> {
                 ? Colors.red.withOpacity(0.08)
                 : Colors.black.withOpacity(0.03),
             spreadRadius: 0,
-            blurRadius: 10,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Top Row: Icon and Overdue Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              if (overdue > 0)
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade600,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        '$overdue',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-
-          SizedBox(height: 16),
-
-          // Count and Title
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.grey.shade900,
+          Container(
+            padding: EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          SizedBox(height: 2),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-
-          // Overdue Section at Bottom
-          if (overdue > 0) ...[
-            SizedBox(height: 12),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.red.shade200,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.red.shade700,
-                    size: 16,
-                  ),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '$overdue Overdue',
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
                       style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (overdue > 0)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              color: Colors.white,
+                              size: 9,
+                            ),
+                            SizedBox(width: 2),
+                            Text(
+                              '$overdue',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 3),
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade900,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 }
-
 
 ///new 2
 // class DashboardStatsCard extends GetView<DashboardController> {

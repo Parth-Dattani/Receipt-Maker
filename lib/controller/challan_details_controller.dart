@@ -59,92 +59,92 @@ class ChallanDetailsController extends GetxController {
       return;
     }
 
-    // ✅ CHECK IF CHALLAN IS IN PROGRESS STATUS
-    if (currentChallan.status?.toLowerCase() == 'progress') {
-      Get.dialog(
-        AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.lock, color: Colors.orange.shade700, size: 28),
-              SizedBox(width: 12),
-              Text('Challan Locked'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This challan is currently in PROGRESS and cannot be edited.',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.pending_actions, color: Colors.blue.shade700, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Status: PROGRESS',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Challans in progress are locked because they have been converted to an invoice and are being processed.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.amber.shade200),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.amber.shade700, size: 16),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'To make changes, the challan status must be changed back to "InProgress" or "Pending".',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.amber.shade900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('OK', style: TextStyle(fontSize: 16)),
-            ),
-          ],
-        ),
-        barrierDismissible: true,
-      );
-      return;
-    }
+    /// ✅ CHECK IF CHALLAN IS IN PROGRESS STATUS
+    // if (currentChallan.status?.toLowerCase() == 'progress') {
+    //   Get.dialog(
+    //     AlertDialog(
+    //       title: Row(
+    //         children: [
+    //           Icon(Icons.lock, color: Colors.orange.shade700, size: 28),
+    //           SizedBox(width: 12),
+    //           Text('Challan Locked'),
+    //         ],
+    //       ),
+    //       content: Column(
+    //         mainAxisSize: MainAxisSize.min,
+    //         crossAxisAlignment: CrossAxisAlignment.start,
+    //         children: [
+    //           Text(
+    //             'This challan is currently in PROGRESS and cannot be edited.',
+    //             style: TextStyle(fontSize: 16),
+    //           ),
+    //           SizedBox(height: 16),
+    //           Container(
+    //             padding: EdgeInsets.all(12),
+    //             decoration: BoxDecoration(
+    //               color: Colors.blue.shade50,
+    //               borderRadius: BorderRadius.circular(8),
+    //               border: Border.all(color: Colors.blue.shade200),
+    //             ),
+    //             child: Row(
+    //               children: [
+    //                 Icon(Icons.pending_actions, color: Colors.blue.shade700, size: 20),
+    //                 SizedBox(width: 8),
+    //                 Expanded(
+    //                   child: Text(
+    //                     'Status: PROGRESS',
+    //                     style: TextStyle(
+    //                       fontWeight: FontWeight.bold,
+    //                       color: Colors.blue.shade800,
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //           SizedBox(height: 12),
+    //           Text(
+    //             'Challans in progress are locked because they have been converted to an invoice and are being processed.',
+    //             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+    //           ),
+    //           SizedBox(height: 8),
+    //           Container(
+    //             padding: EdgeInsets.all(10),
+    //             decoration: BoxDecoration(
+    //               color: Colors.amber.shade50,
+    //               borderRadius: BorderRadius.circular(6),
+    //               border: Border.all(color: Colors.amber.shade200),
+    //             ),
+    //             child: Row(
+    //               crossAxisAlignment: CrossAxisAlignment.start,
+    //               children: [
+    //                 Icon(Icons.info_outline, color: Colors.amber.shade700, size: 16),
+    //                 SizedBox(width: 6),
+    //                 Expanded(
+    //                   child: Text(
+    //                     'To make changes, the challan status must be changed back to "InProgress" or "Pending".',
+    //                     style: TextStyle(
+    //                       fontSize: 12,
+    //                       color: Colors.amber.shade900,
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //       actions: [
+    //         TextButton(
+    //           onPressed: () => Get.back(),
+    //           child: Text('OK', style: TextStyle(fontSize: 16)),
+    //         ),
+    //       ],
+    //     ),
+    //     barrierDismissible: true,
+    //   );
+    //   return;
+    // }
 
     try {
       print("=== NAVIGATING TO EDIT MODE ===");

@@ -232,67 +232,67 @@ class InvoiceDetailsController extends GetxController {
       return;
     }
 
-    // ✅ CHECK IF INVOICE IS PAID
-    if (currentInvoice.status?.toLowerCase() == 'paid') {
-      Get.dialog(
-        AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.lock, color: Colors.orange.shade700, size: 28),
-              SizedBox(width: 12),
-              Text('Invoice Locked'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This invoice has been marked as PAID and cannot be edited.',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Status: PAID',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'To make changes, first change the status to "Pending" or "Partial" in the invoice management system.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('OK', style: TextStyle(fontSize: 16)),
-            ),
-          ],
-        ),
-        barrierDismissible: true,
-      );
-      return;
-    }
+    /// ✅ CHECK IF INVOICE IS PAID
+    // if (currentInvoice.status?.toLowerCase() == 'paid') {
+    //   Get.dialog(
+    //     AlertDialog(
+    //       title: Row(
+    //         children: [
+    //           Icon(Icons.lock, color: Colors.orange.shade700, size: 28),
+    //           SizedBox(width: 12),
+    //           Text('Invoice Locked'),
+    //         ],
+    //       ),
+    //       content: Column(
+    //         mainAxisSize: MainAxisSize.min,
+    //         crossAxisAlignment: CrossAxisAlignment.start,
+    //         children: [
+    //           Text(
+    //             'This invoice has been marked as PAID and cannot be edited.',
+    //             style: TextStyle(fontSize: 16),
+    //           ),
+    //           SizedBox(height: 16),
+    //           Container(
+    //             padding: EdgeInsets.all(12),
+    //             decoration: BoxDecoration(
+    //               color: Colors.green.shade50,
+    //               borderRadius: BorderRadius.circular(8),
+    //               border: Border.all(color: Colors.green.shade200),
+    //             ),
+    //             child: Row(
+    //               children: [
+    //                 Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+    //                 SizedBox(width: 8),
+    //                 Expanded(
+    //                   child: Text(
+    //                     'Status: PAID',
+    //                     style: TextStyle(
+    //                       fontWeight: FontWeight.bold,
+    //                       color: Colors.green.shade800,
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //           SizedBox(height: 12),
+    //           Text(
+    //             'To make changes, first change the status to "Pending" or "Partial" in the invoice management system.',
+    //             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+    //           ),
+    //         ],
+    //       ),
+    //       actions: [
+    //         TextButton(
+    //           onPressed: () => Get.back(),
+    //           child: Text('OK', style: TextStyle(fontSize: 16)),
+    //         ),
+    //       ],
+    //     ),
+    //     barrierDismissible: true,
+    //   );
+    //   return;
+    // }
 
     /// Prevent multiple clicks
     if (isLoading.value) {

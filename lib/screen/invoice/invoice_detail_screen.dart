@@ -40,16 +40,20 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
             }
 
             final inv = controller.invoice.value;
-            final isPaid = inv?.status?.toLowerCase() == 'paid';
+            //final isPaid = inv?.status?.toLowerCase() == 'paid';
 
             return IconButton(
               icon: Icon(
                 Icons.edit,
-                color: isPaid ? Colors.grey.shade400 : Colors.white,
+                color: //isPaid ? Colors.grey.shade400 :
+                Colors.white,
               ),
-              tooltip: isPaid ? 'Cannot edit paid invoice' : 'Edit Invoice',
-              onPressed: isPaid ? null
-                  : () => controller.navigateToEditMode(),
+              tooltip:
+              //isPaid ? 'Cannot edit paid invoice' :
+              'Edit Invoice',
+              onPressed:
+              //isPaid ? null :
+                  () => controller.navigateToEditMode(),
             );
           }),
 
@@ -164,17 +168,17 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
                           fontWeight: FontWeight.bold,
                           color: AppColors.tealColor)),
                 ),
-                if (isPaid) ...[
-                  SizedBox(width: 8),
-                  Tooltip(
-                    message: 'This invoice is locked (Paid)',
-                    child: Icon(
-                      Icons.lock,
-                      color: Colors.orange.shade700,
-                      size: 20,
-                    ),
-                  ),
-                ],
+                // if (isPaid) ...[
+                //   SizedBox(width: 8),
+                //   Tooltip(
+                //     message: 'This invoice is locked (Paid)',
+                //     child: Icon(
+                //       Icons.lock,
+                //       color: Colors.orange.shade700,
+                //       size: 20,
+                //     ),
+                //   ),
+                // ],
 
                 Container(
                   padding:
@@ -191,33 +195,33 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
               ],
             ),
 
-            // ✅ Add warning message for paid invoices
-            if (isPaid) ...[
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This invoice is locked and cannot be edited',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            /// ✅ Add warning message for paid invoices
+            // if (isPaid) ...[
+            //   SizedBox(height: 12),
+            //   Container(
+            //     padding: EdgeInsets.all(10),
+            //     decoration: BoxDecoration(
+            //       color: Colors.orange.shade50,
+            //       borderRadius: BorderRadius.circular(8),
+            //       border: Border.all(color: Colors.orange.shade200),
+            //     ),
+            //     child: Row(
+            //       children: [
+            //         Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
+            //         SizedBox(width: 8),
+            //         Expanded(
+            //           child: Text(
+            //             'This invoice is locked and cannot be edited',
+            //             style: TextStyle(
+            //               fontSize: 12,
+            //               color: Colors.orange.shade800,
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ],
             const SizedBox(height: 16),
             Row(
               children: [

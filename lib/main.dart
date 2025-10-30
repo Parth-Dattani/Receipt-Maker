@@ -10,10 +10,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'constant/constant.dart';
 import 'controller/controller.dart';
+import 'services/remote_service.dart';
 import 'utils/shared_preferences_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+
+
   await sharedPreferencesHelper.getSharedPreferencesInstance();
   //await Firebase.initializeApp();
   /// Initialize Firebase with platform-specific options
@@ -28,7 +32,8 @@ Future<void> main() async {
         appId: "1:134369591951:web:5cf271caa468b073d8a6fa",
       ),
     );
-  } else {
+  }
+  else {
     await Firebase.initializeApp();
   }
   // await Supabase.initialize(

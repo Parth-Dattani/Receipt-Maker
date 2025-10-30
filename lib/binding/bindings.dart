@@ -16,3 +16,6 @@ export 'challan_details_binding.dart';
 export 'quotation_list_binding.dart';
 export 'payment_details_binding.dart';
 export 'purchase_entry_binding.dart';
+export 'purchase_list_binding.dart';
+export 'purchase_details_binding.dart';
+export 'stock_report_binding.dart';

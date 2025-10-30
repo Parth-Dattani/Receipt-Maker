@@ -31,9 +31,8 @@ class PurchaseItem {
       itemId: json['itemId'] ?? '',
       itemName: json['itemName'] ?? '',
       description: json['description'] ?? '',
-      quantity: json['quantity'] is int
-          ? json['quantity']
-          : int.tryParse(json['quantity'].toString()) ?? 0,
+      quantity: json['quantity'] != null
+          ? double.tryParse(json['quantity'].toString()) ?? 0:0,
       purchasePrice: json['purchasePrice'] is double
           ? json['purchasePrice']
           : double.tryParse(json['purchasePrice'].toString()) ?? 0.0,

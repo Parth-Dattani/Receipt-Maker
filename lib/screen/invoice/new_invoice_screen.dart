@@ -573,7 +573,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               Obx(() {
                 if (controller.isEditMode.value) {
                   return _buildEditModeCustomerInfo();
-                } else {
+                }
+                else {
                   if (controller.customers.isEmpty && !controller.showCustomerForm.value) {
                     return Column(
                       children: [
@@ -610,7 +611,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                           ...controller.customers.map((customer) {
                             return DropdownMenuItem<String?>(
                               value: customer['id']?.toString(),
-                              child: Text(customer['name'] ?? 'Unknown Customer'),
+                              child: Text( (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),),
                             );
                           }).toList(),
                         ],
@@ -1634,7 +1635,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                     value: item,
                                                     child: Padding(
                                                       padding: EdgeInsets.symmetric(horizontal: 8),
-                                                      child: Text('${item.itemName}', style: TextStyle(fontSize: 14)),
+                                                      child: Text(('${item.itemName}').toString().toUpperCase(), style: TextStyle(fontSize: 14)),
                                                     ),
                                                   );
                                                 }).toList(),

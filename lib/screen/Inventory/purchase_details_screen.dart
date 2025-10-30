@@ -1,4 +1,3 @@
-import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -6,35 +5,26 @@ import 'package:intl/intl.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
+import '../../utils/utils.dart';
 
+class PurchaseDetailsScreen extends GetView<PurchaseDetailsController> {
+  static const String pageId = '/PurchaseDetailsScreen';
 
-class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
-  static const String pageId = '/ChallanDetailsScreen';
-
-  const ChallanDetailsScreen({Key? key}) : super(key: key);
+  const PurchaseDetailsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title:  Text("challan_details".tr),
+        title: Text("purchase_details".tr),
         actions: [
-          // Edit button - navigates to NewChallanScreen for editing
+          // Edit button
           Obx(() {
-            final challan = controller.challan.value;
-            final isProgress = challan?.status?.toLowerCase() == 'progress';
-
+            final purchase = controller.purchase.value;
             return IconButton(
-              icon: Icon(
-                Icons.edit,
-                color: //isProgress ? Colors.grey.shade400 :
-                Colors.white,
-              ),
-              tooltip:
-              //isProgress ? 'Cannot edit challan in Progress' :
-              'Edit Challan',
-              onPressed: //isProgress ? null :
-                  () => controller.navigateToEditMode(),
+              icon: Icon(Icons.edit, color: Colors.white),
+              tooltip: 'Edit Purchase',
+              onPressed: () => controller.navigateToEditMode(),
             );
           }),
           // Refresh button
@@ -42,12 +32,14 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
               ? const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white))
               : IconButton(
             icon: const Icon(Icons.refresh, size: 20),
             onPressed: () async {
               print("🔄 MANUAL REFRESH TRIGGERED");
-              await controller.loadChallanItems(controller.challan.value!.challanId!);
+              await controller.loadPurchaseItems(
+                  controller.purchase.value!.purchaseId!);
               Get.snackbar('Success', 'Items refreshed from server');
             },
             tooltip: "Force Refresh Items",
@@ -58,8 +50,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
       ),
       body: SafeArea(
         child: Obx(() {
-          final challan = controller.challan.value;
-          if (challan == null) {
+          final purchase = controller.purchase.value;
+          if (purchase == null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -67,7 +59,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                   Icon(Icons.error_outline,
                       size: 64, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
-                  Text("challan_not_found".tr,
+                  Text("purchase_not_found".tr,
                       style: TextStyle(
                           fontSize: 18, color: Colors.grey.shade600)),
                 ],
@@ -80,15 +72,15 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildChallanHeader(challan),
+                _buildPurchaseHeader(purchase),
                 const SizedBox(height: 24),
-                _buildCustomerInfo(challan),
+                _buildVendorInfo(purchase),
                 const SizedBox(height: 24),
-                _buildChallanItems(challan),
+                _buildPurchaseItems(purchase),
                 const SizedBox(height: 24),
-                _buildPaymentSummary(challan),
+                _buildPaymentSummary(purchase),
                 const SizedBox(height: 24),
-                // _buildActionButtons(challan),
+                _buildActionButtons(purchase),
               ],
             ),
           );
@@ -97,10 +89,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
     );
   }
 
-  /// Challan header (ID, Date, Status)
-  Widget _buildChallanHeader(Challan challan) {
-    final isProgress = challan.status?.toLowerCase() == 'progress';
-
+  /// Purchase header (ID, Date, Status)
+  Widget _buildPurchaseHeader(PurchaseEntry purchase) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -113,33 +103,21 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Challan ${challan.challanId ?? 'N/A'}",
+                  "Purchase ${purchase.purchaseId ?? 'N/A'}",
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppColors.tealColor),
                 ),
-                /// ✅ Add lock icon for Progress status
-                // if (isProgress) ...[
-                //   SizedBox(width: 8),
-                //   Tooltip(
-                //     message: 'This challan is locked (Progress)',
-                //     child: Icon(
-                //       Icons.lock,
-                //       color: Colors.orange.shade700,
-                //       size: 20,
-                //     ),
-                //   ),
-                // ],
                 Container(
                   padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(challan.status),
+                    color: _getStatusColor(purchase.paymentStatus),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    challan.status ?? "Unknown",
+                    purchase.paymentStatus ?? "Unknown",
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -148,46 +126,18 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                 ),
               ],
             ),
-            /// ✅ Add warning banner for Progress status
-            // if (isProgress) ...[
-            //   SizedBox(height: 12),
-            //   Container(
-            //     padding: EdgeInsets.all(10),
-            //     decoration: BoxDecoration(
-            //       color: Colors.orange.shade50,
-            //       borderRadius: BorderRadius.circular(8),
-            //       border: Border.all(color: Colors.orange.shade200),
-            //     ),
-            //     child: Row(
-            //       children: [
-            //         Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
-            //         SizedBox(width: 8),
-            //         Expanded(
-            //           child: Text(
-            //             'This challan is locked and cannot be edited (converted to invoice)',
-            //             style: TextStyle(
-            //               fontSize: 12,
-            //               color: Colors.orange.shade800,
-            //             ),
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ],
             const SizedBox(height: 12),
             Text(
-              "Date: ${_formatDate(challan.challanDate)}",
+              "Date: ${_formatDate(purchase.purchaseDate)}",
               style: TextStyle(
                   color: Colors.grey.shade600, fontWeight: FontWeight.w500),
             ),
-            if (challan.notes != null && challan.notes!.isNotEmpty) ...[
+            if (purchase.notes != null && purchase.notes!.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                "Notes: ${challan.notes}",
+                "Notes: ${purchase.notes}",
                 style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontStyle: FontStyle.italic),
+                    color: Colors.grey.shade600, fontStyle: FontStyle.italic),
               ),
             ]
           ],
@@ -196,8 +146,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
     );
   }
 
-  /// Customer details
-  Widget _buildCustomerInfo(Challan challan) {
+  /// Vendor details
+  Widget _buildVendorInfo(PurchaseEntry purchase) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -206,16 +156,16 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("customer_information".tr,
+            Text("vendor_information".tr,
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: AppColors.tealColor)),
             const SizedBox(height: 12),
-            _buildInfoRow("name".tr, challan.customerName ?? "N/A"),
-            _buildInfoRow("email".tr, challan.customerEmail ?? "N/A"),
-            _buildInfoRow("phone".tr, challan.customerMobile ?? "N/A"),
-            _buildInfoRow("address".tr, challan.customerAddress ?? "N/A"),
+            _buildInfoRow("name".tr, purchase.vendorName ?? "N/A"),
+            _buildInfoRow("email".tr, purchase.vendorEmail ?? "N/A"),
+            _buildInfoRow("phone".tr, purchase.vendorMobile ?? "N/A"),
+            _buildInfoRow("address".tr, purchase.vendorAddress ?? "N/A"),
           ],
         ),
       ),
@@ -223,7 +173,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
   }
 
   /// Items list
-  Widget _buildChallanItems(Challan challan) {
+  Widget _buildPurchaseItems(PurchaseEntry purchase) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -235,7 +185,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("challan_items".tr,
+                Text("purchase_items".tr,
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -245,11 +195,11 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.tealColor))
+                        strokeWidth: 2, color: AppColors.tealColor))
                     : IconButton(
-                  icon: Icon(Icons.refresh, size: 20, color: AppColors.tealColor),
-                  onPressed: controller.refreshChallanItems,
+                  icon: Icon(Icons.refresh,
+                      size: 20, color: AppColors.tealColor),
+                  onPressed: controller.refreshPurchaseItems,
                   tooltip: "Refresh Items",
                 )),
               ],
@@ -266,13 +216,12 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                     ));
               }
 
-              if (controller.challanItems.isEmpty) {
+              if (controller.purchaseItems.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Icon(Icons.inbox,
-                          size: 48, color: Colors.grey.shade400),
+                      Icon(Icons.inbox, size: 48, color: Colors.grey.shade400),
                       const SizedBox(height: 8),
                       Text("No items found",
                           style: TextStyle(color: Colors.grey.shade600)),
@@ -285,7 +234,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                 children: [
                   // header
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
                         color: AppColors.tealColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8)),
@@ -325,10 +275,10 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
 
                   // items rows
                   Column(
-                    children: controller.challanItems.map((item) {
+                    children: controller.purchaseItems.map((item) {
                       return Container(
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 12),
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                             color: Colors.grey.shade50,
@@ -342,9 +292,10 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(item.itemName ?? "N/A",
-                                        style:
-                                        const TextStyle(fontWeight: FontWeight.w500)),
-                                    if (item.unit != null && item.unit!.isNotEmpty)
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500)),
+                                    if (item.unit != null &&
+                                        item.unit!.isNotEmpty)
                                       Text(
                                         "Unit: ${item.unit!.toUpperCase()}",
                                         style: TextStyle(
@@ -361,12 +312,12 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                             Expanded(
                                 flex: 2,
                                 child: Text(
-                                    "${(item.price ?? 0).toStringAsFixed(2)}",
+                                    "${(item.purchasePrice ?? 0).toStringAsFixed(2)}",
                                     textAlign: TextAlign.right)),
                             Expanded(
                                 flex: 2,
                                 child: Text(
-                                    "${((item.quantity ?? 0) * (item.price ?? 0)).toStringAsFixed(2)}",
+                                    "${((item.quantity ?? 0) * (item.purchasePrice ?? 0)).toStringAsFixed(2)}",
                                     textAlign: TextAlign.right,
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold,
@@ -381,19 +332,23 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
 
                   // subtotal
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
                         color: AppColors.tealColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.tealColor.withOpacity(0.3))),
+                        border: Border.all(
+                            color: AppColors.tealColor.withOpacity(0.3))),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Items Subtotal (${controller.challanItems.length} items):",
+                        Text(
+                            "Items Subtotal (${controller.purchaseItems.length} items):",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.tealColor)),
-                        Text("₹${AppUtil.formatCurrency(_calculateItemsSubtotal().toDouble())}",
+                        Text(
+                            "₹${AppUtil.formatCurrency(_calculateItemsSubtotal().toDouble())}",
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.tealColor,
@@ -411,11 +366,12 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
   }
 
   /// Payment summary
-  Widget _buildPaymentSummary(Challan challan) {
-    final subtotal = challan.subtotal ?? _calculateItemsSubtotal();
-    final tax = challan.gstAmount ?? 0.0;
-    final total =  (subtotal + tax);
-    //final total = challan.totalAmount ?? (subtotal + tax);
+  Widget _buildPaymentSummary(PurchaseEntry purchase) {
+    final subtotal = purchase.subtotal ?? _calculateItemsSubtotal();
+    final tax = purchase.gstAmount ?? 0.0;
+    final total = (subtotal + tax);
+    final paidAmount = purchase.paidAmount ?? 0.0;
+    final pendingAmount = purchase.pendingAmount ?? (total - paidAmount);
 
     return Card(
       elevation: 2,
@@ -432,7 +388,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                     color: AppColors.tealColor)),
             const SizedBox(height: 12),
             _buildInfoRow("Subtotal:", "₹${AppUtil.formatCurrency(subtotal)}"),
-            if (tax > 0) _buildInfoRow("GST:", "₹${AppUtil.formatCurrency(tax)}"),
+            if (tax > 0)
+              _buildInfoRow("GST:", "₹${AppUtil.formatCurrency(tax)}"),
             const Divider(thickness: 2),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -444,12 +401,22 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade700)),
+                        color: Colors.purple.shade700)),
               ],
             ),
-            // const SizedBox(height: 12),
-            // _buildInfoRow("Payment Status:", _getPaymentStatusBadge(challan.paymentStatus)),
-
+            const SizedBox(height: 12),
+            _buildInfoRow(
+                "Paid Amount:", "₹${AppUtil.formatCurrency(paidAmount)}"),
+            _buildInfoRow("Pending Amount:",
+                "₹${AppUtil.formatCurrency(pendingAmount)}"),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Payment Status:"),
+                _getPaymentStatusBadge(purchase.paymentStatus),
+              ],
+            ),
           ],
         ),
       ),
@@ -457,12 +424,12 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
   }
 
   /// Action buttons
-  Widget _buildActionButtons(Challan challan) {
+  Widget _buildActionButtons(PurchaseEntry purchase) {
     return Row(
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => controller.downloadChallanPdf(),
+            onPressed: () => controller.downloadPurchasePdf(),
             icon: const Icon(Icons.download),
             label: const Text("Download PDF"),
             style: OutlinedButton.styleFrom(
@@ -475,9 +442,9 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () => controller.shareChallan(),
+            onPressed: () => controller.sharePurchase(),
             icon: const Icon(Icons.share),
-            label: const Text("Share Challan"),
+            label: const Text("Share Purchase"),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.tealColor,
               foregroundColor: Colors.white,
@@ -496,7 +463,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
       child: Row(
         children: [
           SizedBox(
-              width: 100,
+              width: 120,
               child: Text(label,
                   style: TextStyle(
                       color: Colors.grey.shade600,
@@ -511,7 +478,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
 
   /// Payment status badge
   Widget _getPaymentStatusBadge(String? status) {
-    final statusColor = _getPaymentStatusColor(status);
+    final statusColor = _getStatusColor(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -530,14 +497,14 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
     );
   }
 
-  Color _getPaymentStatusColor(String? status) {
+  Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
       case "paid":
         return Colors.green;
       case "partial":
-        return Colors.orange;
+        return Colors.blue;
       case "pending":
-        return Colors.red;
+        return Colors.orange;
       default:
         return Colors.grey;
     }
@@ -548,30 +515,11 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
     return DateFormat("MMM dd, yyyy").format(date);
   }
 
-  Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case "completed":
-      case "delivered":
-        return Colors.green;
-      case "progress":  // ✅ Add specific color for Progress
-        return AppColors.tealColor;
-      case "inprogress":  // ✅ Handle InProgress as well
-      case "pending":
-        return Colors.orange;
-      case "cancelled":
-      case "rejected":
-        return Colors.red;
-      case "draft":
-        return Colors.grey;
-      default:
-        return AppColors.tealColor;
-    }
-  }
-
   double _calculateItemsSubtotal() {
-    return controller.challanItems.fold(
+    return controller.purchaseItems.fold(
       0.0,
-          (sum, item) => sum + ((item.quantity ?? 0) * (item.price ?? 0.0)),
+          (sum, item) =>
+      sum + ((item.quantity ?? 0) * (item.purchasePrice ?? 0.0)),
     );
   }
 }

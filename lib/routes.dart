@@ -46,6 +46,22 @@ List<GetPage> appPages = [
       page: () => CustomerRegistrationScreen(),
       binding: CustomerRegistrationBinding()
   ),
+  GetPage(
+      name: PurchaseListScreen.pageId,
+      page: () => PurchaseListScreen(),
+      binding: PurchaseListBinding()
+  ),
+  GetPage(
+      name: PurchaseDetailsScreen.pageId,
+      page: () => PurchaseDetailsScreen(),
+      binding: PurchaseDetailsBinding()
+  ),
+
+  GetPage(
+      name: StockReportScreen.pageId,
+      page: () => StockReportScreen(),
+      binding: StockReportBinding()
+  ),
 
   GetPage(
       name: SettingsScreen.pageId,

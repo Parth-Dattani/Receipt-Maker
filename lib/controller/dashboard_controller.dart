@@ -39,7 +39,7 @@ class DashboardController extends BaseController {
   var unpaidInvoices = 0.obs;
   var overdueInvoices = 0.obs;
   var draftInvoices = 0.obs;
-  var totalRevenue = 0.0.obs;
+    var totalRevenue = 0.0.obs;
   var pendingAmount = 0.0.obs;
   var overdueAmount = 0.0.obs;
   var customerCount = 0.obs;
@@ -105,8 +105,22 @@ class DashboardController extends BaseController {
     });
     ///loadChallanPreference();
     _startOverdueChecker();
+    _setupLifecycleObserver();
   }
 
+// ✅ NEW: Add lifecycle observer
+  void _setupLifecycleObserver() {
+    WidgetsBinding.instance.addObserver(
+      _DashboardLifecycleObserver(
+        onResumed: () {
+          if (_hasInitialized) {
+            print("🔄 App resumed, refreshing dashboard...");
+            refreshDashboard();
+          }
+        },
+      ),
+    );
+  }
 
   Future<void> _initializeDashboard() async {
     // 🆕 Prevent multiple initializations
@@ -139,6 +153,8 @@ class DashboardController extends BaseController {
       isLoading.value = false;
     }
   }
+
+
 
   // Add this method to save the challan preference to SharedPreferences
   Future<void> saveChallanPreference(bool isEnabled) async {
@@ -567,21 +583,16 @@ class DashboardController extends BaseController {
           .toList();
 
       if (userPurchases.isEmpty) {
-        purchaseList.clear();
-        totalPurchaseAmount.value = 0.0;
-        totalPurchases.value = 0;
-        paidPurchases.value = 0;
-        pendingPurchases.value = 0;
-        pendingPurchaseAmount.value = 0.0;
+       _clearPurchaseStats();
         return;
       }
 
       purchaseList.assignAll(userPurchases);
 
       // Calculate purchase stats
-      if (!_isInitializing) {
+
         _calculatePurchaseStats();
-      }
+
 
     } catch (e) {
       print("Error in loadPurchases(): $e");
@@ -593,7 +604,17 @@ class DashboardController extends BaseController {
       );
     }
   }
+  void _clearPurchaseStats() {
+    totalPurchases.value = 0;
+    paidPurchases.value = 0;
+    pendingPurchases.value = 0;
+    totalPurchaseAmount.value = 0.0;
+    pendingPurchaseAmount.value = 0.0;
+    overduePurchases.value = 0;
+    overduePurchaseAmount.value = 0.0;
 
+    print("🧹 Purchase stats cleared");
+  }
   // Replace the _calculatePurchaseStats() method in DashboardController with this:
 
   void _calculatePurchaseStats() {
@@ -629,7 +650,8 @@ class DashboardController extends BaseController {
       if (status == "paid" || status == "completed") {
         paidCount++;
         print("   ✅ COUNTED AS PAID");
-      } else {
+      }
+      else {
         bool isOverdue = false;
 
         // Check if purchase has a due date and is overdue
@@ -1192,9 +1214,33 @@ class DashboardController extends BaseController {
   }
 
   // 🔹 FIXED: refreshDashboard now properly reloads
-  // 🆕 IMPROVED: Better refresh management
+  /// 🆕 IMPROVED: Better refresh management
+  // Future<void> refreshDashboard() async {
+  //   // 🆕 Prevent multiple simultaneous refreshes
+  //   if (isLoading.value) {
+  //     print("⚠️ Refresh already in progress, skipping...");
+  //     return;
+  //   }
+  //
+  //   try {
+  //     print("🔄 Refreshing dashboard...");
+  //     _isInitializing = true;
+  //     isLoading.value = true;
+  //
+  //     await _loadCompanyData();
+  //     await loadDashboardData();
+  //     print("✅ Dashboard refreshed successfully");
+  //
+  //   } catch (e) {
+  //     print("❌ Error refreshing dashboard: $e");
+  //
+  //   } finally {
+  //     _isInitializing = false;
+  //     isLoading.value = false;
+  //   }
+  // }
+// ============================================
   Future<void> refreshDashboard() async {
-    // 🆕 Prevent multiple simultaneous refreshes
     if (isLoading.value) {
       print("⚠️ Refresh already in progress, skipping...");
       return;
@@ -1202,24 +1248,34 @@ class DashboardController extends BaseController {
 
     try {
       print("🔄 Refreshing dashboard...");
-      _isInitializing = true;
       isLoading.value = true;
 
+      // ✅ Load company data
       await _loadCompanyData();
-      await loadDashboardData();
-      print("✅ Dashboard refreshed successfully");
+      await loadCompanySettings();
+
+      // ✅ Load purchases AND invoices
+      await Future.wait([
+        loadPurchases(),
+        loadInvoices(),
+        loadCustomerCount(),
+        getMonthlyRevenueData(),
+      ]);
+
+      print("✅ Dashboard refreshed");
+      print("   📦 Purchases: ${totalPurchases.value}, ₹${totalPurchaseAmount.value.toStringAsFixed(2)}");
+      print("   📄 Invoices: ${invoiceList.length}, ₹${totalRevenue.value.toStringAsFixed(2)}");
+      print("   👥 Customers: ${customerCount.value}");
 
     } catch (e) {
       print("❌ Error refreshing dashboard: $e");
-
     } finally {
-      _isInitializing = false;
       isLoading.value = false;
     }
   }
 
   ///working
-  void navigateToCreateInvoice() {
+  Future<void> navigateToCreateInvoice() async {
     print("Compny--------:${companyId.value}");
     if (companyId.value.isEmpty) {
       Get.snackbar(
@@ -1234,7 +1290,9 @@ class DashboardController extends BaseController {
     }
     Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-    Get.to(() => NewInvoiceScreen());
+    await Get.to(() => NewInvoiceScreen());
+    print("🔄 Returned from Invoice Creation, refreshing...");
+    await refreshDashboard();
     //Get.toNamed(NewInvoiceScreen.pageId);
   }
 
@@ -1255,6 +1313,41 @@ class DashboardController extends BaseController {
     showInvoiceOptions();
   }
 
+  /// Navigate to Stock Report Screen
+  Future<void> navigateToStockReport() async {
+    if (companyId.value.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please register a company first',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (!Get.isRegistered<StockReportController>()) {
+      Get.put(StockReportController());
+    }
+
+    await Get.to(() => StockReportScreen());
+
+    print("🔄 Returned from Stock Report, refreshing...");
+    await refreshDashboard();
+  }
+
+  Future<void> navigateToInventoryMangment() async {
+    Get.lazyPut<ItemController>(() => ItemController());
+
+    // ✅ Wait for result from Purchase Entry screen
+    final result = await Get.to(() => InventoryManagementScreen());
+
+    /// ✅ If purchase was saved successfully, refresh dashboard
+    //if (result == true) {
+    print("🔄 Purchase saved, refreshing dashboard...");
+    await refreshDashboard();
+    //}
+  }
   void showInvoiceOptions() {
     Get.dialog(
       InvoicePreviewScreen(
@@ -1267,17 +1360,25 @@ class DashboardController extends BaseController {
     );
   }
 
-  void navigateToInvoiceList() {
+  Future<void> navigateToInvoiceList() async {
     Get.lazyPut<InvoiceListController>(() => InvoiceListController());
-    Get.to(InvoiceListScreen());
+    await Get.to(InvoiceListScreen());
+    // ✅ Always refresh when returning
+    print("🔄 Returned from Invoice List, refreshing...");
+    await refreshDashboard();
   }
 
-  void navigateToInventory() {
-    // Get.lazyPut<ItemController>(() => ItemController());
-    // Get.to(InventoryManagementScreen());
-
+  Future<void> navigateToInventory() async {
     Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-    Get.to(PurchaseEntryScreen());
+
+    // ✅ Wait for result from Purchase Entry screen
+    final result = await Get.to(() => PurchaseEntryScreen());
+
+    /// ✅ If purchase was saved successfully, refresh dashboard
+    //if (result == true) {
+      print("🔄 Purchase saved, refreshing dashboard...");
+      await refreshDashboard();
+    //}
   }
 
   // Updated method to navigate to customer registration with company selection
@@ -1293,7 +1394,7 @@ class DashboardController extends BaseController {
   // }
 
   // Updated method for adding new customer
-  void navigateToAddNewCustomer() {
+  Future<void> navigateToAddNewCustomer() async {
     if (companyId.value.isEmpty) {
       Get.snackbar(
         'Company Required',
@@ -1307,7 +1408,11 @@ class DashboardController extends BaseController {
     }
 
     // Navigate directly to company selection or customer registration
-    Get.toNamed(CompanySelectionScreen.pageId);
+    await Get.toNamed(CompanySelectionScreen.pageId);
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Add Customer, refreshing...");
+    await loadCustomerCount();
   }
 
   // Updated method to get customer count and load it in dashboard
@@ -1336,7 +1441,7 @@ class DashboardController extends BaseController {
   }
 
   // Updated method to navigate to customer list
-  void navigateToCustomerList() {
+  Future<void> navigateToCustomerList() async {
     if (companyId.value.isEmpty) {
       print("companyId.value: ${companyId.value}");
       Get.snackbar(
@@ -1360,7 +1465,12 @@ class DashboardController extends BaseController {
       }
 
       // Navigate to the screen
-      Get.to(() => const CustomerListScreen());
+      await Get.to(() => const CustomerListScreen());
+
+      // ✅ Always refresh when returning
+      print("🔄 Returned from Customer List, refreshing...");
+      await loadCustomerCount(); // Refresh customer count
+
     } catch (e) {
       print("Error navigating to customer list: $e");
       // Fallback - show a simple dialog with customer count
@@ -1507,39 +1617,70 @@ class DashboardController extends BaseController {
     super.onClose();
   }
 
-  void navigateToItems() {
-    Get.toNamed(ItemScreen.pageId);
+  Future<void> navigateToItems() async {
+   await Get.toNamed(ItemScreen.pageId);
+   // ✅ Refresh when returning
+   print("🔄 Returned from Items, refreshing...");
+   await refreshDashboard();
   }
 
-  void navigateToChallanList() {
+  Future<void> navigateToChallanList() async {
     if (Get.isRegistered<ChallanListController>()) {
       Get.delete<ChallanListController>();
     }
     Get.put(ChallanListController());
-    Get.to(() => ChallanListScreen());
+    await Get.to(() => ChallanListScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Challan List, refreshing...");
+    await refreshDashboard();
   }
 
-  void navigateToQuotList() {
+  Future<void> navigateToPurchaseList() async {
+    if (Get.isRegistered<PurchaseListController>()) {
+      Get.delete<PurchaseListController>();
+    }
+    Get.put(PurchaseListController());
+    await Get.to(() => PurchaseListScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Challan List, refreshing...");
+    await refreshDashboard();
+  }
+
+  Future<void> navigateToQuotList() async {
     if (Get.isRegistered<QuotationListController>()) {
       Get.delete<QuotationListController>();
     }
     Get.put(QuotationListController());
-    Get.to(() => QuotationListScreen());
+    await Get.to(() => QuotationListScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Quotation List, refreshing...");
+    await refreshDashboard();
   }
 
-  void navigateToPaymentDetails() {
+  Future<void> navigateToPaymentDetails() async {
     if (Get.isRegistered<PaymentDetailsController>()) {
       Get.delete<PaymentDetailsController>();
     }
     Get.put(PaymentDetailsController());
-    Get.to(() => PaymentDetailsScreen());
+    await Get.to(() => PaymentDetailsScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Payment Details, refreshing...");
+    await refreshDashboard();
   }
 
 
-  void navigateToNewChallan() {
+  Future<void> navigateToNewChallan() async {
     Get.lazyPut<NewChallanController>(() => NewChallanController());
 
-    Get.to(() => NewChallanScreen(),);
+    await Get.to(() => NewChallanScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from New Challan, refreshing...");
+    await refreshDashboard();
     // Get.to(
     //       () => NewChallanScreen(),
     //   transition: Transition.rightToLeft,
@@ -1911,17 +2052,17 @@ class DashboardController extends BaseController {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColors.grey300),
           children: [
-            _buildTableCell('Invoice ID', isHeader: true, fontSize: 8),
-            _buildTableCell('Customer', isHeader: true, fontSize: 8),
-            _buildTableCell('Date', isHeader: true, fontSize: 8),
-            _buildTableCell('Item', isHeader: true, fontSize: 8),
-            _buildTableCell('Qty', isHeader: true, fontSize: 8),
-            _buildTableCell('Rate', isHeader: true, fontSize: 8),
-            _buildTableCell('Subtotal', isHeader: true, fontSize: 8),
-            _buildTableCell('GST%', isHeader: true, fontSize: 8),
-            _buildTableCell('CGST', isHeader: true, fontSize: 8),
-            _buildTableCell('SGST', isHeader: true, fontSize: 8),
-            _buildTableCell('Total', isHeader: true, fontSize: 8),
+            _buildTableCell('Invoice ID', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
+            _buildTableCell('Customer', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
+            _buildTableCell('Date', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.center),
+            _buildTableCell('Item', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
+            _buildTableCell('Qty', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('Rate', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('Subtotal', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('GST%', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('CGST', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('SGST', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
+            _buildTableCell('Total', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
           ],
         ),
       );
@@ -1935,17 +2076,17 @@ class DashboardController extends BaseController {
           detailRows.add(
             pw.TableRow(
               children: [
-                _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
-                _buildTableCell(inv.customerName ?? "", fontSize: 7),
-                _buildTableCell(dateStr, fontSize: 7),
-                _buildTableCell("No Items", fontSize: 7),
-                _buildTableCell("0", fontSize: 7),
-                _buildTableCell("0.00", fontSize: 7),
-                _buildTableCell("0.00", fontSize: 7),
-                _buildTableCell("0", fontSize: 7),
-                _buildTableCell("0.00", fontSize: 7),
-                _buildTableCell("0.00", fontSize: 7),
-                _buildTableCell("0.00", fontSize: 7),
+                _buildTableCell(inv.invoiceId ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                _buildTableCell(dateStr, fontSize: 7, textAlign: pw.TextAlign.center),
+                _buildTableCell("No Items", fontSize: 7, textAlign: pw.TextAlign.left),
+                _buildTableCell("0", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
+                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
               ],
             ),
           );
@@ -1963,17 +2104,17 @@ class DashboardController extends BaseController {
             detailRows.add(
               pw.TableRow(
                 children: [
-                  _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
-                  _buildTableCell(inv.customerName ?? "", fontSize: 7),
-                  _buildTableCell(dateStr, fontSize: 7),
-                  _buildTableCell(item.itemName ?? "", fontSize: 7),
-                  _buildTableCell(qty.toStringAsFixed(0), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(rate), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(subtotal), fontSize: 7),
-                  _buildTableCell('${gstRate.toStringAsFixed(0)}%', fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(cgst), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(sgst), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(total), fontSize: 7),
+                  _buildTableCell(inv.invoiceId ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                  _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                  _buildTableCell(dateStr, fontSize: 7, textAlign: pw.TextAlign.center),
+                  _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                  _buildTableCell(qty.toStringAsFixed(0), fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell(AppUtil.formatCurrency(rate), fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell(AppUtil.formatCurrency(subtotal), fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell('${gstRate.toStringAsFixed(0)}%', fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell(AppUtil.formatCurrency(cgst), fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell(AppUtil.formatCurrency(sgst), fontSize: 7, textAlign: pw.TextAlign.right),
+                  _buildTableCell(AppUtil.formatCurrency(total), fontSize: 7, textAlign: pw.TextAlign.right),
                 ],
               ),
             );
@@ -1989,14 +2130,14 @@ class DashboardController extends BaseController {
             _buildTableCell('', fontSize: 7),
             _buildTableCell('', fontSize: 7),
             _buildTableCell('', fontSize: 7),
-            _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8),
+            _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8, textAlign: pw.TextAlign.left),
             _buildTableCell('', fontSize: 7),
             _buildTableCell('', fontSize: 7),
-            _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8),
+            _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
             _buildTableCell('', fontSize: 7),
-            _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8),
-            _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8),
-            _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8),
+            _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
+            _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
+            _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
           ],
         ),
       );
@@ -2013,17 +2154,17 @@ class DashboardController extends BaseController {
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
               columnWidths: {
-                0: pw.FixedColumnWidth(60),
-                1: pw.FixedColumnWidth(70),
-                2: pw.FixedColumnWidth(50),
-                3: pw.FlexColumnWidth(2),
-                4: pw.FixedColumnWidth(30),
-                5: pw.FixedColumnWidth(45),
-                6: pw.FixedColumnWidth(50),
-                7: pw.FixedColumnWidth(35),
-                8: pw.FixedColumnWidth(45),
-                9: pw.FixedColumnWidth(45),
-                10: pw.FixedColumnWidth(50),
+                0: pw.FixedColumnWidth(50),   // Invoice ID - reduced from 60
+                1: pw.FixedColumnWidth(60),   // Customer - reduced from 70
+                2: pw.FixedColumnWidth(45),   // Date - reduced from 50
+                3: pw.FixedColumnWidth(70),   // Item - reduced from 80
+                4: pw.FixedColumnWidth(28),   // Qty - reduced from 30
+                5: pw.FixedColumnWidth(40),   // Rate - reduced from 45
+                6: pw.FixedColumnWidth(45),   // Subtotal - reduced from 50
+                7: pw.FixedColumnWidth(30),   // GST% - reduced from 35
+                8: pw.FixedColumnWidth(42),   // CGST - reduced from 45
+                9: pw.FixedColumnWidth(42),   // SGST - reduced from 45
+                10: pw.FixedColumnWidth(48),  // Total - reduced from 50 but still enough
               },
               children: detailRows,
             ),
@@ -2065,7 +2206,7 @@ class DashboardController extends BaseController {
   }
 
 // Helper function to build table cells
-  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10}) {
+  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10, pw.TextAlign? textAlign}) {
     return pw.Padding(
       padding: pw.EdgeInsets.all(4),
       child: pw.Text(
@@ -2074,7 +2215,7 @@ class DashboardController extends BaseController {
           fontSize: fontSize,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
-        textAlign: pw.TextAlign.center,
+        textAlign: textAlign ?? pw.TextAlign.center,
       ),
     );
   }
@@ -2260,6 +2401,21 @@ class DashboardController extends BaseController {
     );
   }
 }
+
+// ============================================
+class _DashboardLifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback onResumed;
+
+  _DashboardLifecycleObserver({required this.onResumed});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResumed();
+    }
+  }
+}
+
 
 class ChartData {
   final String label;
