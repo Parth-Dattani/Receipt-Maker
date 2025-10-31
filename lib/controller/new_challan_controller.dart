@@ -443,55 +443,71 @@ class NewChallanController extends BaseController {
       return;
     }
 
-    final lastChallan = await getLastChallan();
-    String newId = generateChallanIdFromLast(lastChallan);
+    try {
+      final lastChallan = await getLastChallan();
+      String newId = generateChallanIdFromLast(lastChallan);
 
-    challanNumberController.text = newId;
-    challanDateController.text = _formatDate(challanDate.value);
+      challanNumberController.text = newId;
+      challanDateController.text = _formatDate(challanDate.value);
 
-    // Add initial empty item for new challans
-    if (challanItems.isEmpty) {
-      addNewItem();
+      // Add initial empty item for new challans
+      if (challanItems.isEmpty) {
+        addNewItem();
+      }
+
+      print("✅ NEW CHALLAN INITIALIZATION COMPLETE - ID: $newId");
+    } catch (e) {
+      print("⚠️ Error initializing challan: $e");
+      // Fallback to default ID if sheet doesn't exist yet
+      challanNumberController.text = "CH001";
+      challanDateController.text = _formatDate(challanDate.value);
+
+      if (challanItems.isEmpty) {
+        addNewItem();
+      }
     }
-
-    print("✅ NEW CHALLAN INITIALIZATION COMPLETE - ID: $newId");
   }
 
+  Future<Challan?> getLastChallan() async {
+    try {
+      List<Challan> challans = await GoogleSheetService.getChallansList();
 
+      if (challans.isEmpty) {
+        print("ℹ️ No previous challans found, starting with CH001");
+        return null;
+      }
 
-  /// 🟢 Always keep priceControllers in sync with challanItems
-  TextEditingController getPriceController(int index, {double? initialValue}) {
-    while (priceControllers.length < challanItems.length) {
-      final itemIndex = priceControllers.length;
-      final item = challanItems[itemIndex];
-      priceControllers.add(
-        TextEditingController(text: item.price.toStringAsFixed(2)), // ✅ int only
-      );
+      challans.sort((a, b) => (a.challanId ?? '').compareTo(b.challanId ?? ''));
+      print("----lastttt: ${challans.last.challanId}");
+      return challans.last;
+
+    } catch (e) {
+      print("⚠️ Error fetching last challan: $e");
+      return null; // Return null to trigger CH001
     }
-
-    while (priceControllers.length > challanItems.length) {
-      priceControllers.removeLast().dispose();
-    }
-
-    if (initialValue != null &&
-        priceControllers[index].text != initialValue.toInt().toString()) {
-      priceControllers[index].text = initialValue.toInt().toString();
-    }
-
-    return priceControllers[index];
   }
-
-
 
   String generateChallanIdFromLast(Challan? lastChallan) {
-    if (lastChallan == null || lastChallan.challanId == null) return "CH001";
+    if (lastChallan == null ||
+        lastChallan.challanId == null ||
+        lastChallan.challanId!.isEmpty) {
+      print("✅ Generating first challan ID: CH001");
+      return "CH001";
+    }
 
     RegExp regex = RegExp(r'^CH(\d+)$', caseSensitive: false);
     final match = regex.firstMatch(lastChallan.challanId!);
-    if (match == null) return "CH001";
+
+    if (match == null) {
+      print("⚠️ Invalid challan ID format, defaulting to CH001");
+      return "CH001";
+    }
 
     int number = int.tryParse(match.group(1) ?? "0") ?? 0;
-    return "CH${(number + 1).toString().padLeft(3, '0')}";
+    String newId = "CH${(number + 1).toString().padLeft(3, '0')}";
+
+    print("✅ Generated new challan ID: $newId");
+    return newId;
   }
 
   String generateChallanId() {
@@ -542,14 +558,29 @@ class NewChallanController extends BaseController {
     return newId;
   }
 
-  Future<Challan?> getLastChallan() async {
-    List<Challan> challans = await GoogleSheetService.getChallansList();
-    if (challans.isEmpty) return null;
+  /// 🟢 Always keep priceControllers in sync with challanItems
+  TextEditingController getPriceController(int index, {double? initialValue}) {
+    while (priceControllers.length < challanItems.length) {
+      final itemIndex = priceControllers.length;
+      final item = challanItems[itemIndex];
+      priceControllers.add(
+        TextEditingController(text: item.price.toStringAsFixed(2)), // ✅ int only
+      );
+    }
 
-    challans.sort((a, b) => (a.challanId ?? '').compareTo(b.challanId ?? ''));
-    print("----lastttt: ${challans.last}");
-    return challans.last;
+    while (priceControllers.length > challanItems.length) {
+      priceControllers.removeLast().dispose();
+    }
+
+    if (initialValue != null &&
+        priceControllers[index].text != initialValue.toInt().toString()) {
+      priceControllers[index].text = initialValue.toInt().toString();
+    }
+
+    return priceControllers[index];
   }
+
+
 
   // Add any other missing methods from your original implementation
   Future<void> loadCompanyData() async {
@@ -579,61 +610,80 @@ class NewChallanController extends BaseController {
 
 // Replace your existing loadCustomers() method with this updated version:
 
+  /// ✅ FIXED: Load customers from Google Sheets instead of Firebase
   Future<void> loadCustomers() async {
     try {
       isLoading.value = true;
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        print("⚠️ No authenticated user found");
+        return;
+      }
 
       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-      print("Company ID: $companyId");
+      print("📦 Loading customers for Company ID: $companyId");
 
-      final customersSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("customers")
-          .get();
+      if (companyId.isEmpty) {
+        print("⚠️ No company ID found");
+        Get.snackbar(
+          'Company Required',
+          'Please select a company first',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+        return;
+      }
 
+      // ✅ Fetch customers from Google Sheets
+      final allCustomers = await GoogleSheetService.getCustomers(
+        companyId: companyId,
+        userId: user.uid,
+      );
+
+      print("📊 Total customers fetched: ${allCustomers.length}");
+
+      // ✅ Filter only active customers
       customers.clear();
-
-      // Filter only active customers
-      for (var doc in customersSnapshot.docs) {
-        final data = doc.data();
-
-        // Check if customer is active (assuming you have an 'isActive' or 'status' field)
-        // Adjust the field name based on your actual Firestore structure
-        bool isActive = data['isActive'] ?? true; // Default to true if field doesn't exist
-        // OR if you use status field:
-        // bool isActive = data['status'] == 'active';
+      for (var customer in allCustomers) {
+        // Check if customer is active
+        bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
 
         if (isActive) {
-          data['id'] = doc.id;
-          customers.add(data);
-          print("Added active customer: ${data['name']} (ID: ${doc.id})");
+          customers.add(customer);
+          print("✅ Added active customer: ${customer['name']} (ID: ${customer['customerId']})");
         } else {
-          print("Skipped inactive customer: ${data['name']} (ID: ${doc.id})");
+          print("⏭️ Skipped inactive customer: ${customer['name']} (ID: ${customer['customerId']})");
         }
       }
 
       // Update customer count with only active customers
       customerCount.value = customers.length;
 
-      print("Active Customer count: ${customerCount.value}");
+      print("📈 Active customers loaded: ${customerCount.value}");
 
       if (customers.isEmpty) {
         print("⚠️ No active customers found");
+        Get.snackbar(
+          'No Customers',
+          'No active customers found. Please add customers first.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
       }
 
-    } catch (e) {
-      print("Error loading customers: $e");
+    } catch (e, stackTrace) {
+      print("❌ Error loading customers: $e");
+      print("📄 Stack trace: $stackTrace");
+
       Get.snackbar(
         'Error',
-        'Failed to load customers',
+        'Failed to load customers: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        duration: Duration(seconds: 4),
       );
     } finally {
       isLoading.value = false;
@@ -704,7 +754,7 @@ class NewChallanController extends BaseController {
     }
 
     // Double-check if customer is still active
-    bool isActive = customer['isActive'] ?? true;
+    bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
     if (!isActive) {
       Get.snackbar(
         'Customer Inactive',
@@ -717,6 +767,8 @@ class NewChallanController extends BaseController {
     }
 
     selectedCustomer.value = customer;
+
+    // ✅ Map Google Sheets fields to form controllers
     customerNameController.text = customer['name'] ?? '';
     customerMobileController.text = customer['mobile1'] ?? '';
     customerEmailController.text = customer['email'] ?? '';
@@ -724,14 +776,15 @@ class NewChallanController extends BaseController {
     customerGstController.text = customer['gst'] ?? '';
     customerAddressController.text = customer['address'] ?? '';
 
-    selectedCustomerId.value = customer['customerId'] ?? customer['id'] ?? '';
+    // ✅ Use 'customerId' field from Google Sheets
+    selectedCustomerId.value = customer['customerId'] ?? '';
 
     showCustomerForm.value = false;
 
-    print("Selected Active Customer:");
-    print("  ID: ${selectedCustomerId.value}");
-    print("  Name: ${customerNameController.text}");
-    print("  Mobile: ${customerMobileController.text}");
+    print("✅ Selected Active Customer:");
+    print("   ID: ${selectedCustomerId.value}");
+    print("   Name: ${customerNameController.text}");
+    print("   Mobile: ${customerMobileController.text}");
   }
 
   void toggleCustomerForm() {

@@ -200,11 +200,10 @@ class StockReportController extends BaseController  {
                     columnWidths: {
                       0: pw.FlexColumnWidth(2.5), // Item Name - wider
                       1: pw.FlexColumnWidth(1.2), // Price
-                      2: pw.FlexColumnWidth(1), // GST %
-                      3: pw.FlexColumnWidth(1), // Unit
-                      4: pw.FlexColumnWidth(1.2), // Current Stock
-                      5: pw.FlexColumnWidth(1.5), // Stock Value
-                      6: pw.FlexColumnWidth(1.3), // Status
+                      2: pw.FlexColumnWidth(1), // Unit
+                      3: pw.FlexColumnWidth(1.2), // Current Stock
+                      4: pw.FlexColumnWidth(1.5), // Stock Value
+                      5: pw.FlexColumnWidth(1.3), // Status
                     },
                     children: [
                       // Header
@@ -213,7 +212,6 @@ class StockReportController extends BaseController  {
                         children: [
                           _buildTableCell('Item Name', isHeader: true, font: customFont, align: pw.TextAlign.left),
                           _buildTableCell('Price', isHeader: true, font: customFont, align: pw.TextAlign.right),
-                          _buildTableCell('GST %', isHeader: true, font: customFont),
                           _buildTableCell('Unit', isHeader: true, font: customFont),
                           _buildTableCell('Current Stock', isHeader: true, font: customFont),
                           _buildTableCell('Stock Value', isHeader: true, font: customFont, align: pw.TextAlign.right),
@@ -232,8 +230,7 @@ class StockReportController extends BaseController  {
                           children: [
                             _buildTableCell(item.itemName ?? '-', font: customFont, align: pw.TextAlign.left),
                             _buildTableCell('₹${item.price?.toStringAsFixed(2) ?? "0.00"}', font: customFont, align: pw.TextAlign.right),
-                            _buildTableCell('${item.gstPercent?.toStringAsFixed(1) ?? "0.0"}%', font: customFont),
-                            _buildTableCell(item.unitOfMeasurement ?? '-', font: customFont),
+                          _buildTableCell(item.unitOfMeasurement ?? '-', font: customFont),
                             _buildTableCell('${item.currentStock ?? 0}', font: customFont),
                             _buildTableCell('₹${AppUtil.formatCurrency(stockValue)}', font: customFont, align: pw.TextAlign.right),
                             _buildTableCell(status, font: customFont),

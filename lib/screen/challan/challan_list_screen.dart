@@ -513,3 +513,4 @@ class ChallanListScreen extends GetView<ChallanListController> {
     );
   }
 }
+

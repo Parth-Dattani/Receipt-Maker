@@ -464,7 +464,8 @@ class CustomerListScreen extends GetView<CustomerListController> {
   }
 
   Widget _buildCustomerCard(Map<String, dynamic> customer, int index) {
-    final isActive = customer['isActive'] ?? true;
+    final isActiveString = customer['isActive']?.toString() ?? 'true';
+    final isActive = isActiveString.toLowerCase() == 'true';
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
@@ -685,3 +686,4 @@ class CustomerListScreen extends GetView<CustomerListController> {
     );
   }
 }
+

@@ -596,7 +596,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: DropdownButton<String?>(
+                      child: DropdownButton<String>(  // ✅ Changed from String? to String
                         value: controller.selectedCustomerId.value.isEmpty
                             ? null
                             : controller.selectedCustomerId.value,
@@ -604,23 +604,29 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         hint: Text('select_customer'.tr),
                         underline: SizedBox(),
                         items: [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('select_customer'.tr),
-                          ),
+                          // ✅ REMOVED the null value item - it's redundant with hint
                           ...controller.customers.map((customer) {
-                            return DropdownMenuItem<String?>(
-                              value: customer['id']?.toString(),
-                              child: Text( (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),),
+                            // ✅ Add null check and ensure unique values
+                            final customerId = customer['customerId']?.toString() ?? '';
+                            if (customerId.isEmpty) {
+                              return null; // Skip invalid customers
+                            }
+
+                            return DropdownMenuItem<String>(
+                              value: customerId,
+                              child: Text(
+                                (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),
+                              ),
                             );
-                          }).toList(),
+                          }).whereType<DropdownMenuItem<String>>().toList(), // ✅ Filter out nulls
                         ],
                         onChanged: (customerId) {
                           if (customerId == null || customerId.isEmpty) {
                             controller.selectCustomer(null);
                           } else {
-                            final customer = controller.customers
-                                .firstWhereOrNull((c) => c['id'] == customerId);
+                            final customer = controller.customers.firstWhereOrNull(
+                                    (c) => c['customerId']?.toString() == customerId
+                            );
                             controller.selectCustomer(customer);
                           }
                         },

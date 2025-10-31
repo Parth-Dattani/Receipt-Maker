@@ -880,6 +880,7 @@ class NewInvoiceController extends GetxController {
   }
 
 // NEW: Fetch complete customer details from Firestore
+  /// ✅ FIXED: Fetch complete customer details from Google Sheets
   Future<void> _fetchCustomerDetailsById(String customerId) async {
     if (customerId.isEmpty) {
       print("⚠️ Cannot fetch customer details: customerId is empty");
@@ -901,23 +902,22 @@ class NewInvoiceController extends GetxController {
         return;
       }
 
-      // Query Firestore for customer
-      final customerSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("customers")
-          .where("customerId", isEqualTo: customerId)
-          .limit(1)
-          .get();
+      // ✅ Fetch from Google Sheets instead of Firestore
+      final allCustomers = await GoogleSheetService.getCustomers(
+        companyId: companyId,
+        userId: user.uid,
+      );
 
-      if (customerSnapshot.docs.isEmpty) {
+      // Find the specific customer
+      final customerData = allCustomers.firstWhere(
+            (customer) => customer['customerId'] == customerId,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (customerData.isEmpty) {
         print("⚠️ No customer found with customerId: $customerId");
         return;
       }
-
-      final customerData = customerSnapshot.docs.first.data();
 
       // ✅ ALWAYS update PAN and GST (overwrite existing values)
       customerPanController.text = customerData['pan'] ?? '';
@@ -947,7 +947,7 @@ class NewInvoiceController extends GetxController {
         print("✅ Set Mobile: ${customerMobileController.text}");
       }
 
-      print("✅ Customer details fetched and populated successfully");
+      print("✅ Customer details fetched and populated successfully from Google Sheets");
 
     } catch (e, stackTrace) {
       print("❌ Error fetching customer details: $e");
@@ -1103,45 +1103,57 @@ class NewInvoiceController extends GetxController {
     }
   }
 
+  /// ✅ FIXED: Load customers from Google Sheets instead of Firebase
   Future<void> loadCustomers() async {
     try {
       isLoading.value = true;
 
       await _loadWithCache('customers', () async {
         final user = _auth.currentUser;
-        if (user == null) return;
+        if (user == null) {
+          print("⚠️ No authenticated user found");
+          return;
+        }
 
         String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+        print("📦 Loading customers for Company ID: $companyId");
 
-        final customersSnapshot = await _firestore
-            .collection("users")
-            .doc(user.uid)
-            .collection("companies")
-            .doc(companyId)
-            .collection("customers")
-            .get();
+        if (companyId.isEmpty) {
+          print("⚠️ No company ID found");
+          Get.snackbar(
+            'Company Required',
+            'Please select a company first',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
+          return;
+        }
 
+        // ✅ Fetch customers from Google Sheets
+        final allCustomers = await GoogleSheetService.getCustomers(
+          companyId: companyId,
+          userId: user.uid,
+        );
+
+        print("📊 Total customers fetched from Google Sheets: ${allCustomers.length}");
+
+        // ✅ Filter only active customers
         customers.clear();
         int activeCount = 0;
         int inactiveCount = 0;
 
-        for (var doc in customersSnapshot.docs) {
-          final data = doc.data();
-
+        for (var customer in allCustomers) {
           // Check if customer is active
-          // Adjust field name based on your Firestore structure
-          bool isActive = data['isActive'] ?? true; // Default to true if field doesn't exist
-          // OR if you use status field:
-          // bool isActive = data['status'] == 'active';
+          bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
 
           if (isActive) {
-            data['id'] = doc.id;
-            customers.add(data);
+            customers.add(customer);
             activeCount++;
-            print("✅ Added active customer: ${data['name']} (ID: ${doc.id})");
+            print("✅ Added active customer: ${customer['name']} (ID: ${customer['customerId']})");
           } else {
             inactiveCount++;
-            print("⏭️ Skipped inactive customer: ${data['name']} (ID: ${doc.id})");
+            print("⏭️ Skipped inactive customer: ${customer['name']} (ID: ${customer['customerId']})");
           }
         }
 
@@ -1161,19 +1173,29 @@ class NewInvoiceController extends GetxController {
             baseColor: Colors.orange.shade700,
             icon: Icons.info_outline,
           );
+        } else {
+          showCustomSnackbar(
+            title: "Customers Loaded",
+            message: "Found $activeCount active customer${activeCount != 1 ? 's' : ''}",
+            baseColor: Colors.green.shade700,
+            icon: Icons.check_circle_outline,
+          );
         }
 
         return null;
       });
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("❌ Error loading customers: $e");
+      print("📄 Stack trace: $stackTrace");
+
       Get.snackbar(
         'Error',
-        'Failed to load customers',
+        'Failed to load customers: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
+        duration: Duration(seconds: 4),
       );
     } finally {
       isLoading.value = false;
@@ -1361,9 +1383,8 @@ class NewInvoiceController extends GetxController {
       return;
     }
 
-    // Double-check if customer is still active before selection
-    bool isActive = customer['isActive'] ?? true;
-    // OR: bool isActive = customer['status'] == 'active';
+    // ✅ Double-check if customer is still active before selection
+    bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
 
     if (!isActive) {
       showCustomSnackbar(
@@ -1376,19 +1397,23 @@ class NewInvoiceController extends GetxController {
       return;
     }
 
-    selectedCustomerId.value = customer['customerId'] ?? customer['id'] ?? '';
+    // ✅ Map Google Sheets fields to form controllers
+    selectedCustomerId.value = customer['customerId'] ?? '';
     customerNameController.text = customer['name'] ?? '';
     customerMobileController.text = customer['mobile1'] ?? '';
     customerEmailController.text = customer['email'] ?? '';
     customerAddressController.text = customer['address'] ?? '';
     customerPanController.text = customer['pan'] ?? '';
     customerGstController.text = customer['gst'] ?? '';
+
     showCustomerForm.value = false;
 
     print("✅ Selected active customer:");
     print("   ID: ${selectedCustomerId.value}");
     print("   Name: ${customerNameController.text}");
     print("   Mobile: ${customerMobileController.text}");
+    print("   PAN: ${customerPanController.text}");
+    print("   GST: ${customerGstController.text}");
   }
 
   void toggleCustomerForm() {

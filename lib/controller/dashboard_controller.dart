@@ -1348,6 +1348,7 @@ class DashboardController extends BaseController {
     await refreshDashboard();
     //}
   }
+
   void showInvoiceOptions() {
     Get.dialog(
       InvoicePreviewScreen(
@@ -1457,23 +1458,20 @@ class DashboardController extends BaseController {
 
     print("Navigating to Customer List Screen");
 
-    // Try direct navigation first
     try {
-      // Make sure the controller is initialized
       if (!Get.isRegistered<CustomerListController>()) {
         Get.put(CustomerListController());
       }
 
-      // Navigate to the screen
+      // ✅ Wait for result from Customer List
       await Get.to(() => const CustomerListScreen());
 
-      // ✅ Always refresh when returning
-      print("🔄 Returned from Customer List, refreshing...");
-      await loadCustomerCount(); // Refresh customer count
+      // ✅ Refresh customer count when returning
+      print("🔄 Returned from Customer List, refreshing count...");
+      await loadCustomerCount();
 
     } catch (e) {
       print("Error navigating to customer list: $e");
-      // Fallback - show a simple dialog with customer count
       _showSimpleCustomerDialog();
     }
   }

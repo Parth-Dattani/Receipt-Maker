@@ -282,69 +282,176 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                   ),
                 ),
                 Spacer(),
+
+                // ✅ Add refresh button for vendors list
                 Obx(() => !controller.isEditMode.value
-                    ? IconButton(
-                  onPressed: controller.toggleVendorForm,
-                  icon: Icon(
-                    controller.showVendorForm.value ? Icons.store : Icons.add_business,
-                    color: AppColors.tealColor,
-                  ),
-                  tooltip: controller.showVendorForm.value
-                      ? 'Select from existing customers'
-                      : 'Add new vendor manually',
+                    ? Row(
+                  children: [
+                    IconButton(
+                      onPressed: controller.refreshVendors,
+                      icon: Icon(Icons.refresh, color: AppColors.tealColor),
+                      tooltip: 'Refresh vendors list',
+                    ),
+                    IconButton(
+                      onPressed: controller.toggleVendorForm,
+                      icon: Icon(
+                        controller.showVendorForm.value
+                            ? Icons.store
+                            : Icons.add_business,
+                        color: AppColors.tealColor,
+                      ),
+                      tooltip: controller.showVendorForm.value
+                          ? 'Select from existing customers'
+                          : 'Add new vendor manually',
+                    ),
+                  ],
                 )
                     : SizedBox()),
               ],
             ),
             SizedBox(height: 16),
+
             Obx(() {
               if (controller.isEditMode.value) {
                 return _buildVendorFormFields();
               } else {
+                // ✅ Show loading state while fetching customers
+                if (controller.isLoading.value && controller.customers.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Loading customers...',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // ✅ Enhanced empty state with action button
                 if (controller.customers.isEmpty && !controller.showVendorForm.value) {
-                  return Column(
-                    children: [
-                      Text(
-                        'No customers found. Please add vendor details.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: controller.toggleVendorForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
-                          foregroundColor: Colors.white,
+                  return Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.orange.shade700,
+                          size: 32,
                         ),
-                        child: Text('Add Vendor Details'),
-                      ),
-                    ],
+                        SizedBox(height: 12),
+                        Text(
+                          'No customers found in your account',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Please add vendor details manually or create customers first',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: controller.toggleVendorForm,
+                              icon: Icon(Icons.add_business, size: 18),
+                              label: Text('Add Vendor Details'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.tealColor,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: controller.refreshVendors,
+                              icon: Icon(Icons.refresh, size: 18),
+                              label: Text('Refresh'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.tealColor,
+                                side: BorderSide(color: AppColors.tealColor),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 } else if (!controller.showVendorForm.value) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButton<Map<String, dynamic>>(
-                      value: controller.selectedVendor.value,
-                      isExpanded: true,
-                      hint: Text('Select Customer as Vendor'),
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text('Select Customer'),
+                  // ✅ Show customer dropdown with count
+                  return Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        ...controller.customers.map((customer) {
-                          return DropdownMenuItem(
-                            value: customer,
-                            child: Text(customer['name'] ?? 'Unknown Customer'),
-                          );
-                        }).toList(),
-                      ],
-                      onChanged: controller.selectVendor,
-                    ),
+                        child: DropdownButton<Map<String, dynamic>>(
+                          value: controller.selectedVendor.value,
+                          isExpanded: true,
+                          hint: Text('Select Customer as Vendor'),
+                          underline: SizedBox(),
+                          items: [
+                            DropdownMenuItem(
+                              value: null,
+                              child: Text('Select Customer'),
+                            ),
+                            ...controller.customers.map((customer) {
+                              return DropdownMenuItem(
+                                value: customer,
+                                child: Text(customer['name'] ?? 'Unknown Customer'),
+                              );
+                            }).toList(),
+                          ],
+                          onChanged: controller.selectVendor,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${controller.vendorCount.value} customers available',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: controller.refreshVendors,
+                            icon: Icon(Icons.refresh, size: 16),
+                            label: Text('Refresh'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.tealColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   );
                 } else {
                   return _buildVendorFormFields();
@@ -357,6 +464,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
     );
   }
 
+// Keep your existing _buildVendorFormFields() method unchanged
   Widget _buildVendorFormFields() {
     return Column(
       children: [

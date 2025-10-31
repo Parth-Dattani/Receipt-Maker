@@ -1947,14 +1947,25 @@ class PurchaseEntryController extends BaseController {
   void initializePurchase() async {
     if (isEditMode.value) return;
 
-    final lastPurchase = await getLastPurchase();
-    String newId = generatePurchaseIdFromLast(lastPurchase);
+    try {
+      final lastPurchase = await getLastPurchase();
+      String newId = generatePurchaseIdFromLast(lastPurchase);
 
-    purchaseNumberController.text = newId;
-    purchaseDateController.text = _formatDate(purchaseDate.value);
+      purchaseNumberController.text = newId;
+      purchaseDateController.text = _formatDate(purchaseDate.value);
 
-    if (purchaseItems.isEmpty) {
-      addNewItem();
+      if (purchaseItems.isEmpty) {
+        addNewItem();
+      }
+    } catch (e) {
+      print("⚠️ Error initializing purchase: $e");
+      // Fallback to default ID if sheet doesn't exist yet
+      purchaseNumberController.text = "PUR001";
+      purchaseDateController.text = _formatDate(purchaseDate.value);
+
+      if (purchaseItems.isEmpty) {
+        addNewItem();
+      }
     }
   }
 
@@ -2038,19 +2049,44 @@ class PurchaseEntryController extends BaseController {
   }
 
   String generatePurchaseIdFromLast(PurchaseEntry? lastPurchase) {
-    if (lastPurchase == null || lastPurchase.purchaseId == null) return "PUR001";
+    if (lastPurchase == null ||
+        lastPurchase.purchaseId == null ||
+        lastPurchase.purchaseId!.isEmpty) {
+      print("✅ Generating first purchase ID: PUR001");
+      return "PUR001";
+    }
+
     RegExp regex = RegExp(r'^PUR(\d+)$', caseSensitive: false);
     final match = regex.firstMatch(lastPurchase.purchaseId!);
-    if (match == null) return "PUR001";
+
+    if (match == null) {
+      print("⚠️ Invalid purchase ID format, defaulting to PUR001");
+      return "PUR001";
+    }
+
     int number = int.tryParse(match.group(1) ?? "0") ?? 0;
-    return "PUR${(number + 1).toString().padLeft(3, '0')}";
+    String newId = "PUR${(number + 1).toString().padLeft(3, '0')}";
+
+    print("✅ Generated new purchase ID: $newId");
+    return newId;
   }
 
   Future<PurchaseEntry?> getLastPurchase() async {
-    List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
-    if (purchases.isEmpty) return null;
-    purchases.sort((a, b) => (a.purchaseId ?? '').compareTo(b.purchaseId ?? ''));
-    return purchases.last;
+    try {
+      List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
+
+      if (purchases.isEmpty) {
+        print("ℹ️ No previous purchases found, starting with PUR001");
+        return null;
+      }
+
+      purchases.sort((a, b) => (a.purchaseId ?? '').compareTo(b.purchaseId ?? ''));
+      return purchases.last;
+
+    } catch (e) {
+      print("⚠️ Error fetching last purchase: $e");
+      return null; // Return null to trigger PUR001
+    }
   }
 
   Future<void> loadCompanyData() async {
@@ -2076,38 +2112,92 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
+  // ✅ UPDATED: Refresh vendors list
+  Future<void> refreshVendors() async {
+    await loadCustomersAsVendors();
+  }
+
   Future<void> loadCustomersAsVendors() async {
     try {
       isLoading.value = true;
-      final user = _auth.currentUser;
-      if (user == null) return;
 
+      // ✅ Get userId from shared preferences
+      String userId = await sharedPreferencesHelper.getPrefData("userId") ?? "";
       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
 
-      final customersSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId)
-          .collection("customers")
-          .get();
+      if (userId.isEmpty || companyId.isEmpty) {
+        print("⚠️ Missing userId or companyId");
+        showCustomSnackbar(
+          title: "Setup Required",
+          message: "Please complete your account setup",
+          baseColor: Colors.orange.shade700,
+          icon: Icons.warning,
+        );
+        return;
+      }
+
+      print("📋 Fetching customers for companyId: $companyId, userId: $userId");
+
+      // ✅ Fetch customers from Google Sheets
+      List<Map<String, dynamic>> customersFromSheet =
+      await GoogleSheetService.getCustomers(
+        companyId: companyId,
+        userId: userId,
+      );
+
+      print("📊 Retrieved ${customersFromSheet.length} customers from Google Sheets");
 
       customers.clear();
 
-      for (var doc in customersSnapshot.docs) {
-        final data = doc.data();
-        bool isActive = data['isActive'] ?? true;
+      for (var customerData in customersFromSheet) {
+        // ✅ Check if customer is active
+        bool isActive = customerData['isActive']?.toString().toLowerCase() == 'true';
 
         if (isActive) {
-          data['id'] = doc.id;
-          data['vendorId'] = data['customerId'] ?? doc.id;
-          customers.add(data);
+          // ✅ Map customer data to expected format
+          Map<String, dynamic> vendor = {
+            'id': customerData['customerId'] ?? '',
+            'vendorId': customerData['customerId'] ?? '',
+            'customerId': customerData['customerId'] ?? '',
+            'name': customerData['name'] ?? '',
+            'mobile': customerData['mobile1'] ?? '',
+            'mobile1': customerData['mobile1'] ?? '',
+            'mobile2': customerData['mobile2'] ?? '',
+            'email': customerData['email'] ?? '',
+            'address': customerData['address'] ?? '',
+            'city': customerData['city'] ?? '',
+            'state': customerData['state'] ?? '',
+            'country': customerData['country'] ?? '',
+            'pincode': customerData['pincode'] ?? '',
+            'gst': customerData['gst'] ?? '',
+            'pan': customerData['pan'] ?? '',
+            'businessName': customerData['businessName'] ?? '',
+            'businessType': customerData['businessType'] ?? '',
+            'isActive': true,
+          };
+
+          customers.add(vendor);
+          print("✅ Added vendor: ${vendor['name']} (${vendor['vendorId']})");
+        } else {
+          print("⚠️ Skipped inactive customer: ${customerData['name']}");
         }
       }
 
       vendorCount.value = customers.length;
+      print("✅ Loaded ${customers.length} active customers from Google Sheets");
+
+      if (customers.isEmpty) {
+        print("⚠️ No active customers found. User should add vendors manually.");
+      }
+
     } catch (e) {
-      print("Error loading customers: $e");
+      print("❌ Error loading customers from Google Sheets: $e");
+      showCustomSnackbar(
+        title: "Error",
+        message: "Failed to load customers: ${e.toString()}",
+        baseColor: Colors.red.shade700,
+        icon: Icons.error,
+      );
     } finally {
       isLoading.value = false;
     }
