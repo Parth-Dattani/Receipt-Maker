@@ -802,309 +802,6 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
-//   Widget buildDrawer() {
-//     return Drawer(
-//       child: Column(
-//         children: [
-//           // Drawer Header with Company Info
-//           Obx(() => DrawerHeader(
-//             decoration: BoxDecoration(
-//               gradient: LinearGradient(
-//                 colors: [  AppColors.tealColor,
-//                   AppColors.tealColor.withOpacity(0.7)],
-//                 begin: Alignment.topLeft,
-//                 end: Alignment.bottomRight,
-//               ),
-//             ),
-//             child: Container(
-//               width: double.infinity,
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   CircleAvatar(
-//                     radius: 30,
-//                     backgroundColor: Colors.white.withOpacity(0.3),
-//                     child: Icon(
-//                       Icons.business,
-//                       size: 35,
-//                       color: Colors.white,
-//                     ),
-//                   ),
-//                   SizedBox(height: 12),
-//                   Text(
-//                     controller.companyName.isNotEmpty
-//                         ? controller.companyName
-//                         : "No Company Selected",
-//                     style: TextStyle(
-//                       color: Colors.white,
-//                       fontSize: 18,
-//                       fontWeight: FontWeight.bold,
-//                     ),
-//                   ),
-//                   if (controller.hasMultipleCompanies.value)
-//                     GestureDetector(
-//                       onTap: controller.showCompanySwitcher,
-//                       child: Container(
-//                         margin: EdgeInsets.only(top: 4),
-//                         padding: EdgeInsets.symmetric(
-//                             horizontal: 8, vertical: 4),
-//                         decoration: BoxDecoration(
-//                           color: Colors.white.withOpacity(0.2),
-//                           borderRadius: BorderRadius.circular(12),
-//                         ),
-//                         child: Row(
-//                           mainAxisSize: MainAxisSize.min,
-//                           children: [
-//                             Text(
-//                               "Switch Company",
-//                               style: TextStyle(
-//                                 color: Colors.white,
-//                                 fontSize: 12,
-//                               ),
-//                             ),
-//                             SizedBox(width: 4),
-//                             Icon(
-//                               Icons.swap_horiz,
-//                               color: Colors.white,
-//                               size: 16,
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-//                     ),
-//                 ],
-//               ),
-//             ),
-//           )),
-//
-//           // Drawer Items
-//           Expanded(
-//             child: ListView(
-//               padding: EdgeInsets.zero,
-//               children: [
-//
-//                 ListTile(
-//                   leading: Icon(Icons.receipt_long, color: Colors.blue),
-//                   title: Text("purchase".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToInventory();
-//                   },
-//                 ),
-//                 ListTile(
-//                   leading: Icon(Icons.people, color: Colors.orange),
-//                   title: Text("customers".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToCustomerList();
-//                   },
-//                 ),
-//
-//                 ListTile(
-//                   leading: Icon(Icons.analytics, color: Colors.purple),
-//                   title: Text("challans".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToChallanList();
-//                   },
-//                 ),
-//                 ListTile(
-//                   leading: Icon(Icons.analytics, color: Colors.purple),
-//                   title: Text("Purchase List".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToPurchaseList();
-//                   },
-//                 ),
-//                 ListTile(
-//                   leading: Icon(Icons.receipt_outlined, color: Colors.indigoAccent),
-//                   title: Text("quotations".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToQuotList();
-//                   },
-//                 ),
-//
-//                 ListTile(
-//                   leading: Icon(Icons.cases_outlined, color: Colors.indigoAccent),
-//                   title: Text("payment".tr),
-//                   onTap: () {
-//                     Get.back();
-//                     controller.navigateToPaymentDetails();
-//                   },
-//                 ),
-//
-//
-//                 /// 🔹 Challan Toggle
-//                 Obx(() => ListTile(
-//                   leading: Icon(Icons.list_alt, color: Colors.green),
-//                   title: Text("enable_challan".tr),
-//                   trailing: Switch(
-//                     value: AppConstants.isChallan.value,
-//                     onChanged: (value) async {
-//                       await controller.updateCompanyPreference('isChallanEnabled', value);
-//                     },
-//                     activeColor: Colors.white,                // thumb when active
-//                     activeTrackColor: Colors.green.shade600,  // track when active
-//                     inactiveThumbColor: Colors.white,         // thumb when inactive
-//                     inactiveTrackColor: Colors.grey.shade400, // track when inactive
-//                     splashRadius: 28,                         // ripple effect
-//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-//                       if (states.contains(WidgetState.selected)) {
-//                         return Icon(Icons.check, color: Colors.green); // ✅ when ON
-//                       }
-//                       return Icon(Icons.close, color: Colors.grey);    // ❌ when OFF
-//                     }),
-//                   ),
-//                 )),
-//
-// // 🔹 GST Toggle
-//                 Obx(() => ListTile(
-//                   leading: Icon(Icons.attach_money, color: Colors.teal),
-//                   title: Text("enable_gst".tr),
-//                   trailing: Switch(
-//                     value: AppConstants.withGST.value,
-//                     onChanged: (value) async {
-//                       await controller.updateCompanyPreference('isGstEnabled', value);
-//                     },
-//                     activeColor: Colors.white,
-//                     activeTrackColor: Colors.teal.shade600,
-//                     inactiveThumbColor: Colors.white,
-//                     inactiveTrackColor: Colors.grey.shade400,
-//                     splashRadius: 28,
-//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-//                       if (states.contains(WidgetState.selected)) {
-//                         return Icon(Icons.check, color: Colors.teal);
-//                       }
-//                       return Icon(Icons.close, color: Colors.grey);
-//                     }),
-//                   ),
-//                 )),
-//
-//
-//                 ///Language
-//                 Obx(() => ListTile(
-//                   leading: Icon(Icons.language, color: Colors.teal),
-//                   title: Text('enable_gujarati'.tr), // 🔹 Use .tr for translation
-//                   trailing: Switch(
-//                     value: AppConstants.isGujarati.value,
-//                     onChanged: (value) async {
-//                       await controller.updateLanguagePreference(value);
-//                     },
-//                     activeColor: Colors.white,
-//                     activeTrackColor: Colors.teal.shade600,
-//                     inactiveThumbColor: Colors.white,
-//                     inactiveTrackColor: Colors.grey.shade400,
-//                     splashRadius: 28,
-//                     thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
-//                       if (states.contains(WidgetState.selected)) {
-//                         return Icon(Icons.check, color: Colors.teal);
-//                       }
-//                       return Icon(Icons.close, color: Colors.grey);
-//                     }),
-//                   ),
-//                 )),
-//
-//
-//                 Divider(),
-//
-//                 // Company Management Section
-//                 if (controller.hasMultipleCompanies.value)
-//                   ListTile(
-//                     leading: Icon(Icons.swap_horiz, color: Colors.indigo),
-//                     title: Text("Switch Company"),
-//                     onTap: () {
-//                       Get.back();
-//                       controller.showCompanySwitcher();
-//                     },
-//                   ),
-//
-//                 ListTile(
-//                   leading: Icon(Icons.add_business, color: Colors.teal),
-//                   title: Text("edit_company".tr),
-//                   onTap: () {
-//                     // ✅ Use currentCompany instead of companyData
-//                     final data = controller.currentCompany.value;
-//
-//                     if (data != null && controller.companyId.value.isNotEmpty) {
-//                       controller.navigateToEditCompany(data, controller.companyId.value);
-//                     } else {
-//                       Get.snackbar(
-//                         "Error",
-//                         "No active company found to edit.",
-//                         snackPosition: SnackPosition.BOTTOM,
-//                         backgroundColor: Colors.red.shade100,
-//                       );
-//                     }
-//                   },
-//                 ),
-//
-//                 Divider(),
-//
-//                 // ListTile(
-//                 //   leading: Icon(Icons.settings, color: Colors.grey),
-//                 //   title: Text("Settings"),
-//                 //   onTap: () {
-//                 //     Get.back();
-//                 //     controller.navigateToNewChallan();
-//                 //   },
-//                 // ),
-//                 ListTile(
-//                   leading: Icon(Icons.logout, color: Colors.red),
-//                   title: Text(
-//                     "logout".tr,
-//                     style: TextStyle(
-//                       color: Colors.red.shade700,
-//                       fontWeight: FontWeight.bold,
-//                     ),
-//                   ),
-//                   onTap: () async {
-//                     Get.dialog(
-//                       AlertDialog(
-//                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-//                         title: Row(
-//                           children: [
-//                             Icon(Icons.logout, color: Colors.red),
-//                             SizedBox(width: 8),
-//                             Text("confirm_logout".tr),
-//                           ],
-//                         ),
-//                         content: Text(
-//                           "logout_message".tr,
-//                           style: TextStyle(fontSize: 15),
-//                         ),
-//                         actions: [
-//                           TextButton(
-//                             child: Text("cancel".tr, style: TextStyle(color: Colors.grey)),
-//                             onPressed: () => Get.back(),
-//                           ),
-//                           ElevatedButton(
-//                             style: ElevatedButton.styleFrom(
-//                               backgroundColor: Colors.red.shade600,
-//                               foregroundColor: Colors.white,
-//                               shape: RoundedRectangleBorder(
-//                                 borderRadius: BorderRadius.circular(8),
-//                               ),
-//                             ),
-//                             child: Text("logout".tr),
-//                             onPressed: () async {
-//                               Get.back(); // close dialog
-//                               await controller.logout();
-//                             },
-//                           ),
-//                         ],
-//                       ),
-//                     );
-//                   },
-//                 ),
-//
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
 
   Widget buildDrawer() {
     return Drawer(
@@ -1187,32 +884,33 @@ class DashboardScreen extends GetView<DashboardController> {
             child: ListView(
               padding: EdgeInsets.only(top: 8, bottom: 20),
               children: [
-                // 📦 Inventory Management Submenu
-                _buildExpansionTile(
-                  icon: Icons.inventory_2,
-                  iconColor: Colors.blue.shade600,
-                  title: "inventory_management".tr,
-                  children: [
-                    _buildSubMenuItem(
-                      icon: Icons.shopping_cart,
-                      iconColor: Colors.blue.shade700,
-                      title: "purchase".tr,
-                      onTap: () {
-                        Get.back();
-                        controller.navigateToInventory();
-                      },
-                    ),
-                    _buildSubMenuItem(
-                      icon: Icons.list_alt,
-                      iconColor: Colors.blue.shade700,
-                      title: "Purchase List",
-                      onTap: () {
-                        Get.back();
-                        controller.navigateToPurchaseList();
-                      },
-                    ),
-                  ],
-                ),
+                // 📦 Inventory Management Submenu (Only for Trading)
+                if (AppConstants.businessType == "Trading")
+                  _buildExpansionTile(
+                    icon: Icons.inventory_2,
+                    iconColor: Colors.blue.shade600,
+                    title: "inventory_management".tr,
+                    children: [
+                      _buildSubMenuItem(
+                        icon: Icons.shopping_cart,
+                        iconColor: Colors.blue.shade700,
+                        title: "purchase".tr,
+                        onTap: () {
+                          Get.back();
+                          controller.navigateToInventory();
+                        },
+                      ),
+                      _buildSubMenuItem(
+                        icon: Icons.list_alt,
+                        iconColor: Colors.blue.shade700,
+                        title: "Purchase List",
+                        onTap: () {
+                          Get.back();
+                          controller.navigateToPurchaseList();
+                        },
+                      ),
+                    ],
+                  ),
 
                 // 📋 Sales & Orders Submenu
                 _buildExpansionTile(
@@ -1220,15 +918,18 @@ class DashboardScreen extends GetView<DashboardController> {
                   iconColor: Colors.purple.shade600,
                   title: "sales_orders".tr,
                   children: [
-                    _buildSubMenuItem(
-                      icon: Icons.note_alt,
-                      iconColor: Colors.purple.shade700,
-                      title: "challans".tr,
-                      onTap: () {
-                        Get.back();
-                        controller.navigateToChallanList();
-                      },
-                    ),
+                    // ✅ Challans - Only for Trading
+                    if (AppConstants.businessType == "Trading")
+                      _buildSubMenuItem(
+                        icon: Icons.note_alt,
+                        iconColor: Colors.purple.shade700,
+                        title: "challans".tr,
+                        onTap: () {
+                          Get.back();
+                          controller.navigateToChallanList();
+                        },
+                      ),
+                    // ✅ Invoice - Always visible
                     _buildSubMenuItem(
                       icon: Icons.receipt,
                       iconColor: Colors.purple.shade700,
@@ -1238,6 +939,7 @@ class DashboardScreen extends GetView<DashboardController> {
                         controller.navigateToInvoiceList();
                       },
                     ),
+                    // ✅ Quotations - Always visible
                     _buildSubMenuItem(
                       icon: Icons.request_quote,
                       iconColor: Colors.purple.shade700,
@@ -1250,17 +952,19 @@ class DashboardScreen extends GetView<DashboardController> {
                   ],
                 ),
 
-                // 📊 Stock Report (Direct Item)
-                _buildMenuItem(
-                  icon: Icons.assessment,
-                  iconColor: Colors.purple.shade600,
-                  title: "Stock Report",
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToStockReport();
-                  },
-                ),
-                // 👥 Customers (Direct Item)
+                // 📊 Stock Report (Only for Trading)
+                if (AppConstants.businessType == "Trading")
+                  _buildMenuItem(
+                    icon: Icons.assessment,
+                    iconColor: Colors.purple.shade600,
+                    title: "Stock Report",
+                    onTap: () {
+                      Get.back();
+                      controller.navigateToStockReport();
+                    },
+                  ),
+
+                // 👥 Customers (Direct Item - Always visible)
                 _buildMenuItem(
                   icon: Icons.people,
                   iconColor: Colors.orange.shade600,
@@ -1271,7 +975,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   },
                 ),
 
-                // 💰 Payment (Direct Item)
+                // 💰 Payment (Direct Item - Always visible)
                 _buildMenuItem(
                   icon: Icons.account_balance_wallet,
                   iconColor: Colors.indigo.shade600,
@@ -1288,20 +992,21 @@ class DashboardScreen extends GetView<DashboardController> {
                 // ⚙️ Settings Section Header
                 _buildSectionHeader("settings".tr),
 
-                // 🔹 Challan Toggle
-                Obx(() => _buildSwitchTile(
-                  icon: Icons.list_alt,
-                  iconColor: Colors.green.shade600,
-                  title: "enable_challan".tr,
-                  value: AppConstants.isChallan.value,
-                  activeColor: Colors.green.shade600,
-                  onChanged: (value) async {
-                    await controller.updateCompanyPreference(
-                        'isChallanEnabled', value);
-                  },
-                )),
+                // 🔹 Challan Toggle (Only for Trading)
+                if (AppConstants.businessType == "Trading")
+                  Obx(() => _buildSwitchTile(
+                    icon: Icons.list_alt,
+                    iconColor: Colors.green.shade600,
+                    title: "enable_challan".tr,
+                    value: AppConstants.isChallan.value,
+                    activeColor: Colors.green.shade600,
+                    onChanged: (value) async {
+                      await controller.updateCompanyPreference(
+                          'isChallanEnabled', value);
+                    },
+                  )),
 
-                // 💵 GST Toggle
+                // 💵 GST Toggle (Always visible)
                 Obx(() => _buildSwitchTile(
                   icon: Icons.attach_money,
                   iconColor: Colors.teal.shade600,
@@ -1314,7 +1019,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   },
                 )),
 
-                // 🌐 Language Toggle
+                // 🌐 Language Toggle (Always visible)
                 Obx(() => _buildSwitchTile(
                   icon: Icons.language,
                   iconColor: Colors.deepPurple.shade600,
@@ -1452,7 +1157,7 @@ class DashboardScreen extends GetView<DashboardController> {
   }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎨 HELPER WIDGETS
+// 🎨 HELPER WIDGETS (Keep all the existing helper methods)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   /// Section Header

@@ -2148,12 +2148,16 @@ class PurchaseEntryController extends BaseController {
       print("📊 Retrieved ${customersFromSheet.length} customers from Google Sheets");
 
       customers.clear();
+      int creditorCount = 0;
 
       for (var customerData in customersFromSheet) {
         // ✅ Check if customer is active
         bool isActive = customerData['isActive']?.toString().toLowerCase() == 'true';
 
-        if (isActive) {
+        // ✅ Check if customer is a Creditor
+        bool isCreditor = customerData['sundryType']?.toString().toLowerCase() == 'creditors';
+
+        if (isActive && isCreditor) {
           // ✅ Map customer data to expected format
           Map<String, dynamic> vendor = {
             'id': customerData['customerId'] ?? '',
@@ -2173,21 +2177,31 @@ class PurchaseEntryController extends BaseController {
             'pan': customerData['pan'] ?? '',
             'businessName': customerData['businessName'] ?? '',
             'businessType': customerData['businessType'] ?? '',
+            'sundryType': customerData['sundryType'] ?? '',
             'isActive': true,
           };
 
           customers.add(vendor);
-          print("✅ Added vendor: ${vendor['name']} (${vendor['vendorId']})");
+          creditorCount++;
+          print("✅ Added creditor vendor: ${vendor['name']} (${vendor['vendorId']})");
+        } else if (isActive && !isCreditor) {
+          print("⚠️ Skipped non-creditor customer: ${customerData['name']} (Type: ${customerData['sundryType']})");
         } else {
           print("⚠️ Skipped inactive customer: ${customerData['name']}");
         }
       }
 
       vendorCount.value = customers.length;
-      print("✅ Loaded ${customers.length} active customers from Google Sheets");
+      print("✅ Loaded $creditorCount active creditor customers from Google Sheets");
 
       if (customers.isEmpty) {
-        print("⚠️ No active customers found. User should add vendors manually.");
+        print("⚠️ No active creditor customers found.");
+        showCustomSnackbar(
+          title: "No Creditors Found",
+          message: "No active creditor customers found. Please add creditor customers first.",
+          baseColor: Colors.orange.shade700,
+          icon: Icons.info_outline,
+        );
       }
 
     } catch (e) {
@@ -2203,6 +2217,54 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
+  void selectVendor(Map<String, dynamic>? vendor) {
+    if (vendor == null) {
+      selectedVendor.value = null;
+      clearVendorSelection();
+      showVendorForm.value = false;
+      return;
+    }
+
+    // ✅ Double-check if vendor is active
+    bool isActive = vendor['isActive'] ?? true;
+    if (!isActive) {
+      Get.snackbar(
+        'Customer Inactive',
+        'This customer is currently inactive. Please select an active customer.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // ✅ Double-check if vendor is a creditor
+    bool isCreditor = vendor['sundryType']?.toString().toLowerCase() == 'creditors';
+    if (!isCreditor) {
+      Get.snackbar(
+        'Invalid Vendor Type',
+        'Please select a creditor customer for purchase entries.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    selectedVendor.value = vendor;
+    vendorNameController.text = vendor['name'] ?? '';
+    vendorMobileController.text = vendor['mobile1'] ?? vendor['mobile'] ?? '';
+    vendorEmailController.text = vendor['email'] ?? '';
+    vendorAddressController.text = vendor['address'] ?? '';
+    selectedVendorId.value = vendor['vendorId'] ?? vendor['customerId'] ?? vendor['id'] ?? '';
+    showVendorForm.value = false;
+
+    print("✅ Selected Creditor Vendor:");
+    print("   ID: ${selectedVendorId.value}");
+    print("   Name: ${vendorNameController.text}");
+    print("   Type: ${vendor['sundryType']}");
+  }
+
   Future<void> fetchItems() async {
     try {
       isLoading.value = true;
@@ -2215,28 +2277,7 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
-  void selectVendor(Map<String, dynamic>? vendor) {
-    if (vendor == null) {
-      selectedVendor.value = null;
-      clearVendorSelection();
-      showVendorForm.value = false;
-      return;
-    }
 
-    bool isActive = vendor['isActive'] ?? true;
-    if (!isActive) {
-      Get.snackbar('Customer Inactive', 'Please select an active customer.');
-      return;
-    }
-
-    selectedVendor.value = vendor;
-    vendorNameController.text = vendor['name'] ?? '';
-    vendorMobileController.text = vendor['mobile1'] ?? vendor['mobile'] ?? '';
-    vendorEmailController.text = vendor['email'] ?? '';
-    vendorAddressController.text = vendor['address'] ?? '';
-    selectedVendorId.value = vendor['vendorId'] ?? vendor['customerId'] ?? vendor['id'] ?? '';
-    showVendorForm.value = false;
-  }
 
   void toggleVendorForm() {
     showVendorForm.value = !showVendorForm.value;

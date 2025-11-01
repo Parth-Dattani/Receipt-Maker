@@ -127,15 +127,17 @@ class SplashController extends BaseController {
       final data = doc.data() ?? {};
       final isChallanEnabled = data['isChallanEnabled'] ?? false;
       final isGstEnabled = data['isGstEnabled'] ?? false;
+      final businessType = data['businessType'] ?? '';
 
       // ✅ Only set values, don’t overwrite Firestore again
       await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
       await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
+      await AppConstants.setBusinessType(businessType);
 
       AppConstants.isChallan.value = isChallanEnabled;
       AppConstants.withGST.value = isGstEnabled;
 
-      print("✅ Settings Loaded → Challan=$isChallanEnabled | GST=$isGstEnabled");
+      print("✅ Settings Loaded → Challan=$isChallanEnabled | GST=$isGstEnabled | businessType=$businessType");
     } catch (e) {
       print("Error loading company settings: $e");
     }

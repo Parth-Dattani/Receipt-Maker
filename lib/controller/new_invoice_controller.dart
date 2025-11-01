@@ -1138,45 +1138,55 @@ class NewInvoiceController extends GetxController {
 
         print("📊 Total customers fetched from Google Sheets: ${allCustomers.length}");
 
-        // ✅ Filter only active customers
+        // ✅ Filter only active customers AND sundryType == "Debtors"
         customers.clear();
-        int activeCount = 0;
+        int activeDebtorsCount = 0;
         int inactiveCount = 0;
+        int creditorsCount = 0;
 
         for (var customer in allCustomers) {
           // Check if customer is active
           bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
 
-          if (isActive) {
+          // ✅ NEW: Check if sundryType is "Debtors"
+          String sundryType = customer['sundryType']?.toString() ?? '';
+
+          if (isActive && sundryType.toLowerCase() == 'debtors') {
             customers.add(customer);
-            activeCount++;
-            print("✅ Added active customer: ${customer['name']} (ID: ${customer['customerId']})");
+            activeDebtorsCount++;
+            print("✅ Added debtor customer: ${customer['name']} (ID: ${customer['customerId']})");
           } else {
-            inactiveCount++;
-            print("⏭️ Skipped inactive customer: ${customer['name']} (ID: ${customer['customerId']})");
+            if (!isActive) {
+              inactiveCount++;
+              print("⏭️ Skipped inactive customer: ${customer['name']}");
+            } else if (sundryType.toLowerCase() != 'debtors') {
+              creditorsCount++;
+              print("⏭️ Skipped creditor customer: ${customer['name']} (Type: $sundryType)");
+            }
           }
         }
 
-        // Update customer count with only active customers
+        // Update customer count with only active debtors
         customerCount.value = customers.length;
 
         print("📊 Customer Summary:");
-        print("   Active: $activeCount");
-        print("   Inactive: $inactiveCount");
+        print("   Active Debtors: $activeDebtorsCount");
+        print("   Creditors (skipped): $creditorsCount");
+        print("   Inactive (skipped): $inactiveCount");
         print("   Total shown: ${customerCount.value}");
 
         if (customers.isEmpty) {
-          print("⚠️ No active customers found");
+          print("⚠️ No active debtor customers found");
           showCustomSnackbar(
-            title: "No Active Customers",
-            message: "No active customers available. Please add customers first.",
+            title: "No Customers",
+            message: "No debtor customers available. Please add customers first.",
             baseColor: Colors.orange.shade700,
             icon: Icons.info_outline,
           );
         } else {
           showCustomSnackbar(
             title: "Customers Loaded",
-            message: "Found $activeCount active customer${activeCount != 1 ? 's' : ''}",
+            message: "Found $activeDebtorsCount debtor customer${activeDebtorsCount != 1 ? 's' : ''}",
             baseColor: Colors.green.shade700,
             icon: Icons.check_circle_outline,
           );

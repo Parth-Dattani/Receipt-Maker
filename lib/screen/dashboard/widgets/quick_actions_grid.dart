@@ -35,13 +35,8 @@ class QuickActionsGrid extends GetView<DashboardController> {
               color: Colors.blue,
               onTap: controller.navigateToCreateInvoice,
             ),
-            // _buildActionCard(
-            //   icon: Icons.list_alt,
-            //   label: 'New Challan',
-            //   color: Colors.green,
-            //   onTap: controller.navigateToNewChallan,
-            // ),
-            if (AppConstants.isChallan.value)
+
+            if (AppConstants.isChallan.value && AppConstants.businessType == "Trading")
               _buildActionCard(
                 icon: Icons.list_alt,
                 label: 'new_challan'.tr,

@@ -635,7 +635,6 @@ class NewChallanController extends BaseController {
         return;
       }
 
-      // ✅ Fetch customers from Google Sheets
       final allCustomers = await GoogleSheetService.getCustomers(
         companyId: companyId,
         userId: user.uid,
@@ -643,30 +642,32 @@ class NewChallanController extends BaseController {
 
       print("📊 Total customers fetched: ${allCustomers.length}");
 
-      // ✅ Filter only active customers
       customers.clear();
-      for (var customer in allCustomers) {
-        // Check if customer is active
-        bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
+      int debtorCount = 0;
 
-        if (isActive) {
+      for (var customer in allCustomers) {
+        bool isActive = customer['isActive']?.toString().toLowerCase() == 'true';
+        bool isDebtor = customer['sundryType']?.toString().toLowerCase() == 'debtors';
+
+        if (isActive && isDebtor) {
           customers.add(customer);
-          print("✅ Added active customer: ${customer['name']} (ID: ${customer['customerId']})");
+          debtorCount++;
+          print("✅ Added debtor customer: ${customer['name']} (ID: ${customer['customerId']})");
+        } else if (isActive && !isDebtor) {
+          print("⏭️ Skipped non-debtor customer: ${customer['name']} (Type: ${customer['sundryType']})");
         } else {
-          print("⏭️ Skipped inactive customer: ${customer['name']} (ID: ${customer['customerId']})");
+          print("⏭️ Skipped inactive customer: ${customer['name']}");
         }
       }
 
-      // Update customer count with only active customers
       customerCount.value = customers.length;
-
-      print("📈 Active customers loaded: ${customerCount.value}");
+      print("📈 Active debtor customers loaded: $debtorCount");
 
       if (customers.isEmpty) {
-        print("⚠️ No active customers found");
+        print("⚠️ No active debtor customers found");
         Get.snackbar(
-          'No Customers',
-          'No active customers found. Please add customers first.',
+          'No Debtor Customers',
+          'No active debtor customers found. Please add debtor customers first.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange,
           colorText: Colors.white,
