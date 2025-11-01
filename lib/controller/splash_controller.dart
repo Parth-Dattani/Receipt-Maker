@@ -20,7 +20,8 @@ class SplashController extends BaseController {
   }
 
   void goToNext() async {
-    await Future.delayed(const Duration(seconds: 3));
+    // Show splash for minimum 2 seconds (reduced from 3)
+    await Future.delayed(const Duration(seconds: 2));
 
     final user = _auth.currentUser;
 
@@ -36,11 +37,12 @@ class SplashController extends BaseController {
     print("Logged-in User: ${user.uid} | Email: ${user.email}");
 
     try {
-      // ✅ Step 2: Check if company exists
+      // ✅ Step 2: Check if company exists with active filter
       final companies = await _firestore
           .collection("users")
           .doc(user.uid)
           .collection("companies")
+          .where('isActive', isEqualTo: true)
           .limit(1)
           .get();
 
@@ -50,59 +52,43 @@ class SplashController extends BaseController {
         return;
       }
 
-      final companyId = companies.docs.first.id;
+      final companyDoc = companies.docs.first;
+      final companyId = companyDoc.id;
+      final companyData = companyDoc.data();
+
       await AppConstants.setCompanyId(companyId);
       print("Company found → ID: $companyId");
 
-      // ✅ Load company settings (Challan & GST flags)
-      await loadCompanySettings(companyId);
+      // ✅ Load company settings from the already fetched document
+      await loadCompanySettingsFromData(companyData);
 
-      // ✅ Step 3: Check if user has AppSheet credentials
+      // ✅ Step 3: Check spreadsheet (fetch user doc in parallel if needed)
       final userDoc = await _firestore.collection("users").doc(user.uid).get();
+
       if (!userDoc.exists) {
-        print("User document missing → ConnectAppSheetScreen");
-        // Get.offAll(() => ConnectAppSheetScreen());
+        print("User document missing → CompanyRegistrationScreen");
+        Get.offAllNamed(CompanyRegistrationScreen.pageId);
         return;
       }
 
       final userData = userDoc.data() ?? {};
-      print("Company exists :---${userData}");
-      final hasSpreadsheetId = userData['spreadsheetId'] != null;
+      final spreadsheetId = userData['spreadsheetId'] as String?;
 
-      print("Company exists :${hasSpreadsheetId}");
-      if (hasSpreadsheetId) {
-        await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
-        AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+      if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
+        await sharedPreferencesHelper.storePrefData("spreadsheetId", spreadsheetId);
+        AppConstants.spreadsheetId = spreadsheetId;
 
-        print("✅ Spreadsheet found → ${AppConstants.spreadsheetId}");
-        // ✅ Test access first
-        print("🔧 Testing Google Sheets access...");
-        bool hasAccess = await GoogleSheetService.testSpreadsheetAccess();
+        print("✅ Spreadsheet found → $spreadsheetId");
 
-        if (!hasAccess) {
-          print("");
-          print("=" * 60);
-          print("⚠️ SETUP REQUIRED:");
-          print("=" * 60);
-          print("1. Open this URL:");
-          print("   https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
-          print("");
-          print("2. Click 'Share' button");
-          print("");
-          print("3. Add this email as Editor:");
-          print("   invoicesathi@invoicesathi.iam.gserviceaccount.com");
-          print("");
-          print("4. Restart the app");
-          print("=" * 60);
-        } else {
-          print("✅ Access confirmed, initializing sheets...");
-          await GoogleSheetService.initializeAllSheets();
-        }
-        print("✅ Company + Spreadsheet found → Dashboard");
+        // ✅ Initialize sheets in background (don't wait for it)
+        _initializeSheetsInBackground();
+
+        // Go to dashboard immediately
+        print("✅ Navigating to Dashboard");
         Get.offAllNamed(DashboardScreen.pageId);
       } else {
-        print("Company exists but no Spreadsheet → ConnectAppSheetScreen");
-        // Get.offAll(() => ConnectAppSheetScreen());
+        print("Company exists but no Spreadsheet → CompanyRegistrationScreen");
+        Get.offAllNamed(CompanyRegistrationScreen.pageId);
       }
     } catch (e) {
       print("Error checking company or user data: $e");
@@ -110,6 +96,60 @@ class SplashController extends BaseController {
     }
   }
 
+  // ✅ NEW: Initialize sheets in background without blocking navigation
+  void _initializeSheetsInBackground() async {
+    try {
+      print("🔧 Testing Google Sheets access in background...");
+      bool hasAccess = await GoogleSheetService.testSpreadsheetAccess();
+
+      if (!hasAccess) {
+        print("");
+        print("=" * 60);
+        print("⚠️ SETUP REQUIRED:");
+        print("=" * 60);
+        print("1. Open this URL:");
+        print("   https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
+        print("");
+        print("2. Click 'Share' button");
+        print("");
+        print("3. Add this email as Editor:");
+        print("   invoicesathi@invoicesathi.iam.gserviceaccount.com");
+        print("");
+        print("4. Restart the app");
+        print("=" * 60);
+      } else {
+        print("✅ Access confirmed, initializing sheets...");
+        await GoogleSheetService.initializeAllSheets();
+        print("✅ Sheets initialized successfully");
+      }
+    } catch (e) {
+      print("⚠️ Error initializing sheets: $e");
+    }
+  }
+
+  // ✅ NEW: Load settings from already fetched company data
+  Future<void> loadCompanySettingsFromData(Map<String, dynamic> data) async {
+    try {
+      final isChallanEnabled = data['isChallanEnabled'] ?? false;
+      final isGstEnabled = data['isGstEnabled'] ?? false;
+      final businessType = data['businessType'] ?? 'Trading';
+
+      // Store in SharedPreferences
+      await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+      await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
+      await AppConstants.setBusinessType(businessType);
+
+      // Update AppConstants
+      AppConstants.isChallan.value = isChallanEnabled;
+      AppConstants.withGST.value = isGstEnabled;
+
+      print("✅ Settings Loaded → Challan=$isChallanEnabled | GST=$isGstEnabled | Type=$businessType");
+    } catch (e) {
+      print("Error loading company settings: $e");
+    }
+  }
+
+  // ✅ Keep original method as fallback (if needed elsewhere)
   Future<void> loadCompanySettings(String companyId) async {
     try {
       final user = _auth.currentUser;
@@ -125,25 +165,12 @@ class SplashController extends BaseController {
       if (!doc.exists) return;
 
       final data = doc.data() ?? {};
-      final isChallanEnabled = data['isChallanEnabled'] ?? false;
-      final isGstEnabled = data['isGstEnabled'] ?? false;
-      final businessType = data['businessType'] ?? '';
-
-      // ✅ Only set values, don’t overwrite Firestore again
-      await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
-      await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
-      await AppConstants.setBusinessType(businessType);
-
-      AppConstants.isChallan.value = isChallanEnabled;
-      AppConstants.withGST.value = isGstEnabled;
-
-      print("✅ Settings Loaded → Challan=$isChallanEnabled | GST=$isGstEnabled | businessType=$businessType");
+      await loadCompanySettingsFromData(data);
     } catch (e) {
       print("Error loading company settings: $e");
     }
   }
 }
-
 
 /// working but Some Flow Chage for AppConst + S.p 26-09   4:07
 // class SplashController extends BaseController{

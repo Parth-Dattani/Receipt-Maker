@@ -206,7 +206,7 @@ class PurchaseDetailsController extends BaseController {
       print("Purchase details loaded successfully");
     } catch (e) {
       print('Error loading purchase details: $e');
-      Get.snackbar('Error', 'Failed to load purchase details');
+
     } finally {
       isLoading.value = false;
     }
@@ -241,7 +241,7 @@ class PurchaseDetailsController extends BaseController {
       print("✅ Successfully loaded and updated ${freshItems.length} items");
     } catch (e, st) {
       print('❌ Error loading purchase items: $e\n$st');
-      Get.snackbar('Error', 'Failed to load purchase items: $e');
+
     } finally {
       isLoadingItems.value = false;
     }

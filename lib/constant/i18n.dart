@@ -231,7 +231,7 @@ class Messages extends Translations {
       'total_purchases': 'Total Purchases',
 
       'inventory_management': 'Inventory Management',
-      'sales_orders': 'Sales & Orders',
+      'sales_orders': 'Sales',
       'settings': 'Settings',
       'company_management': 'Company Management',
     },
@@ -469,7 +469,7 @@ class Messages extends Translations {
       'total_purchases': 'કુલ ખરીદી',
 
       'inventory_management': 'ઇન્વેન્ટરી વ્યવસ્થાપન',
-      'sales_orders': 'વેચાણ અને ઓર્ડર',
+      'sales_orders': 'વેચાણ',
       'settings': 'સેટિંગ્સ',
       'company_management': 'કંપની વ્યવસ્થાપન',
     },

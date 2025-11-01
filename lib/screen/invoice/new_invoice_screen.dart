@@ -34,7 +34,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         )),
         backgroundColor: controller.isEditMode.value
             ? Colors.orange.shade700
-            : Colors.blue.shade700,
+            :         AppColors.tealColor,
         foregroundColor: Colors.white,
         actions: [
           Obx(() => controller.isEditMode.value
@@ -299,7 +299,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     fontWeight: FontWeight.bold,
                     color: controller.isEditMode.value
                         ? Colors.orange.shade700
-                        : Colors.blue.shade700,
+                        : AppColors.tealColor,
                   ),
                 )),
                 Spacer(),
@@ -336,7 +336,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: AppColors.tealColor,
                       ),
                     ),
                     SizedBox(height: 8),
@@ -540,7 +540,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : Colors.blue.shade700,
+                          : AppColors.tealColor,
                     ),
                   ),
                   Text(
@@ -560,7 +560,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                           : Icons.person_add,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : Colors.blue.shade700,
+                          : AppColors.tealColor,
                     ),
                     tooltip: controller.showCustomerForm.value
                         ? 'Select from existing customers'
@@ -1336,7 +1336,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : Colors.blue.shade700,
+                          : AppColors.tealColor,
                     ),
                   ),
                   Spacer(),
@@ -1928,7 +1928,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         icon: Icon(Icons.add_circle_outline, size: 20),
                         label: Text('add_another_item'.tr),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
+                          backgroundColor: AppColors.tealColor,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -1992,7 +1992,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 fontWeight: FontWeight.bold,
                 color: controller.isEditMode.value
                     ? Colors.orange.shade700
-                    : Colors.blue.shade700,
+                    : AppColors.tealColor,
               ),
             ),
             SizedBox(height: 16),
@@ -2211,7 +2211,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : Colors.blue.shade700)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
                   : Colors.black87,
             ),
           ),
@@ -2221,7 +2221,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : Colors.blue.shade700)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
                   : Colors.black87,
             ),
           ),
@@ -2246,7 +2246,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 fontWeight: FontWeight.bold,
                 color: controller.isEditMode.value
                     ? Colors.orange.shade700
-                    : Colors.blue.shade700,
+                    : AppColors.tealColor,
               ),
             ),
             SizedBox(height: 16),
@@ -2288,7 +2288,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             style: ElevatedButton.styleFrom(
               backgroundColor: controller.isEditMode.value
                   ? Colors.orange.shade700
-                  : Colors.blue.shade700,
+                  : AppColors.tealColor,
               padding: EdgeInsets.symmetric(vertical: 12),
             ),
             child: Text(

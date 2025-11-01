@@ -275,25 +275,41 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             const SizedBox(height: 16),
 
                             // Business Type Dropdown
-                            Obx(() => _customDropdown(
-                              label: "Business Type *",
-                              prefixIcon: Icons.business_center,
-                              value: controller.selectedBusinessType.value.isEmpty
-                                  ? null
-                                  : controller.selectedBusinessType.value,
-                              items: controller.businessTypes.map((type) {
-                                return DropdownMenuItem<String>(
-                                  value: type,
-                                  child: Text(type),
+                            Obx(() {
+                              if(controller.isEditMode.value){
+                                return CustomTextFormField(
+                                  controller: TextEditingController(
+                                    text: controller.selectedBusinessType.value,
+                                  ),
+                                  label: "Business Type *",
+                                  prefixIcon: Icons.business_center,
+                                  readOnly: true,
+                                  //enabled: false,
                                 );
-                              }).toList(),
-                              onChanged: (value) {
-                                controller.selectedBusinessType.value =
-                                    value ?? '';
-                              },
-                              isRequired: true,
-                              hint: "Select Business Type",
-                            )),
+                              }
+                              else{
+                                return  _customDropdown(
+                                  label: "Business Type *",
+                                  prefixIcon: Icons.business_center,
+                                  value: controller.selectedBusinessType.value.isEmpty
+                                      ? null
+                                      : controller.selectedBusinessType.value,
+                                  items: controller.businessTypes.map((type) {
+                                    return DropdownMenuItem<String>(
+                                      value: type,
+                                      child: Text(type),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    controller.selectedBusinessType.value =
+                                        value ?? '';
+                                  },
+                                  isRequired: true,
+                                  hint: "Select Business Type",
+                                );
+                              }
+                            }
+                            ),
                             CustomTextFormField(
                               controller: controller.businessCategoryController,
                               label: "Business Category *",
@@ -440,7 +456,9 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                             _sectionTitle("GST", Icons.receipt_long),
                             Obx(() => SwitchListTile(
                               value: controller.isGstEnabled.value,
-                              onChanged: (value) {
+                              onChanged: controller.isEditMode.value
+                                  ? null  // Disable switch in edit mode
+                                  : (value) {
                                 controller.isGstEnabled.value = value;
                               },
                               activeColor: Colors.white,

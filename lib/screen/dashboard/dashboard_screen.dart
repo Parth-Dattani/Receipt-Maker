@@ -889,7 +889,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   _buildExpansionTile(
                     icon: Icons.inventory_2,
                     iconColor: Colors.blue.shade600,
-                    title: "inventory_management".tr,
+                    title: "purchase".tr,
                     children: [
                       _buildSubMenuItem(
                         icon: Icons.shopping_cart,
@@ -916,7 +916,7 @@ class DashboardScreen extends GetView<DashboardController> {
                 _buildExpansionTile(
                   icon: Icons.receipt_long,
                   iconColor: Colors.purple.shade600,
-                  title: "sales_orders".tr,
+                  title: "sales".tr,
                   children: [
                     // ✅ Challans - Only for Trading
                     if (AppConstants.businessType == "Trading")
@@ -1006,18 +1006,6 @@ class DashboardScreen extends GetView<DashboardController> {
                     },
                   )),
 
-                // 💵 GST Toggle (Always visible)
-                Obx(() => _buildSwitchTile(
-                  icon: Icons.attach_money,
-                  iconColor: Colors.teal.shade600,
-                  title: "enable_gst".tr,
-                  value: AppConstants.withGST.value,
-                  activeColor: Colors.teal.shade600,
-                  onChanged: (value) async {
-                    await controller.updateCompanyPreference(
-                        'isGstEnabled', value);
-                  },
-                )),
 
                 // 🌐 Language Toggle (Always visible)
                 Obx(() => _buildSwitchTile(
