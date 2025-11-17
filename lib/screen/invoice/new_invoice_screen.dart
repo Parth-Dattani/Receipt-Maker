@@ -348,7 +348,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               return SizedBox();
             }),
 
-            // Invoice Number
+            // Invoice Number - This works because it's wrapped in Obx
             Obx(() => TextFormField(
               controller: controller.invoiceNumberController,
               decoration: InputDecoration(
@@ -371,12 +371,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             // ✅ NEW: Invoice Date and Payment Due Date in Row
             Row(
               children: [
-                // Invoice Date
+                // Invoice Date - Wrap this specific field in Obx
                 Expanded(
-                  child: TextFormField(
+                  child: Obx(() => TextFormField(
                     controller: controller.invoiceDateController,
                     decoration: InputDecoration(
-                      labelText: 'Invoice Date',
+                      labelText: '${controller.invoiceType.value.name} Date',
                       prefixIcon: Icon(Icons.calendar_today, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -386,20 +386,22 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     readOnly: true,
                     onTap: controller.selectInvoiceDate,
                     style: TextStyle(fontSize: 14),
-                  ),
+                  )),
                 ),
 
                 SizedBox(width: 12),
 
-                // Payment Due Date
+                // Payment Due Date - Wrap this specific field in Obx
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
+                      Obx(() => TextFormField(
                         controller: controller.paymentDueDateController,
                         decoration: InputDecoration(
-                          labelText: 'Due Date',
+                          labelText: controller.invoiceType.value == InvoiceType.invoice
+                              ? 'Due Date'
+                              : 'Valid Until',
                           prefixIcon: Icon(Icons.event_available, size: 20),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -409,42 +411,71 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         readOnly: true,
                         onTap: controller.selectPaymentDueDate,
                         style: TextStyle(fontSize: 14),
-                      ),
-
+                      )),
                     ],
                   ),
                 ),
               ],
             ),
 
-            // ✅ Show days until due (optional info)
+            // ✅ Show days until due (optional info) - This also needs to be reactive for quotation
             Obx(() {
               if (!controller.isEditMode.value && !controller.isFromQuotation.value) {
                 final daysUntilDue = controller.paymentDueDate.value.difference(controller.invoiceDate.value).inDays;
-                return Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.info_outline, size: 14, color: Colors.blue.shade700),
-                        SizedBox(width: 6),
-                        Text(
-                          'Payment due in $daysUntilDue days',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade700,
+
+                // Update this to show different messages for invoice vs quotation
+                if (controller.invoiceType.value == InvoiceType.invoice) {
+                  return Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline, size: 14, color: Colors.blue.shade700),
+                          SizedBox(width: 6),
+                          Text(
+                            'Payment due in $daysUntilDue days',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue.shade700,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  // For quotation
+                  return Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline, size: 14, color: Colors.orange.shade700),
+                          SizedBox(width: 6),
+                          Text(
+                            'Quotation valid for $daysUntilDue days',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
               }
               return SizedBox.shrink();
             }),
@@ -476,6 +507,43 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 );
               }
               return SizedBox();
+            }),
+
+            // Add this in _buildInvoiceDetailsCard() after the invoice type section
+            Obx(() {
+              if (AppConstants.isDemo.value) {
+                return Column(
+                  children: [
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '🔒 Demo Mode: Invoice dates limited to 1990-1992',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade800,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
             }),
           ],
         ),
@@ -2007,191 +2075,201 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
               ],
             )),
-            SizedBox(height: 20),
-            Divider(),
-            Text("payment_status".tr),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() => Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<String>(
-                      value: controller.paymentStatus.value,
-                      isExpanded: true,
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                        DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                        DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          controller.updatePaymentStatus(value);
-                        }
-                      },
-                    ),
-                  )),
-                ),
-              ],
-            ),
-            Obx(() {
-              if (controller.paymentStatus.value == 'Partial') {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 16),
-                    Text(
-                      "Received Amount",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: controller.receivedAmountController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.currency_rupee, size: 20),
-                        hintText: 'Enter received amount',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) {
-                        if (controller.paymentStatus.value == 'Partial') {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter received amount';
-                          }
-                          double? amount = double.tryParse(value);
-                          if (amount == null || amount <= 0) {
-                            return 'Please enter a valid amount';
-                          }
-                          if (amount > controller.totalAmount.value) {
-                            return 'Cannot exceed total amount';
-                          }
-                        }
-                        return null;
-                      },
-                      onChanged: (value) {
-                        controller.updateReceivedAmount(value);
-                      },
-                    ),
-                    SizedBox(height: 12),
+           Obx((){
+             if (controller.invoiceType.value == InvoiceType.invoice){
+               return  Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   SizedBox(height: 20),
+                   Divider(),
+                   Text("payment_status".tr),
+                   Row(
+                     children: [
+                       Expanded(
+                         child: Obx(() => Container(
+                           padding: EdgeInsets.symmetric(horizontal: 12),
+                           decoration: BoxDecoration(
+                             border: Border.all(color: Colors.grey.shade300),
+                             borderRadius: BorderRadius.circular(8),
+                           ),
+                           child: DropdownButton<String>(
+                             value: controller.paymentStatus.value,
+                             isExpanded: true,
+                             underline: SizedBox(),
+                             items: [
+                               DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                               DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                               DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+                             ],
+                             onChanged: (value) {
+                               if (value != null) {
+                                 controller.updatePaymentStatus(value);
+                               }
+                             },
+                           ),
+                         )),
+                       ),
+                     ],
+                   ),
+                   Obx(() {
+                     if (controller.paymentStatus.value == 'Partial') {
+                       return Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           SizedBox(height: 16),
+                           Text(
+                             "Received Amount",
+                             style: TextStyle(
+                               fontWeight: FontWeight.bold,
+                               fontSize: 14,
+                               color: Colors.grey.shade700,
+                             ),
+                           ),
+                           SizedBox(height: 8),
+                           TextFormField(
+                             controller: controller.receivedAmountController,
+                             decoration: InputDecoration(
+                               prefixIcon: Icon(Icons.currency_rupee, size: 20),
+                               hintText: 'Enter received amount',
+                               border: OutlineInputBorder(
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                             ),
+                             keyboardType: TextInputType.numberWithOptions(decimal: true),
+                             validator: (value) {
+                               if (controller.paymentStatus.value == 'Partial') {
+                                 if (value == null || value.isEmpty) {
+                                   return 'Please enter received amount';
+                                 }
+                                 double? amount = double.tryParse(value);
+                                 if (amount == null || amount <= 0) {
+                                   return 'Please enter a valid amount';
+                                 }
+                                 if (amount > controller.totalAmount.value) {
+                                   return 'Cannot exceed total amount';
+                                 }
+                               }
+                               return null;
+                             },
+                             onChanged: (value) {
+                               controller.updateReceivedAmount(value);
+                             },
+                           ),
+                           SizedBox(height: 12),
 
-                    // Pending Amount Display
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Pending Amount:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade800,
-                            ),
-                          ),
-                          Obx(() => Text(
-                            '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.orange.shade800,
-                            ),
-                          )),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return SizedBox.shrink();
-            }),
+                           // Pending Amount Display
+                           Container(
+                             padding: EdgeInsets.all(12),
+                             decoration: BoxDecoration(
+                               color: Colors.orange.shade50,
+                               borderRadius: BorderRadius.circular(8),
+                               border: Border.all(color: Colors.orange.shade200),
+                             ),
+                             child: Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                               children: [
+                                 Text(
+                                   'Pending Amount:',
+                                   style: TextStyle(
+                                     fontWeight: FontWeight.bold,
+                                     color: Colors.orange.shade800,
+                                   ),
+                                 ),
+                                 Obx(() => Text(
+                                   '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+                                   style: TextStyle(
+                                     fontWeight: FontWeight.bold,
+                                     fontSize: 16,
+                                     color: Colors.orange.shade800,
+                                   ),
+                                 )),
+                               ],
+                             ),
+                           ),
+                         ],
+                       );
+                     }
+                     return SizedBox.shrink();
+                   }),
 
-            // Show summary for Paid/Pending status
-            Obx(() {
-              if (controller.paymentStatus.value == 'Paid') {
-                return Column(
-                  children: [
-                    SizedBox(height: 12),
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Fully Paid',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              } else if (controller.paymentStatus.value == 'Pending') {
-                return Column(
-                  children: [
-                    SizedBox(height: 12),
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.pending, color: Colors.red.shade700, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Pending Amount:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red.shade800,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            '₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.red.shade800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return SizedBox.shrink();
-            }),
+                   // Show summary for Paid/Pending status
+                   Obx(() {
+                     if (controller.paymentStatus.value == 'Paid') {
+                       return Column(
+                         children: [
+                           SizedBox(height: 12),
+                           Container(
+                             padding: EdgeInsets.all(12),
+                             decoration: BoxDecoration(
+                               color: Colors.green.shade50,
+                               borderRadius: BorderRadius.circular(8),
+                               border: Border.all(color: Colors.green.shade200),
+                             ),
+                             child: Row(
+                               children: [
+                                 Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                                 SizedBox(width: 8),
+                                 Text(
+                                   'Fully Paid',
+                                   style: TextStyle(
+                                     fontWeight: FontWeight.bold,
+                                     color: Colors.green.shade800,
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ],
+                       );
+                     } else if (controller.paymentStatus.value == 'Pending') {
+                       return Column(
+                         children: [
+                           SizedBox(height: 12),
+                           Container(
+                             padding: EdgeInsets.all(12),
+                             decoration: BoxDecoration(
+                               color: Colors.red.shade50,
+                               borderRadius: BorderRadius.circular(8),
+                               border: Border.all(color: Colors.red.shade200),
+                             ),
+                             child: Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                               children: [
+                                 Row(
+                                   children: [
+                                     Icon(Icons.pending, color: Colors.red.shade700, size: 20),
+                                     SizedBox(width: 8),
+                                     Text(
+                                       'Pending Amount:',
+                                       style: TextStyle(
+                                         fontWeight: FontWeight.bold,
+                                         color: Colors.red.shade800,
+                                       ),
+                                     ),
+                                   ],
+                                 ),
+                                 Text(
+                                   '₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
+                                   style: TextStyle(
+                                     fontWeight: FontWeight.bold,
+                                     fontSize: 16,
+                                     color: Colors.red.shade800,
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           ),
+                         ],
+                       );
+                     }
+                     return SizedBox.shrink();
+                   }),
+                 ],
+               );
+             }
+             return SizedBox.shrink();
+           }),
 
           ],
         ),

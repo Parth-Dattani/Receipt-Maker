@@ -25,134 +25,175 @@ class RegistrationForm extends GetView<AuthController> {
                   "New Registration",
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.teal),
                 ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: controller.regUsernameController,
-                  decoration: InputDecoration(
-                    labelText: "User Name *",
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: controller.regEmailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: "Email ID *",
-                    prefixIcon: const Icon(Icons.email),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Obx(
-                  ()=> TextFormField(
-                    controller: controller.loginPasswordController,
-                    obscureText: controller.isPasswordHidden.value,
-                    decoration: InputDecoration(
-                      labelText: "Password *",
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          controller.isPasswordHidden.value ? Icons.visibility_off : Icons.visibility,
-                        ),
-                        onPressed: controller.togglePasswordVisibility,
-                      ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: controller.regMobile1Controller,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: "Mobile No. 1 *",
-                    prefixIcon: const Icon(Icons.phone),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: controller.regMobile2Controller,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: "Mobile No. 2 (Optional)",
-                    prefixIcon: const Icon(Icons.phone),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Obx(() => _customDropdown(
-                  label: "Country ",
-                  prefixIcon: Icons.flag,
-                  value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
-                  items: controller.countries.map((country) {
-                    return DropdownMenuItem<String>(
-                      value: country,
-                      child: Text(country),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    controller.selectedCountry.value = value ?? '';
-                    controller.selectedState.value = ''; // Reset state when country changes
-                  },
-                  isRequired: true,
-                  hint: "Select Country",
-                )),
-                const SizedBox(height: 16),
-                Obx(() {
-                  if (controller.selectedCountry.value.isNotEmpty) {
-                    return _customDropdown(
-                      label: "State ",
-                      prefixIcon: Icons.map,
-                      value: controller.selectedState.value.isEmpty
-                          ? null
-                          : controller.selectedState.value,
-                      items: controller.getStatesForCountry().map((state) {
-                        return DropdownMenuItem<String>(
-                          value: state,
-                          child: Text(state),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        controller.selectedState.value = value ?? '';
-                      },
-                      isRequired: true,
-                      hint: "Select State",
-                    );
-                  } else {
-                    return Container(); // Hide state dropdown when no country is selected
-                  }
-                }),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: controller.regCityController,
-                  decoration: InputDecoration(
-                    labelText: "City *",
-                    prefixIcon: const Icon(Icons.location_city),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-               // const SizedBox(height: 16),
-                // TextFormField(
-                //   controller: controller.regStateController,
-                //   decoration: InputDecoration(
-                //     labelText: "State *",
-                //     prefixIcon: const Icon(Icons.map),
-                //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                //   ),
-                // ),
-                // const SizedBox(height: 16),
-                // TextFormField(
-                //   controller: controller.regCountryController,
-                //   decoration: InputDecoration(
-                //     labelText: "Country *",
-                //     prefixIcon: const Icon(Icons.public),
-                //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                //   ),
-                // ),
+               //  const SizedBox(height: 20),
+               //  TextFormField(
+               //    controller: controller.regUsernameController,
+               //    decoration: InputDecoration(
+               //      labelText: "User Name *",
+               //      prefixIcon: const Icon(Icons.person),
+               //      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
+               //  TextFormField(
+               //    controller: controller.regEmailController,
+               //    keyboardType: TextInputType.emailAddress,
+               //    decoration: InputDecoration(
+               //      labelText: "Email ID *",
+               //      prefixIcon: const Icon(Icons.email),
+               //      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
+               //  Obx(
+               //    ()=> TextFormField(
+               //      controller: controller.loginPasswordController,
+               //      obscureText: controller.isPasswordHidden.value,
+               //      decoration: InputDecoration(
+               //        labelText: "Password *",
+               //        prefixIcon: const Icon(Icons.lock),
+               //        suffixIcon: IconButton(
+               //          icon: Icon(
+               //            controller.isPasswordHidden.value ? Icons.visibility_off : Icons.visibility,
+               //          ),
+               //          onPressed: controller.togglePasswordVisibility,
+               //        ),
+               //        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //      ),
+               //    ),
+               //  ),
+               //
+               //  const SizedBox(height: 16),
+               //  TextFormField(
+               //    controller: controller.regMobile1Controller,
+               //    keyboardType: TextInputType.phone,
+               //    decoration: InputDecoration(
+               //      labelText: "Mobile No. 1 *",
+               //      prefixIcon: const Icon(Icons.phone),
+               //      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
+               //  TextFormField(
+               //    controller: controller.regMobile2Controller,
+               //    keyboardType: TextInputType.phone,
+               //    decoration: InputDecoration(
+               //      labelText: "Mobile No. 2 (Optional)",
+               //      prefixIcon: const Icon(Icons.phone),
+               //      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
+               //  Obx(() => _customDropdown(
+               //    label: "Country ",
+               //    prefixIcon: Icons.flag,
+               //    value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
+               //    items: controller.countries.map((country) {
+               //      return DropdownMenuItem<String>(
+               //        value: country,
+               //        child: Text(country),
+               //      );
+               //    }).toList(),
+               //    onChanged: (value) {
+               //      controller.selectedCountry.value = value ?? '';
+               //      controller.selectedState.value = ''; // Reset state when country changes
+               //    },
+               //    isRequired: true,
+               //    hint: "Select Country",
+               //  )),
+               //  const SizedBox(height: 16),
+               //  Obx(() {
+               //    if (controller.selectedCountry.value.isNotEmpty) {
+               //      return _customDropdown(
+               //        label: "State ",
+               //        prefixIcon: Icons.map,
+               //        value: controller.selectedState.value.isEmpty
+               //            ? null
+               //            : controller.selectedState.value,
+               //        items: controller.getStatesForCountry().map((state) {
+               //          return DropdownMenuItem<String>(
+               //            value: state,
+               //            child: Text(state),
+               //          );
+               //        }).toList(),
+               //        onChanged: (value) {
+               //          controller.selectedState.value = value ?? '';
+               //        },
+               //        isRequired: true,
+               //        hint: "Select State",
+               //      );
+               //    } else {
+               //      return Container(); // Hide state dropdown when no country is selected
+               //    }
+               //  }),
+               //  const SizedBox(height: 16),
+               //  TextFormField(
+               //    controller: controller.regCityController,
+               //    decoration: InputDecoration(
+               //      labelText: "City *",
+               //      prefixIcon: const Icon(Icons.location_city),
+               //      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //    ),
+               //  ),
+               // // const SizedBox(height: 16),
+               //  // TextFormField(
+               //  //   controller: controller.regStateController,
+               //  //   decoration: InputDecoration(
+               //  //     labelText: "State *",
+               //  //     prefixIcon: const Icon(Icons.map),
+               //  //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //  //   ),
+               //  // ),
+               //  // const SizedBox(height: 16),
+               //  // TextFormField(
+               //  //   controller: controller.regCountryController,
+               //  //   decoration: InputDecoration(
+               //  //     labelText: "Country *",
+               //  //     prefixIcon: const Icon(Icons.public),
+               //  //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+               //  //   ),
+               //  // ),
+               //  const SizedBox(height: 16),
+               //  // Compact checkbox design
+               //  Obx(() => Container(
+               //    decoration: BoxDecoration(
+               //      border: Border.all(color: Colors.grey.shade400),
+               //      borderRadius: BorderRadius.circular(12),
+               //    ),
+               //    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+               //    child: Row(
+               //      children: [
+               //        Checkbox(
+               //          value: controller.isDemo.value,
+               //          onChanged: (bool? value) {
+               //            controller.isDemo.value = value ?? false;
+               //          },
+               //          activeColor: Colors.deepPurple,
+               //        ),
+               //        Expanded(
+               //          child: Column(
+               //            crossAxisAlignment: CrossAxisAlignment.start,
+               //            children: const [
+               //              Text(
+               //                "Demo Account",
+               //                style: TextStyle(
+               //                  fontSize: 16,
+               //                  fontWeight: FontWeight.w500,
+               //                ),
+               //              ),
+               //              Text(
+               //                "Check this for a demo/test account",
+               //                style: TextStyle(
+               //                  fontSize: 12,
+               //                  color: Colors.grey,
+               //                ),
+               //              ),
+               //            ],
+               //          ),
+               //        ),
+               //      ],
+               //    ),
+               //  )),
                 const SizedBox(height: 30),
                 Obx(() =>
                     CustomButton(

@@ -306,11 +306,21 @@ class NewInvoiceController extends GetxController {
 
       // ✅ Set invoice date to today
       DateTime today = DateTime.now();
-      invoiceDate.value = today;
-      invoiceDateController.text = _formatDate(today);
+      DateTime defaultDate;
+      if (AppConstants.isDemo.value) {
+        // For demo mode, set default to middle of allowed range
+        defaultDate = DateTime(1991, 1, 1);
+        print("🔒 Demo mode: Setting default date to 1991-01-01");
+      } else {
+        // For regular users, use today's date
+        defaultDate = DateTime.now();
+      }
+
+      invoiceDate.value = defaultDate;
+      invoiceDateController.text = _formatDate(defaultDate);
 
       // ✅ Set payment due date to 15 days from today
-      paymentDueDate.value = today.add(Duration(days: 15));
+      paymentDueDate.value = defaultDate.add(Duration(days: 15));
       paymentDueDateController.text = _formatDate(paymentDueDate.value);
 
       // Set customer info
@@ -717,11 +727,18 @@ class NewInvoiceController extends GetxController {
 
   // 4. Add method to update invoice date and auto-calculate due date
   Future<void> selectInvoiceDate() async {
+    // ✅ Use AppConstants.isDemo directly - no async needed!
+    final DateTime firstDate = AppConstants.isDemo.value ? DateTime(1990, 1, 1) : DateTime(2000);
+    final DateTime lastDate = AppConstants.isDemo.value ? DateTime(1992, 12, 31) : DateTime(2100);
+
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
-      initialDate: invoiceDate.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      initialDate: invoiceDate.value.isBefore(firstDate) || invoiceDate.value.isAfter(lastDate)
+          ? firstDate
+          : invoiceDate.value,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value ? 'Select Date (Demo: 1990-1992 only)' : 'Select Invoice Date',
     );
 
     if (picked != null && picked != invoiceDate.value) {
@@ -729,8 +746,14 @@ class NewInvoiceController extends GetxController {
       invoiceDateController.text = _formatDate(picked);
 
       // ✅ AUTO-CALCULATE DUE DATE (15 days from invoice date)
-      if (!isEditMode.value) {  // Only auto-calculate for new invoices
+      if (!isEditMode.value) {
         paymentDueDate.value = picked.add(Duration(days: 15));
+
+        // ✅ Ensure due date is also within demo range if applicable
+        if (AppConstants.isDemo.value && paymentDueDate.value.isAfter(lastDate)) {
+          paymentDueDate.value = lastDate;
+        }
+
         paymentDueDateController.text = _formatDate(paymentDueDate.value);
 
         Get.snackbar(
@@ -746,11 +769,21 @@ class NewInvoiceController extends GetxController {
   }
 
   Future<void> selectPaymentDueDate() async {
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : invoiceDate.value;
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime(2100);
+
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
-      initialDate: paymentDueDate.value,
-      firstDate: invoiceDate.value,  // Can't be before invoice date
-      lastDate: DateTime(2100),
+      initialDate: paymentDueDate.value.isBefore(firstDate) || paymentDueDate.value.isAfter(lastDate)
+          ? firstDate
+          : paymentDueDate.value,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value ? 'Select Date (Demo: 1990-1992 only)' : 'Select Payment Due Date',
     );
 
     if (picked != null && picked != paymentDueDate.value) {
@@ -1291,16 +1324,36 @@ class NewInvoiceController extends GetxController {
 
     final nextInvoiceId = await getNextInvoiceNumber();
     invoiceNumberController.text = nextInvoiceId;
-    DateTime today = DateTime.now();
-    dueDate.value = today;
-    dueDateController.text = _formatDate(today);
 
-    // ✅ Set payment due date to 15 days from today
-    paymentDueDate.value = today.add(Duration(days: 15));
-    paymentDueDateController.text = _formatDate(paymentDueDate.value);
+    // ✅ Set default date based on demo mode
+    DateTime defaultDate;
+    if (AppConstants.isDemo.value) {
+      // For demo mode, set default to middle of allowed range (Jan 1, 1991)
+      defaultDate = DateTime(1991, 1, 1);
+    } else {
+      // For regular users, use today's date
+      defaultDate = DateTime.now();
+    }
+
+    dueDate.value = defaultDate;
+    dueDateController.text = _formatDate(defaultDate);
+
+    // ✅ Set invoice date
+    invoiceDate.value = defaultDate;
+    invoiceDateController.text = _formatDate(defaultDate);
+
+    // ✅ Set payment due date to 15 days from default date
+    DateTime dueDateValue = defaultDate.add(Duration(days: 15));
+
+    // ✅ Ensure due date is also within demo range if applicable
+    if (AppConstants.isDemo.value && dueDateValue.isAfter(DateTime(1992, 12, 31))) {
+      dueDateValue = DateTime(1992, 12, 31);
+    }
+
+    paymentDueDate.value = dueDateValue;
+    paymentDueDateController.text = _formatDate(dueDateValue);
 
     addNewItem();
-
     isLoading.value = false;
   }
 

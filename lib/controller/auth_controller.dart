@@ -39,6 +39,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   final TextEditingController appSheetUrlController = TextEditingController();
   var selectedCountry = ''.obs;
   var selectedState = ''.obs;
+  var isDemo = false.obs;
 
   @override
   void onInit() {
@@ -541,7 +542,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "altEmail": regAltEmailController.text.trim(),
           "createdAt": FieldValue.serverTimestamp(),
           "appId":"",
-          "spreadsheetId":""
+          "spreadsheetId":"",
+          "isDemo": isDemo.value,
         });
 
         // If successful, break out of retry loop
@@ -683,6 +685,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     regCityController.clear();
     selectedState.value = "";
     selectedCountry.value = "";
+    isDemo.value = false;
     regAltEmailController.clear();
   }
 

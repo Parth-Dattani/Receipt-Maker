@@ -16,7 +16,7 @@ class AppConstants{
    static final isChallan = false.obs; //isChallanEnabled
    static final withGST = false.obs; //isGstEnabled
    static final isGujarati = false.obs; //Language toggle
-
+   static final isDemo = false.obs;
 
    /// 🔹 Load everything from SharedPreferences into memory
    static Future<void> loadFromPrefs() async {
@@ -30,6 +30,7 @@ class AppConstants{
       isChallan.value = await sharedPreferencesHelper.retrievePrefBoolData("isChallanEnabled") ?? false;
       withGST.value = await sharedPreferencesHelper.retrievePrefBoolData("isGstEnabled") ?? false;
       isGujarati.value = await sharedPreferencesHelper.retrievePrefBoolData("isGujarati") ?? false;
+      isDemo.value = await sharedPreferencesHelper.retrievePrefBoolData("isDemo") ?? false; // 🆕 Load demo status
 
       // 🔹 Apply saved language
       if (isGujarati.value) {
@@ -81,5 +82,10 @@ class AppConstants{
    static Future<void> setGstEnabled(bool value) async {
       withGST.value = value;
       await sharedPreferencesHelper.storeBoolPrefData("isGstEnabled", value);
+   }
+
+   static Future<void> setDemoMode(bool value) async {
+      isDemo.value = value;
+      await sharedPreferencesHelper.storeBoolPrefData("isDemo", value);
    }
 }

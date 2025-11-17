@@ -7,11 +7,14 @@ class Messages extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
     englishCode: {
+      'invoice_saathi' : 'Invoice Saathi',
       'dashboard': 'Dashboard',
       'welcome_back': 'Welcome back!',
       'business_overview': 'Here\'s your business overview',
       'create_invoice': 'Create Invoice',
       'customers': 'Customers',
+      'new_customer': 'New Customer',
+      'edit_customer': 'Edit Customer',
       'challans': 'Challans',
       'quotations': 'Quotations',
       'enable_challan': 'Enable Challan Feature',
@@ -237,11 +240,14 @@ class Messages extends Translations {
     },
 
     gujaratiCode: {
+      'invoice_saathi' : 'ઇન્વોઇસ સાથી',
       'dashboard': 'ડેશબોર્ડ',
       'welcome_back': 'ફરી સ્વાગત છે!',
       'business_overview': 'અહીં તમારી વ્યવસાય સારાંશ છે',
       'create_invoice': 'ઇન્વોઇસ બનાવો',
       'customers': 'ગ્રાહકો',
+      'new_customer': 'નવો ગ્રાહક',
+      'edit_customer': 'ગ્રાહક સંપાદિત કરો',
       'challans': 'ચલણો',
       'quotations': 'કોટેશન',
       'enable_challan': 'ચલણ સુવિધા સક્રિય કરો',

@@ -487,13 +487,14 @@ class DashboardController extends BaseController {
       ]);
 
     } catch (error) {
-      Get.snackbar(
-        'Error',
-        'Failed to load dashboard data: ${error.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      print("Failed to load dashboard data: ${error.toString()}");
+      // Get.snackbar(
+      //   'Error',
+      //   'Failed to load dashboard data: ${error.toString()}',
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   backgroundColor: Colors.red,
+      //   colorText: Colors.white,
+      // );
     } finally {
       if (!_isInitializing) {
         isLoading.value = false;
@@ -551,12 +552,12 @@ class DashboardController extends BaseController {
 
     } catch (e) {
       print("Error in loadInvoices(): $e");
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load invoices: ${e.toString()}",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
+      // showCustomSnackbar(
+      //   title: "Error",
+      //   message: "Failed to load invoices: ${e.toString()}",
+      //   baseColor: Colors.red.shade700,
+      //   icon: Icons.error_outline,
+      // );
     }
   }
 
@@ -597,12 +598,12 @@ class DashboardController extends BaseController {
 
     } catch (e) {
       print("Error in loadPurchases(): $e");
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load purchases: ${e.toString()}",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
+      // showCustomSnackbar(
+      //   title: "Error",
+      //   message: "Failed to load purchases: ${e.toString()}",
+      //   baseColor: Colors.red.shade700,
+      //   icon: Icons.error_outline,
+      // );
     }
   }
   void _clearPurchaseStats() {

@@ -28,7 +28,7 @@ class DashboardScreen extends GetView<DashboardController> {
           },
           icon: Icon(Icons.menu),
         ),
-        title: Text('dashboard'.tr),
+        title: Text('invoice_saathi'.tr),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
         elevation: 0,

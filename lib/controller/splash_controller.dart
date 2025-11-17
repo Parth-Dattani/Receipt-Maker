@@ -37,6 +37,9 @@ class SplashController extends BaseController {
     print("Logged-in User: ${user.uid} | Email: ${user.email}");
 
     try {
+      // ✅ Step 1.5: Check and load demo status from user document
+      await _checkAndLoadDemoStatus(user.uid);
+
       // ✅ Step 2: Check if company exists with active filter
       final companies = await _firestore
           .collection("users")
@@ -95,6 +98,34 @@ class SplashController extends BaseController {
       Get.offAllNamed(CompanyRegistrationScreen.pageId);
     }
   }
+
+  // 🆕 NEW: Check and load demo status
+  Future<void> _checkAndLoadDemoStatus(String userId) async {
+    try {
+      final userDoc = await _firestore
+          .collection("users")
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data() ?? {};
+        final isDemoUser = userData['isDemo'] == true;
+
+        await AppConstants.setDemoMode(isDemoUser);
+
+        if (isDemoUser) {
+          print("🔒 Demo mode activated for user");
+        } else {
+          print("✅ Regular user mode");
+        }
+      }
+    } catch (e) {
+      print("Error checking demo status: $e");
+      // Default to non-demo if error occurs
+      await AppConstants.setDemoMode(false);
+    }
+  }
+
 
   // ✅ NEW: Initialize sheets in background without blocking navigation
   void _initializeSheetsInBackground() async {
