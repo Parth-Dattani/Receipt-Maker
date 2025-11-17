@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controller/controller.dart';
+import '../../utils/shared_preferences_helper.dart';
 import '../../widgets/widgets.dart';
 
 import 'package:shimmer/shimmer.dart';
 
+import '../auth/auth_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CompanyRegistrationScreen extends GetView<CompanyController> {
   static const pageId = "/CompanyRegistrationScreen";
@@ -79,6 +82,55 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
     );
   }
 
+  // 🆕 Logout confirmation dialog
+  void _showLogoutDialog(BuildContext context) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: AppColors.errorColor),
+            const SizedBox(width: 10),
+            const Text('Logout'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              Get.back(); // Close dialog
+              await FirebaseAuth.instance.signOut();
+              await sharedPreferencesHelper.clearPrefData();
+              Get.offAllNamed(AuthScreen.pageId); // Replace with your login route
+            },
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,6 +148,19 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         centerTitle: true,
         elevation: 0,
         foregroundColor: Colors.white,
+        actions: [
+          Obx(() {
+            // Show logout button only when company is not registered (not in edit mode)
+            if (!controller.isEditMode.value) {
+              return IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Logout',
+                onPressed: () => _showLogoutDialog(context),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+        ],
       ),
       body: SafeArea(
         child: Obx(() {
