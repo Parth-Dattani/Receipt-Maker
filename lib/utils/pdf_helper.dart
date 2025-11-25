@@ -490,8 +490,9 @@ class InvoiceHelper {
 
               /// Advertise Footer
               pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 10),
+                padding: pw.EdgeInsets.symmetric(vertical: 8),
                 decoration: pw.BoxDecoration(
+                  color: PdfColors.grey50,
                   border: pw.Border(
                     top: pw.BorderSide(color: borderColor, width: 1),
                   ),
@@ -499,13 +500,38 @@ class InvoiceHelper {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text("inteligenttech.in",
-                        style: pw.TextStyle(
+                    // Left side - Application info
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        pw.Text(
+                          "Application By: www.intelligenttech.in",
+                          style: pw.TextStyle(
                             fontSize: 9,
-                            color: PdfColors.grey700,
-                            fontWeight: pw.FontWeight.bold)),
-                    pw.Text("+91 9876543210",
-                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                            color: primaryColor,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+                          style: pw.TextStyle(
+                            fontSize: 7,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Right side - Contact
+                    pw.Text(
+                      "info@intelligenttech.in",
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.blue700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1458,8 +1484,9 @@ class InvoiceHelper {
 
               /// Advertise Footer
               pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 10),
+                padding: pw.EdgeInsets.symmetric(vertical: 8),
                 decoration: pw.BoxDecoration(
+                  color: PdfColors.grey50,
                   border: pw.Border(
                     top: pw.BorderSide(color: borderColor, width: 1),
                   ),
@@ -1467,13 +1494,38 @@ class InvoiceHelper {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text("inteligenttech.in",
-                        style: pw.TextStyle(
+                    // Left side - Application info
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        pw.Text(
+                          "Application By: www.intelligenttech.in",
+                          style: pw.TextStyle(
                             fontSize: 9,
-                            color: PdfColors.grey700,
-                            fontWeight: pw.FontWeight.bold)),
-                    pw.Text("+91 9876543210",
-                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                            color: primaryColor,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+                          style: pw.TextStyle(
+                            fontSize: 7,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Right side - Contact
+                    pw.Text(
+                      "info@intelligenttech.in",
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.blue700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -3532,8 +3584,9 @@ class InvoiceHelper {
 
             /// Advertise Footer
             pw.Container(
-              padding: pw.EdgeInsets.symmetric(vertical: 10),
+              padding: pw.EdgeInsets.symmetric(vertical: 8),
               decoration: pw.BoxDecoration(
+                color: PdfColors.grey50,
                 border: pw.Border(
                   top: pw.BorderSide(color: borderColor, width: 1),
                 ),
@@ -3541,13 +3594,38 @@ class InvoiceHelper {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text("inteligenttech.in",
-                      style: pw.TextStyle(
+                  // Left side - Application info
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        "Application By: www.intelligenttech.in",
+                        style: pw.TextStyle(
                           fontSize: 9,
-                          color: PdfColors.grey700,
-                          fontWeight: pw.FontWeight.bold)),
-                  pw.Text("+91 9876543210",
-                      style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                          color: primaryColor,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 2),
+                      pw.Text(
+                        "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Right side - Contact
+                  pw.Text(
+                    "info@intelligenttech.in",
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.blue700,
+                    ),
+                  ),
                 ],
               ),
             ),

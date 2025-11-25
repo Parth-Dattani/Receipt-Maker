@@ -6,6 +6,7 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../utils/utils.dart';
+import '../../widgets/widgets.dart';
 
 class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   static const String pageId = '/PurchaseEntryScreen';
@@ -243,6 +244,42 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                       ),
                     ],
                   ),
+
+                  // Add this after the date container
+                  Obx(() {
+                    if (AppConstants.isDemo.value) {
+                      return Column(
+                        children: [
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '🔒 Demo Mode: Purchase dates limited to 1990-1992',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange.shade800,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return SizedBox.shrink();
+                  }),
                 ],
               ),
             ),
@@ -282,8 +319,6 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                   ),
                 ),
                 Spacer(),
-
-                // ✅ Add refresh button for vendors list
                 Obx(() => !controller.isEditMode.value
                     ? Row(
                   children: [
@@ -310,12 +345,10 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               ],
             ),
             SizedBox(height: 16),
-
             Obx(() {
               if (controller.isEditMode.value) {
                 return _buildVendorFormFields();
               } else {
-                // ✅ Show loading state while fetching customers
                 if (controller.isLoading.value && controller.customers.isEmpty) {
                   return Center(
                     child: Padding(
@@ -336,7 +369,6 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                   );
                 }
 
-                // ✅ Enhanced empty state with action button
                 if (controller.customers.isEmpty && !controller.showVendorForm.value) {
                   return Container(
                     padding: EdgeInsets.all(16),
@@ -401,41 +433,54 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     ),
                   );
                 } else if (!controller.showVendorForm.value) {
-                  // ✅ Show customer dropdown with count
+                  // ✅ NEW: Use SearchableDropdown for vendors
                   return Column(
                     children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: DropdownButton<Map<String, dynamic>>(
-                          value: controller.selectedVendor.value,
-                          isExpanded: true,
-                          hint: Text('Select Customer as Vendor'),
-                          underline: SizedBox(),
-                          items: [
-                            DropdownMenuItem(
-                              value: null,
-                              child: Text('Select Customer'),
+                      SearchableDropdown<Map<String, dynamic>>(
+                        value: controller.selectedVendor.value,
+                        items: controller.customers,
+                        itemLabel: (vendor) => (vendor['name'] ?? 'Unknown Vendor').toString().toUpperCase(),
+                        hintText: 'Select Vendor',
+                        searchHintText: 'Search vendors by name...',
+                        itemBuilder: (vendor) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (vendor['name'] ?? 'Unknown').toString().toUpperCase(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
-                            ...controller.customers.map((customer) {
-                              return DropdownMenuItem(
-                                value: customer,
-                                child: Text(customer['name'] ?? 'Unknown Customer'),
-                              );
-                            }).toList(),
+                            if (vendor['mobile1'] != null && vendor['mobile1'].toString().isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.phone, size: 12, color: Colors.grey.shade600),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      vendor['mobile1'].toString(),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
-                          onChanged: controller.selectVendor,
                         ),
+                        onChanged: (selectedVendor) {
+                          controller.selectVendor(selectedVendor);
+                        },
                       ),
                       SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${controller.vendorCount.value} customers available',
+                            '${controller.vendorCount.value} vendors available',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -670,6 +715,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
             SizedBox(height: 12),
             Obx(() => Column(
               children: [
+
                 if (controller.useItemMaster.value && controller.itemList.isEmpty)
                   Container(
                     padding: EdgeInsets.all(16),
@@ -737,26 +783,21 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                         Item? currentItem;
                                         try {
                                           currentItem = controller.itemList.firstWhere(
-                                                  (i) => i.itemId == item.itemId);
+                                                  (i) => i.itemId == item.itemId
+                                          );
                                         } catch (e) {
                                           currentItem = null;
                                         }
 
-                                        final isInactive = currentItem != null &&
-                                            !(currentItem.isActive ?? true);
+                                        final isInactive = currentItem != null && !(currentItem.isActive ?? true);
 
-                                        if (controller.isEditMode.value &&
-                                            (isInactive || currentItem == null) &&
-                                            item.itemName.isNotEmpty) {
+                                        if (controller.isEditMode.value && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
                                           return Container(
                                             height: 40,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 10),
+                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                             decoration: BoxDecoration(
-                                              border: Border.all(
-                                                  color: Colors.grey.shade300),
-                                              borderRadius:
-                                              BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.grey.shade300),
+                                              borderRadius: BorderRadius.circular(8),
                                               color: Colors.grey.shade50,
                                             ),
                                             child: Text(
@@ -776,75 +817,76 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                         Item? selectedItem;
                                         try {
                                           selectedItem = activeItems.firstWhere(
-                                                  (element) =>
-                                              element.itemId == item.itemId);
+                                                  (element) => element.itemId == item.itemId
+                                          );
                                         } catch (e) {
                                           selectedItem = null;
                                         }
 
-                                        return Container(
-                                          height: 40,
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: Colors.grey.shade300),
-                                            borderRadius:
-                                            BorderRadius.circular(8),
-                                          ),
-                                          child: DropdownButton<Item>(
-                                            value: selectedItem,
-                                            isExpanded: true,
-                                            hint: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                  horizontal: 8),
-                                              child: Text('Select Item',
-                                                  style:
-                                                  TextStyle(fontSize: 14)),
-                                            ),
-                                            underline: SizedBox(),
-                                            icon: Padding(
-                                              padding: EdgeInsets.only(right: 8),
-                                              child: Icon(
-                                                  Icons.arrow_drop_down,
-                                                  size: 20),
-                                            ),
-                                            items: [
-                                              DropdownMenuItem(
-                                                value: null,
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 8),
-                                                  child: Text('Select Item',
-                                                      style:
-                                                      TextStyle(fontSize: 14)),
+                                        // ✅ NEW: Use SearchableDropdown for items
+                                        return SearchableDropdown<Item>(
+                                          value: selectedItem,
+                                          items: activeItems,
+                                          itemLabel: (item) => item.itemName.toUpperCase(),
+                                          hintText: 'Select Item',
+                                          searchHintText: 'Search items by name...',
+                                          itemBuilder: (item) => Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.itemName.toUpperCase(),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
                                                 ),
                                               ),
-                                              ...activeItems.map((item) {
-                                                return DropdownMenuItem(
-                                                  value: item,
-                                                  child: Padding(
-                                                    padding: EdgeInsets.symmetric(
-                                                        horizontal: 8),
-                                                    child: Text(
-                                                      item.itemName,
-                                                      style:
-                                                      TextStyle(fontSize: 14),
-                                                    ),
+                                              if (item.price > 0)
+                                                Padding(
+                                                  padding: EdgeInsets.only(top: 4),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.currency_rupee, size: 12, color: Colors.green.shade600),
+                                                      Text(
+                                                        '${item.price.toStringAsFixed(2)}',
+                                                        style: TextStyle(
+                                                          color: Colors.green.shade600,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      if (item.unitOfMeasurement.isNotEmpty) ...[
+                                                        SizedBox(width: 8),
+                                                        Container(
+                                                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.blue.shade50,
+                                                            borderRadius: BorderRadius.circular(4),
+                                                            border: Border.all(color: Colors.blue.shade200),
+                                                          ),
+                                                          child: Text(
+                                                            item.unitOfMeasurement,
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              color: Colors.blue.shade700,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
                                                   ),
-                                                );
-                                              }).toList(),
+                                                ),
                                             ],
-                                            onChanged: (selectedItem) {
-                                              if (selectedItem != null) {
-                                                controller.selectItemForIndex(
-                                                    index, selectedItem);
-                                              }
-                                            },
                                           ),
+                                          onChanged: (selectedItem) {
+                                            if (selectedItem != null) {
+                                              controller.selectItemForIndex(index, selectedItem);
+                                            }
+                                          },
                                         );
                                       },
                                     ),
+
                                   if (!controller.useItemMaster.value)
                                     Container(
                                       height: 40,
@@ -1026,35 +1068,25 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                   SizedBox(height: 4),
                                   Container(
                                     height: 40,
-                                    child: TextFormField(
-                                      // key: ValueKey('gst_$index'),  // ✅ Important: Unique key
-                                      // initialValue: item.gstRate.toString(),
-                                      // focusNode: controller.gstFocusNodes[index],
-                                      controller: controller.getGstController(index, initialValue: item.gstRate),
-
-                                      textAlign: TextAlign.center,
+                                    child: DropdownButtonFormField<double>(
+                                      value: item.gstRate,
                                       decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(
-                                            borderRadius:
-                                            BorderRadius.circular(8)),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(
-                                              color: AppColors.tealColor,
-                                              width: 2),
+                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
                                         ),
                                       ),
-                                      keyboardType: TextInputType
-                                          .numberWithOptions(decimal: true),
+                                      items: [
+                                        DropdownMenuItem(value: 0.0, child: Text("0%")),
+                                        DropdownMenuItem(value: 5.0, child: Text("5%")),
+                                        DropdownMenuItem(value: 12.0, child: Text("12%")),
+                                        DropdownMenuItem(value: 18.0, child: Text("18%")),
+                                      ],
                                       onChanged: (value) {
-                                        double? gst = double.tryParse(value);
-                                        if (gst != null &&
-                                            gst >= 0 &&
-                                            gst <= 100) {
-                                          controller.updateItem(index,
-                                              gstRate: gst);
+                                        if (value != null) {
+                                          controller.updateItem(index, gstRate: value);
                                         }
                                       },
                                     ),

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controller/controller.dart';
 
+
 class AuthScreen extends GetView<AuthController> {
   static const pageId = "/AuthScreen";
 
@@ -19,10 +20,7 @@ class AuthScreen extends GetView<AuthController> {
               gradient: LinearGradient(
                 colors: [
                   Colors.deepPurple,
-                  //Colors.pinkAccent,
-                  //Color(0xFF6A11CB),
                   Colors.teal,
-                  //Colors.tealAccent,
                   Color(0xFF2575FC),
                 ],
                 begin: Alignment.topLeft,
@@ -41,21 +39,23 @@ class AuthScreen extends GetView<AuthController> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(30),
-
               ),
-              child:
-              TabBar(
+              child: TabBar(
                 controller: controller.tabController,
                 indicator: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                 ),
-                indicatorSize:  TabBarIndicatorSize.tab,
+                indicatorSize: TabBarIndicatorSize.tab,
                 labelColor: Colors.deepPurple,
                 unselectedLabelColor: Colors.white,
-                tabs: const [
-                  Tab(icon: Icon(Icons.login), text: "Login"),
-                  Tab(icon: Icon(Icons.person_add), text: "Register"),
+                tabs: [
+                  const Tab(icon: Icon(Icons.login), text: "Login"),
+                  // Register tab with 7-tap gesture
+                  GestureDetector(
+                    onTap: controller.handleRegisterTabTap,
+                    child: const Tab(icon: Icon(Icons.person_add), text: "Register"),
+                  ),
                 ],
               ),
             ),
@@ -68,7 +68,7 @@ class AuthScreen extends GetView<AuthController> {
             controller: controller.tabController,
             children: [
               LoginForm(),
-              RegistrationForm(),
+              RegistrationForm(showFormFields: controller.showFormFields.value),
             ],
           ),
           if (controller.isLoading.value)
@@ -83,3 +83,4 @@ class AuthScreen extends GetView<AuthController> {
     );
   }
 }
+

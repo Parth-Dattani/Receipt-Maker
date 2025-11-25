@@ -28,7 +28,7 @@ class DashboardScreen extends GetView<DashboardController> {
           },
           icon: Icon(Icons.menu),
         ),
-        title: Text('invoice_saathi'.tr),
+        title: Text('invoice_sathi'.tr),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -804,342 +804,442 @@ class DashboardScreen extends GetView<DashboardController> {
 
 
   Widget buildDrawer() {
-    return Drawer(
-      child: Column(
-        children: [
-          // Drawer Header with Company Info
-          Obx(() => DrawerHeader(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.tealColor,
-                  AppColors.tealColor.withOpacity(0.7)
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return SafeArea(
+      child: Drawer(
+        child: Column(
+          children: [
+            // Drawer Header with User & Company Info
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.tealColor,
+                    AppColors.tealColor.withOpacity(0.7)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-            ),
-            child: Container(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    child: Icon(
-                      Icons.business,
-                      size: 35,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    controller.companyName.isNotEmpty
-                        ? controller.companyName
-                        : "No Company Selected",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (controller.hasMultipleCompanies.value)
-                    GestureDetector(
-                      onTap: controller.showCompanySwitcher,
-                      child: Container(
-                        margin: EdgeInsets.only(top: 4),
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+              child: Obx(() => Container(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // User Info Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundColor: Colors.white.withOpacity(0.3),
+                          child: Icon(
+                            Icons.person,
+                            size: 28,
+                            color: Colors.white,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Switch Company",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                controller.userName.value.isNotEmpty
+                                    ? controller.userName.value
+                                    : 'User',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.swap_horiz,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
+                              SizedBox(height: 2),
+                              Text(
+                                controller.userEmail.value,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
+                      ],
+                    ),
+
+                    SizedBox(height: 12),
+
+                    // Company Info Section
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.business,
+                              size: 20,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  controller.companyName.isNotEmpty
+                                      ? controller.companyName
+                                      : "No Company Selected",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (controller.hasMultipleCompanies.value)
+                                  GestureDetector(
+                                    onTap: controller.showCompanySwitcher,
+                                    child: Container(
+                                      margin: EdgeInsets.only(top: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            "Switch Company",
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.8),
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                          SizedBox(width: 4),
+                                          Icon(
+                                            Icons.swap_horiz,
+                                            color: Colors.white.withOpacity(0.8),
+                                            size: 12,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ],
+                ),
+              )),
             ),
-          )),
 
-          // 📋 Drawer Menu Items
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.only(top: 8, bottom: 20),
-              children: [
-                // 📦 Inventory Management Submenu (Only for Trading)
-                if (AppConstants.businessType == "Trading")
+            // 📋 Drawer Menu Items
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.only(top: 8, bottom: 20),
+                children: [
+                  // 📦 Inventory Management Submenu (Only for Trading)
+                  if (AppConstants.businessType == "Trading")
+                    _buildExpansionTile(
+                      icon: Icons.inventory_2,
+                      iconColor: Colors.blue.shade600,
+                      title: "purchase".tr,
+                      children: [
+                        _buildSubMenuItem(
+                          icon: Icons.shopping_cart,
+                          iconColor: Colors.blue.shade700,
+                          title: "purchase".tr,
+                          onTap: () {
+                            Get.back();
+                            controller.navigateToInventory();
+                          },
+                        ),
+                        _buildSubMenuItem(
+                          icon: Icons.list_alt,
+                          iconColor: Colors.blue.shade700,
+                          title: "Purchase List",
+                          onTap: () {
+                            Get.back();
+                            controller.navigateToPurchaseList();
+                          },
+                        ),
+                      ],
+                    ),
+
+                  // 📋 Sales & Orders Submenu
                   _buildExpansionTile(
-                    icon: Icons.inventory_2,
-                    iconColor: Colors.blue.shade600,
-                    title: "purchase".tr,
+                    icon: Icons.receipt_long,
+                    iconColor: Colors.purple.shade600,
+                    title: "sales".tr,
                     children: [
+                      // ✅ Challans - Only for Trading
+                      if (AppConstants.businessType == "Trading")
+                        _buildSubMenuItem(
+                          icon: Icons.note_alt,
+                          iconColor: Colors.purple.shade700,
+                          title: "challans".tr,
+                          onTap: () {
+                            Get.back();
+                            controller.navigateToChallanList();
+                          },
+                        ),
+                      // ✅ Invoice - Always visible
                       _buildSubMenuItem(
-                        icon: Icons.shopping_cart,
-                        iconColor: Colors.blue.shade700,
-                        title: "purchase".tr,
+                        icon: Icons.receipt,
+                        iconColor: Colors.purple.shade700,
+                        title: "invoice".tr,
                         onTap: () {
                           Get.back();
-                          controller.navigateToInventory();
+                          controller.navigateToInvoiceList();
                         },
                       ),
+                      // ✅ Quotations - Always visible
                       _buildSubMenuItem(
-                        icon: Icons.list_alt,
-                        iconColor: Colors.blue.shade700,
-                        title: "Purchase List",
+                        icon: Icons.request_quote,
+                        iconColor: Colors.purple.shade700,
+                        title: "quotations".tr,
                         onTap: () {
                           Get.back();
-                          controller.navigateToPurchaseList();
+                          controller.navigateToQuotList();
                         },
                       ),
                     ],
                   ),
 
-                // 📋 Sales & Orders Submenu
-                _buildExpansionTile(
-                  icon: Icons.receipt_long,
-                  iconColor: Colors.purple.shade600,
-                  title: "sales".tr,
-                  children: [
-                    // ✅ Challans - Only for Trading
-                    if (AppConstants.businessType == "Trading")
-                      _buildSubMenuItem(
-                        icon: Icons.note_alt,
-                        iconColor: Colors.purple.shade700,
-                        title: "challans".tr,
-                        onTap: () {
-                          Get.back();
-                          controller.navigateToChallanList();
-                        },
-                      ),
-                    // ✅ Invoice - Always visible
-                    _buildSubMenuItem(
-                      icon: Icons.receipt,
-                      iconColor: Colors.purple.shade700,
-                      title: "invoice".tr,
+                  // 📊 Stock Report (Only for Trading)
+                  if (AppConstants.businessType == "Trading")
+                    _buildMenuItem(
+                      icon: Icons.assessment,
+                      iconColor: Colors.purple.shade600,
+                      title: "Stock Report",
                       onTap: () {
                         Get.back();
-                        controller.navigateToInvoiceList();
+                        controller.navigateToStockReport();
                       },
                     ),
-                    // ✅ Quotations - Always visible
-                    _buildSubMenuItem(
-                      icon: Icons.request_quote,
-                      iconColor: Colors.purple.shade700,
-                      title: "quotations".tr,
-                      onTap: () {
-                        Get.back();
-                        controller.navigateToQuotList();
-                      },
-                    ),
-                  ],
-                ),
 
-                // 📊 Stock Report (Only for Trading)
-                if (AppConstants.businessType == "Trading")
+                  // 👥 Customers (Direct Item - Always visible)
                   _buildMenuItem(
-                    icon: Icons.assessment,
-                    iconColor: Colors.purple.shade600,
-                    title: "Stock Report",
+                    icon: Icons.people,
+                    iconColor: Colors.orange.shade600,
+                    title: "customers".tr,
                     onTap: () {
                       Get.back();
-                      controller.navigateToStockReport();
+                      controller.navigateToCustomerList();
                     },
                   ),
 
-                // 👥 Customers (Direct Item - Always visible)
-                _buildMenuItem(
-                  icon: Icons.people,
-                  iconColor: Colors.orange.shade600,
-                  title: "customers".tr,
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToCustomerList();
-                  },
-                ),
+                  // 💰 Payment (Direct Item - Always visible)
+                  _buildMenuItem(
+                    icon: Icons.account_balance_wallet,
+                    iconColor: Colors.indigo.shade600,
+                    title: "payment".tr,
+                    onTap: () {
+                      Get.back();
+                      controller.navigateToPaymentDetails();
+                    },
+                  ),
 
-                // 💰 Payment (Direct Item - Always visible)
-                _buildMenuItem(
-                  icon: Icons.account_balance_wallet,
-                  iconColor: Colors.indigo.shade600,
-                  title: "payment".tr,
-                  onTap: () {
-                    Get.back();
-                    controller.navigateToPaymentDetails();
-                  },
-                ),
+                  // ━━━━━━━━━━━━━━━━━━━━━
+                  Divider(height: 32, thickness: 1),
 
-                // ━━━━━━━━━━━━━━━━━━━━━
-                Divider(height: 32, thickness: 1),
+                  // ⚙️ Settings Section Header
+                  _buildSectionHeader("settings".tr),
 
-                // ⚙️ Settings Section Header
-                _buildSectionHeader("settings".tr),
+                  // 🔹 Challan Toggle (Only for Trading)
+                  if (AppConstants.businessType == "Trading")
+                    Obx(() => _buildSwitchTile(
+                      icon: Icons.list_alt,
+                      iconColor: Colors.green.shade600,
+                      title: "enable_challan".tr,
+                      value: AppConstants.isChallan.value,
+                      activeColor: Colors.green.shade600,
+                      onChanged: (value) async {
+                        await controller.updateCompanyPreference(
+                            'isChallanEnabled', value);
+                      },
+                    )),
 
-                // 🔹 Challan Toggle (Only for Trading)
-                if (AppConstants.businessType == "Trading")
+
+                  // 🌐 Language Toggle (Always visible)
                   Obx(() => _buildSwitchTile(
-                    icon: Icons.list_alt,
-                    iconColor: Colors.green.shade600,
-                    title: "enable_challan".tr,
-                    value: AppConstants.isChallan.value,
-                    activeColor: Colors.green.shade600,
+                    icon: Icons.language,
+                    iconColor: Colors.deepPurple.shade600,
+                    title: 'enable_gujarati'.tr,
+                    value: AppConstants.isGujarati.value,
+                    activeColor: Colors.deepPurple.shade600,
                     onChanged: (value) async {
-                      await controller.updateCompanyPreference(
-                          'isChallanEnabled', value);
+                      await controller.updateLanguagePreference(value);
                     },
                   )),
 
+                  // ━━━━━━━━━━━━━━━━━━━━━
+                  Divider(height: 32, thickness: 1),
 
-                // 🌐 Language Toggle (Always visible)
-                Obx(() => _buildSwitchTile(
-                  icon: Icons.language,
-                  iconColor: Colors.deepPurple.shade600,
-                  title: 'enable_gujarati'.tr,
-                  value: AppConstants.isGujarati.value,
-                  activeColor: Colors.deepPurple.shade600,
-                  onChanged: (value) async {
-                    await controller.updateLanguagePreference(value);
-                  },
-                )),
+                  // 🏢 Company Management Section Header
+                  _buildSectionHeader("company_management".tr),
 
-                // ━━━━━━━━━━━━━━━━━━━━━
-                Divider(height: 32, thickness: 1),
+                  // Switch Company (Conditional)
+                  if (controller.hasMultipleCompanies.value)
+                    _buildMenuItem(
+                      icon: Icons.swap_horiz,
+                      iconColor: Colors.indigo.shade600,
+                      title: "Switch Company",
+                      onTap: () {
+                        Get.back();
+                        controller.showCompanySwitcher();
+                      },
+                    ),
 
-                // 🏢 Company Management Section Header
-                _buildSectionHeader("company_management".tr),
-
-                // Switch Company (Conditional)
-                if (controller.hasMultipleCompanies.value)
+                  // Edit Company
                   _buildMenuItem(
-                    icon: Icons.swap_horiz,
-                    iconColor: Colors.indigo.shade600,
-                    title: "Switch Company",
+                    icon: Icons.business,
+                    iconColor: Colors.teal.shade600,
+                    title: "edit_company".tr,
                     onTap: () {
-                      Get.back();
-                      controller.showCompanySwitcher();
+                      final data = controller.currentCompany.value;
+                      if (data != null && controller.companyId.value.isNotEmpty) {
+                        Get.back();
+                        controller.navigateToEditCompany(
+                            data, controller.companyId.value);
+                      } else {
+                        Get.snackbar(
+                          "Error",
+                          "No active company found to edit.",
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red.shade100,
+                          colorText: Colors.red.shade800,
+                        );
+                      }
                     },
                   ),
 
-                // Edit Company
-                _buildMenuItem(
-                  icon: Icons.business,
-                  iconColor: Colors.teal.shade600,
-                  title: "edit_company".tr,
-                  onTap: () {
-                    final data = controller.currentCompany.value;
-                    if (data != null && controller.companyId.value.isNotEmpty) {
-                      Get.back();
-                      controller.navigateToEditCompany(
-                          data, controller.companyId.value);
-                    } else {
-                      Get.snackbar(
-                        "Error",
-                        "No active company found to edit.",
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red.shade100,
-                        colorText: Colors.red.shade800,
-                      );
-                    }
-                  },
-                ),
+                  // ━━━━━━━━━━━━━━━━━━━━━
+                  Divider(height: 32, thickness: 1),
 
-                // ━━━━━━━━━━━━━━━━━━━━━
-                Divider(height: 32, thickness: 1),
-
-                // 🚪 Logout
-                _buildMenuItem(
-                  icon: Icons.logout,
-                  iconColor: Colors.red.shade600,
-                  title: "logout".tr,
-                  titleStyle: TextStyle(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  onTap: () {
-                    Get.dialog(
-                      AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        title: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(10),
+                  // 🚪 Logout
+                  _buildMenuItem(
+                    icon: Icons.logout,
+                    iconColor: Colors.red.shade600,
+                    title: "logout".tr,
+                    titleStyle: TextStyle(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onTap: () {
+                      Get.dialog(
+                        AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          title: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.logout,
+                                    color: Colors.red.shade600, size: 24),
                               ),
-                              child: Icon(Icons.logout,
-                                  color: Colors.red.shade600, size: 24),
+                              SizedBox(width: 12),
+                              Text(
+                                "confirm_logout".tr,
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ],
+                          ),
+                          content: Text(
+                            "logout_message".tr,
+                            style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+                          ),
+                          actions: [
+                            TextButton(
+                              child: Text(
+                                "cancel".tr,
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              onPressed: () => Get.back(),
                             ),
-                            SizedBox(width: 12),
-                            Text(
-                              "confirm_logout".tr,
-                              style: TextStyle(fontSize: 18),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade600,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                              ),
+                              child: Text("logout".tr,
+                                  style: TextStyle(fontSize: 15)),
+                              onPressed: () async {
+                                Get.back();
+                                await controller.logout();
+                              },
                             ),
                           ],
                         ),
-                        content: Text(
-                          "logout_message".tr,
-                          style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
-                        ),
-                        actions: [
-                          TextButton(
-                            child: Text(
-                              "cancel".tr,
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 15,
-                              ),
-                            ),
-                            onPressed: () => Get.back(),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade600,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                            ),
-                            child: Text("logout".tr,
-                                style: TextStyle(fontSize: 15)),
-                            onPressed: () async {
-                              Get.back();
-                              await controller.logout();
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
 
-                // Extra padding at bottom for safe area
-                SizedBox(height: MediaQuery.of(Get.context!).padding.bottom + 16),
-              ],
+                  SizedBox(height: 20),
+
+                  // Replace the version section with this minimal version:
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade300, width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'invoice_sathi'.tr,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Obx(() => Text(
+                          'v${controller.appVersion.value}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

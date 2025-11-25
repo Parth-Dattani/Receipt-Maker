@@ -233,6 +233,7 @@ class ItemScreen extends GetView<ItemController> {
     final formKey = GlobalKey<FormState>();
 
     String selectedUnit = controller.unitOptions.first;
+    double selectedGst = 5.0; // Default to 5%
     bool isActive = true;
     bool isUnlimitedStock = false;
 
@@ -344,31 +345,43 @@ class ItemScreen extends GetView<ItemController> {
                           ],
                         ),
                         SizedBox(height: 16),
-                        // GST Percentage
+                        // GST Percentage - Dropdown with only 0,5,12,18
                         SizedBox(height: 16),
                         Obx(() => AppConstants.withGST.value
                             ? Column(
                           children: [
-                            SizedBox(height: 16),
-                            TextFormField(
-                              controller: gstCtrl,
+                            DropdownButtonFormField<double>(
+                              value: selectedGst,
                               decoration: InputDecoration(
-                                labelText: "GST (%)",
-                                hintText: "Enter GST percentage",
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                                labelText: "GST (%) *",
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 filled: true,
                                 fillColor: Colors.grey.shade50,
                                 prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
                               ),
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              items: [
+                                DropdownMenuItem(value: 0.0, child: Text("0%")),
+                                DropdownMenuItem(value: 5.0, child: Text("5%")),
+                                DropdownMenuItem(value: 12.0, child: Text("12%")),
+                                DropdownMenuItem(value: 18.0, child: Text("18%")),
+                              ],
+                              onChanged: isAdding ? null : (value) {
+                                setState(() => selectedGst = value!);
+                              },
                               validator: (value) {
-                                final gst = double.tryParse(value ?? '');
-                                if (gst == null || gst < 0 || gst > 100) {
-                                  return "Enter valid GST (0-100)";
+                                if (value == null) {
+                                  return "Please select GST percentage";
                                 }
                                 return null;
                               },
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "Selected GST: ${selectedGst}%",
+                              style: TextStyle(
+                                color: AppColors.tealColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         )
@@ -506,7 +519,7 @@ class ItemScreen extends GetView<ItemController> {
                                     await controller.addNewItem(
                                       name: name,
                                       price: price,
-                                      gstPercent: gstPercent,
+                                      gstPercent: selectedGst,
                                       unitOfMeasurement: selectedUnit,
                                       currentStock: stock,
                                       detailRequirement: detail,
@@ -560,6 +573,7 @@ class ItemScreen extends GetView<ItemController> {
     final formKey = GlobalKey<FormState>();
 
     String selectedUnit = item.unitOfMeasurement;
+    double selectedGst = item.gstPercent;
     bool isActive = item.isActive;
     bool isUnlimitedStock = item.currentStock == -1;
 
@@ -669,26 +683,45 @@ class ItemScreen extends GetView<ItemController> {
                         ),
                         SizedBox(height: 16),
 
-                        // GST Percentage
+                        // GST Percentage - Dropdown with only 0,5,12,18
                         SizedBox(height: 16),
                         Obx(() => AppConstants.withGST.value
-                            ? TextFormField(
-                          controller: gstCtrl,
-                          decoration: InputDecoration(
-                            labelText: "GST (%)",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
-                          validator: (value) {
-                            final gst = double.tryParse(value ?? '');
-                            if (gst == null || gst < 0 || gst > 100) {
-                              return "Enter valid GST (0-100)";
-                            }
-                            return null;
-                          },
+                            ? Column(
+                          children: [
+                            DropdownButtonFormField<double>(
+                              value: selectedGst,
+                              decoration: InputDecoration(
+                                labelText: "GST (%) *",
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                                prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
+                              ),
+                              items: [
+                                DropdownMenuItem(value: 0.0, child: Text("0%")),
+                                DropdownMenuItem(value: 5.0, child: Text("5%")),
+                                DropdownMenuItem(value: 12.0, child: Text("12%")),
+                                DropdownMenuItem(value: 18.0, child: Text("18%")),
+                              ],
+                              onChanged: isSaving ? null : (value) {
+                                setState(() => selectedGst = value!);
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return "Please select GST percentage";
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "Selected GST: ${selectedGst}%",
+                              style: TextStyle(
+                                color: AppColors.tealColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         )
                             : const SizedBox.shrink()),
 
@@ -826,7 +859,7 @@ class ItemScreen extends GetView<ItemController> {
                                       itemId: item.itemId,
                                       newName: name,
                                       newPrice: price,
-                                      gstPercent: gstPercent,
+                                      gstPercent: selectedGst,
                                       unitOfMeasurement: selectedUnit,
                                       currentStock: stock,
                                       detailRequirement: detail,

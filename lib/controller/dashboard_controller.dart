@@ -1,7 +1,7 @@
 
 import 'dart:async';
 import 'dart:io';
-
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/controller/bash_controller.dart';
 import 'package:demo_prac_getx/screen/Inventory/inventory_management_screen.dart';
@@ -85,7 +85,9 @@ class DashboardController extends BaseController {
   var purchaseList = <PurchaseEntry>[].obs;
   var overduePurchases = 0.obs;
   var overduePurchaseAmount = 0.0.obs;
-
+  var appVersion = '1.0.0'.obs;
+  var userName = ''.obs;
+  var userEmail = ''.obs;
 
   @override
   void onInit() {
@@ -98,6 +100,7 @@ class DashboardController extends BaseController {
     ]);
 
     _initializeDashboard();
+    _loadAppVersion();
     // 🔹 FIXED: Only recalculate when NOT initializing
     ever(invoiceList, (_) {
       if (!_isInitializing && _hasInitialized) {
@@ -135,7 +138,7 @@ class DashboardController extends BaseController {
       _isInitializing = true;
       isLoading.value = true;
       print("🔄 Starting dashboard initialization...");
-
+      await _loadUserData();
       // Step 1: Load company first (await!)
       await _loadCompanyData();
 
@@ -155,7 +158,35 @@ class DashboardController extends BaseController {
     }
   }
 
+  // Add this method to load user data
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        userEmail.value = user.email ?? '';
 
+        // Try to get user name from Firestore
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          userName.value = data?['username'] ?? data?['displayName'] ??
+              user.displayName ??
+              user.email!.split('@').first;
+        } else {
+          userName.value = user.displayName ?? user.email!.split('@').first;
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+      final user = FirebaseAuth.instance.currentUser;
+      userName.value = user?.displayName ?? user?.email?.split('@').first ?? 'User';
+      userEmail.value = user?.email ?? '';
+    }
+  }
 
   // Add this method to save the challan preference to SharedPreferences
   Future<void> saveChallanPreference(bool isEnabled) async {
@@ -398,6 +429,16 @@ class DashboardController extends BaseController {
     print("Current company set: ${company['companyName']} (${company['id']})");
   }
 
+  Future<void> _loadAppVersion() async {
+    try {
+      PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      appVersion.value = '${packageInfo.version} (${packageInfo.buildNumber})';
+      print("📱 App Version: ${appVersion.value}");
+    } catch (e) {
+      print('❌ Error loading package info: $e');
+      appVersion.value = '1.0.0';
+    }
+  }
 
 
   Future<void> loadCompanySettings() async {

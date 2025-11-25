@@ -806,906 +806,6 @@ import 'controller.dart';
 // }
 
 
-///19-10 work
-// class PurchaseEntryController extends BaseController {
-//   // Form controllers
-//   final formKey = GlobalKey<FormState>();
-//   final vendorNameController = TextEditingController();
-//   final vendorMobileController = TextEditingController();
-//   final vendorEmailController = TextEditingController();
-//   final vendorAddressController = TextEditingController();
-//   final purchaseNumberController = TextEditingController();
-//   final purchaseDateController = TextEditingController();
-//   final notesController = TextEditingController();
-//
-//   // Observable variables - Changed from vendors to customers
-//   var selectedVendor = Rxn<Map<String, dynamic>>();
-//   var customers = <Map<String, dynamic>>[].obs; // Changed from vendors
-//   var itemList = <Item>[].obs;
-//   var purchaseList = <PurchaseEntry>[].obs;
-//   var purchaseItems = <PurchaseItem>[].obs;
-//   var purchaseDate = DateTime.now().obs;
-//   var showVendorForm = false.obs;
-//   var vendorCount = 0.obs;
-//   final RxString selectedVendorId = ''.obs;
-//
-//   // Calculation observables
-//   var subtotal = 0.0.obs;
-//   var paymentStatus = 'Pending'.obs;
-//   var totalAmount = 0.0.obs;
-//   var gstAmount = 0.0.obs;
-//   var companyData = <String, dynamic>{}.obs;
-//
-//   // Firebase instances
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-//
-//   // Edit mode variables
-//   final RxBool isEditMode = false.obs;
-//   final RxString editingPurchaseId = ''.obs;
-//   final Rxn<Map<String, dynamic>> originalPurchaseData = Rxn<Map<String, dynamic>>();
-//   final RxInt originalItemsCount = 0.obs;
-//
-//   /// Add item selection mode
-//   var useItemMaster = true.obs; // Toggle between modes
-//
-//   final List<String> unitOptions = [
-//     'pcs', 'kg', 'ltr', 'ml', 'mtr', 'cm', 'ft', 'inch', 'box', 'pack', 'dozen'
-//   ];
-//
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     _handleArguments();
-//
-//     if (!isEditMode.value) {
-//       initializePurchase();
-//     } else {
-//       if (purchaseItems.isEmpty) {
-//         addNewItem();
-//       }
-//     }
-//
-//     Future.microtask(() {
-//       loadCompanyData();
-//       loadCustomersAsVendors(); // Changed method name
-//       fetchItems();
-//     });
-//   }
-//
-//   void _handleArguments() {
-//     print("🔍 Starting _handleArguments...");
-//
-//     final arguments = Get.arguments;
-//     print("📥 Raw arguments: $arguments");
-//
-//     if (arguments is PurchaseEntry) {
-//       print("🏷️ Arguments is directly a PurchaseEntry object");
-//       isEditMode.value = true;
-//       editingPurchaseId.value = arguments.purchaseId ?? '';
-//
-//       try {
-//         originalPurchaseData.value = _purchaseToMap(arguments);
-//         _prefillPurchaseData();
-//       } catch (e, stackTrace) {
-//         print("❌ Error processing direct PurchaseEntry: $e");
-//         print("📄 Stack trace: $stackTrace");
-//       }
-//     } else if (arguments != null && arguments is Map) {
-//       if (arguments['editMode'] == true) {
-//         isEditMode.value = true;
-//         editingPurchaseId.value = arguments['purchaseId']?.toString() ?? '';
-//
-//         if (arguments['purchaseData'] != null) {
-//           if (arguments['purchaseData'] is PurchaseEntry) {
-//             final purchaseObj = arguments['purchaseData'] as PurchaseEntry;
-//             try {
-//               originalPurchaseData.value = _purchaseToMap(purchaseObj);
-//               _prefillPurchaseData();
-//             } catch (e, stackTrace) {
-//               print("❌ Error converting PurchaseEntry to Map: $e");
-//             }
-//           } else if (arguments['purchaseData'] is Map) {
-//             try {
-//               originalPurchaseData.value = Map<String, dynamic>.from(arguments['purchaseData'] as Map);
-//               _prefillPurchaseData();
-//             } catch (e, stackTrace) {
-//               print("❌ Error processing Map data: $e");
-//             }
-//           }
-//         }
-//       }
-//     }
-//
-//     print("🏁 Finished _handleArguments");
-//     print("📊 Final state: isEditMode=${isEditMode.value}, editingPurchaseId='${editingPurchaseId.value}'");
-//   }
-//
-//   Map<String, dynamic> _purchaseToMap(PurchaseEntry purchase) {
-//     return {
-//       'purchaseId': purchase.purchaseId,
-//       'vendorId': purchase.vendorId,
-//       'vendorName': purchase.vendorName,
-//       'vendorEmail': purchase.vendorEmail,
-//       'vendorMobile': purchase.vendorMobile,
-//       'vendorAddress': purchase.vendorAddress,
-//       'purchaseDate': purchase.purchaseDate,
-//       'subtotal': purchase.subtotal,
-//       'gstAmount': purchase.gstAmount,
-//       'totalAmount': purchase.totalAmount,
-//       'paymentStatus': purchase.paymentStatus,
-//       'notes': purchase.notes,
-//     };
-//   }
-//
-//   void _prefillPurchaseData() {
-//     print("🔄 Starting _prefillPurchaseData...");
-//
-//     final purchaseData = originalPurchaseData.value;
-//     if (purchaseData != null) {
-//       print("📋 Prefilling with data: $purchaseData");
-//
-//       purchaseNumberController.text = purchaseData['purchaseId']?.toString() ?? '';
-//
-//       if (purchaseData['purchaseDate'] != null) {
-//         if (purchaseData['purchaseDate'] is DateTime) {
-//           purchaseDateController.text = _formatDate(purchaseData['purchaseDate'] as DateTime);
-//           purchaseDate.value = purchaseData['purchaseDate'] as DateTime;
-//         } else if (purchaseData['purchaseDate'] is String) {
-//           purchaseDateController.text = purchaseData['purchaseDate'] as String;
-//           try {
-//             purchaseDate.value = DateTime.parse(purchaseData['purchaseDate'] as String);
-//           } catch (e) {
-//             print('Could not parse date string: ${purchaseData['purchaseDate']}');
-//           }
-//         }
-//       }
-//
-//       vendorNameController.text = purchaseData['vendorName']?.toString() ?? '';
-//       vendorMobileController.text = purchaseData['vendorMobile']?.toString() ?? '';
-//       vendorEmailController.text = purchaseData['vendorEmail']?.toString() ?? '';
-//       vendorAddressController.text = purchaseData['vendorAddress']?.toString() ?? '';
-//
-//       if (purchaseData['vendorId'] != null && purchaseData['vendorId'].toString().isNotEmpty) {
-//         selectedVendorId.value = purchaseData['vendorId'].toString();
-//         print("🆔 Restored vendor ID: ${selectedVendorId.value}");
-//       }
-//
-//       paymentStatus.value = purchaseData['paymentStatus']?.toString() ?? 'Pending';
-//       notesController.text = purchaseData['notes']?.toString() ?? '';
-//
-//       if (purchaseData['subtotal'] != null) {
-//         subtotal.value = double.tryParse(purchaseData['subtotal'].toString()) ?? 0.0;
-//       }
-//       if (purchaseData['gstAmount'] != null) {
-//         gstAmount.value = double.tryParse(purchaseData['gstAmount'].toString()) ?? 0.0;
-//       }
-//       if (purchaseData['totalAmount'] != null) {
-//         totalAmount.value = double.tryParse(purchaseData['totalAmount'].toString()) ?? 0.0;
-//       }
-//
-//       _loadExistingPurchaseItems();
-//     }
-//   }
-//
-//   void _loadExistingPurchaseItems() async {
-//     if (editingPurchaseId.value.isEmpty) {
-//       print("⚠️ No editing purchase ID, skipping item load");
-//       return;
-//     }
-//
-//     try {
-//       isLoading.value = true;
-//       print("📦 Loading existing items for purchase: ${editingPurchaseId.value}");
-//
-//       final existingItems = await GoogleSheetService.getPurchaseItemsByPurchaseId(editingPurchaseId.value);
-//
-//       originalItemsCount.value = existingItems.length;
-//       print("📊 Found ${existingItems.length} existing items");
-//
-//       purchaseItems.clear();
-//       for (var item in existingItems) {
-//         print("📦 Loading item: ${item.itemName}");
-//         purchaseItems.add(PurchaseItem(
-//           vendorId: item.vendorId ?? '',
-//           itemId: item.itemId ?? '',
-//           itemName: item.itemName ?? '',
-//           description: item.description ?? '',
-//           quantity: item.quantity ?? 1,
-//           purchasePrice: item.purchasePrice ?? 0.0,
-//           unit: item.unit ?? 'pcs',
-//           totalPrice: item.totalPrice ?? 0.0,
-//           gstRate: item.gstRate ?? 0.0,
-//           createdAt: item.createdAt ?? DateTime.now(),
-//         ));
-//       }
-//
-//       calculateTotals();
-//       print('✅ Loaded ${existingItems.length} existing items for editing');
-//
-//     } catch (e) {
-//       print('❌ Error loading existing items: $e');
-//       Get.snackbar('Error', 'Failed to load existing items');
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   @override
-//   void onClose() {
-//     vendorNameController.dispose();
-//     vendorMobileController.dispose();
-//     vendorEmailController.dispose();
-//     vendorAddressController.dispose();
-//     purchaseNumberController.dispose();
-//     purchaseDateController.dispose();
-//     notesController.dispose();
-//     super.onClose();
-//   }
-//
-//   void initializePurchase() async {
-//     print("🆕 INITIALIZING NEW PURCHASE");
-//
-//     if (isEditMode.value) {
-//       print("⚠️ In edit mode, skipping new purchase initialization");
-//       return;
-//     }
-//
-//     final lastPurchase = await getLastPurchase();
-//     String newId = generatePurchaseIdFromLast(lastPurchase);
-//
-//     purchaseNumberController.text = newId;
-//     purchaseDateController.text = _formatDate(purchaseDate.value);
-//
-//     if (purchaseItems.isEmpty) {
-//       addNewItem();
-//     }
-//
-//     print("✅ NEW PURCHASE INITIALIZATION COMPLETE - ID: $newId");
-//   }
-//
-//   String generatePurchaseIdFromLast(PurchaseEntry? lastPurchase) {
-//     if (lastPurchase == null || lastPurchase.purchaseId == null) return "PUR001";
-//
-//     RegExp regex = RegExp(r'^PUR(\d+)$', caseSensitive: false);
-//     final match = regex.firstMatch(lastPurchase.purchaseId!);
-//     if (match == null) return "PUR001";
-//
-//     int number = int.tryParse(match.group(1) ?? "0") ?? 0;
-//     return "PUR${(number + 1).toString().padLeft(3, '0')}";
-//   }
-//
-//   Future<PurchaseEntry?> getLastPurchase() async {
-//     List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
-//     if (purchases.isEmpty) return null;
-//
-//     purchases.sort((a, b) => (a.purchaseId ?? '').compareTo(b.purchaseId ?? ''));
-//     return purchases.last;
-//   }
-//
-//   Future<void> loadCompanyData() async {
-//     try {
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//       if (companyId.isEmpty) return;
-//
-//       final companyDoc = await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .get();
-//
-//       if (companyDoc.exists) {
-//         companyData.value = companyDoc.data() ?? {};
-//         print("Company data loaded");
-//       }
-//     } catch (e) {
-//       print("Error loading company data: $e");
-//     }
-//   }
-//
-//   // Changed method name from loadVendors to loadCustomersAsVendors
-//   Future<void> loadCustomersAsVendors() async {
-//     try {
-//       isLoading.value = true;
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//       print("Company ID: $companyId");
-//
-//       // Changed collection from "vendors" to "customers"
-//       final customersSnapshot = await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers") // Changed from vendors
-//           .get();
-//
-//       customers.clear();
-//
-//       for (var doc in customersSnapshot.docs) {
-//         final data = doc.data();
-//         bool isActive = data['isActive'] ?? true;
-//
-//         if (isActive) {
-//           data['id'] = doc.id;
-//           // Map customer fields to vendor fields
-//           data['vendorId'] = data['customerId'] ?? doc.id;
-//           customers.add(data);
-//           print("Added active customer as vendor: ${data['name']} (ID: ${doc.id})");
-//         }
-//       }
-//
-//       vendorCount.value = customers.length;
-//       print("Active Customer count (as vendors): ${vendorCount.value}");
-//
-//     } catch (e) {
-//       print("Error loading customers: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to load customers',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   Future<void> fetchItems() async {
-//     try {
-//       isLoading.value = true;
-//       final userId = AppConstants.userId;
-//
-//       print("=== ATTEMPTING TO FETCH ITEMS FOR USER: $userId ===");
-//
-//       List<Item> items = await GoogleSheetService.getItems(userId: userId);
-//
-//       print("Final result: ${items.length} items found");
-//
-//       itemList.assignAll(items);
-//
-//       if (items.isEmpty) {
-//         showCustomSnackbar(
-//           title: "No Items",
-//           message: "No items found for the current user",
-//           baseColor: Colors.orange.shade700,
-//           icon: Icons.info_outline,
-//         );
-//       } else {
-//         showCustomSnackbar(
-//           title: "Success",
-//           message: "Found ${items.length} items",
-//           baseColor: Colors.green.shade700,
-//           icon: Icons.check_circle_outline,
-//         );
-//       }
-//
-//     } catch (e) {
-//       print("Error in fetchItems(): $e");
-//       showCustomSnackbar(
-//         title: "Error",
-//         message: "Failed to load items: $e",
-//         baseColor: Colors.red.shade700,
-//         icon: Icons.error_outline,
-//       );
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   void selectVendor(Map<String, dynamic>? vendor) {
-//     if (vendor == null) {
-//       selectedVendor.value = null;
-//       clearVendorSelection();
-//       showVendorForm.value = false;
-//       return;
-//     }
-//
-//     bool isActive = vendor['isActive'] ?? true;
-//     if (!isActive) {
-//       Get.snackbar(
-//         'Customer Inactive',
-//         'This customer is currently inactive. Please select an active customer.',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.orange,
-//         colorText: Colors.white,
-//       );
-//       return;
-//     }
-//
-//     selectedVendor.value = vendor;
-//     vendorNameController.text = vendor['name'] ?? '';
-//     vendorMobileController.text = vendor['mobile1'] ?? vendor['mobile'] ?? '';
-//     vendorEmailController.text = vendor['email'] ?? '';
-//     vendorAddressController.text = vendor['address'] ?? '';
-//
-//     selectedVendorId.value = vendor['vendorId'] ?? vendor['customerId'] ?? vendor['id'] ?? '';
-//     showVendorForm.value = false;
-//
-//     print("Selected Active Customer as Vendor: ID: ${selectedVendorId.value}, Name: ${vendorNameController.text}");
-//   }
-//
-//   void toggleVendorForm() {
-//     showVendorForm.value = !showVendorForm.value;
-//     if (showVendorForm.value) {
-//       selectedVendor.value = null;
-//       clearVendorSelection();
-//     }
-//   }
-//
-//   void clearVendorSelection() {
-//     selectedVendor.value = null;
-//     vendorNameController.clear();
-//     vendorMobileController.clear();
-//     vendorEmailController.clear();
-//     vendorAddressController.clear();
-//   }
-//
-//   void addNewItem() {
-//     print("Adding new item in ${isEditMode.value ? 'EDIT' : 'CREATE'} mode");
-//
-//     String vendorId = _getValidVendorId();
-//
-//     if (vendorId.isEmpty && isEditMode.value) {
-//       print("WARNING: Vendor ID is empty in edit mode!");
-//       Get.snackbar(
-//         'Error',
-//         'Unable to determine vendor ID. Please reload the purchase.',
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//       return;
-//     }
-//
-//     purchaseItems.add(PurchaseItem(
-//       description: '',
-//       quantity: 1,
-//       purchasePrice: 0.0,
-//       gstRate: 0.0,
-//       itemId: '',
-//       totalPrice: 0.0,
-//       itemName: '',
-//       vendorId: vendorId,
-//       unit: 'pcs',
-//       createdAt: DateTime.now(),
-//     ));
-//
-//     print("Added new item with vendor ID: '$vendorId'");
-//     print("Total items: ${purchaseItems.length}");
-//
-//     calculateTotals();
-//   }
-//
-//   // Modified to handle manual item entry
-//   void updateItem(int index, {
-//     String? itemName,
-//     String? description,
-//     int? quantity,
-//     double? purchasePrice,
-//     String? unit,
-//   }) {
-//     if (index < purchaseItems.length) {
-//       final item = purchaseItems[index];
-//       purchaseItems[index] = PurchaseItem(
-//         vendorId: item.vendorId,
-//         itemName: itemName ?? item.itemName,
-//         description: description ?? item.description,
-//         quantity: quantity ?? item.quantity,
-//         purchasePrice: purchasePrice ?? item.purchasePrice,
-//         gstRate: item.gstRate,
-//         itemId: item.itemId,
-//         totalPrice: item.totalPrice,
-//         unit: unit ?? item.unit,
-//         createdAt: item.createdAt,
-//       );
-//       calculateTotals();
-//     }
-//   }
-//
-//   void removeItem(int index) {
-//     if (purchaseItems.length > 1) {
-//       purchaseItems.removeAt(index);
-//       calculateTotals();
-//     }
-//   }
-//
-//   void updatePaymentStatus(String status) {
-//     paymentStatus.value = status;
-//   }
-//
-//   Future<void> selectPurchaseDate() async {
-//     final DateTime? picked = await showDatePicker(
-//       context: Get.context!,
-//       initialDate: purchaseDate.value,
-//       firstDate: DateTime(2000),
-//       lastDate: DateTime.now(),
-//     );
-//
-//     if (picked != null && picked != purchaseDate.value) {
-//       purchaseDate.value = picked;
-//       purchaseDateController.text = _formatDate(picked);
-//     }
-//   }
-//
-//   String _formatDate(DateTime date) {
-//     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-//   }
-//
-//   String _getValidVendorId() {
-//     String vendorId = '';
-//
-//     if (selectedVendorId.value.isNotEmpty) {
-//       vendorId = selectedVendorId.value;
-//     } else if (isEditMode.value && originalPurchaseData.value?['vendorId'] != null) {
-//       vendorId = originalPurchaseData.value!['vendorId'].toString();
-//       selectedVendorId.value = vendorId;
-//     } else if (purchaseItems.isNotEmpty && purchaseItems.first.vendorId.isNotEmpty) {
-//       vendorId = purchaseItems.first.vendorId;
-//       selectedVendorId.value = vendorId;
-//     } else if (vendorNameController.text.trim().isNotEmpty) {
-//       vendorId = 'MANUAL_${vendorNameController.text.trim().replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}';
-//       selectedVendorId.value = vendorId;
-//     }
-//
-//     return vendorId;
-//   }
-//
-//   bool _validatePurchaseItems() {
-//     if (purchaseItems.isEmpty) {
-//       showCustomSnackbar(
-//         title: "Validation Error",
-//         message: "Please add at least one item to the purchase",
-//         baseColor: Colors.red.shade700,
-//         icon: Icons.error_outline,
-//       );
-//       return false;
-//     }
-//
-//     bool hasValidItem = purchaseItems.any((item) {
-//       bool hasItemName = item.itemName != null && item.itemName!.isNotEmpty;
-//       bool hasDescription = item.description != null && item.description!.isNotEmpty;
-//       return hasItemName || hasDescription;
-//     });
-//
-//     if (!hasValidItem) {
-//       showCustomSnackbar(
-//         title: "No Items Entered",
-//         message: "Please enter at least one item name or description",
-//         baseColor: Colors.orange.shade700,
-//         icon: Icons.warning_amber_rounded,
-//       );
-//       return false;
-//     }
-//
-//     bool hasInvalidQuantityOrPrice = purchaseItems.any((item) {
-//       bool isValidItem = (item.itemName?.isNotEmpty ?? false) ||
-//           (item.description?.isNotEmpty ?? false);
-//
-//       if (isValidItem) {
-//         return item.quantity <= 0 || item.purchasePrice <= 0;
-//       }
-//       return false;
-//     });
-//
-//     if (hasInvalidQuantityOrPrice) {
-//       showCustomSnackbar(
-//         title: "Invalid Item Data",
-//         message: "All items must have quantity and price greater than 0",
-//         baseColor: Colors.orange.shade700,
-//         icon: Icons.warning_amber_rounded,
-//       );
-//       return false;
-//     }
-//
-//     return true;
-//   }
-//
-//   Map<String, dynamic> createPurchaseItemData(PurchaseItem item) {
-//     String vendorId = item.vendorId;
-//     if (vendorId.isEmpty) {
-//       vendorId = _getValidVendorId();
-//     }
-//
-//     String formattedDate = _formatDate(purchaseDate.value);
-//
-//     return {
-//       'purchaseId': purchaseNumberController.text,
-//       'vendorId': vendorId,
-//       'itemId': item.itemId ?? '',
-//       'itemName': item.itemName ?? '',
-//       'description': item.description ?? '',
-//       'quantity': item.quantity.toString(),
-//       'purchasePrice': item.purchasePrice.toString(),
-//       'purchaseDate': formattedDate,
-//       'gstRate': item.gstRate.toString(),
-//       'totalPrice': item.totalPrice.toString(),
-//       'unit': item.unit ?? 'pcs',
-//       'userId': AppConstants.userId,
-//     };
-//   }
-//
-//   void calculateTotals() {
-//     double sub = 0.0;
-//     double gst = 0.0;
-//
-//     for (var i = 0; i < purchaseItems.length; i++) {
-//       final item = purchaseItems[i];
-//       final itemTotal = item.purchasePrice * item.quantity;
-//
-//       double gstForItem = 0.0;
-//       double withGst = itemTotal;
-//
-//       if (AppConstants.withGST.value) {
-//         gstForItem = itemTotal * (item.gstRate / 100);
-//         withGst = itemTotal + gstForItem;
-//       }
-//
-//       purchaseItems[i] = item.copyWith(
-//         totalPrice: withGst,
-//       );
-//
-//       sub += itemTotal;
-//       gst += gstForItem;
-//     }
-//
-//     subtotal.value = sub;
-//     gstAmount.value = gst;
-//     totalAmount.value = AppConstants.withGST.value ? sub + gst : sub;
-//
-//     print("Calculated totals: Subtotal=${sub}, GST=${gst}, Total=${totalAmount.value}");
-//   }
-//
-//   Future<bool> savePurchase() async {
-//     try {
-//       if (vendorNameController.text.trim().isEmpty) {
-//         showCustomSnackbar(
-//           title: "Vendor Required",
-//           message: "Please select a customer or enter vendor details",
-//           baseColor: Colors.red.shade700,
-//           icon: Icons.store_outlined,
-//         );
-//         return false;
-//       }
-//
-//       if (!formKey.currentState!.validate()) {
-//         showCustomSnackbar(
-//           title: "Validation Error",
-//           message: "Please fill all required fields",
-//           baseColor: Colors.orange.shade700,
-//           icon: Icons.warning,
-//         );
-//         return false;
-//       }
-//
-//       if (!_validatePurchaseItems()) {
-//         return false;
-//       }
-//
-//       isLoading.value = true;
-//       calculateTotals();
-//
-//       String finalVendorId = _getValidVendorId();
-//
-//       if (finalVendorId.isEmpty) {
-//         isLoading.value = false;
-//         showCustomSnackbar(
-//           title: "Vendor ID Error",
-//           message: "Unable to determine vendor ID. Please try again.",
-//           baseColor: Colors.red.shade700,
-//           icon: Icons.error_outline,
-//         );
-//         return false;
-//       }
-//
-//       final purchaseId = purchaseNumberController.text;
-//
-//       Map<String, dynamic> purchaseData = {
-//         'purchaseId': purchaseId,
-//         'purchaseDate': _formatDate(purchaseDate.value),
-//         'vendorId': finalVendorId,
-//         'vendorName': vendorNameController.text.trim(),
-//         'vendorMobile': vendorMobileController.text.trim(),
-//         'vendorEmail': vendorEmailController.text.trim(),
-//         'vendorAddress': vendorAddressController.text.trim(),
-//         'subtotal': subtotal.value,
-//         'gstRate': purchaseItems.isNotEmpty ? purchaseItems.first.gstRate : 0.0,
-//         'gstAmount': gstAmount.value,
-//         'totalAmount': totalAmount.value,
-//         'paymentStatus': paymentStatus.value,
-//         'notes': notesController.text,
-//         'userId': AppConstants.userId,
-//       };
-//
-//       if (isEditMode.value && editingPurchaseId.value.isNotEmpty) {
-//         print("=== UPDATING EXISTING PURCHASE ===");
-//
-//         await GoogleSheetService.updatePurchaseWithCacheClear(
-//           purchaseData,
-//           AppConstants.userId,
-//         );
-//
-//         List<Map<String, dynamic>> itemsData =
-//         purchaseItems.map((item) => createPurchaseItemData(item)).toList();
-//
-//         await GoogleSheetService.updatePurchaseItemsWithCacheClear(
-//           purchaseId,
-//           itemsData,
-//           AppConstants.userId,
-//         );
-//
-//         showCustomSnackbar(
-//           title: "Success",
-//           message: "Purchase updated successfully!",
-//           baseColor: Colors.green.shade700,
-//           icon: Icons.check_circle_outline,
-//         );
-//
-//         Get.back(result: true);
-//         return true;
-//
-//       } else {
-//         print("=== CREATING NEW PURCHASE ===");
-//
-//         await GoogleSheetService.addPurchase(purchaseData, AppConstants.userId);
-//
-//         List<Map<String, dynamic>> itemsData =
-//         purchaseItems.map((item) => createPurchaseItemData(item)).toList();
-//
-//         await GoogleSheetService.addPurchaseItemsBatch(
-//           itemsData,
-//           AppConstants.userId,
-//         );
-//
-//         await GoogleSheetService.updateStockAfterPurchase(purchaseItems);
-//
-//         // 🆕 ADD THIS LINE - Sync items to Item master
-//         await syncPurchaseItemsToMaster(purchaseItems);
-//
-//
-//         showCustomSnackbar(
-//           title: "Success",
-//           message: "Purchase created successfully!",
-//           baseColor: Colors.green.shade700,
-//           icon: Icons.check_circle_outline,
-//         );
-//
-//         clearForm();
-//         Get.back(result: true);
-//         return true;
-//       }
-//
-//     } catch (e) {
-//       print("❌ Error saving purchase: $e");
-//       showCustomSnackbar(
-//         title: "Error",
-//         message: "Failed to save purchase: ${e.toString()}",
-//         baseColor: Colors.red.shade700,
-//         icon: Icons.error,
-//       );
-//       return false;
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   void clearForm() {
-//     formKey.currentState?.reset();
-//     purchaseItems.clear();
-//     clearVendorSelection();
-//     notesController.clear();
-//     paymentStatus.value = 'Pending';
-//     calculateTotals();
-//
-//     initializePurchase();
-//   }
-//
-//   String formatCurrency(double amount) {
-//     return amount.toStringAsFixed(2);
-//   }
-//
-//   // Add this method to your PurchaseEntryController class
-//
-//   /// Sync purchase items to Item master
-//   Future<void> syncPurchaseItemsToMaster(List<PurchaseItem> items) async {
-//     try {
-//       print("🔄 Syncing ${items.length} items to Item master...");
-//
-//
-//       int addedCount = 0;
-//       int skippedCount = 0;
-//
-//
-//       for (var purchaseItem in items) {
-//         // ✅ FIX: Add check for empty itemName
-//         if (purchaseItem.itemName == null || purchaseItem.itemName!.isEmpty) {
-//           print("⚠️ Skipping item with empty name");
-//           continue;
-//         }
-//
-//
-//         // Skip if item already has an itemId (already in master)
-//         if (purchaseItem.itemId != null && purchaseItem.itemId!.isNotEmpty) {
-//           print("✓ Item ${purchaseItem.itemName} already in master (ID: ${purchaseItem.itemId})");
-//           continue;
-//         }
-//
-//         // Check if item with same name already exists
-//         final existingItem = itemList.firstWhereOrNull(
-//               (item) => item.itemName.toLowerCase() == purchaseItem.itemName.toLowerCase(),
-//         );
-//
-//         if (existingItem != null) {
-//           print("✓ Item ${purchaseItem.itemName} already exists in master");
-//           // Update the purchaseItem with the existing itemId
-//           continue;
-//         }
-//
-//         // Prepare new item with validation
-//         final newItemId = 'ITM_${DateTime.now().millisecondsSinceEpoch}_${purchaseItem.itemName.hashCode.abs()}';
-//
-//         // Create new item for master
-//         final newItem = Item(
-//           itemId: newItemId,
-//           itemName: purchaseItem.itemName,
-//           price: purchaseItem.purchasePrice, // Use purchase price as initial price
-//           gstPercent: purchaseItem.gstRate,
-//           unitOfMeasurement: purchaseItem.unit,
-//           currentStock: purchaseItem.quantity, // Add purchased quantity to stock
-//           detailRequirement: purchaseItem.description ?? '',
-//           isActive: true,
-//         );
-//
-//         try {
-//           // Add to Google Sheets
-//           await GoogleSheetService.addItem(AppConstants.userId, newItem);
-//           itemList.add(newItem);
-//
-//           print("✅ Added '${newItem.itemName}' to Item master");
-//
-//           showCustomSnackbar(
-//             title: "Item Added",
-//             message: "${newItem.itemName} added to inventory master",
-//             baseColor: Colors.green.shade700,
-//             icon: Icons.check_circle_outline,
-//           );
-//           addedCount++;
-//         } catch (e) {
-//           print("❌ Failed to add ${purchaseItem.itemName} to master: $e");
-//           skippedCount++;
-//         }
-//       }
-//
-//       print("✅ Item sync completed - Added: $addedCount, Skipped: $skippedCount");
-//       if (addedCount > 0) {
-//         showCustomSnackbar(
-//           title: "Sync Complete",
-//           message: "$addedCount item(s) added to inventory master",
-//           baseColor: Colors.blue.shade700,
-//           icon: Icons.sync_outlined,
-//         );
-//       }
-//     } catch (e) {
-//       print("❌ Error syncing items: $e");
-//       showCustomSnackbar(
-//         title: "Sync Error",
-//         message: "Error syncing items: $e",
-//         baseColor: Colors.red.shade700,
-//         icon: Icons.error_outline,
-//       );
-//     }
-//   }
-//
-//
-//
-// }
-
 class PurchaseEntryController extends BaseController {
   // Form controllers
   final formKey = GlobalKey<FormState>();
@@ -1762,9 +862,7 @@ class PurchaseEntryController extends BaseController {
   ];
 
   var priceControllers = <TextEditingController>[].obs;
-  var gstControllers = <TextEditingController>[].obs;
   final Map<int, TextEditingController> qtyControllers = {};
-  final Map<int, FocusNode> gstFocusNodes = {};
 
   @override
   void onInit() {
@@ -1824,7 +922,6 @@ class PurchaseEntryController extends BaseController {
   String _formatDateForDisplay(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
   }
-
 
   Map<String, dynamic> _purchaseToMap(PurchaseEntry purchase) {
     return {
@@ -1935,12 +1032,9 @@ class PurchaseEntryController extends BaseController {
     }
     priceControllers.clear();
 
-    for (var controller in gstControllers) {
-      controller.dispose();
-    }
-    gstControllers.clear();
-
     qtyControllers.forEach((key, controller) => controller.dispose());
+    qtyControllers.clear();
+
     super.onClose();
   }
 
@@ -1952,7 +1046,31 @@ class PurchaseEntryController extends BaseController {
       String newId = generatePurchaseIdFromLast(lastPurchase);
 
       purchaseNumberController.text = newId;
-      purchaseDateController.text = _formatDate(purchaseDate.value);
+
+      // ✅ Set default date based on demo mode
+      DateTime defaultDate;
+      if (AppConstants.isDemo.value) {
+        // For demo mode, set default to middle of allowed range (Jan 1, 1991)
+        defaultDate = DateTime(1991, 1, 1);
+        print("🔒 Demo mode: Setting default date to 1991-01-01");
+      } else {
+        // For regular users, use today's date
+        defaultDate = DateTime.now();
+      }
+
+      purchaseDate.value = defaultDate;
+      purchaseDateController.text = _formatDate(defaultDate);
+
+      // ✅ Set payment due date to 15 days from default date
+      DateTime dueDateValue = defaultDate.add(Duration(days: 15));
+
+      // ✅ Ensure due date is also within demo range if applicable
+      if (AppConstants.isDemo.value && dueDateValue.isAfter(DateTime(1992, 12, 31))) {
+        dueDateValue = DateTime(1992, 12, 31);
+      }
+
+      paymentDueDate.value = dueDateValue;
+      paymentDueDateController.text = _formatDate(dueDateValue);
 
       if (purchaseItems.isEmpty) {
         addNewItem();
@@ -1961,7 +1079,12 @@ class PurchaseEntryController extends BaseController {
       print("⚠️ Error initializing purchase: $e");
       // Fallback to default ID if sheet doesn't exist yet
       purchaseNumberController.text = "PUR001";
-      purchaseDateController.text = _formatDate(purchaseDate.value);
+
+      DateTime defaultDate = AppConstants.isDemo.value
+          ? DateTime(1991, 1, 1)
+          : DateTime.now();
+
+      purchaseDateController.text = _formatDate(defaultDate);
 
       if (purchaseItems.isEmpty) {
         addNewItem();
@@ -1971,12 +1094,11 @@ class PurchaseEntryController extends BaseController {
 
   TextEditingController getPriceController(int index, {double? initialValue}) {
     // Create controller if it doesn't exist
-
     while (priceControllers.length < purchaseItems.length) {
       final itemIndex = priceControllers.length;
       final item = purchaseItems[itemIndex];
       priceControllers.add(
-        TextEditingController(text: item.purchasePrice.toStringAsFixed(2)), // ✅ int only
+        TextEditingController(text: item.purchasePrice.toStringAsFixed(2)),
       );
     }
     while (priceControllers.length > purchaseItems.length) {
@@ -1984,12 +1106,13 @@ class PurchaseEntryController extends BaseController {
     }
 
     if (initialValue != null &&
-        priceControllers[index].text != initialValue.toInt().toString()) {
-      priceControllers[index].text = initialValue.toInt().toString();
+        priceControllers[index].text != initialValue.toString()) {
+      priceControllers[index].text = initialValue.toStringAsFixed(2);
     }
 
     return priceControllers[index];
   }
+
   /// Get or create qty controller for specific index
   TextEditingController getQtyController(int index, {double? initialValue}) {
     // Create controller if it doesn't exist
@@ -2009,33 +1132,8 @@ class PurchaseEntryController extends BaseController {
     return qtyControllers[index]!;
   }
 
-  TextEditingController getGstController(int index, {double? initialValue}) {
-    // Create controller if it doesn't exist
-
-    while (gstControllers.length < purchaseItems.length) {
-      final itemIndex = gstControllers.length;
-      final item = purchaseItems[itemIndex];
-      gstControllers.add(
-        TextEditingController(text: item.gstRate.toStringAsFixed(2)), // ✅ int only
-      );
-    }
-    while (gstControllers.length > purchaseItems.length) {
-      gstControllers.removeLast().dispose();
-    }
-
-    if (initialValue != null &&
-        gstControllers[index].text != initialValue.toString()) {
-      gstControllers[index].text = initialValue.toString();
-    }
-
-    return gstControllers[index];
-  }
-
-
   void _initializeItemControllers(int index, PurchaseItem item) {
     /// Create controllers if they don't exist
-
-
     if (!qtyControllers.containsKey(index)) {
       qtyControllers[index] = TextEditingController(
         text: item.quantity.toString(),
@@ -2044,8 +1142,6 @@ class PurchaseEntryController extends BaseController {
       // Update existing controller
       qtyControllers[index]!.text = item.quantity.toString();
     }
-
-
   }
 
   String generatePurchaseIdFromLast(PurchaseEntry? lastPurchase) {
@@ -2277,8 +1373,6 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
-
-
   void toggleVendorForm() {
     showVendorForm.value = !showVendorForm.value;
     if (showVendorForm.value) {
@@ -2323,10 +1417,6 @@ class PurchaseEntryController extends BaseController {
 
     calculateTotals();
   }
-
-  // Add this method to PurchaseEntryController after the selectVendor method
-
-  // Replace selectItemForIndex() method in PurchaseEntryController with this:
 
   void selectItemForIndex(int index, Item item) {
     if (index >= purchaseItems.length) return;
@@ -2438,8 +1528,7 @@ class PurchaseEntryController extends BaseController {
     return (true, null);
   }
 
-
-// Update the existing updateItem method to handle both dropdown and manual entry
+  // ✅ FIXED: Updated removeItem method without gstControllers
   void removeItem(int index) {
     if (purchaseItems.length > 1) {
       // Remove the item
@@ -2448,35 +1537,29 @@ class PurchaseEntryController extends BaseController {
       // Dispose the controller at removed index
       priceControllers[index]?.dispose();
       qtyControllers[index]?.dispose();
-      gstControllers[index]?.dispose();
 
       // Create new maps with reindexed controllers
       Map<int, TextEditingController> newPriceControllers = {};
       Map<int, TextEditingController> newQtyControllers = {};
-      Map<int, TextEditingController> newGstControllers = {};
 
       // Reindex controllers after the removed index
       for (var i = 0; i < purchaseItems.length; i++) {
         if (i < index) {
           /// Keep controllers before removed index as-is
-                    if (qtyControllers.containsKey(i)) {
+          if (qtyControllers.containsKey(i)) {
             newQtyControllers[i] = qtyControllers[i]!;
           }
-
         } else {
           /// Shift controllers after removed index down by 1
-
           if (qtyControllers.containsKey(i + 1)) {
             newQtyControllers[i] = qtyControllers[i + 1]!;
           }
-
         }
       }
 
       // Replace old maps with reindexed ones
       priceControllers.clear();
       qtyControllers.clear();
-      gstControllers.clear();
 
       qtyControllers.addAll(newQtyControllers);
 
@@ -2484,7 +1567,7 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
-// Update updateItem to update controllers
+  // Update updateItem to update controllers
   void updateItem(int index, {
     String? itemName,
     String? description,
@@ -2510,7 +1593,6 @@ class PurchaseEntryController extends BaseController {
       );
 
       // ✅ Update controllers if values changed
-
       if (quantity != null && qtyControllers.containsKey(index)) {
         qtyControllers[index]!.text = quantity.toString();
       }
@@ -2518,7 +1600,6 @@ class PurchaseEntryController extends BaseController {
       calculateTotals();
     }
   }
-
 
   void updatePaymentStatus(String status) {
     paymentStatus.value = status;
@@ -2568,30 +1649,71 @@ class PurchaseEntryController extends BaseController {
   }
 
   Future<void> selectPurchaseDate() async {
+    // ✅ Use AppConstants.isDemo directly
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : DateTime(2000);
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime.now();
+
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
-      initialDate: purchaseDate.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: purchaseDate.value.isBefore(firstDate) || purchaseDate.value.isAfter(lastDate)
+          ? firstDate
+          : purchaseDate.value,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value
+          ? 'Select Date (Demo: 1990-1992 only)'
+          : 'Select Purchase Date',
     );
 
     if (picked != null) {
       purchaseDate.value = picked;
       purchaseDateController.text = _formatDate(picked);
-      /// Auto-calculate due date
+
+      // ✅ AUTO-CALCULATE DUE DATE (15 days from purchase date)
       if (!isEditMode.value) {
         paymentDueDate.value = picked.add(Duration(days: 15));
+
+        // ✅ Ensure due date is also within demo range if applicable
+        if (AppConstants.isDemo.value && paymentDueDate.value.isAfter(lastDate)) {
+          paymentDueDate.value = lastDate;
+        }
+
         paymentDueDateController.text = _formatDate(paymentDueDate.value);
+
+        Get.snackbar(
+          'Due Date Updated',
+          'Payment due date set to ${_formatDate(paymentDueDate.value)} (15 days)',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.blue.shade100,
+          colorText: Colors.blue.shade800,
+          duration: Duration(seconds: 2),
+        );
       }
     }
   }
 
   Future<void> selectPaymentDueDate() async {
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : purchaseDate.value;
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime(2100);
+
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
-      initialDate: paymentDueDate.value,
-      firstDate: purchaseDate.value,
-      lastDate: DateTime(2100),
+      initialDate: paymentDueDate.value.isBefore(firstDate) || paymentDueDate.value.isAfter(lastDate)
+          ? firstDate
+          : paymentDueDate.value,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value
+          ? 'Select Date (Demo: 1990-1992 only)'
+          : 'Select Payment Due Date',
     );
 
     if (picked != null && picked != paymentDueDate.value) {
@@ -2599,8 +1721,6 @@ class PurchaseEntryController extends BaseController {
       paymentDueDateController.text = _formatDate(picked);
     }
   }
-
-
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -2772,7 +1892,6 @@ class PurchaseEntryController extends BaseController {
       );
     }
   }
-
 
   Future<bool> savePurchase() async {
     try {

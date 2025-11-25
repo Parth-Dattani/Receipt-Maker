@@ -14,6 +14,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../model/model.dart';
+import '../../widgets/widgets.dart';
 
 
 class NewInvoiceScreen extends GetView<NewInvoiceController> {
@@ -612,7 +613,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     ),
                   ),
                   Text(
-                    ' *', // ✅ Required indicator
+                    ' *',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -658,47 +659,53 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       ],
                     );
                   } else if (!controller.showCustomerForm.value) {
-                    return Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
+                    // ✅ NEW: Use SearchableDropdown for customers
+                    return SearchableDropdown<Map<String, dynamic>>(
+                      value: controller.selectedCustomerId.value.isEmpty
+                          ? null
+                          : controller.customers.firstWhereOrNull(
+                              (c) => c['customerId']?.toString() == controller.selectedCustomerId.value
                       ),
-                      child: DropdownButton<String>(  // ✅ Changed from String? to String
-                        value: controller.selectedCustomerId.value.isEmpty
-                            ? null
-                            : controller.selectedCustomerId.value,
-                        isExpanded: true,
-                        hint: Text('select_customer'.tr),
-                        underline: SizedBox(),
-                        items: [
-                          // ✅ REMOVED the null value item - it's redundant with hint
-                          ...controller.customers.map((customer) {
-                            // ✅ Add null check and ensure unique values
-                            final customerId = customer['customerId']?.toString() ?? '';
-                            if (customerId.isEmpty) {
-                              return null; // Skip invalid customers
-                            }
-
-                            return DropdownMenuItem<String>(
-                              value: customerId,
-                              child: Text(
-                                (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),
+                      items: controller.customers,
+                      itemLabel: (customer) => (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),
+                      hintText: 'Select Customer',
+                      searchHintText: 'Search customers by name...',
+                      itemBuilder: (customer) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (customer['name'] ?? 'Unknown').toString().toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (customer['mobile1'] != null && customer['mobile1'].toString().isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.phone, size: 12, color: Colors.grey.shade600),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    customer['mobile1'].toString(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                          }).whereType<DropdownMenuItem<String>>().toList(), // ✅ Filter out nulls
+                            ),
                         ],
-                        onChanged: (customerId) {
-                          if (customerId == null || customerId.isEmpty) {
-                            controller.selectCustomer(null);
-                          } else {
-                            final customer = controller.customers.firstWhereOrNull(
-                                    (c) => c['customerId']?.toString() == customerId
-                            );
-                            controller.selectCustomer(customer);
-                          }
-                        },
                       ),
+                      onChanged: (selectedCustomer) {
+                        if (selectedCustomer == null) {
+                          controller.selectCustomer(null);
+                        } else {
+                          controller.selectCustomer(selectedCustomer);
+                        }
+                      },
                     );
                   } else {
                     return _buildNewCustomerForm();
@@ -1647,6 +1654,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
                                           final isInactive = currentItem != null && !(currentItem.isActive ?? true);
 
+                                          // Show read-only field for inactive items from challan
                                           if (isFromChallan && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
                                             return Container(
                                               height: 40,
@@ -1676,50 +1684,66 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                             selectedItem = null;
                                           }
 
-                                          return Container(
-                                            height: 45,
-                                            padding: EdgeInsets.symmetric(horizontal: 12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              border: Border.all(color: Colors.blue.shade300, width: 1.5),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: DropdownButton<Item>(
-                                              value: selectedItem,
-                                              isExpanded: true,
-                                              hint: Padding(
-                                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                                child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
-                                              ),
-                                              underline: SizedBox(),
-                                              icon: Padding(
-                                                padding: EdgeInsets.only(right: 8),
-                                                child: Icon(Icons.arrow_drop_down, size: 20),
-                                              ),
-                                              items: [
-                                                DropdownMenuItem(
-                                                  value: null,
-                                                  child: Padding(
-                                                    padding: EdgeInsets.symmetric(horizontal: 8),
-                                                    child: Text('select_item'.tr, style: TextStyle(fontSize: 14)),
+                                          // ✅ NEW: Use SearchableDropdown for items
+                                          return SearchableDropdown<Item>(
+                                            value: selectedItem,
+                                            items: activeItems,
+                                            itemLabel: (item) => item.itemName.toUpperCase(),
+                                            hintText: 'Select Item',
+                                            searchHintText: 'Search items by name...',
+                                            itemBuilder: (item) => Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.itemName.toUpperCase(),
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
-                                                ...activeItems.map((item) {
-                                                  return DropdownMenuItem(
-                                                    value: item,
-                                                    child: Padding(
-                                                      padding: EdgeInsets.symmetric(horizontal: 8),
-                                                      child: Text(('${item.itemName}').toString().toUpperCase(), style: TextStyle(fontSize: 14)),
+                                                if (item.price > 0)
+                                                  Padding(
+                                                    padding: EdgeInsets.only(top: 4),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.currency_rupee, size: 12, color: Colors.green.shade600),
+                                                        Text(
+                                                          '${item.price.toStringAsFixed(2)}',
+                                                          style: TextStyle(
+                                                            color: Colors.green.shade600,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
+                                                        ),
+                                                        if (item.unitOfMeasurement.isNotEmpty) ...[
+                                                          SizedBox(width: 8),
+                                                          Container(
+                                                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.blue.shade50,
+                                                              borderRadius: BorderRadius.circular(4),
+                                                              border: Border.all(color: Colors.blue.shade200),
+                                                            ),
+                                                            child: Text(
+                                                              item.unitOfMeasurement,
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color: Colors.blue.shade700,
+                                                                fontWeight: FontWeight.w600,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
                                                     ),
-                                                  );
-                                                }).toList(),
+                                                  ),
                                               ],
-                                              onChanged: (selectedItem) {
-                                                if (selectedItem != null) {
-                                                  controller.selectRemoteItemForIndex(index, selectedItem);
-                                                }
-                                              },
                                             ),
+                                            onChanged: (selectedItem) {
+                                              if (selectedItem != null) {
+                                                controller.selectRemoteItemForIndex(index, selectedItem);
+                                              }
+                                            },
                                           );
                                         },
                                       ),

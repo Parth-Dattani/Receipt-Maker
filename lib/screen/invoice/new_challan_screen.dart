@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../controller/controller.dart';
 import '../../model/model.dart';
+import '../../widgets/widgets.dart';
 
 
 /// 2-10
@@ -232,6 +233,41 @@ class NewChallanScreen extends GetView<NewChallanController> {
               }
               return SizedBox();
             }),
+
+            Obx(() {
+              if (AppConstants.isDemo.value) {
+                return Column(
+                  children: [
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '🔒 Demo Mode: Challan dates limited to 1990-1992',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade800,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
           ],
         ),
       ),
@@ -302,31 +338,45 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     ],
                   );
                 } else if (!controller.showCustomerForm.value) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButton<Map<String, dynamic>>(
-                      value: controller.selectedCustomer.value,
-                      isExpanded: true,
-                      hint: Text('Select Customer'),
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text('Select Customer'),
+                  // ✅ NEW: Use SearchableDropdown for customers
+                  return SearchableDropdown<Map<String, dynamic>>(
+                    value: controller.selectedCustomer.value,
+                    items: controller.customers,
+                    itemLabel: (customer) => (customer['name'] ?? 'Unknown Customer').toString().toUpperCase(),
+                    hintText: 'Select Customer',
+                    searchHintText: 'Search customers by name...',
+                    itemBuilder: (customer) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (customer['name'] ?? 'Unknown').toString().toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                        ...controller.customers.map((customer) {
-                          return DropdownMenuItem(
-                            value: customer,
-                            child: Text((customer['name'] ?? 'Unknown Customer').toString().toUpperCase()),
-                          );
-                        }).toList(),
+                        if (customer['mobile1'] != null && customer['mobile1'].toString().isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.phone, size: 12, color: Colors.grey.shade600),
+                                SizedBox(width: 4),
+                                Text(
+                                  customer['mobile1'].toString(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
-                      onChanged: controller.selectCustomer,
                     ),
+                    onChanged: (selectedCustomer) {
+                      controller.selectCustomer(selectedCustomer);
+                    },
                   );
                 } else {
                   return _buildCustomerFormFields();
@@ -598,6 +648,9 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                     ),
                                   ),
                                   SizedBox(height: 8),
+
+                                  // In _buildItemsSection(), replace the existing dropdown section with this:
+
                                   if (controller.itemList.isNotEmpty)
                                     Builder(
                                       builder: (context) {
@@ -622,13 +675,11 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                             decoration: BoxDecoration(
                                               border: Border.all(color: Colors.grey.shade300),
                                               borderRadius: BorderRadius.circular(8),
-                                              //color: Colors.grey.shade50, // Visual indicator it's read-only
                                             ),
                                             child: Text(
                                               item.description,
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                //color: Colors.grey.shade700,
                                               ),
                                             ),
                                           );
@@ -648,56 +699,70 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                           selectedItem = null;
                                         }
 
-                                        // Normal dropdown for active items
-                                        return Container(
-                                          height: 40,
-                                          padding: EdgeInsets.symmetric(horizontal: 8),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.grey.shade300),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: DropdownButton<Item>(
-                                            value: selectedItem,
-                                            isExpanded: true,
-                                            hint: Padding(
-                                              padding: EdgeInsets.symmetric(horizontal: 8),
-                                              child: Text('Select Item', style: TextStyle(fontSize: 14)),
-                                            ),
-                                            underline: SizedBox(),
-                                            icon: Padding(
-                                              padding: EdgeInsets.only(right: 8),
-                                              child: Icon(Icons.arrow_drop_down, size: 20),
-                                            ),
-                                            items: [
-                                              DropdownMenuItem(
-                                                value: null,
-                                                child: Padding(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8),
-                                                  child: Text('Select Item', style: TextStyle(fontSize: 14)),
+                                        // ✅ NEW: Use SearchableDropdown for items
+                                        return SearchableDropdown<Item>(
+                                          value: selectedItem,
+                                          items: activeItems,
+                                          itemLabel: (item) => item.itemName.toUpperCase(),
+                                          hintText: 'Select Item',
+                                          searchHintText: 'Search items by name...',
+                                          itemBuilder: (item) => Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.itemName.toUpperCase(),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
                                                 ),
                                               ),
-                                              ...activeItems.map((item) {
-                                                return DropdownMenuItem(
-                                                  value: item,
-                                                  child: Padding(
-                                                    padding: EdgeInsets.symmetric(horizontal: 8),
-                                                    child: Text(
-                                                      ('${item.itemName}').toUpperCase(),
-                                                      style: TextStyle(fontSize: 14),
-                                                    ),
+                                              if (item.price > 0)
+                                                Padding(
+                                                  padding: EdgeInsets.only(top: 4),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.currency_rupee, size: 12, color: Colors.green.shade600),
+                                                      Text(
+                                                        '${item.price.toStringAsFixed(2)}',
+                                                        style: TextStyle(
+                                                          color: Colors.green.shade600,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                      if (item.unitOfMeasurement.isNotEmpty) ...[
+                                                        SizedBox(width: 8),
+                                                        Container(
+                                                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.blue.shade50,
+                                                            borderRadius: BorderRadius.circular(4),
+                                                            border: Border.all(color: Colors.blue.shade200),
+                                                          ),
+                                                          child: Text(
+                                                            item.unitOfMeasurement,
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              color: Colors.blue.shade700,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
                                                   ),
-                                                );
-                                              }).toList(),
+                                                ),
                                             ],
-                                            onChanged: (selectedItem) {
-                                              if (selectedItem != null) {
-                                                controller.selectRemoteItemForIndex(index, selectedItem);
-                                              }
-                                            },
                                           ),
+                                          onChanged: (selectedItem) {
+                                            if (selectedItem != null) {
+                                              controller.selectRemoteItemForIndex(index, selectedItem);
+                                            }
+                                          },
                                         );
                                       },
                                     ),
+
                                   if (controller.itemList.isEmpty)
                                     TextFormField(
                                       initialValue: item.description,

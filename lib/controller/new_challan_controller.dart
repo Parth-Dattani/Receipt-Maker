@@ -78,6 +78,10 @@ class NewChallanController extends BaseController {
         addNewItem();
       }
     }
+
+    // ✅ Validate dates for demo mode
+    _validateDatesForDemoMode();
+
     // ✅ Load other data in parallel (non-blocking for challan ID)
     Future.microtask(() {
       loadCompanyData();
@@ -973,21 +977,86 @@ class NewChallanController extends BaseController {
   }
 
   Future<void> selectChallanDate() async {
+    // ✅ Enhanced demo mode date handling
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : DateTime(2000);
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime.now();
+
+    // ✅ Ensure initial date is within demo range
+    DateTime initialDate = challanDate.value;
+    if (AppConstants.isDemo.value) {
+      if (initialDate.isBefore(firstDate)) {
+        initialDate = firstDate;
+      } else if (initialDate.isAfter(lastDate)) {
+        initialDate = lastDate;
+      }
+    }
+
     final DateTime? picked = await showDatePicker(
       context: Get.context!,
-      initialDate: challanDate.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value
+          ? 'Select Date (Demo: 1990-1992 only)'
+          : 'Select Challan Date',
+      fieldLabelText: AppConstants.isDemo.value
+          ? 'Enter date between 1990-1992'
+          : 'Enter challan date',
+      fieldHintText: AppConstants.isDemo.value
+          ? 'DD/MM/1990-1992'
+          : 'DD/MM/YYYY',
     );
 
     if (picked != null && picked != challanDate.value) {
       challanDate.value = picked;
       challanDateController.text = _formatDate(picked);
+
+      // ✅ Show demo mode info when date is selected
+      if (AppConstants.isDemo.value) {
+        Get.snackbar(
+          'Demo Mode Active',
+          'Date limited to 1990-1992 range',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+          duration: Duration(seconds: 2),
+        );
+      }
     }
   }
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  /// Validate and adjust dates for demo mode
+  void _validateDatesForDemoMode() {
+    if (!AppConstants.isDemo.value) return;
+
+    final DateTime demoFirstDate = DateTime(1990, 1, 1);
+    final DateTime demoLastDate = DateTime(1992, 12, 31);
+
+    // Validate challan date
+    if (challanDate.value.isBefore(demoFirstDate) ||
+        challanDate.value.isAfter(demoLastDate)) {
+      print("⚠️ Adjusting challan date for demo mode");
+      challanDate.value = demoFirstDate;
+      challanDateController.text = _formatDate(demoFirstDate);
+    }
+
+    // Validate original challan date in edit mode
+    if (isEditMode.value && originalChallanData.value != null) {
+      final originalDate = originalChallanData.value!['challanDate'];
+      if (originalDate is DateTime) {
+        if (originalDate.isBefore(demoFirstDate) || originalDate.isAfter(demoLastDate)) {
+          print("⚠️ Original challan date outside demo range");
+        }
+      }
+    }
   }
 
   /// Add a method to check if we're in edit mode

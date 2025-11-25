@@ -72,14 +72,7 @@ class LoginForm extends GetView<AuthController> {
                 TextButton(
                   onPressed: controller.isLoading.value
                       ? null
-                      : () {
-                    // TODO: Implement forgot password functionality
-                    Get.snackbar(
-                      "Coming Soon",
-                      "Password reset feature will be available soon",
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
-                  },
+                      : controller.showForgotPasswordDialog, // ✅ Updated
                   child: const Text(
                     "Forgot Password?",
                     style: TextStyle(color: Colors.pinkAccent),

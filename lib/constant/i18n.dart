@@ -7,7 +7,7 @@ class Messages extends Translations {
   @override
   Map<String, Map<String, String>> get keys => {
     englishCode: {
-      'invoice_saathi' : 'Invoice Saathi',
+      'invoice_sathi' : 'Invoice Sathi',
       'dashboard': 'Dashboard',
       'welcome_back': 'Welcome back!',
       'business_overview': 'Here\'s your business overview',
@@ -240,7 +240,7 @@ class Messages extends Translations {
     },
 
     gujaratiCode: {
-      'invoice_saathi' : 'ઇન્વોઇસ સાથી',
+      'invoice_sathi' : 'ઇન્વોઇસ સાથી',
       'dashboard': 'ડેશબોર્ડ',
       'welcome_back': 'ફરી સ્વાગત છે!',
       'business_overview': 'અહીં તમારી વ્યવસાય સારાંશ છે',

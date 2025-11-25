@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/constant/app_colors.dart';
 import 'package:demo_prac_getx/controller/bash_controller.dart';
@@ -41,6 +43,10 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   var selectedState = ''.obs;
   var isDemo = false.obs;
 
+  final RxInt tapCount = 0.obs;
+  final RxBool showFormFields = false.obs;
+  Timer? _tapTimer;
+
   @override
   void onInit() {
     super.onInit();
@@ -70,6 +76,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     // regStateController.dispose();
     // regCountryController.dispose();
     regAltEmailController.dispose();
+    _tapTimer?.cancel();
     super.onClose();
   }
 
@@ -123,6 +130,34 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   // Firebase instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _verificationId = "";
+
+  void handleRegisterTabTap() {
+    tapCount.value++;
+
+    // Reset timer if it's already running
+    _tapTimer?.cancel();
+
+    // Set timer to reset tap count after 2 seconds
+    _tapTimer = Timer(const Duration(seconds: 2), () {
+      tapCount.value = 0;
+    });
+
+    // Check if 7 taps reached
+    if (tapCount.value >= 7) {
+      showFormFields.value = !showFormFields.value;
+      tapCount.value = 0;
+      _tapTimer?.cancel();
+
+      // Show a subtle feedback (optional)
+      ScaffoldMessenger.of(Get.context!).showSnackBar(
+        SnackBar(
+          content: Text(showFormFields.value ? "Developer mode activated!" : "Developer mode deactivated!"),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.deepPurple,
+        ),
+      );
+    }
+  }
 
   void togglePasswordVisibility() {
     isPasswordHidden.value = !isPasswordHidden.value;
@@ -788,6 +823,275 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     } catch (e) {
       print('Error checking company registration: $e');
       Get.offAllNamed(CompanyRegistrationScreen.pageId);
+    }
+  }
+
+  /// Show Forgot Password Dialog
+  void showForgotPasswordDialog() {
+    final TextEditingController emailController = TextEditingController();
+    final RxBool dialogIsLoading = false.obs;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.lock_reset,
+                size: 60,
+                color: Colors.deepPurple,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Reset Password",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Enter your email address and we'll send you a link to reset your password",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: "Email Address",
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Obx(
+                          () => TextButton(
+                        onPressed: dialogIsLoading.value
+                            ? null
+                            : () {
+                          Get.back();
+                        },
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(
+                          () => ElevatedButton(
+                        onPressed: dialogIsLoading.value
+                            ? null
+                            : () async {
+                          dialogIsLoading.value = true;
+                          final email = emailController.text;
+
+                          // Validate email
+                          if (email.trim().isEmpty) {
+                            dialogIsLoading.value = false;
+                            showCustomSnackbar(
+                              title: "Required",
+                              message: "Please enter your email address",
+                              baseColor: AppColors.errorColor,
+                              icon: Icons.error_outline,
+                            );
+                            return;
+                          }
+
+                          if (!GetUtils.isEmail(email)) {
+                            dialogIsLoading.value = false;
+                            showCustomSnackbar(
+                              title: "Invalid Email",
+                              message: "Please enter a valid email address",
+                              baseColor: AppColors.errorColor,
+                              icon: Icons.error_outline,
+                            );
+                            return;
+                          }
+
+                          try {
+                            await _auth.sendPasswordResetEmail(email: email.trim());
+
+                            dialogIsLoading.value = false; // ✅ Stop loading
+
+                            showCustomSnackbar(
+                              title: "Success",
+                              message: "Password reset email sent! Please check your inbox.",
+                              baseColor: AppColors.greenColor2,
+                              icon: Icons.check_circle,
+                            );
+
+                            // Close dialog on success
+                            Get.back();
+
+                          } on FirebaseAuthException catch (e) {
+                            dialogIsLoading.value = false;
+                            String errorMessage;
+
+                            switch (e.code) {
+                              case 'user-not-found':
+                                errorMessage = "No account found with this email address";
+                                break;
+                              case 'invalid-email':
+                                errorMessage = "Invalid email address format";
+                                break;
+                              case 'too-many-requests':
+                                errorMessage = "Too many requests. Please try again later";
+                                break;
+                              default:
+                                errorMessage = e.message ?? "Failed to send reset email";
+                            }
+
+                            showCustomSnackbar(
+                              title: "Error",
+                              message: errorMessage,
+                              baseColor: AppColors.errorColor,
+                              icon: Icons.error,
+                            );
+                          } catch (e) {
+                            dialogIsLoading.value = false;
+                            showCustomSnackbar(
+                              title: "Error",
+                              message: "An unexpected error occurred",
+                              baseColor: AppColors.errorColor,
+                              icon: Icons.error,
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: dialogIsLoading.value
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(
+                          "Send Reset Link",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    ).then((_) {
+      // Dispose controller after dialog is completely closed
+      emailController.dispose();
+    });
+  }
+
+  /// Forgot Password - Send password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (email.trim().isEmpty) {
+      showCustomSnackbar(
+        title: "Required",
+        message: "Please enter your email address",
+        baseColor: AppColors.errorColor,
+        icon: Icons.error_outline,
+      );
+      return;
+    }
+
+    if (!GetUtils.isEmail(email)) {
+      showCustomSnackbar(
+        title: "Invalid Email",
+        message: "Please enter a valid email address",
+        baseColor: AppColors.errorColor,
+        icon: Icons.error_outline,
+      );
+      return;
+    }
+
+    try {
+      if (_isDisposed) return;
+      isLoading.value = true;
+
+      await _auth.sendPasswordResetEmail(email: email.trim());
+
+      if (_isDisposed) return;
+
+      showCustomSnackbar(
+        title: "Success",
+        message: "Password reset email sent! Please check your inbox.",
+        baseColor: AppColors.greenColor2,
+        icon: Icons.check_circle,
+      );
+
+      // Close the dialog after success
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = "No account found with this email address";
+          break;
+        case 'invalid-email':
+          errorMessage = "Invalid email address format";
+          break;
+        case 'too-many-requests':
+          errorMessage = "Too many requests. Please try again later";
+          break;
+        default:
+          errorMessage = e.message ?? "Failed to send reset email";
+      }
+
+      if (!_isDisposed) {
+        showCustomSnackbar(
+          title: "Error",
+          message: errorMessage,
+          baseColor: AppColors.errorColor,
+          icon: Icons.error,
+        );
+      }
+    } catch (e) {
+      if (!_isDisposed) {
+        showCustomSnackbar(
+          title: "Error",
+          message: "An unexpected error occurred",
+          baseColor: AppColors.errorColor,
+          icon: Icons.error,
+        );
+      }
+    } finally {
+      if (!_isDisposed) {
+        isLoading.value = false;
+      }
     }
   }
 
