@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' as io;
 import 'dart:ui';
 import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/animation.dart';
@@ -16,7 +16,9 @@ import '../controller/new_invoice_controller.dart';
 import '../model/model.dart';
 
 import 'package:printing/printing.dart';
-
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
+import 'dart:typed_data';
 import '../services/service.dart';
 
 
@@ -70,6 +72,7 @@ class InvoiceHelper {
       String companyGst = companyData['gst'] ?? 'XXXXXXXXXXXXXXX';
       String companyBank = companyData['bankName'] ?? 'Bank Name';
       String companyAccount = companyData['accountNumber'] ?? 'Account Number';
+      String companyUpi = companyData['upiId'] ?? 'Upi Id';
       String companyIfsc = companyData['ifsc'] ?? 'IFSC Code';
       String companyPan = companyData['pan'] ?? 'PAN Number';
 
@@ -87,12 +90,13 @@ class InvoiceHelper {
           pageFormat: PdfPageFormat.a4,
           theme: theme,
           margin: pw.EdgeInsets.all(25),
+          footer: _buildFooter,
           build: (pw.Context context) {
             return [
               /// Header
               pw.Container(
                 width: double.infinity,
-                padding: pw.EdgeInsets.all(18),
+                padding: pw.EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: headerBg,
                   borderRadius: pw.BorderRadius.circular(10),
@@ -488,7 +492,7 @@ class InvoiceHelper {
 
               pw.Spacer(),
 
-              /// Advertise Footer
+              /// Advertise Footer - Single Line Compact
               pw.Container(
                 padding: pw.EdgeInsets.symmetric(vertical: 8),
                 decoration: pw.BoxDecoration(
@@ -500,13 +504,14 @@ class InvoiceHelper {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    // Left side - Application info
+                    // Left side - Application By & Address
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       mainAxisSize: pw.MainAxisSize.min,
                       children: [
+                        // 1st Line: App Name
                         pw.Text(
-                          "Application By: www.intelligenttech.in",
+                          "Application By: Intelligent Tech",
                           style: pw.TextStyle(
                             fontSize: 9,
                             color: primaryColor,
@@ -514,8 +519,9 @@ class InvoiceHelper {
                           ),
                         ),
                         pw.SizedBox(height: 2),
+                        // 2nd Line: Address
                         pw.Text(
-                          "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+                          "252, NEO Square, P.N.Marg Jamnagar",
                           style: pw.TextStyle(
                             fontSize: 7,
                             color: PdfColors.grey600,
@@ -524,13 +530,30 @@ class InvoiceHelper {
                       ],
                     ),
 
-                    // Right side - Contact
-                    pw.Text(
-                      "info@intelligenttech.in",
-                      style: pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.blue700,
-                      ),
+                    // Right side - Website & Email
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        // 1st Line: Website
+                        pw.Text(
+                          "www.intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.blue700,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        // 2nd Line: Email
+                        pw.Text(
+                          "info@intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.blue700,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -540,17 +563,79 @@ class InvoiceHelper {
         ),
       );
 
-      // Save PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final String filePrefix =
-      invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
-      final filePath = '${directory.path}/${filePrefix}_${invoiceId}_$userName.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+      /// Save PDF
+      /// 1. Generate PDF Bytes
+      final Uint8List bytes = await pdf.save();
 
-      print("✅ PDF Saved: $filePath");
+      //final directory = await getApplicationDocumentsDirectory();
+      final String filePrefix = invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
 
-      await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      // 1. Sanitize the Date: Replace slashes '/' with hyphens '-' to prevent path errors
+      String safeDate = invoiceDate.replaceAll('/', '_').replaceAll(' ', '_');
+
+      // 2. Sanitize the Name: Replace spaces with underscores for better file handling
+      String safeName = userName.replaceAll(' ', '_').replaceAll('/', '-');
+
+     // final filePath = '${directory.path}/${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
+      final String filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
+
+      if (kIsWeb) {
+        // -------------------------------------------
+        // 💻 WEB: Download the PDF
+        // -------------------------------------------
+
+        // Create Blob from bytes
+        final blob = html.Blob([bytes], 'application/pdf');
+
+        // Create an object URL for the Blob
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        // Create a hidden anchor element to trigger download
+        final anchor = html.AnchorElement()
+          ..href = url
+          ..style.display = 'none'
+          ..download = filename; // This attribute forces download
+
+        // Add to DOM, click, and remove
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+
+        // Revoke the URL to free memory
+        html.Url.revokeObjectUrl(url);
+
+        print("✅ Web Download Triggered: $filename");
+
+      }
+      else {
+        // -------------------------------------------
+        // 📱 MOBILE: Save to Storage & Share
+        // -------------------------------------------
+
+        // Get Document Directory
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+
+        // Write to File
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+
+        print("✅ Mobile File Saved: $filePath");
+
+        // Open Share Sheet
+        await Share.shareXFiles(
+            [XFile(filePath)],
+            text: '$documentTitle - $invoiceId'
+        );
+      }
+      // final file = File(filePath);
+      // await file.writeAsBytes(await pdf.save());
+      //
+      // print("✅ PDF Saved: $filePath");
+      //
+      // await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      //
+
     } catch (e) {
       print("❌ Error generating PDF: $e");
     }
@@ -1052,10 +1137,11 @@ class InvoiceHelper {
 
               pw.Spacer(),
 
-              /// Advertise Footer
+              /// Advertise Footer - Single Line Compact
               pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 10),
+                padding: pw.EdgeInsets.symmetric(vertical: 8),
                 decoration: pw.BoxDecoration(
+                  color: PdfColors.grey50,
                   border: pw.Border(
                     top: pw.BorderSide(color: borderColor, width: 1),
                   ),
@@ -1063,13 +1149,57 @@ class InvoiceHelper {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text("inteligenttech.in",
-                        style: pw.TextStyle(
+                    // Left side - Application By & Address
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        // 1st Line: App Name
+                        pw.Text(
+                          "Application By: Intelligent Tech",
+                          style: pw.TextStyle(
                             fontSize: 9,
-                            color: PdfColors.grey700,
-                            fontWeight: pw.FontWeight.bold)),
-                    pw.Text("+91 9876543210",
-                        style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                            color: primaryColor,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        // 2nd Line: Address
+                        pw.Text(
+                          "252, NEO Square, P.N.Marg Jamnagar",
+                          style: pw.TextStyle(
+                            fontSize: 7,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Right side - Website & Email
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        // 1st Line: Website
+                        pw.Text(
+                          "www.intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.blue700,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        // 2nd Line: Email
+                        pw.Text(
+                          "info@intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.blue700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -1078,17 +1208,78 @@ class InvoiceHelper {
         ),
       );
 
-      // Save PDF
-      final directory = await getApplicationDocumentsDirectory();
+      /// Save PDF
+      // 1. Generate PDF Bytes
+      final Uint8List bytes = await pdf.save();
+      //final directory = await getApplicationDocumentsDirectory();
       final String filePrefix =
       invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
-      final filePath = '${directory.path}/${filePrefix}_${invoiceId}_$userName.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
 
-      print("✅ PDF Saved: $filePath");
+      // 1. Sanitize the Date: Replace slashes '/' with hyphens '-' to prevent path errors
+      String safeDate = invoiceDate.replaceAll('/', '_').replaceAll(' ', '_');
 
-      await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      // 2. Sanitize the Name: Replace spaces with underscores for better file handling
+      String safeName = userName.replaceAll(' ', '_').replaceAll('/', '-');
+
+      final filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
+
+      if (kIsWeb) {
+        // -------------------------------------------
+        // 💻 WEB: Download the PDF
+        // -------------------------------------------
+
+        // Create Blob from bytes
+        final blob = html.Blob([bytes], 'application/pdf');
+
+        // Create an object URL for the Blob
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        // Create a hidden anchor element to trigger download
+        final anchor = html.AnchorElement()
+          ..href = url
+          ..style.display = 'none'
+          ..download = filename; // This attribute forces download
+
+        // Add to DOM, click, and remove
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+
+        // Revoke the URL to free memory
+        html.Url.revokeObjectUrl(url);
+
+        print("✅ Web Download Triggered: $filename");
+
+      }
+      else {
+        // -------------------------------------------
+        // 📱 MOBILE: Save to Storage & Share
+        // -------------------------------------------
+
+        // Get Document Directory
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+
+        // Write to File using 'io.File'
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+
+        print("✅ Mobile File Saved: $filePath");
+
+        // Open Share Sheet
+        await Share.shareXFiles(
+            [XFile(filePath)],
+            text: '$documentTitle - $invoiceId'
+        );
+      }
+
+      // final file = File(filePath);
+      // await file.writeAsBytes(await pdf.save());
+      //
+      // print("✅ PDF Saved: $filePath");
+      //
+      // await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+
     } catch (e) {
       print("❌ Error generating PDF: $e");
     }
@@ -1482,7 +1673,7 @@ class InvoiceHelper {
               /// Spacer pushes footer to bottom
               pw.Spacer(),
 
-              /// Advertise Footer
+              /// Advertise Footer - Single Line Compact
               pw.Container(
                 padding: pw.EdgeInsets.symmetric(vertical: 8),
                 decoration: pw.BoxDecoration(
@@ -1494,13 +1685,14 @@ class InvoiceHelper {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    // Left side - Application info
+                    // Left side - Application By & Address
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       mainAxisSize: pw.MainAxisSize.min,
                       children: [
+                        // 1st Line: App Name
                         pw.Text(
-                          "Application By: www.intelligenttech.in",
+                          "Application By: Intelligent Tech",
                           style: pw.TextStyle(
                             fontSize: 9,
                             color: primaryColor,
@@ -1508,8 +1700,9 @@ class InvoiceHelper {
                           ),
                         ),
                         pw.SizedBox(height: 2),
+                        // 2nd Line: Address
                         pw.Text(
-                          "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+                          "252, NEO Square, P.N.Marg Jamnagar",
                           style: pw.TextStyle(
                             fontSize: 7,
                             color: PdfColors.grey600,
@@ -1518,13 +1711,30 @@ class InvoiceHelper {
                       ],
                     ),
 
-                    // Right side - Contact
-                    pw.Text(
-                      "info@intelligenttech.in",
-                      style: pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.blue700,
-                      ),
+                    // Right side - Website & Email
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        // 1st Line: Website
+                        pw.Text(
+                          "www.intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.blue700,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        // 2nd Line: Email
+                        pw.Text(
+                          "info@intelligenttech.in",
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.blue700,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1535,14 +1745,46 @@ class InvoiceHelper {
       );
 
       // Save PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/Challan_${challanId}_$userName.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+      final Uint8List bytes = await pdf.save();
+      //final directory = await getApplicationDocumentsDirectory();
+      final filename = 'Challan_${challanId}_$userName.pdf';
 
-      print("✅ Challan PDF saved: $filePath");
+      if (kIsWeb) {
+        // -------------------------------------------
+        // 💻 WEB: Download the PDF
+        // -------------------------------------------
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement()
+          ..href = url
+          ..style.display = 'none'
+          ..download = filename;
 
-      await Share.shareXFiles([XFile(filePath)], text: 'Challan - $challanId');
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+
+        print("✅ Web Download Triggered: $filename");
+
+      }
+      else {
+        // -------------------------------------------
+        // 📱 MOBILE: Save to Storage & Share
+        // -------------------------------------------
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+
+        // ✅ Use io.File to prevent conflict
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+
+        print("✅ Mobile File Saved: $filePath");
+
+        // Open Share Sheet
+        await Share.shareXFiles([XFile(filePath)], text: 'Challan - $challanId');
+      }
+
     } catch (e) {
       print("❌ Error generating Challan PDF: $e");
     }
@@ -2001,14 +2243,44 @@ class InvoiceHelper {
       );
 
       // Save and open PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory
-          .path}/Modern_Invoice_${invoiceId}_${userName}.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+      final Uint8List bytes = await pdf.save();
+      //final directory = await getApplicationDocumentsDirectory();
+      final filename = '/Modern_Invoice_${invoiceId}_${userName}.pdf';
 
-      print("✅ Modern PDF saved: $filePath");
-      await OpenFile.open(filePath);
+      if (kIsWeb) {
+        // -------------------------------------------
+        // 💻 WEB: Download the PDF
+        // -------------------------------------------
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        final anchor = html.AnchorElement()
+          ..href = url
+          ..style.display = 'none'
+          ..download = filename;
+
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+
+        print("✅ Web Download Triggered: $filename");
+
+      } else {
+        // -------------------------------------------
+        // 📱 MOBILE: Save to Storage & Open
+        // -------------------------------------------
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+
+        print("✅ Modern PDF saved: $filePath");
+
+        await OpenFile.open(filePath);
+      }
+
     } catch (e) {
       print("Error generating modern PDF: $e");
     }
@@ -2045,553 +2317,553 @@ class InvoiceHelper {
     );
   }
 
-// NEW METHOD: Colorful Premium Invoice Format
-  static Future<void> generateColorfulInvoice(List<Invoice> invoices,
-      String userName,
-      String phoneNumber,
-      String customerEmail,
-      String customerAddress,
-      double subtotal,
-      double taxAmount,
-      double discountAmount,
-      double totalAmount,
-      double taxRate,
-      String discountType,
-      String notes,
-      Map<String, dynamic> companyData,) async {
-    try {
-      final pdf = pw.Document();
-
-      // Load custom font
-      final fontData = await rootBundle.load(
-          "assets/fonts/NotoSans-Regular.ttf");
-      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
-
-      final theme = pw.ThemeData.withFont(
-        base: customFont,
-        bold: customFont,
-        italic: customFont,
-        boldItalic: customFont,
-      );
-
-      final String invoiceId = invoices.isNotEmpty
-          ? invoices.first.invoiceId
-          : "UNKNOWN";
-      // Extract company information
-      String companyName = companyData['companyName'] ?? 'Samira Hadid';
-      String companyAddress = companyData['address'] ??
-          '123 Anywhere St., Any City';
-      String companyPhone = companyData['phone'] ?? '+123-456-7890';
-      String companyEmail = companyData['email'] ?? 'company@email.com';
-      String companyBank = companyData['bankName'] ?? 'Name Bank';
-      String companyAccount = companyData['accountNumber'] ?? '123-456-7890';
-      String companyWebsite = companyData['website'] ?? 'reallygreatsite.com';
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          theme: theme,
-          margin: pw.EdgeInsets.all(40),
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Colorful Header with gradient
-                pw.Container(
-                  width: double.infinity,
-                  padding: pw.EdgeInsets.all(25),
-                  decoration: pw.BoxDecoration(
-                    gradient: pw.LinearGradient(
-                      colors: [PdfColors.blue700, PdfColors.purple700],
-                      begin: pw.Alignment.topLeft,
-                      end: pw.Alignment.bottomRight,
-                    ),
-                    borderRadius: pw.BorderRadius.circular(12),
-                  ),
-                  child: pw.Column(
-                    children: [
-                      pw.Text(
-                        'INVOICE',
-                        style: pw.TextStyle(
-                          fontSize: 36,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                      pw.SizedBox(height: 10),
-                      pw.Text(
-                        'NO: $invoiceId',
-                        style: pw.TextStyle(
-                          fontSize: 16,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                pw.SizedBox(height: 30),
-
-                // From and To Sections with colored cards
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    // Bill To Section - Blue card
-                    pw.Container(
-                      width: 250,
-                      padding: pw.EdgeInsets.all(20),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.blue50,
-                        borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(
-                            color: PdfColors.blue200, width: 2),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(
-                            'Bill To:',
-                            style: pw.TextStyle(
-                              fontSize: 16,
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.blue800,
-                            ),
-                          ),
-                          pw.SizedBox(height: 15),
-                          pw.Text(
-                            userName.isEmpty ? 'Esterlie Darcy' : userName,
-                            style: pw.TextStyle(
-                              fontSize: 14,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            phoneNumber.isEmpty ? '+123-456-7890' : phoneNumber,
-                            style: pw.TextStyle(fontSize: 12),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            customerAddress.isEmpty
-                                ? '123 Anywhere St., Any City'
-                                : customerAddress,
-                            style: pw.TextStyle(fontSize: 12),
-                          ),
-                          if (customerEmail.isNotEmpty) pw.SizedBox(height: 8),
-                          if (customerEmail.isNotEmpty)
-                            pw.Text(
-                              'Email: $customerEmail',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    // From Section - Purple card
-                    pw.Container(
-                      width: 250,
-                      padding: pw.EdgeInsets.all(20),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.purple50,
-                        borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(
-                            color: PdfColors.purple200, width: 2),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(
-                            'From:',
-                            style: pw.TextStyle(
-                              fontSize: 16,
-                              fontWeight: pw.FontWeight.bold,
-                              color: PdfColors.purple800,
-                            ),
-                          ),
-                          pw.SizedBox(height: 15),
-                          pw.Text(
-                            companyName,
-                            style: pw.TextStyle(
-                              fontSize: 14,
-                              fontWeight: pw.FontWeight.bold,
-                            ),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            companyPhone,
-                            style: pw.TextStyle(fontSize: 12),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            companyAddress,
-                            style: pw.TextStyle(fontSize: 12),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            'Email: $companyEmail',
-                            style: pw.TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                pw.SizedBox(height: 30),
-
-                // Date - Right aligned with color
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.end,
-                  children: [
-                    pw.Container(
-                      padding: pw.EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 8),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.blue100,
-                        borderRadius: pw.BorderRadius.circular(20),
-                      ),
-                      child: pw.Text(
-                        'Date: ${DateFormat('dd MMMM yyyy').format(
-                            DateTime.now())}',
-                        style: pw.TextStyle(
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.blue800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                pw.SizedBox(height: 30),
-
-                // Items Table with colorful header and alternating row colors
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    borderRadius: pw.BorderRadius.circular(8),
-                    boxShadow: [
-                      pw.BoxShadow(
-                        color: PdfColors.grey300,
-                        blurRadius: 5,
-
-                        ///offset: pw.Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: pw.Table(
-                    border: pw.TableBorder.all(
-                      color: PdfColors.grey200,
-                      width: 1,
-
-                      ///borderRadius: pw.BorderRadius.circular(8),
-                    ),
-                    columnWidths: {
-                      0: pw.FlexColumnWidth(3),
-                      1: pw.FlexColumnWidth(1),
-                      2: pw.FlexColumnWidth(1.5),
-                      3: pw.FlexColumnWidth(1.5),
-                    },
-                    children: [
-                      // Table Header with gradient
-                      pw.TableRow(
-                        decoration: pw.BoxDecoration(
-                          gradient: pw.LinearGradient(
-                            colors: [PdfColors.blue600, PdfColors.purple600],
-                            begin: pw.Alignment.centerLeft,
-                            end: pw.Alignment.centerRight,
-                          ),
-                          borderRadius: pw.BorderRadius.only(
-                            topLeft: pw.Radius.circular(8),
-                            topRight: pw.Radius.circular(8),
-                          ),
-                        ),
-                        children: [
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'Description',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                                color: PdfColors.white,
-                              ),
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'Qty',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                                color: PdfColors.white,
-                              ),
-                              textAlign: pw.TextAlign.center,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'Price',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                                color: PdfColors.white,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(12),
-                            child: pw.Text(
-                              'Total',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                fontSize: 12,
-                                color: PdfColors.white,
-                              ),
-                              textAlign: pw.TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Table Rows - Only show actual items (no empty rows)
-                      ...invoices
-                          .asMap()
-                          .entries
-                          .map((entry) {
-                        int index = entry.key;
-                        Invoice item = entry.value;
-                        final isEven = index % 2 == 0;
-                        return pw.TableRow(
-                          decoration: pw.BoxDecoration(
-                            color: isEven ? PdfColors.grey50 : PdfColors.white,
-                          ),
-                          children: [
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(12),
-                              child: pw.Text(
-                                item.itemName!,
-                                style: pw.TextStyle(fontSize: 12),
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(12),
-                              child: pw.Text(
-                                '${item.qty}',
-                                style: pw.TextStyle(fontSize: 12),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(12),
-                              child: pw.Text(
-                                '\$${item.price!.toStringAsFixed(2)}',
-                                style: pw.TextStyle(fontSize: 12),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                            pw.Padding(
-                              padding: pw.EdgeInsets.all(12),
-                              child: pw.Text(
-                                '\$${(item.price! * item.qty!).toStringAsFixed(
-                                    2)}',
-                                style: pw.TextStyle(fontSize: 12),
-                                textAlign: pw.TextAlign.right,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ),
-
-                // Show message if no items
-                if (invoices.isEmpty) pw.SizedBox(height: 20),
-                if (invoices.isEmpty)
-                  pw.Center(
-                    child: pw.Text(
-                      'No items in this invoice',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontStyle: pw.FontStyle.italic,
-                        color: PdfColors.grey,
-                      ),
-                    ),
-                  ),
-
-                pw.SizedBox(height: 20),
-
-                // Total Section with colorful background
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.end,
-                  children: [
-                    pw.Container(
-                      width: 250,
-                      padding: pw.EdgeInsets.all(20),
-                      decoration: pw.BoxDecoration(
-                        gradient: pw.LinearGradient(
-                          colors: [PdfColors.blue50, PdfColors.purple50],
-                          begin: pw.Alignment.topLeft,
-                          end: pw.Alignment.bottomRight,
-                        ),
-                        borderRadius: pw.BorderRadius.circular(10),
-                        border: pw.Border.all(
-                            color: PdfColors.blue200, width: 1),
-                      ),
-                      child: pw.Column(
-                        children: [
-                          _buildColorfulTotalRow('Sub Total:', subtotal),
-                          if (taxAmount > 0)
-                            _buildColorfulTotalRow('Tax (${taxRate
-                                .toStringAsFixed(1)}%):', taxAmount),
-                          if (discountAmount > 0)
-                            _buildColorfulTotalRow(
-                                'Discount:', -discountAmount, isDiscount: true),
-                          pw.Divider(color: PdfColors.blue300, height: 20),
-                          _buildColorfulTotalRow(
-                            'TOTAL:',
-                            totalAmount,
-                            isTotal: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                pw.SizedBox(height: 40),
-
-                // Notes and Payment Information with colored backgrounds
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    // Notes Section - Blue background
-                    pw.Expanded(
-                      child: pw.Container(
-                        padding: pw.EdgeInsets.all(20),
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.blue50,
-                          borderRadius: pw.BorderRadius.circular(10),
-                          border: pw.Border.all(color: PdfColors.blue200,
-                              width: 1),
-                        ),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Notes:',
-                              style: pw.TextStyle(
-                                fontSize: 14,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.blue800,
-                              ),
-                            ),
-                            pw.SizedBox(height: 10),
-                            pw.Text(
-                              notes.isNotEmpty
-                                  ? notes
-                                  : 'Thank you for your business!',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    pw.SizedBox(width: 20),
-
-                    // Payment Information - Purple background
-                    pw.Expanded(
-                      child: pw.Container(
-                        padding: pw.EdgeInsets.all(20),
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.purple50,
-                          borderRadius: pw.BorderRadius.circular(10),
-                          border: pw.Border.all(color: PdfColors.purple200,
-                              width: 1),
-                        ),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              'Payment Information:',
-                              style: pw.TextStyle(
-                                fontSize: 14,
-                                fontWeight: pw.FontWeight.bold,
-                                color: PdfColors.purple800,
-                              ),
-                            ),
-                            pw.SizedBox(height: 10),
-                            pw.Text(
-                              'Bank: $companyBank',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                            pw.Text(
-                              'Account No: $companyAccount',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                            pw.Text(
-                              'Email: $companyEmail',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                            pw.Text(
-                              'Website: $companyWebsite',
-                              style: pw.TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                pw.SizedBox(height: 40),
-
-                // Thank You Message with gradient background
-                pw.Center(
-                  child: pw.Container(
-                    padding: pw.EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 15),
-                    decoration: pw.BoxDecoration(
-                      gradient: pw.LinearGradient(
-                        colors: [PdfColors.blue700, PdfColors.purple700],
-                        begin: pw.Alignment.centerLeft,
-                        end: pw.Alignment.centerRight,
-                      ),
-                      borderRadius: pw.BorderRadius.circular(25),
-                    ),
-                    child: pw.Text(
-                      'Thank You!',
-                      style: pw.TextStyle(
-                        fontSize: 24,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
-
-      // Save and open PDF
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/Invoice_${invoiceId}_${userName}.pdf';
-
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
-
-      print("✅ Colorful PDF saved: $filePath");
-      await OpenFile.open(filePath);
-    } catch (e) {
-      print("Error generating colorful PDF: $e");
-    }
-  }
+/// NEW METHOD: Colorful Premium Invoice Format
+//   static Future<void> generateColorfulInvoice(List<Invoice> invoices,
+//       String userName,
+//       String phoneNumber,
+//       String customerEmail,
+//       String customerAddress,
+//       double subtotal,
+//       double taxAmount,
+//       double discountAmount,
+//       double totalAmount,
+//       double taxRate,
+//       String discountType,
+//       String notes,
+//       Map<String, dynamic> companyData,) async {
+//     try {
+//       final pdf = pw.Document();
+//
+//       // Load custom font
+//       final fontData = await rootBundle.load(
+//           "assets/fonts/NotoSans-Regular.ttf");
+//       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+//
+//       final theme = pw.ThemeData.withFont(
+//         base: customFont,
+//         bold: customFont,
+//         italic: customFont,
+//         boldItalic: customFont,
+//       );
+//
+//       final String invoiceId = invoices.isNotEmpty
+//           ? invoices.first.invoiceId
+//           : "UNKNOWN";
+//       // Extract company information
+//       String companyName = companyData['companyName'] ?? 'Samira Hadid';
+//       String companyAddress = companyData['address'] ??
+//           '123 Anywhere St., Any City';
+//       String companyPhone = companyData['phone'] ?? '+123-456-7890';
+//       String companyEmail = companyData['email'] ?? 'company@email.com';
+//       String companyBank = companyData['bankName'] ?? 'Name Bank';
+//       String companyAccount = companyData['accountNumber'] ?? '123-456-7890';
+//       String companyWebsite = companyData['website'] ?? 'reallygreatsite.com';
+//
+//       pdf.addPage(
+//         pw.Page(
+//           pageFormat: PdfPageFormat.a4,
+//           theme: theme,
+//           margin: pw.EdgeInsets.all(40),
+//           build: (pw.Context context) {
+//             return pw.Column(
+//               crossAxisAlignment: pw.CrossAxisAlignment.start,
+//               children: [
+//                 // Colorful Header with gradient
+//                 pw.Container(
+//                   width: double.infinity,
+//                   padding: pw.EdgeInsets.all(25),
+//                   decoration: pw.BoxDecoration(
+//                     gradient: pw.LinearGradient(
+//                       colors: [PdfColors.blue700, PdfColors.purple700],
+//                       begin: pw.Alignment.topLeft,
+//                       end: pw.Alignment.bottomRight,
+//                     ),
+//                     borderRadius: pw.BorderRadius.circular(12),
+//                   ),
+//                   child: pw.Column(
+//                     children: [
+//                       pw.Text(
+//                         'INVOICE',
+//                         style: pw.TextStyle(
+//                           fontSize: 36,
+//                           fontWeight: pw.FontWeight.bold,
+//                           color: PdfColors.white,
+//                         ),
+//                       ),
+//                       pw.SizedBox(height: 10),
+//                       pw.Text(
+//                         'NO: $invoiceId',
+//                         style: pw.TextStyle(
+//                           fontSize: 16,
+//                           color: PdfColors.white,
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//
+//                 pw.SizedBox(height: 30),
+//
+//                 // From and To Sections with colored cards
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                   crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                   children: [
+//                     // Bill To Section - Blue card
+//                     pw.Container(
+//                       width: 250,
+//                       padding: pw.EdgeInsets.all(20),
+//                       decoration: pw.BoxDecoration(
+//                         color: PdfColors.blue50,
+//                         borderRadius: pw.BorderRadius.circular(10),
+//                         border: pw.Border.all(
+//                             color: PdfColors.blue200, width: 2),
+//                       ),
+//                       child: pw.Column(
+//                         crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                         children: [
+//                           pw.Text(
+//                             'Bill To:',
+//                             style: pw.TextStyle(
+//                               fontSize: 16,
+//                               fontWeight: pw.FontWeight.bold,
+//                               color: PdfColors.blue800,
+//                             ),
+//                           ),
+//                           pw.SizedBox(height: 15),
+//                           pw.Text(
+//                             userName.isEmpty ? 'Esterlie Darcy' : userName,
+//                             style: pw.TextStyle(
+//                               fontSize: 14,
+//                               fontWeight: pw.FontWeight.bold,
+//                             ),
+//                           ),
+//                           pw.SizedBox(height: 8),
+//                           pw.Text(
+//                             phoneNumber.isEmpty ? '+123-456-7890' : phoneNumber,
+//                             style: pw.TextStyle(fontSize: 12),
+//                           ),
+//                           pw.SizedBox(height: 8),
+//                           pw.Text(
+//                             customerAddress.isEmpty
+//                                 ? '123 Anywhere St., Any City'
+//                                 : customerAddress,
+//                             style: pw.TextStyle(fontSize: 12),
+//                           ),
+//                           if (customerEmail.isNotEmpty) pw.SizedBox(height: 8),
+//                           if (customerEmail.isNotEmpty)
+//                             pw.Text(
+//                               'Email: $customerEmail',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                         ],
+//                       ),
+//                     ),
+//
+//                     // From Section - Purple card
+//                     pw.Container(
+//                       width: 250,
+//                       padding: pw.EdgeInsets.all(20),
+//                       decoration: pw.BoxDecoration(
+//                         color: PdfColors.purple50,
+//                         borderRadius: pw.BorderRadius.circular(10),
+//                         border: pw.Border.all(
+//                             color: PdfColors.purple200, width: 2),
+//                       ),
+//                       child: pw.Column(
+//                         crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                         children: [
+//                           pw.Text(
+//                             'From:',
+//                             style: pw.TextStyle(
+//                               fontSize: 16,
+//                               fontWeight: pw.FontWeight.bold,
+//                               color: PdfColors.purple800,
+//                             ),
+//                           ),
+//                           pw.SizedBox(height: 15),
+//                           pw.Text(
+//                             companyName,
+//                             style: pw.TextStyle(
+//                               fontSize: 14,
+//                               fontWeight: pw.FontWeight.bold,
+//                             ),
+//                           ),
+//                           pw.SizedBox(height: 8),
+//                           pw.Text(
+//                             companyPhone,
+//                             style: pw.TextStyle(fontSize: 12),
+//                           ),
+//                           pw.SizedBox(height: 8),
+//                           pw.Text(
+//                             companyAddress,
+//                             style: pw.TextStyle(fontSize: 12),
+//                           ),
+//                           pw.SizedBox(height: 8),
+//                           pw.Text(
+//                             'Email: $companyEmail',
+//                             style: pw.TextStyle(fontSize: 12),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//
+//                 pw.SizedBox(height: 30),
+//
+//                 // Date - Right aligned with color
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.end,
+//                   children: [
+//                     pw.Container(
+//                       padding: pw.EdgeInsets.symmetric(
+//                           horizontal: 15, vertical: 8),
+//                       decoration: pw.BoxDecoration(
+//                         color: PdfColors.blue100,
+//                         borderRadius: pw.BorderRadius.circular(20),
+//                       ),
+//                       child: pw.Text(
+//                         'Date: ${DateFormat('dd MMMM yyyy').format(
+//                             DateTime.now())}',
+//                         style: pw.TextStyle(
+//                           fontSize: 12,
+//                           fontWeight: pw.FontWeight.bold,
+//                           color: PdfColors.blue800,
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//
+//                 pw.SizedBox(height: 30),
+//
+//                 // Items Table with colorful header and alternating row colors
+//                 pw.Container(
+//                   decoration: pw.BoxDecoration(
+//                     borderRadius: pw.BorderRadius.circular(8),
+//                     boxShadow: [
+//                       pw.BoxShadow(
+//                         color: PdfColors.grey300,
+//                         blurRadius: 5,
+//
+//                         ///offset: pw.Offset(0, 2),
+//                       ),
+//                     ],
+//                   ),
+//                   child: pw.Table(
+//                     border: pw.TableBorder.all(
+//                       color: PdfColors.grey200,
+//                       width: 1,
+//
+//                       ///borderRadius: pw.BorderRadius.circular(8),
+//                     ),
+//                     columnWidths: {
+//                       0: pw.FlexColumnWidth(3),
+//                       1: pw.FlexColumnWidth(1),
+//                       2: pw.FlexColumnWidth(1.5),
+//                       3: pw.FlexColumnWidth(1.5),
+//                     },
+//                     children: [
+//                       // Table Header with gradient
+//                       pw.TableRow(
+//                         decoration: pw.BoxDecoration(
+//                           gradient: pw.LinearGradient(
+//                             colors: [PdfColors.blue600, PdfColors.purple600],
+//                             begin: pw.Alignment.centerLeft,
+//                             end: pw.Alignment.centerRight,
+//                           ),
+//                           borderRadius: pw.BorderRadius.only(
+//                             topLeft: pw.Radius.circular(8),
+//                             topRight: pw.Radius.circular(8),
+//                           ),
+//                         ),
+//                         children: [
+//                           pw.Padding(
+//                             padding: pw.EdgeInsets.all(12),
+//                             child: pw.Text(
+//                               'Description',
+//                               style: pw.TextStyle(
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 fontSize: 12,
+//                                 color: PdfColors.white,
+//                               ),
+//                             ),
+//                           ),
+//                           pw.Padding(
+//                             padding: pw.EdgeInsets.all(12),
+//                             child: pw.Text(
+//                               'Qty',
+//                               style: pw.TextStyle(
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 fontSize: 12,
+//                                 color: PdfColors.white,
+//                               ),
+//                               textAlign: pw.TextAlign.center,
+//                             ),
+//                           ),
+//                           pw.Padding(
+//                             padding: pw.EdgeInsets.all(12),
+//                             child: pw.Text(
+//                               'Price',
+//                               style: pw.TextStyle(
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 fontSize: 12,
+//                                 color: PdfColors.white,
+//                               ),
+//                               textAlign: pw.TextAlign.right,
+//                             ),
+//                           ),
+//                           pw.Padding(
+//                             padding: pw.EdgeInsets.all(12),
+//                             child: pw.Text(
+//                               'Total',
+//                               style: pw.TextStyle(
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 fontSize: 12,
+//                                 color: PdfColors.white,
+//                               ),
+//                               textAlign: pw.TextAlign.right,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                       // Table Rows - Only show actual items (no empty rows)
+//                       ...invoices
+//                           .asMap()
+//                           .entries
+//                           .map((entry) {
+//                         int index = entry.key;
+//                         Invoice item = entry.value;
+//                         final isEven = index % 2 == 0;
+//                         return pw.TableRow(
+//                           decoration: pw.BoxDecoration(
+//                             color: isEven ? PdfColors.grey50 : PdfColors.white,
+//                           ),
+//                           children: [
+//                             pw.Padding(
+//                               padding: pw.EdgeInsets.all(12),
+//                               child: pw.Text(
+//                                 item.itemName!,
+//                                 style: pw.TextStyle(fontSize: 12),
+//                               ),
+//                             ),
+//                             pw.Padding(
+//                               padding: pw.EdgeInsets.all(12),
+//                               child: pw.Text(
+//                                 '${item.qty}',
+//                                 style: pw.TextStyle(fontSize: 12),
+//                                 textAlign: pw.TextAlign.center,
+//                               ),
+//                             ),
+//                             pw.Padding(
+//                               padding: pw.EdgeInsets.all(12),
+//                               child: pw.Text(
+//                                 '\$${item.price!.toStringAsFixed(2)}',
+//                                 style: pw.TextStyle(fontSize: 12),
+//                                 textAlign: pw.TextAlign.right,
+//                               ),
+//                             ),
+//                             pw.Padding(
+//                               padding: pw.EdgeInsets.all(12),
+//                               child: pw.Text(
+//                                 '\$${(item.price! * item.qty!).toStringAsFixed(
+//                                     2)}',
+//                                 style: pw.TextStyle(fontSize: 12),
+//                                 textAlign: pw.TextAlign.right,
+//                               ),
+//                             ),
+//                           ],
+//                         );
+//                       }).toList(),
+//                     ],
+//                   ),
+//                 ),
+//
+//                 // Show message if no items
+//                 if (invoices.isEmpty) pw.SizedBox(height: 20),
+//                 if (invoices.isEmpty)
+//                   pw.Center(
+//                     child: pw.Text(
+//                       'No items in this invoice',
+//                       style: pw.TextStyle(
+//                         fontSize: 12,
+//                         fontStyle: pw.FontStyle.italic,
+//                         color: PdfColors.grey,
+//                       ),
+//                     ),
+//                   ),
+//
+//                 pw.SizedBox(height: 20),
+//
+//                 // Total Section with colorful background
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.end,
+//                   children: [
+//                     pw.Container(
+//                       width: 250,
+//                       padding: pw.EdgeInsets.all(20),
+//                       decoration: pw.BoxDecoration(
+//                         gradient: pw.LinearGradient(
+//                           colors: [PdfColors.blue50, PdfColors.purple50],
+//                           begin: pw.Alignment.topLeft,
+//                           end: pw.Alignment.bottomRight,
+//                         ),
+//                         borderRadius: pw.BorderRadius.circular(10),
+//                         border: pw.Border.all(
+//                             color: PdfColors.blue200, width: 1),
+//                       ),
+//                       child: pw.Column(
+//                         children: [
+//                           _buildColorfulTotalRow('Sub Total:', subtotal),
+//                           if (taxAmount > 0)
+//                             _buildColorfulTotalRow('Tax (${taxRate
+//                                 .toStringAsFixed(1)}%):', taxAmount),
+//                           if (discountAmount > 0)
+//                             _buildColorfulTotalRow(
+//                                 'Discount:', -discountAmount, isDiscount: true),
+//                           pw.Divider(color: PdfColors.blue300, height: 20),
+//                           _buildColorfulTotalRow(
+//                             'TOTAL:',
+//                             totalAmount,
+//                             isTotal: true,
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//
+//                 pw.SizedBox(height: 40),
+//
+//                 // Notes and Payment Information with colored backgrounds
+//                 pw.Row(
+//                   crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                   children: [
+//                     // Notes Section - Blue background
+//                     pw.Expanded(
+//                       child: pw.Container(
+//                         padding: pw.EdgeInsets.all(20),
+//                         decoration: pw.BoxDecoration(
+//                           color: PdfColors.blue50,
+//                           borderRadius: pw.BorderRadius.circular(10),
+//                           border: pw.Border.all(color: PdfColors.blue200,
+//                               width: 1),
+//                         ),
+//                         child: pw.Column(
+//                           crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                           children: [
+//                             pw.Text(
+//                               'Notes:',
+//                               style: pw.TextStyle(
+//                                 fontSize: 14,
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 color: PdfColors.blue800,
+//                               ),
+//                             ),
+//                             pw.SizedBox(height: 10),
+//                             pw.Text(
+//                               notes.isNotEmpty
+//                                   ? notes
+//                                   : 'Thank you for your business!',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                           ],
+//                         ),
+//                       ),
+//                     ),
+//
+//                     pw.SizedBox(width: 20),
+//
+//                     // Payment Information - Purple background
+//                     pw.Expanded(
+//                       child: pw.Container(
+//                         padding: pw.EdgeInsets.all(20),
+//                         decoration: pw.BoxDecoration(
+//                           color: PdfColors.purple50,
+//                           borderRadius: pw.BorderRadius.circular(10),
+//                           border: pw.Border.all(color: PdfColors.purple200,
+//                               width: 1),
+//                         ),
+//                         child: pw.Column(
+//                           crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                           children: [
+//                             pw.Text(
+//                               'Payment Information:',
+//                               style: pw.TextStyle(
+//                                 fontSize: 14,
+//                                 fontWeight: pw.FontWeight.bold,
+//                                 color: PdfColors.purple800,
+//                               ),
+//                             ),
+//                             pw.SizedBox(height: 10),
+//                             pw.Text(
+//                               'Bank: $companyBank',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                             pw.Text(
+//                               'Account No: $companyAccount',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                             pw.Text(
+//                               'Email: $companyEmail',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                             pw.Text(
+//                               'Website: $companyWebsite',
+//                               style: pw.TextStyle(fontSize: 12),
+//                             ),
+//                           ],
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//
+//                 pw.SizedBox(height: 40),
+//
+//                 // Thank You Message with gradient background
+//                 pw.Center(
+//                   child: pw.Container(
+//                     padding: pw.EdgeInsets.symmetric(
+//                         horizontal: 40, vertical: 15),
+//                     decoration: pw.BoxDecoration(
+//                       gradient: pw.LinearGradient(
+//                         colors: [PdfColors.blue700, PdfColors.purple700],
+//                         begin: pw.Alignment.centerLeft,
+//                         end: pw.Alignment.centerRight,
+//                       ),
+//                       borderRadius: pw.BorderRadius.circular(25),
+//                     ),
+//                     child: pw.Text(
+//                       'Thank You!',
+//                       style: pw.TextStyle(
+//                         fontSize: 24,
+//                         fontWeight: pw.FontWeight.bold,
+//                         color: PdfColors.white,
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             );
+//           },
+//         ),
+//       );
+//
+//       // Save and open PDF
+//       final directory = await getApplicationDocumentsDirectory();
+//       final filePath = '${directory.path}/Invoice_${invoiceId}_${userName}.pdf';
+//
+//       final file = File(filePath);
+//       await file.writeAsBytes(await pdf.save());
+//
+//       print("✅ Colorful PDF saved: $filePath");
+//       await OpenFile.open(filePath);
+//     } catch (e) {
+//       print("Error generating colorful PDF: $e");
+//     }
+//   }
 
   static pw.Widget _buildColorfulTotalRow(String label, double amount,
       {bool isTotal = false, bool isDiscount = false}) {
@@ -3116,7 +3388,7 @@ class InvoiceHelper {
 //     return file;
 //   }
 
-  static Future<File> generateDocument({
+  static Future<io.File?> generateDocument({
     required bool isChallan,
     Invoice? invoice,
     Challan? challan,
@@ -3635,17 +3907,47 @@ class InvoiceHelper {
     );
 
     // Save PDF
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/${docTitle.toLowerCase()}_$docId.pdf';
-    final file = File(filePath);
-    await file.writeAsBytes(await pdf.save());
+    final Uint8List bytes = await pdf.save();
+    String safeDate = DateFormat('yyyyMMdd').format(docDate);
+    String safeName = customerName?.replaceAll(' ', '_').replaceAll('/', '-') ?? 'Customer';
+    final String filename = '${docTitle}_${docId}_${safeName}_${safeDate}.pdf';
+    if (kIsWeb) {
+      // -------------------------------------------
+      // 💻 WEB: Download the PDF
+      // -------------------------------------------
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement()
+        ..href = url
+        ..style.display = 'none'
+        ..download = filename;
 
-    print("✅ PDF Saved: $filePath");
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
 
-    return file;
+      print("✅ Web Download Triggered: $filename");
+      return null; // No File object on Web
+
+    }
+    else {
+      // -------------------------------------------
+      // 📱 MOBILE: Save to Storage
+      // -------------------------------------------
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$filename';
+
+      final file = io.File(filePath);
+      await file.writeAsBytes(bytes);
+
+      print("✅ Mobile File Saved: $filePath");
+      return file;
+    }
+
   }
 
-  static Future<File> generate(Invoice invoice,
+  static Future<io.File?> generate(Invoice invoice,
       List<InvoiceItem> invoiceItems,
       Map<String, dynamic> companyData,
       {
@@ -4237,16 +4539,48 @@ class InvoiceHelper {
     );
 
     // Save the PDF
-    final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/invoice_${invoice.invoiceId}.pdf';
-    final file = File(path);
+    final Uint8List bytes = await pdf.save();
+    //final directory = await getApplicationDocumentsDirectory();
+    String safeName = (invoice.customerName ?? 'Customer').replaceAll(' ', '_').replaceAll('/', '-');
+    final String filename = 'invoice_${invoice.invoiceId}_$safeName.pdf';
 
-    await file.writeAsBytes(await pdf.save());
-   /// await Share.shareXFiles([XFile(path)], text: 'Invoice - ${invoice.invoiceId}');
-    return file;
+    if (kIsWeb) {
+      // -------------------------------------------
+      // 💻 WEB: Download the PDF
+      // -------------------------------------------
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement()
+        ..href = url
+        ..style.display = 'none'
+        ..download = filename;
+
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
+
+      print("✅ Web Download Triggered: $filename");
+      return null;
+
+    }
+    else {
+      // -------------------------------------------
+      // 📱 MOBILE: Save to Storage
+      // -------------------------------------------
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$filename';
+
+      // ✅ Use io.File to prevent conflict
+      final file = io.File(filePath);
+      await file.writeAsBytes(bytes);
+
+      print("✅ Mobile File Saved: $filePath");
+      return file;
+    }
   }
 
-  static Future<File> generateChallan(
+  static Future<io.File?> generateChallan(
       Challan challan, List<ChallanItem> challanItems, Map<String, dynamic> companyData) async {
     final pdf = pw.Document();
 
@@ -4541,12 +4875,45 @@ class InvoiceHelper {
     );
 
     // Save File
-    final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/challan_${challan.challanId}.pdf';
-    final file = File(path);
+    final Uint8List bytes = await pdf.save();
 
-    await file.writeAsBytes(await pdf.save());
-    return file;
+    // 2. Prepare Filename
+    String safeName = (challan.customerName ?? 'Customer').replaceAll(' ', '_').replaceAll('/', '-');
+    final String filename = 'challan_${challan.challanId}_$safeName.pdf';
+
+    if (kIsWeb) {
+      // -------------------------------------------
+      // 💻 WEB: Download the PDF
+      // -------------------------------------------
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement()
+        ..href = url
+        ..style.display = 'none'
+        ..download = filename;
+
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      html.document.body?.children.remove(anchor);
+      html.Url.revokeObjectUrl(url);
+
+      print("✅ Web Download Triggered: $filename");
+      return null;
+
+    } else {
+      // -------------------------------------------
+      // 📱 MOBILE: Save to Storage
+      // -------------------------------------------
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$filename';
+
+      // ✅ Use io.File to prevent conflict
+      final file = io.File(filePath);
+      await file.writeAsBytes(bytes);
+
+      print("✅ Mobile File Saved: $filePath");
+      return file;
+    }
   }
 
 

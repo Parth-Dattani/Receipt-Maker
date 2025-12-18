@@ -126,6 +126,10 @@ class NewInvoiceController extends GetxController {
   final invoiceDateController = TextEditingController();
   final paymentDueDateController = TextEditingController();
 
+  final RxSet<int> itemsWithStockViolation = <int>{}.obs; // Track indices of items with violations
+  final RxMap<int, String> violationMessages = <int, String>{}.obs;  // Track which item violated
+  bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
+  var forceRefreshTriggers = <int, int>{}.obs;
 
   @override
   void onInit() {
@@ -1602,9 +1606,9 @@ class NewInvoiceController extends GetxController {
         challanId: item.challanId,
       );
 
-      if (quantity != null) {
-        updateQuantityController(index, quantity);
-      }
+      // if (quantity != null) {
+      //   updateQuantityController(index, quantity);
+      // }
       if (rate != null) {
         updatePriceController(index, rate);
       }
@@ -1648,37 +1652,82 @@ class NewInvoiceController extends GetxController {
     while (quantityControllers.length < invoiceItems.length) {
       final itemIndex = quantityControllers.length;
       final item = invoiceItems[itemIndex];
+
+      String quantityText = "";
+
       quantityControllers.add(
-        TextEditingController(text: item.quantity.toString()),
+        TextEditingController(text: quantityText),
       );
     }
 
     // Remove extra controllers if items were removed
     while (quantityControllers.length > invoiceItems.length) {
-      quantityControllers.removeLast().dispose();
+      final removedController = quantityControllers.removeLast();
+      removedController.dispose();
     }
 
-    // Update the controller text if initial value is provided and different
-    if (initialValue != null &&
-        quantityControllers[index].text != initialValue.toString()) {
-      quantityControllers[index].text = initialValue.toString();
+    if (index >= quantityControllers.length) {
+      print("⚠️ Warning: Index $index is out of bounds for quantityControllers");
+      return TextEditingController();
+    }
+
+    // ✅ Only update if initialValue is explicitly provided AND controller is empty
+    if (initialValue != null && quantityControllers[index].text.isEmpty) {
+      String newText = initialValue % 1 == 0
+          ? initialValue.toInt().toString()
+          : initialValue.toString();
+
+      quantityControllers[index].text = newText;
+      print("📝 Set initial quantity at index $index to: $newText");
     }
 
     return quantityControllers[index];
   }
 
-// Keep this method for programmatic updates:
-  void updateQuantityController(int index, double newQuantity) {
-    if (index < quantityControllers.length) {
-      final formatted = newQuantity.toString();
-      if (quantityControllers[index].text != formatted) {
-        quantityControllers[index].text = formatted;
-      }
-    }
-  }
+// // Keep this method for programmatic updates:
+//   void updateQuantityController(int index, double newQuantity) {
+//     if (index < quantityControllers.length) {
+//       final formatted = newQuantity.toString();
+//       if (quantityControllers[index].text != formatted) {
+//         quantityControllers[index].text = formatted;
+//       }
+//     }
+//   }
 
   void selectRemoteItemForIndex(int index, Item item) {
     if (index >= invoiceItems.length) return;
+
+    // ✅ NEW: Stock Check Logic
+    // 1. Check if business is NOT service (Services don't use stock)
+
+    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
+    final isProductBusiness = businessType != 'service' && businessType != 'client';
+
+    if (isProductBusiness) {
+      // 2. Check if stock is 0 or less
+      // Note: Make sure your Item model has a 'stock' or 'quantity' property.
+      // Replace 'item.stock' with 'item.currentStock' if your variable name is different.
+      if ((item.currentStock ?? 0) <= 0) {
+
+        // Use the unit in the message (e.g., "0 PCS")
+        String unit = item.unitOfMeasurement ?? 'units';
+
+        // 3. Show Notification
+        Get.snackbar(
+          "Out of Stock",
+          "Item '${item.itemName}' has 0 $unit stock available.\nPlease add stock in Inventory first.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+          icon: Icon(Icons.inventory_2_outlined, color: Colors.white),
+          duration: Duration(seconds: 4),
+          margin: EdgeInsets.all(16),
+        );
+
+        // 4. Stop execution (Do not select the item)
+        return;
+      }
+    }
 
     // 🔎 Check if this item already exists
     int existingIndex = -1;
@@ -1702,7 +1751,7 @@ class NewInvoiceController extends GetxController {
       );
 
       // ✅ UPDATE THE CONTROLLER for the existing item
-      updateQuantityController(existingIndex, newQty);
+      //updateQuantityController(existingIndex, newQty);
 
       // Remove the duplicate row
       invoiceItems[index].descriptionController?.dispose();
@@ -1751,8 +1800,8 @@ class NewInvoiceController extends GetxController {
 
     // ✅ NEW: Decide what description to use
     String finalDescription;
+
     // Check business type
-    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
     final isServiceBusiness = (businessType == 'service' || businessType == 'client');
 
     if (isServiceBusiness) {
@@ -1797,7 +1846,7 @@ class NewInvoiceController extends GetxController {
 
 
     // ✅ UPDATE CONTROLLERS for the current index
-    updateQuantityController(index, currentItem.quantity);
+    //updateQuantityController(index, currentItem.quantity);
     updatePriceController(index, item.price.toDouble());
 
     calculateTotals();
@@ -1821,14 +1870,60 @@ class NewInvoiceController extends GetxController {
 
   void removeItem(int index) {
     if (invoiceItems.length > 1) {
-      // Dispose the controller before removing
-      invoiceItems[index].descriptionController?.dispose();
+      print("🗑️ Removing item at index $index");
+      print("📊 Before removal: ${invoiceItems.length} items");
 
-
+      // ✅ Remove the item
       invoiceItems.removeAt(index);
+
+      // ✅ Remove corresponding controllers
+      if (index < priceControllers.length) {
+        priceControllers[index].dispose();
+        priceControllers.removeAt(index);
+      }
+
+      if (index < quantityControllers.length) {
+        quantityControllers[index].dispose();
+        quantityControllers.removeAt(index);
+      }
+
+      // ✅ Clear violations for removed item
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+
+      // ✅ Rebuild violation indices (shift them down)
+      final newViolations = <int>{};
+      final newMessages = <int, String>{};
+
+      for (var i in itemsWithStockViolation) {
+        if (i > index) {
+          newViolations.add(i - 1);
+          newMessages[i - 1] = violationMessages[i] ?? '';
+        } else if (i < index) {
+          newViolations.add(i);
+          newMessages[i] = violationMessages[i] ?? '';
+        }
+      }
+
+      itemsWithStockViolation.assignAll(newViolations);
+      violationMessages.assignAll(newMessages);
+
+
       calculateTotals();
+
+      Get.snackbar(
+        'Item Removed',
+        'Item successfully removed from invoice',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+        duration: Duration(seconds: 2),
+        margin: EdgeInsets.all(10),
+      );
     }
   }
+
+
 
   void calculateTotals() {
     double sub = 0.0;
@@ -2152,6 +2247,20 @@ class NewInvoiceController extends GetxController {
       }
       _removeEmptyItemsBeforeSave();
 
+      // ✅ Check for ANY stock violations
+      if (hasAnyStockViolation) {
+        String violationList = violationMessages.values.join('\n• ');
+
+        showCustomSnackbar(
+          title: "Cannot Create Invoice",
+          message: "Fix these issues first:\n• $violationList",
+          baseColor: Colors.red.shade700,
+          icon: Icons.error_outline,
+          duration: Duration(seconds: 5),
+        );
+        return false;
+      }
+
       if (invoiceItems.isEmpty) {
         showCustomSnackbar(
           title: "No Valid Items",
@@ -2418,6 +2527,15 @@ class NewInvoiceController extends GetxController {
     receivedAmount.value = 0.0;
     pendingAmount.value = 0.0;
     calculateTotals();
+    // ✅ Clear all controllers
+    for (var controller in priceControllers) {
+      controller.dispose();
+    }
+    priceControllers.clear();
+
+    for (var controller in quantityControllers) {
+      controller.dispose();
+    }
 
     initializeInvoice();
   }

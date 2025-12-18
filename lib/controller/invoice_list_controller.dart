@@ -642,8 +642,14 @@ class InvoiceListController extends BaseController {
         companyData: companyData.value,
       );
 
-      await Share.shareXFiles([XFile(pdfFile.path)], text: 'Invoice - ${invoice.invoiceId}');
-
+      if (pdfFile != null) {
+        await Share.shareXFiles(
+            [XFile(pdfFile.path)],
+            text: 'Invoice - ${invoice.invoiceId}'
+        );
+      } else {
+        print("Web download triggered automatically");
+      }
       Get.snackbar(
         'Success',
         'Invoice exported as PDF',

@@ -988,6 +988,73 @@ class CustomerRegistrationController extends GetxController {
     return true;
   }
 
+  Future<bool> _checkIfCustomerExists() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || companyId.value.isEmpty) return false;
+
+      String newMobile = mobile1Controller.text.trim();
+      String newGST = gstController.text.trim().toUpperCase();
+      String newName = nameController.text.trim().toLowerCase(); // Get lowercase name
+
+      final allCustomers = await GoogleSheetService.getCustomers(
+        companyId: companyId.value,
+        userId: user.uid,
+      );
+
+      for (var customer in allCustomers) {
+        // Skip current customer if editing
+        if (isEditMode.value &&
+            customer['customerId'].toString() == customerId.value) {
+          continue;
+        }
+
+        // /// 1. Check Mobile Number
+        // if (customer['mobile1'].toString() == newMobile) {
+        //   showCustomSnackbar(
+        //     title: "Duplicate Found",
+        //     message: "Mobile Number $newMobile is already used by ${customer['name']}",
+        //     baseColor: AppColors.errorColor,
+        //     icon: Icons.warning_amber_rounded,
+        //   );
+        //   return true;
+        // }
+        //
+        // // 2. Check GST (if provided)
+        // if (newGST.isNotEmpty &&
+        //     customer['gst'] != null &&
+        //     customer['gst'].toString() == newGST) {
+        //   showCustomSnackbar(
+        //     title: "Duplicate Found",
+        //     message: "GST Number $newGST is already registered.",
+        //     baseColor: AppColors.errorColor,
+        //     icon: Icons.warning_amber_rounded,
+        //   );
+        //   return true;
+        // }
+
+        /// 3. ✅ Check Name (Optional: Prevent same name)
+        // We compare lowercase to catch "Abc" vs "abc"
+        if (customer['name'].toString().toLowerCase() == newName) {
+          showCustomSnackbar(
+            title: "Duplicate Name",
+            message: "Customer name '$newName' already exists. Please use a unique name.",
+            baseColor: AppColors.errorColor,
+            icon: Icons.warning_amber_rounded,
+          );
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      print("Error checking duplicates: $e");
+      return false;
+    }
+  }
+
+
+
   // Main method that handles both create and update
   void registerCustomer() async {
     if (!formKey.currentState!.validate()) return;
@@ -1016,6 +1083,15 @@ class CustomerRegistrationController extends GetxController {
         );
         isLoading.value = false;
         return;
+      }
+
+      // ✅ NEW: Check for duplicates before proceeding
+      // ---------------------------------------------------------
+      bool isDuplicate = await _checkIfCustomerExists();
+
+      if (isDuplicate) {
+        isLoading.value = false;
+        return; // Stop execution here
       }
 
       if (companyId.value.isEmpty) {
@@ -1118,6 +1194,16 @@ class CustomerRegistrationController extends GetxController {
           baseColor: AppColors.errorColor,
           icon: Icons.error,
         );
+        isLoading.value = false;
+        return;
+      }
+
+      // ✅ NEW: Check for duplicates during update
+      // The _checkIfCustomerExists method already handles logic
+      // to ignore the *current* ID being edited.
+      // ---------------------------------------------------------
+      bool isDuplicate = await _checkIfCustomerExists();
+      if (isDuplicate) {
         isLoading.value = false;
         return;
       }

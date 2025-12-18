@@ -55,12 +55,19 @@ class NewChallanController extends BaseController {
 
   var priceControllers = <TextEditingController>[].obs;
   var gstAmount = 0.0.obs;
+  var quantityControllers = <TextEditingController>[].obs;
 
   final RxBool isEditMode = false.obs;
   final RxString editingChallanId = ''.obs;
   final Rxn<Map<String, dynamic>> originalChallanData = Rxn<Map<String, dynamic>>();
   final RxInt originalItemsCount = 0.obs;
 
+// ✅ ADD THESE (multi-item tracking):
+  final RxSet<int> itemsWithStockViolation = <int>{}.obs; // Track indices of items with violations
+  final RxMap<int, String> violationMessages = <int, String>{}.obs; // Track error messages per item
+
+// ✅ ADD THIS COMPUTED PROPERTY:
+  bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
 
   @override
   void onInit() {
@@ -369,6 +376,11 @@ class NewChallanController extends BaseController {
     }
     priceControllers.clear();
 
+    for (var controller in quantityControllers) {
+      controller.dispose();
+    }
+    quantityControllers.clear();
+
     customerNameController.dispose();
     customerMobileController.dispose();
     customerEmailController.dispose();
@@ -379,7 +391,48 @@ class NewChallanController extends BaseController {
     super.onClose();
   }
 
+  /// ✅ Keep quantityControllers in sync with challanItems
+  TextEditingController getQuantityController(int index, {double? initialValue}) {
+    // Ensure we have enough controllers
+    while (quantityControllers.length < challanItems.length) {
+      final itemIndex = quantityControllers.length;
+      final item = challanItems[itemIndex];
 
+      // ✅ Start with empty string instead of default "1"
+      String quantityText = "";
+
+      quantityControllers.add(
+        TextEditingController(text: quantityText),
+      );
+
+      print("✅ Created quantity controller for index $itemIndex with empty value");
+    }
+
+    // Remove excess controllers (when items are deleted)
+    while (quantityControllers.length > challanItems.length) {
+      final removedController = quantityControllers.removeLast();
+      removedController.dispose();
+      print("🗑️ Disposed excess quantity controller");
+    }
+
+    // Validate index
+    if (index >= quantityControllers.length) {
+      print("⚠️ Warning: Index $index is out of bounds for quantityControllers");
+      return TextEditingController();
+    }
+
+    // ✅ Only update if initialValue is explicitly provided AND controller is empty
+    if (initialValue != null && quantityControllers[index].text.isEmpty) {
+      String newText = initialValue % 1 == 0
+          ? initialValue.toInt().toString()
+          : initialValue.toString();
+
+      quantityControllers[index].text = newText;
+      print("📝 Set initial quantity at index $index to: $newText");
+    }
+
+    return quantityControllers[index];
+  }
 
   Future<void> loadChallans() async {
     try {
@@ -968,6 +1021,39 @@ class NewChallanController extends BaseController {
   void removeItem(int index) {
     if (challanItems.length > 1) {
       challanItems.removeAt(index);
+
+      // ✅ Remove corresponding controllers
+      if (index < priceControllers.length) {
+        priceControllers[index].dispose();
+        priceControllers.removeAt(index);
+      }
+
+      if (index < quantityControllers.length) {
+        quantityControllers[index].dispose();
+        quantityControllers.removeAt(index);
+      }
+
+      // Clear violations for this item
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+
+      // Rebuild violation indices (shift them down)
+      final newViolations = <int>{};
+      final newMessages = <int, String>{};
+
+      for (var i in itemsWithStockViolation) {
+        if (i > index) {
+          newViolations.add(i - 1);
+          newMessages[i - 1] = violationMessages[i] ?? '';
+        } else if (i < index) {
+          newViolations.add(i);
+          newMessages[i] = violationMessages[i] ?? '';
+        }
+      }
+
+      itemsWithStockViolation.assignAll(newViolations);
+      violationMessages.assignAll(newMessages);
+
       calculateTotals();
     }
   }
@@ -1291,6 +1377,20 @@ class NewChallanController extends BaseController {
         return false;
       }
 
+      // ✅ NEW: Check for stock violations FIRST
+      if (hasAnyStockViolation) {
+        String violationList = violationMessages.values.join('\n• ');
+
+        showCustomSnackbar(
+          title: "Cannot Create Challan",
+          message: "Fix these issues first:\n• $violationList",
+          baseColor: Colors.red.shade700,
+          icon: Icons.error_outline,
+          duration: Duration(seconds: 5),
+        );
+        return false;
+      }
+
       _removeEmptyItemsBeforeSave();
 
       // Double-check after removing empty items
@@ -1572,8 +1672,19 @@ class NewChallanController extends BaseController {
     notesController.clear();
     paymentStatus.value = 'Pending';
     calculateTotals();
+    // ✅ Clear all controllers
+    for (var controller in priceControllers) {
+      controller.dispose();
+    }
+    priceControllers.clear();
+
+    for (var controller in quantityControllers) {
+      controller.dispose();
+    }
+    quantityControllers.clear();
 
     initializeChallan();
   }
 }
+
 

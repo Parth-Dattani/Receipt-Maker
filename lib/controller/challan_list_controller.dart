@@ -495,7 +495,14 @@ class ChallanListController extends BaseController {
         companyData: companyData.value,
       );
 
-      await Share.shareXFiles([XFile(pdfFile.path)], text: 'Challan - ${challan.challanId}');
+      if (pdfFile != null) {
+        await Share.shareXFiles(
+            [XFile(pdfFile.path)],
+            text: 'Challan - ${challan.challanId}'
+        );
+      } else {
+        print("Web download triggered automatically");
+      }
 
       Get.snackbar(
         'Success',

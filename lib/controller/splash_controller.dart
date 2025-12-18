@@ -89,10 +89,13 @@ class SplashController extends BaseController {
         // Go to dashboard immediately
         print("✅ Navigating to Dashboard");
         Get.offAllNamed(DashboardScreen.pageId);
-      } else {
+      }
+      else {
         print("Company exists but no Spreadsheet → CompanyRegistrationScreen");
         Get.offAllNamed(CompanyRegistrationScreen.pageId);
       }
+
+
     } catch (e) {
       print("Error checking company or user data: $e");
       Get.offAllNamed(CompanyRegistrationScreen.pageId);

@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'constant/constant.dart';
 import 'controller/controller.dart';
+import 'firebase_options.dart';
 import 'services/remote_service.dart';
 import 'utils/shared_preferences_helper.dart';
 
@@ -23,23 +24,13 @@ Future<void> main() async {
   /// Initialize Firebase with platform-specific options
   if (kIsWeb) {
     await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: "AIzaSyBTWh86tWbhygufUosvn7OQwYdrMycCPzA",
-        authDomain: "getyourinvoice-8f128.firebaseapp.com",
-        projectId: "getyourinvoice-8f128",
-        storageBucket: "getyourinvoice-8f128.firebasestorage.app",
-        messagingSenderId: "134369591951",
-        appId: "1:134369591951:web:5cf271caa468b073d8a6fa",
-      ),
+      options: DefaultFirebaseOptions.currentPlatform,
     );
   }
   else {
     await Firebase.initializeApp();
   }
-  // await Supabase.initialize(
-  //   url: 'https://dwhvrupyeeknfwnusjdr.supabase.co',
-  //   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3aHZydXB5ZWVrbmZ3bnVzamRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NDc5NzYsImV4cCI6MjA3MjIyMzk3Nn0.yFCtlbH7lkLk79e0zte-JzjkUikESZCm4HFTWC7IKIA',
-  //);
+
 
   /// 🔹 Load language before app starts
   await AppConstants.loadFromPrefs();
@@ -53,7 +44,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     Get.put(AuthController());
     return GetMaterialApp(
-      title: 'Flutter Demo',
+      title: 'Invoice Sathi',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
@@ -68,3 +59,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

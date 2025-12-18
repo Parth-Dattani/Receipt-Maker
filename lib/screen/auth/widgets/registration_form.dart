@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../controller/controller.dart';
 import '../../../widgets/widgets.dart';
 
+
 class RegistrationForm extends GetView<AuthController> {
   final bool showFormFields;
 
@@ -11,41 +12,36 @@ class RegistrationForm extends GetView<AuthController> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        margin: const EdgeInsets.all(20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 8,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const Text(
-                  "For New Registration Contact your Authorised Person",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.teal),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "New Registration",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.teal),
-                ),
-
-                // Conditional form fields based on showFormFields state
-                showFormFields ? _buildFormFields() : const SizedBox(),
-
-                const SizedBox(height: 30),
-                Obx(() => CustomButton(
-                  text: "Register",
-                  backgroundColor: Colors.deepPurple,
-                  isLoading: controller.isLoading.value,
-                  onPressed: controller.handleRegistration,
-                )),
-                const SizedBox(height: 20),
-              ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50, // Very light teal
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.teal.shade100),
+            ),
+            child: Text(
+              "For New Registration Contact your Authorised Person",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.teal.shade800),
             ),
           ),
-        ),
+          const SizedBox(height: 20),
+
+          if (showFormFields) _buildFormFields(),
+
+          const SizedBox(height: 30),
+          Obx(() => _buildPrimaryButton(
+            text: "REGISTER",
+            isLoading: controller.isLoading.value,
+            onPressed: controller.handleRegistration,
+          )),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
@@ -53,197 +49,212 @@ class RegistrationForm extends GetView<AuthController> {
   Widget _buildFormFields() {
     return Column(
       children: [
-        const SizedBox(height: 20),
-        TextFormField(
+        _buildTealTextField(
           controller: controller.regUsernameController,
-          decoration: InputDecoration(
-            labelText: "User Name *",
-            prefixIcon: const Icon(Icons.person),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          label: "Full Name",
+          icon: Icons.person_outline,
         ),
         const SizedBox(height: 16),
-        TextFormField(
+        _buildTealTextField(
           controller: controller.regEmailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: "Email ID *",
-            prefixIcon: const Icon(Icons.email),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          label: "Email ID",
+          icon: Icons.email_outlined,
+          inputType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        Obx(
-              ()=> TextFormField(
-            controller: controller.loginPasswordController,
-            obscureText: controller.isPasswordHidden.value,
-            decoration: InputDecoration(
-              labelText: "Password *",
-              prefixIcon: const Icon(Icons.lock),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.isPasswordHidden.value ? Icons.visibility_off : Icons.visibility,
-                ),
-                onPressed: controller.togglePasswordVisibility,
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-
+        Obx(() => _buildTealTextField(
+          controller: controller.loginPasswordController,
+          label: "Password",
+          icon: Icons.lock_outline,
+          isPassword: true,
+          isPasswordHidden: controller.isPasswordHidden.value,
+          onVisibilityToggle: controller.togglePasswordVisibility,
+        )),
         const SizedBox(height: 16),
-        TextFormField(
+        _buildTealTextField(
           controller: controller.regMobile1Controller,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: "Mobile No. 1 *",
-            prefixIcon: const Icon(Icons.phone),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          label: "Mobile No. 1",
+          icon: Icons.phone_android,
+          inputType: TextInputType.phone,
         ),
         const SizedBox(height: 16),
-        TextFormField(
+        _buildTealTextField(
           controller: controller.regMobile2Controller,
-          keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            labelText: "Mobile No. 2 (Optional)",
-            prefixIcon: const Icon(Icons.phone),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          label: "Mobile No. 2 (Optional)",
+          icon: Icons.phone_android,
+          inputType: TextInputType.phone,
         ),
         const SizedBox(height: 16),
-        Obx(() => _customDropdown(
-          label: "Country ",
-          prefixIcon: Icons.flag,
+        Obx(() => _buildTealDropdown(
+          label: "Country",
+          icon: Icons.flag_outlined,
           value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
-          items: controller.countries.map((country) {
-            return DropdownMenuItem<String>(
-              value: country,
-              child: Text(country),
-            );
-          }).toList(),
+          items: controller.countries,
           onChanged: (value) {
             controller.selectedCountry.value = value ?? '';
-            controller.selectedState.value = ''; // Reset state when country changes
+            controller.selectedState.value = '';
           },
-          isRequired: true,
-          hint: "Select Country",
         )),
         const SizedBox(height: 16),
         Obx(() {
           if (controller.selectedCountry.value.isNotEmpty) {
-            return _customDropdown(
-              label: "State ",
-              prefixIcon: Icons.map,
-              value: controller.selectedState.value.isEmpty
-                  ? null
-                  : controller.selectedState.value,
-              items: controller.getStatesForCountry().map((state) {
-                return DropdownMenuItem<String>(
-                  value: state,
-                  child: Text(state),
-                );
-              }).toList(),
-              onChanged: (value) {
-                controller.selectedState.value = value ?? '';
-              },
-              isRequired: true,
-              hint: "Select State",
+            return _buildTealDropdown(
+              label: "State",
+              icon: Icons.map_outlined,
+              value: controller.selectedState.value.isEmpty ? null : controller.selectedState.value,
+              items: controller.getStatesForCountry(),
+              onChanged: (value) => controller.selectedState.value = value ?? '',
             );
-          } else {
-            return Container(); // Hide state dropdown when no country is selected
           }
+          return const SizedBox.shrink();
         }),
         const SizedBox(height: 16),
-        TextFormField(
+        _buildTealTextField(
           controller: controller.regCityController,
-          decoration: InputDecoration(
-            labelText: "City *",
-            prefixIcon: const Icon(Icons.location_city),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          label: "City",
+          icon: Icons.location_city_outlined,
         ),
-        const SizedBox(height: 16),
-        // Compact checkbox design
-        Obx(() => Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade400),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Row(
-            children: [
-              Checkbox(
-                value: controller.isDemo.value,
-                onChanged: (bool? value) {
-                  controller.isDemo.value = value ?? false;
-                },
-                activeColor: Colors.deepPurple,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      "Demo Account",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      "Check this for a demo/test account",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        const SizedBox(height: 20),
+        Obx(() => CheckboxListTile(
+          value: controller.isDemo.value,
+          onChanged: (val) => controller.isDemo.value = val ?? false,
+          title: Text("Demo Account", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade900)),
+          subtitle: const Text("Check to create a test account"),
+          activeColor: Colors.teal,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
         )),
       ],
     );
   }
+}
 
-  Widget _customDropdown({
-    required String label,
-    required IconData prefixIcon,
-    required String? value,
-    required List<DropdownMenuItem<String>> items,
-    required Function(String?) onChanged,
-    bool isRequired = false,
-    String? hint,
-  }) {
-    // Check if the current value exists in the items list
-    final bool valueExists = items.any((item) => item.value == value);
+// --- SHARED WIDGETS (TEAL STYLE) ---
 
-    // If value doesn't exist in items, use null to avoid the error
-    final String? safeValue = valueExists ? value : null;
+Widget _buildTealTextField({
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  TextInputType inputType = TextInputType.text,
+  bool isPassword = false,
+  bool isPasswordHidden = false,
+  VoidCallback? onVisibilityToggle,
+}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50, // Very slight grey for input
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    ),
+    child: TextFormField(
+      controller: controller,
+      obscureText: isPassword && isPasswordHidden,
+      keyboardType: inputType,
+      style: const TextStyle(color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey.shade600),
+        prefixIcon: Icon(icon, color: Colors.teal), // Teal Icon
+        suffixIcon: isPassword
+            ? IconButton(
+          icon: Icon(
+            isPasswordHidden ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
+          onPressed: onVisibilityToggle,
+        )
+            : null,
+        // No border until focused
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.teal, width: 1.5), // Teal Border on Focus
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      ),
+    ),
+  );
+}
 
-    return DropdownButtonFormField<String>(
+Widget _buildTealDropdown({
+  required String label,
+  required IconData icon,
+  required String? value,
+  required List<String> items,
+  required Function(String?) onChanged,
+}) {
+  final safeValue = items.contains(value) ? value : null;
+
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5)),
+      ],
+    ),
+    child: DropdownButtonFormField<String>(
       value: safeValue,
       decoration: InputDecoration(
-        labelText: isRequired ? '$label *' : label,
-        prefixIcon: Icon(prefixIcon),
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.teal),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.teal, width: 1.5),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+      onChanged: onChanged,
+    ),
+  );
+}
+
+Widget _buildPrimaryButton({
+  required String text,
+  required VoidCallback onPressed,
+  bool isLoading = false,
+}) {
+  return SizedBox(
+    height: 55,
+    child: ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.teal, // Main Teal Color
+        foregroundColor: Colors.white,
+        elevation: 5,
+        shadowColor: Colors.teal.withOpacity(0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
         ),
       ),
-      items: items,
-      onChanged: onChanged,
-      validator: isRequired
-          ? (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select $label';
-        }
-        return null;
-      }
-          : null,
-      hint: hint != null ? Text(hint) : null,
-      isExpanded: true,
-    );
-  }
+      child: isLoading
+          ? const SizedBox(
+        height: 24,
+        width: 24,
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+      )
+          : Text(
+        text,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+      ),
+    ),
+  );
 }

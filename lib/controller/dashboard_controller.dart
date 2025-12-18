@@ -88,6 +88,7 @@ class DashboardController extends BaseController {
   var appVersion = '1.0.0'.obs;
   var userName = ''.obs;
   var userEmail = ''.obs;
+  StreamSubscription<DocumentSnapshot>? _subscriptionListener;
 
   @override
   void onInit() {
@@ -98,6 +99,9 @@ class DashboardController extends BaseController {
       ChartData("Pending", 0.0, Colors.orange),
       ChartData("Overdue", 0.0, Colors.red),
     ]);
+
+    // 2️⃣ Start the Real-time Listener immediately
+    checkSubscriptionStatus();
 
     _initializeDashboard();
     _loadAppVersion();
@@ -333,34 +337,59 @@ class DashboardController extends BaseController {
 
 
   Future<void> checkSubscriptionStatus() async {
-    // Get user creation date from Firestore
-    final userDoc = await FirebaseFirestore.instance
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    print("🎧 Starting Real-time Subscription Listener...");
+
+    _subscriptionListener = FirebaseFirestore.instance
         .collection('users')
-        .doc(FirebaseAuth.instance.currentUser?.uid)
-        .get();
+        .doc(user.uid)
+        .snapshots() // 👈 This keeps the connection open
+        .listen((snapshot) {
 
-    if (userDoc.exists) {
-      final createdAt = userDoc.data()?['createdAt'] as Timestamp?;
-      if (createdAt != null) {
-        final accountCreationDate = createdAt.toDate();
-        final trialEndDate = accountCreationDate.add(Duration(days: 30));
-        final now = DateTime.now();
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        // Get the endDate from Firestore
+        final endDateTimestamp = data?['endDate'] as Timestamp?;
 
-        // Show dialog if trial has ended
-        if (now.isAfter(trialEndDate)) {
-          // Use a small delay to ensure widget is fully built
-          Future.delayed(Duration(milliseconds: 500), () {
-            showDialog(
-              context: Get.context!,
-              barrierDismissible: false, // This prevents tapping outside to dismiss
-              builder: (BuildContext context) {
-                return SubscriptionDialog();
-              },
-            );
-          });
+        if (endDateTimestamp != null) {
+          final endDate = endDateTimestamp.toDate();
+          final now = DateTime.now();
+
+          print("🔄 Real-time Status Check: Now($now) vs EndDate($endDate)");
+
+          // Check if subscription has EXPIRED
+          if (now.isAfter(endDate)) {
+            print("❌ Subscription EXPIRED. Locking App.");
+
+            // Only show dialog if it's NOT already open (prevents stacking)
+            if (Get.isDialogOpen != true) {
+              Get.dialog(
+                // WillPopScope prevents Android Back Button closing it
+                WillPopScope(
+                  onWillPop: () async => false,
+                  child: const SubscriptionDialog(),
+                ),
+                barrierDismissible: false, // Prevents clicking outside to close
+              );
+            }
+          } else {
+            print("✅ Subscription ACTIVE.");
+
+            // If the user was blocked, and you extended the date in Firebase,
+            // this will automatically close the dialog!
+            if (Get.isDialogOpen == true) {
+              Get.back(); // Close the blocking dialog
+            }
+          }
+        } else {
+          print("⚠️ No 'endDate' field found in user document.");
         }
       }
-    }
+    }, onError: (e) {
+      print("❌ Error in subscription listener: $e");
+    });
   }
 
   // Load all companies and set current company
@@ -1629,7 +1658,7 @@ class DashboardController extends BaseController {
                   onPressed: () {
                     Get.back(); // Close dialog
                     // Try to navigate to full customer list
-                    Get.to(() => const CustomerListScreen());
+                    Get.to(() =>  CustomerListScreen());
                   },
                   icon: Icon(Icons.list),
                   label: Text('View All Customers'),

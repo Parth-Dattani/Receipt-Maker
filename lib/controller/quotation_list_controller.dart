@@ -676,11 +676,16 @@ class QuotationListController extends BaseController {
         companyData: companyData.value,
       );
 
-      // ✅ Share PDF
-      await Share.shareXFiles(
-          [XFile(pdfFile.path)],
-          text: 'Quotation - ${quotation.invoiceId}'
-      );
+      // ✅ FIX: Check if file exists (Mobile) before sharing
+      if (pdfFile != null) {
+        await Share.shareXFiles(
+            [XFile(pdfFile.path)],
+            text: 'Quotation - ${quotation.invoiceId}'
+        );
+      }
+      else {
+        print("Web download triggered automatically");
+      }
 
       Get.snackbar(
         'Success',

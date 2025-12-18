@@ -576,6 +576,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "country": selectedCountry.value,
           "altEmail": regAltEmailController.text.trim(),
           "createdAt": FieldValue.serverTimestamp(),
+          "endDate": DateTime.now().add(const Duration(days: 5000)),
           "appId":"",
           "spreadsheetId":"",
           "isDemo": isDemo.value,
