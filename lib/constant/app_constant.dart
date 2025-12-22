@@ -17,6 +17,9 @@ class AppConstants{
    static final withGST = false.obs; //isGstEnabled
    static final isGujarati = false.obs; //Language toggle
    static final isDemo = false.obs;
+   static final isDueDateEnabled = false.obs;
+   static int dueDateDays = 0;
+   static final RxBool isExtraNotesEnabled = false.obs;
 
    /// 🔹 Load everything from SharedPreferences into memory
    static Future<void> loadFromPrefs() async {
@@ -38,6 +41,10 @@ class AppConstants{
       } else {
          Get.updateLocale(const Locale('en', 'US'));
       }
+
+      isDueDateEnabled.value = await sharedPreferencesHelper.retrievePrefBoolData("isDueDateEnabled") ?? false;
+      dueDateDays = int.tryParse(await sharedPreferencesHelper.getPrefData("dueDateDays") ?? "0") ?? 0;
+
 
    }
 
@@ -87,5 +94,28 @@ class AppConstants{
    static Future<void> setDemoMode(bool value) async {
       isDemo.value = value;
       await sharedPreferencesHelper.storeBoolPrefData("isDemo", value);
+   }
+
+   /// 🔹 Update + persist isDueDateEnabled
+   static Future<void> setDueDateEnabled(bool value) async {
+      isDueDateEnabled.value = value;
+      await sharedPreferencesHelper.storeBoolPrefData("isDueDateEnabled", value);
+   }
+
+   /// 🔹 Update + persist dueDateDays
+   static Future<void> setDueDateDays(int days) async {
+      dueDateDays = days;
+      await sharedPreferencesHelper.storePrefData("dueDateDays", days.toString());
+   }
+
+
+   static Future<void> setExtraNotesEnabled(bool value) async {
+      isExtraNotesEnabled.value = value;
+      await sharedPreferencesHelper.storeBoolPrefData('isExtraNotesEnabled', value);
+   }
+
+   static Future<bool> getExtraNotesEnabled() async {
+      // final prefs = await SharedPreferences.getInstance();
+      return await sharedPreferencesHelper.retrievePrefBoolData('isExtraNotesEnabled') ?? false;
    }
 }

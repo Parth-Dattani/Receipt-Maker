@@ -71,10 +71,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
   AppBar _buildAppBar(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width > 900;
     return AppBar(
-      leading: IconButton(
-        onPressed: () => Get.back(),
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-      ),
+      foregroundColor: Colors.white,
       elevation: 0,
       backgroundColor: AppColors.tealColor,
       title: Text(

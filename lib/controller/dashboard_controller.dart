@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -48,7 +47,6 @@ class DashboardController extends BaseController {
   var paidCount = 0.obs;
   var overdueCount = 0.obs;
 
-  // Recent invoices list
   var recentInvoices = <Invoice>[].obs;
 
   // Chart data
@@ -162,7 +160,6 @@ class DashboardController extends BaseController {
     }
   }
 
-  // Add this method to load user data
   Future<void> _loadUserData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -197,7 +194,6 @@ class DashboardController extends BaseController {
     print("Is Enable Valure : --------- ${isEnabled}");
 
     try {
-
       await updateCompanyPreference('isChallanEnabled', isEnabled);
 
       /// Also update in Firestore
@@ -216,11 +212,11 @@ class DashboardController extends BaseController {
       print('Error saving challan preference to SharedPreferences: $e');
     }
   }
-// Add to DashboardController
+
   void _startOverdueChecker() {
     // Check once immediately
     _updateOverdueInvoices();
-    _updateOverduePurchases(); // ← Add this line
+    _updateOverduePurchases();
 
     // Then check every hour
     Timer.periodic(Duration(hours: 1), (timer) {
@@ -252,12 +248,6 @@ class DashboardController extends BaseController {
               "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
           hasChanges = true;
 
-          // Optionally update status in Google Sheet
-          // await GoogleSheetService.updateInvoiceStatus(
-          //   invoice.invoiceId,
-          //   "overdue",
-          //   sheetName: "Invoice",
-          // );
         }
       }
     }
@@ -290,17 +280,6 @@ class DashboardController extends BaseController {
               "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
           hasChanges = true;
 
-          // 🔹 OPTIONAL: Update status in Google Sheet
-          // Uncomment if you want to update the sheet status automatically
-          // try {
-          //   await GoogleSheetService.updatePurchaseStatus(
-          //     purchase.purchaseId ?? '',
-          //     "overdue",
-          //     sheetName: "Purchase",
-          //   );
-          // } catch (e) {
-          //   print("Error updating purchase status: $e");
-          // }
         }
       }
     }
@@ -345,7 +324,7 @@ class DashboardController extends BaseController {
     _subscriptionListener = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .snapshots() // 👈 This keeps the connection open
+        .snapshots()
         .listen((snapshot) {
 
       if (snapshot.exists) {
@@ -363,10 +342,8 @@ class DashboardController extends BaseController {
           if (now.isAfter(endDate)) {
             print("❌ Subscription EXPIRED. Locking App.");
 
-            // Only show dialog if it's NOT already open (prevents stacking)
             if (Get.isDialogOpen != true) {
               Get.dialog(
-                // WillPopScope prevents Android Back Button closing it
                 WillPopScope(
                   onWillPop: () async => false,
                   child: const SubscriptionDialog(),
@@ -377,8 +354,6 @@ class DashboardController extends BaseController {
           } else {
             print("✅ Subscription ACTIVE.");
 
-            // If the user was blocked, and you extended the date in Firebase,
-            // this will automatically close the dialog!
             if (Get.isDialogOpen == true) {
               Get.back(); // Close the blocking dialog
             }
@@ -392,66 +367,12 @@ class DashboardController extends BaseController {
     });
   }
 
-  // Load all companies and set current company
-  Future<void> _loadAllCompaniesAndSetCurrent() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      // Load all user companies
-      final companiesSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      allUserCompanies.clear();
-      for (var doc in companiesSnapshot.docs) {
-        final companyData = doc.data();
-        companyData['id'] = doc.id;
-        allUserCompanies.add(companyData);
-      }
-
-      hasMultipleCompanies.value = allUserCompanies.length > 1;
-
-      // Try to get current company from SharedPreferences
-      String savedCompanyId = await sharedPreferencesHelper.getPrefData("CompanyId").toString();
-
-      if (savedCompanyId.isNotEmpty) {
-        // Find saved company in the list
-        final savedCompany = allUserCompanies.firstWhereOrNull(
-                (company) => company['id'] == savedCompanyId
-        );
-
-        if (savedCompany != null) {
-          _setCurrentCompany(savedCompany);
-
-        } else if (allUserCompanies.isNotEmpty) {
-          // Saved company not found, use first available
-          _setCurrentCompany(allUserCompanies.first);
-        }
-      } else if (allUserCompanies.isNotEmpty) {
-        // No saved company, use first available
-        _setCurrentCompany(allUserCompanies.first);
-      }
-
-      // Load dashboard data after setting company
-      if (companyId.value.isNotEmpty) {
-        loadDashboardData();
-      }
-
-    } catch (e) {
-      print("Error loading companies: $e");
-    }
-  }
 
   // Set current company and save to preferences
   void _setCurrentCompany(Map<String, dynamic> company) {
     currentCompany.value = company;
     companyId.value = company['id'];
 
-    // Save to SharedPreferences
     sharedPreferencesHelper.storePrefData("CompanyId" , company['id']);
     AppConstants.companyId = company['id'];
 
@@ -468,7 +389,6 @@ class DashboardController extends BaseController {
       appVersion.value = '1.0.0';
     }
   }
-
 
   Future<void> loadCompanySettings() async {
     try {
@@ -558,13 +478,7 @@ class DashboardController extends BaseController {
 
     } catch (error) {
       print("Failed to load dashboard data: ${error.toString()}");
-      // Get.snackbar(
-      //   'Error',
-      //   'Failed to load dashboard data: ${error.toString()}',
-      //   snackPosition: SnackPosition.BOTTOM,
-      //   backgroundColor: Colors.red,
-      //   colorText: Colors.white,
-      // );
+
     } finally {
       if (!_isInitializing) {
         isLoading.value = false;
@@ -622,12 +536,6 @@ class DashboardController extends BaseController {
 
     } catch (e) {
       print("Error in loadInvoices(): $e");
-      // showCustomSnackbar(
-      //   title: "Error",
-      //   message: "Failed to load invoices: ${e.toString()}",
-      //   baseColor: Colors.red.shade700,
-      //   icon: Icons.error_outline,
-      // );
     }
   }
 
@@ -663,19 +571,14 @@ class DashboardController extends BaseController {
 
       // Calculate purchase stats
 
-        _calculatePurchaseStats();
+      _calculatePurchaseStats();
 
 
     } catch (e) {
       print("Error in loadPurchases(): $e");
-      // showCustomSnackbar(
-      //   title: "Error",
-      //   message: "Failed to load purchases: ${e.toString()}",
-      //   baseColor: Colors.red.shade700,
-      //   icon: Icons.error_outline,
-      // );
     }
   }
+
   void _clearPurchaseStats() {
     totalPurchases.value = 0;
     paidPurchases.value = 0;
@@ -687,7 +590,6 @@ class DashboardController extends BaseController {
 
     print("🧹 Purchase stats cleared");
   }
-  // Replace the _calculatePurchaseStats() method in DashboardController with this:
 
   void _calculatePurchaseStats() {
     int totalCount = 0;
@@ -746,13 +648,11 @@ class DashboardController extends BaseController {
             print("   🟡 COUNTED AS PENDING (not overdue yet)");
           }
         } else {
-          // No due date, just count as pending
           pendingCount++;
           pendingAmount += pendingAmt;
           print("   🟡 COUNTED AS PENDING (no due date)");
         }
 
-        // 🔥 CRITICAL FIX: Overdue purchases should ALSO count toward pending amount
         // because they are still pending payment, just overdue
         if (isOverdue) {
           pendingAmount += pendingAmt; // Add overdue amount to pending total
@@ -1443,9 +1343,7 @@ class DashboardController extends BaseController {
 
   Future<void> navigateToInventory() async {
     Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-
-    // ✅ Wait for result from Purchase Entry screen
-    final result = await Get.to(() => PurchaseEntryScreen());
+    await Get.to(() => PurchaseEntryScreen());
 
     /// ✅ If purchase was saved successfully, refresh dashboard
     //if (result == true) {
@@ -1454,6 +1352,17 @@ class DashboardController extends BaseController {
     //}
   }
 
+  Future<void> navigateToPurchaseList() async {
+    if (Get.isRegistered<PurchaseListController>()) {
+    Get.delete<PurchaseListController>();
+    }
+    Get.put(PurchaseListController());
+    await Get.to(() => PurchaseListScreen());
+
+    // ✅ Refresh when returning
+    print("🔄 Returned from Challan List, refreshing...");
+    await refreshDashboard();
+  }
   // Updated method to navigate to customer registration with company selection
   void navigateToCustomers() {
     /// Always show company selection screen
@@ -1706,17 +1615,6 @@ class DashboardController extends BaseController {
     await refreshDashboard();
   }
 
-  Future<void> navigateToPurchaseList() async {
-    if (Get.isRegistered<PurchaseListController>()) {
-      Get.delete<PurchaseListController>();
-    }
-    Get.put(PurchaseListController());
-    await Get.to(() => PurchaseListScreen());
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Challan List, refreshing...");
-    await refreshDashboard();
-  }
 
   Future<void> navigateToQuotList() async {
     if (Get.isRegistered<QuotationListController>()) {
@@ -1744,7 +1642,10 @@ class DashboardController extends BaseController {
 
 
   Future<void> navigateToNewChallan() async {
-    Get.lazyPut<NewChallanController>(() => NewChallanController());
+    if (Get.isRegistered<NewChallanController>()) {
+      Get.delete<NewChallanController>();
+    }
+    Get.put(NewChallanController());
 
     await Get.to(() => NewChallanScreen());
 
@@ -2392,9 +2293,7 @@ class DashboardController extends BaseController {
   ];
 
 
-  // Add this method to generate revenue data dynamically
   /// Method to generate month-based revenue data
-
   Future<List<RevenueData>> getMonthlyRevenueData({
     int monthsBack = 12,
     String? statusFilter,

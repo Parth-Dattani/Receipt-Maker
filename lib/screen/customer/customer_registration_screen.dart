@@ -154,7 +154,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Get.back(),
+          onPressed: () =>Navigator.pop(context),
         ),
         title: Obx(() => Text(
           controller.isEditMode.value ? "Edit Customer" : "New Customer",
@@ -316,7 +316,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         children: [
           Container(
             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-            child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Get.back()),
+            child: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context)),
           ),
           const Spacer(),
           Obx(() => Text(

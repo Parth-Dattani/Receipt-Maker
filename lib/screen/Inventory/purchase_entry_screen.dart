@@ -23,10 +23,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 4,
-        leading: IconButton(
-          onPressed: () => Get.back(),
-          icon: Icon(Icons.arrow_back_ios, color: Colors.white), // Fixed color ref
-        ),
+        automaticallyImplyLeading: true,
+        foregroundColor: Colors.white,
         backgroundColor: AppColors.tealColor,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -757,7 +755,9 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               child: SizedBox(
                                 height: 40,
                                 child: TextFormField(
+                                  ///no want Price every Time User manully enter not from Gettin gList
                                   controller: controller.getPriceController(index, initialValue: item.purchasePrice),
+                                  //controller: controller.priceControllers,
                                   textAlign: TextAlign.center,
                                   decoration: InputDecoration(
                                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),

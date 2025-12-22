@@ -1092,7 +1092,9 @@ class DashboardScreen extends GetView<DashboardController> {
                     _buildExpansionTile(
                       icon: Icons.inventory_2, iconColor: Colors.blue.shade600, title: "purchase".tr,
                       children: [
-                        _buildSubMenuItem(icon: Icons.shopping_cart, iconColor: Colors.blue.shade700, title: "purchase".tr, onTap: () { Get.back(); controller.navigateToInventory(); }),
+                        _buildSubMenuItem(icon: Icons.shopping_cart, iconColor: Colors.blue.shade700, title: "purchase".tr, onTap: () {
+                          //Get.back();
+                          controller.navigateToInventory(); }),
                         _buildSubMenuItem(icon: Icons.list_alt, iconColor: Colors.blue.shade700, title: "Purchase List", onTap: () { Get.back(); controller.navigateToPurchaseList(); }),
                       ],
                     ),

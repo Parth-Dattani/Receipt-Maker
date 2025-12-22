@@ -27,10 +27,19 @@ class CompanyController extends BaseController {
   final bankNameController = TextEditingController();
   final ifscController = TextEditingController();
   final accountNumberController = TextEditingController();
+  final upiController = TextEditingController();
   final authorisedSignatureController = TextEditingController();
+  final extraNote1Controller = TextEditingController();
+  final extraNote2Controller = TextEditingController();
+  final extraNote3Controller = TextEditingController();
+  var isExtraNotesEnabled = false.obs;
 
   // 🆕 NEW: Invoice starting number controller
   final invoiceStartingNumberController = TextEditingController(text: '1');
+
+  // 🆕 NEW: Due date controllers
+  final dueDateDaysController = TextEditingController();
+  var isDueDateEnabled = false.obs;
 
   var isChallanEnabled = false.obs;
   var selectedCountry = ''.obs;
@@ -128,13 +137,23 @@ class CompanyController extends BaseController {
     bankNameController.text = companyData['bankName'] ?? '';
     ifscController.text = companyData['ifsc'] ?? '';
     accountNumberController.text = companyData['accountNumber'] ?? '';
+    upiController.text = companyData['upiId'] ?? '';
     authorisedSignatureController.text = companyData['authorisedSignature'] ?? '';
+    isExtraNotesEnabled.value = companyData['isExtraNotesEnabled'] ?? false;
+    extraNote1Controller.text = companyData['extraNote1'] ?? '';
+    extraNote2Controller.text = companyData['extraNote2'] ?? '';
+    extraNote3Controller.text = companyData['extraNote3'] ?? '';
+
     isChallanEnabled.value = companyData['isChallanEnabled'] ?? false;
     isGstEnabled.value = companyData['isGstEnabled'] ?? false;
 
     invoiceStartingNumberController.text = (companyData['invoiceStartingNumber'] ?? 1).toString();
     print('Invoice Starting Number Controller: ${invoiceStartingNumberController.text}'); // Add this
 
+    isDueDateEnabled.value = companyData['isDueDateEnabled'] ?? false;
+    dueDateDaysController.text = companyData['dueDateDays'] != null && companyData['dueDateDays'] != 0
+        ? companyData['dueDateDays'].toString()
+        : '';
 
     final String country = companyData['country'] ?? 'India';
     if (countries.contains(country)) {
@@ -190,6 +209,36 @@ class CompanyController extends BaseController {
       );
       return false;
     }
+    // 🆕 NEW: Validate due date days if enabled
+    if (isDueDateEnabled.value) {
+      final dueDays = int.tryParse(dueDateDaysController.text.trim());
+      if (dueDays == null || dueDays < 1) {
+        showCustomSnackbar(
+          title: "",
+          message: "Due date days must be a positive number",
+          icon: Icons.close,
+          baseColor: AppColors.appColor,
+        );
+        return false;
+      }
+    }
+
+    if (isExtraNotesEnabled.value) {
+      final note1 = extraNote1Controller.text.trim();
+      final note2 = extraNote2Controller.text.trim();
+      final note3 = extraNote3Controller.text.trim();
+
+      if (note1.isEmpty && note2.isEmpty && note3.isEmpty) {
+        showCustomSnackbar(
+          title: "",
+          message: "At least one extra note is required when Extra Notes is enabled",
+          icon: Icons.close,
+          baseColor: AppColors.appColor,
+        );
+        return false;
+      }
+    }
+
 
     return true;
   }
@@ -248,10 +297,20 @@ class CompanyController extends BaseController {
         'businessType': selectedBusinessType.value,
         'gst': gstController.text.trim().toUpperCase(),
         'pan': panController.text.trim().toUpperCase(),
+        'isDueDateEnabled': isDueDateEnabled.value,
+        'dueDateDays': isDueDateEnabled.value
+            ? int.tryParse(dueDateDaysController.text.trim()) ?? 0
+            : 0,
         'bankName': bankNameController.text.trim(),
         'ifsc': ifscController.text.trim().toUpperCase(),
         'accountNumber': accountNumberController.text.trim(),
+        'upiId': upiController.text.trim(),
         'authorisedSignature': authorisedSignatureController.text.trim(),
+        'isExtraNotesEnabled': isExtraNotesEnabled.value,
+        'extraNote1': isExtraNotesEnabled.value ? extraNote1Controller.text.trim() : '',
+        'extraNote2': isExtraNotesEnabled.value ? extraNote2Controller.text.trim() : '',
+        'extraNote3': isExtraNotesEnabled.value ? extraNote3Controller.text.trim() : '',
+
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
@@ -280,6 +339,15 @@ class CompanyController extends BaseController {
       await AppConstants.setChallanEnabled(isChallanEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
+
+      // 🆕 NEW: Save due date settings to AppConstants
+      await AppConstants.setDueDateEnabled(isDueDateEnabled.value);
+      await AppConstants.setDueDateDays(
+          isDueDateEnabled.value
+              ? int.tryParse(dueDateDaysController.text.trim()) ?? 0
+              : 0
+      );
+      await AppConstants.setExtraNotesEnabled(isExtraNotesEnabled.value);
 
       Get.toNamed(
         CustomerRegistrationScreen.pageId,
@@ -354,10 +422,19 @@ class CompanyController extends BaseController {
         'businessType': selectedBusinessType.value,
         'gst': gstController.text.trim().toUpperCase(),
         'pan': panController.text.trim().toUpperCase(),
+        'isDueDateEnabled': isDueDateEnabled.value,
+        'dueDateDays': isDueDateEnabled.value
+            ? int.tryParse(dueDateDaysController.text.trim()) ?? 0
+            : 0,
         'bankName': bankNameController.text.trim(),
         'ifsc': ifscController.text.trim().toUpperCase(),
         'accountNumber': accountNumberController.text.trim(),
+        'upiId': upiController.text.trim(),
         'authorisedSignature': authorisedSignatureController.text.trim(),
+        'isExtraNotesEnabled': isExtraNotesEnabled.value,
+        'extraNote1': isExtraNotesEnabled.value ? extraNote1Controller.text.trim() : '',
+        'extraNote2': isExtraNotesEnabled.value ? extraNote2Controller.text.trim() : '',
+        'extraNote3': isExtraNotesEnabled.value ? extraNote3Controller.text.trim() : '',
         'updatedAt': FieldValue.serverTimestamp(),
         'isChallanEnabled': isChallanEnabled.value,
         'isGstEnabled': isGstEnabled.value,
@@ -405,6 +482,8 @@ class CompanyController extends BaseController {
           await AppConstants.setChallanEnabled(isChallanEnabled.value);
           await AppConstants.setGstEnabled(isGstEnabled.value);
           await AppConstants.setBusinessType(selectedBusinessType.value);
+
+
         }
       }
 
@@ -420,6 +499,15 @@ class CompanyController extends BaseController {
       await AppConstants.setChallanEnabled(isChallanEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
+      // 🆕 NEW: Save due date settings to AppConstants
+      await AppConstants.setDueDateEnabled(isDueDateEnabled.value);
+      await AppConstants.setDueDateDays(
+          isDueDateEnabled.value
+              ? int.tryParse(dueDateDaysController.text.trim()) ?? 0
+              : 0
+      );
+      await AppConstants.setExtraNotesEnabled(isExtraNotesEnabled.value);
+
 
 
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -468,8 +556,13 @@ class CompanyController extends BaseController {
     bankNameController.dispose();
     ifscController.dispose();
     accountNumberController.dispose();
+    upiController.dispose();
     authorisedSignatureController.dispose();
+    extraNote1Controller.dispose();
+    extraNote2Controller.dispose();
+    extraNote3Controller.dispose();
     invoiceStartingNumberController.dispose(); // 🆕 NEW
+    dueDateDaysController.dispose();
     super.dispose();
   }
 

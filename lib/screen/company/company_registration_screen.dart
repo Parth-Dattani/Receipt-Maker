@@ -64,10 +64,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         controller.isEditMode.value ? "Edit Company" : "Company Registration",
         style: const TextStyle(color: Colors.white),
       )),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-        onPressed: () => Get.back(),
-      ),
       centerTitle: true,
       elevation: 0,
       foregroundColor: Colors.white,
@@ -298,6 +294,48 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             CustomTextFormField(controller: controller.businessCategoryController, label: "Business Category *", prefixIcon: Icons.category, isRequired: true),
             CustomTextFormField(controller: controller.gstController, label: "G.S.T. Number", prefixIcon: Icons.confirmation_number),
             CustomTextFormField(controller: controller.panController, label: "PAN No", prefixIcon: Icons.credit_card),
+
+            const SizedBox(height: 16),
+            // 🆕 NEW: Due Date Switch
+            Obx(() => SwitchListTile(
+              value: controller.isDueDateEnabled.value,
+              onChanged: (value) {
+                controller.isDueDateEnabled.value = value;
+                if (!value) {
+                  controller.dueDateDaysController.clear();
+                }
+              },
+              activeColor: Colors.white,
+              activeTrackColor: AppColors.tealColor,
+              inactiveThumbColor: Colors.grey,
+              title: const Text(
+                "Enable Due Date",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                "Set payment due date in days from invoice date",
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+              secondary: Icon(Icons.calendar_today, color: AppColors.tealColor),
+            )),
+            // 🆕 NEW: Days TextField (Conditional)
+            Obx(() {
+              if (controller.isDueDateEnabled.value) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: CustomTextFormField(
+                    controller: controller.dueDateDaysController,
+                    label: "Due Date (Days) *",
+                    prefixIcon: Icons.event_available,
+                    keyboardType: TextInputType.number,
+                    hintText: "e.g., 30",
+                    isRequired: true,
+                  ),
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            }),
           ],
         ),
       ),
@@ -321,6 +359,11 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
               ],
             ),
             CustomTextFormField(controller: controller.accountNumberController, label: "Account Number", prefixIcon: Icons.numbers, keyboardType: TextInputType.number),
+            CustomTextFormField(
+              controller: controller.upiController,
+              label: "Upi Id",
+              prefixIcon: Icons.paypal,
+            ),
           ],
         ),
       ),
@@ -337,6 +380,82 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
           children: [
             _sectionTitle("Authorisation", Icons.edit_document),
             CustomTextFormField(controller: controller.authorisedSignatureController, label: "Authorised Signature", prefixIcon: Icons.person),
+
+            const SizedBox(height: 16),
+
+            // 🆕 NEW: Extra Notes Switch
+            Obx(() => SwitchListTile(
+              value: controller.isExtraNotesEnabled.value,
+              onChanged: (value) {
+                controller.isExtraNotesEnabled.value = value;
+                if (!value) {
+                  // Clear all notes when disabled
+                  controller.extraNote1Controller.clear();
+                  controller.extraNote2Controller.clear();
+                  controller.extraNote3Controller.clear();
+                }
+              },
+              activeColor: Colors.white,
+              activeTrackColor: AppColors.tealColor,
+              inactiveThumbColor: Colors.grey,
+              title: const Text(
+                "Enable Extra Notes",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                "Add up to 3 custom notes to display on invoices",
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+              secondary: Icon(Icons.note_add, color: AppColors.tealColor),
+            )),
+
+            // 🆕 NEW: Extra Notes Text Fields (Conditional)
+            Obx(() {
+              if (controller.isExtraNotesEnabled.value) {
+                return Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    CustomTextFormField(
+                      controller: controller.extraNote1Controller,
+                      label: "Note 1",
+                      prefixIcon: Icons.notes,
+                      hintText: "e.g., Terms & Conditions",
+                      //maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    CustomTextFormField(
+                      controller: controller.extraNote2Controller,
+                      label: "Note 2",
+                      prefixIcon: Icons.notes,
+                      hintText: "e.g., Payment Terms",
+                      // maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    CustomTextFormField(
+                      controller: controller.extraNote3Controller,
+                      label: "Note 3",
+                      prefixIcon: Icons.notes,
+                      hintText: "e.g., Delivery Instructions",
+                      //maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 4),
+                      child: Text(
+                        "* At least one note is required when Extra Notes is enabled",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red.shade600,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            }),
           ],
         ),
       ),

@@ -174,6 +174,7 @@ class NewInvoiceController extends GetxController {
     // Load other data after a delay
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadSecondaryData();
+      ensureControllersMatch();
     });
   }
 
@@ -323,9 +324,20 @@ class NewInvoiceController extends GetxController {
       invoiceDate.value = defaultDate;
       invoiceDateController.text = _formatDate(defaultDate);
 
-      // ✅ Set payment due date to 15 days from today
-      paymentDueDate.value = defaultDate.add(Duration(days: 15));
+
+// NEW CODE (ADD):
+// ✅ Set payment due date based on company settings
+      int daysToAdd = AppConstants.isDueDateEnabled.value
+          ? AppConstants.dueDateDays
+          : 15; // Default to 15 days if not enabled
+
+      paymentDueDate.value = defaultDate.add(Duration(days: daysToAdd));
       paymentDueDateController.text = _formatDate(paymentDueDate.value);
+
+      print("📅 Quotation conversion - Invoice date: ${invoiceDate.value}");
+      print("📅 Quotation conversion - Payment due date: ${paymentDueDate.value} (+$daysToAdd days)");
+
+
 
       // Set customer info
       selectedCustomerId.value = quotation.customerId ?? '';
@@ -751,7 +763,13 @@ class NewInvoiceController extends GetxController {
 
       // ✅ AUTO-CALCULATE DUE DATE (15 days from invoice date)
       if (!isEditMode.value) {
-        paymentDueDate.value = picked.add(Duration(days: 15));
+        // 🆕 Use dueDateDays from AppConstants (from company settings)
+        int daysToAdd = AppConstants.isDueDateEnabled.value
+            ? AppConstants.dueDateDays
+            : 15; // Default to 15 days if not enabled
+
+        paymentDueDate.value = picked.add(Duration(days: daysToAdd));
+
 
         // ✅ Ensure due date is also within demo range if applicable
         if (AppConstants.isDemo.value && paymentDueDate.value.isAfter(lastDate)) {
@@ -791,9 +809,34 @@ class NewInvoiceController extends GetxController {
     );
 
     if (picked != null && picked != paymentDueDate.value) {
+// ✅ Validate that due date is not before invoice date
+      if (picked.isBefore(invoiceDate.value)) {
+        Get.snackbar(
+          'Invalid Date',
+          'Due date cannot be before invoice date',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade800,
+          icon: Icon(Icons.warning, color: Colors.orange.shade700),
+          duration: Duration(seconds: 3),
+        );
+        return;
+      }
       paymentDueDate.value = picked;
       paymentDueDateController.text = _formatDate(picked);
+
+      // Show how many days until due
+      int daysUntil = picked.difference(invoiceDate.value).inDays;
+      Get.snackbar(
+        'Due Date Set',
+        'Payment due in $daysUntil days',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.blue.shade100,
+        colorText: Colors.blue.shade800,
+        duration: Duration(seconds: 2),
+      );
     }
+
   }
 
   void validateManualCustomerEntry() {
@@ -1346,8 +1389,14 @@ class NewInvoiceController extends GetxController {
     invoiceDate.value = defaultDate;
     invoiceDateController.text = _formatDate(defaultDate);
 
+    // ✅ NEW: Set payment due date based on company settings
+    int daysToAdd = AppConstants.isDueDateEnabled.value
+        ? AppConstants.dueDateDays
+        : 15; // Default to 15 days if not enabled
+
+
     // ✅ Set payment due date to 15 days from default date
-    DateTime dueDateValue = defaultDate.add(Duration(days: 15));
+    DateTime dueDateValue = defaultDate.add(Duration(days: daysToAdd));
 
     // ✅ Ensure due date is also within demo range if applicable
     if (AppConstants.isDemo.value && dueDateValue.isAfter(DateTime(1992, 12, 31))) {
@@ -1569,6 +1618,8 @@ class NewInvoiceController extends GetxController {
       customerId: customerId,
       descriptionController: newDescriptionController,
     ));
+    // ✅ Initialize controllers AFTER adding item
+    ensureControllersMatch();
 
     calculateTotals();
   }
@@ -1646,42 +1697,111 @@ class NewInvoiceController extends GetxController {
       }
     }
   }
+  ///chnaged 18/12
+  // TextEditingController getQuantityController(int index, {double? initialValue}) {
+  //   // Ensure we have the right number of controllers
+  //   while (quantityControllers.length < invoiceItems.length) {
+  //     final itemIndex = quantityControllers.length;
+  //     final item = invoiceItems[itemIndex];
+  //
+  //     String quantityText = "";
+  //
+  //     quantityControllers.add(
+  //       TextEditingController(text: quantityText),
+  //     );
+  //   }
+  //
+  //   // Remove extra controllers if items were removed
+  //   while (quantityControllers.length > invoiceItems.length) {
+  //     final removedController = quantityControllers.removeLast();
+  //     removedController.dispose();
+  //   }
+  //
+  //   if (index >= quantityControllers.length) {
+  //     print("⚠️ Warning: Index $index is out of bounds for quantityControllers");
+  //     return TextEditingController();
+  //   }
+  //
+  //   // ✅ Only update if initialValue is explicitly provided AND controller is empty
+  //   if (initialValue != null && quantityControllers[index].text.isEmpty) {
+  //     String newText = initialValue % 1 == 0
+  //         ? initialValue.toInt().toString()
+  //         : initialValue.toString();
+  //
+  //     quantityControllers[index].text = newText;
+  //     print("📝 Set initial quantity at index $index to: $newText");
+  //   }
+  //
+  //   return quantityControllers[index];
+  // }
 
-  TextEditingController getQuantityController(int index, {double? initialValue}) {
-    // Ensure we have the right number of controllers
+
+  void ensureControllersMatch() {
+    // Ensure quantity controllers match items
     while (quantityControllers.length < invoiceItems.length) {
-      final itemIndex = quantityControllers.length;
-      final item = invoiceItems[itemIndex];
-
-      String quantityText = "";
-
+      final index = quantityControllers.length;
+      final item = invoiceItems[index];
       quantityControllers.add(
-        TextEditingController(text: quantityText),
+        TextEditingController(
+          text: item.quantity > 0 ? item.quantity.toString() : '',
+        ),
       );
     }
 
-    // Remove extra controllers if items were removed
+    // Remove extra controllers
     while (quantityControllers.length > invoiceItems.length) {
-      final removedController = quantityControllers.removeLast();
-      removedController.dispose();
+      final controller = quantityControllers.removeLast();
+      controller.dispose();
     }
 
-    if (index >= quantityControllers.length) {
-      print("⚠️ Warning: Index $index is out of bounds for quantityControllers");
-      return TextEditingController();
+    // Ensure price controllers match items
+    while (priceControllers.length < invoiceItems.length) {
+      final index = priceControllers.length;
+      final item = invoiceItems[index];
+      priceControllers.add(
+        TextEditingController(
+          text: item.rate > 0 ? item.rate.toInt().toString() : '',
+        ),
+      );
     }
 
-    // ✅ Only update if initialValue is explicitly provided AND controller is empty
-    if (initialValue != null && quantityControllers[index].text.isEmpty) {
+    // Remove extra price controllers
+    while (priceControllers.length > invoiceItems.length) {
+      final controller = priceControllers.removeLast();
+      controller.dispose();
+    }
+  }
+
+  TextEditingController getQuantityController(int index, {double? initialValue}) {
+    // ✅ Don't modify lists during build - just return what exists
+    if (index >= quantityControllers.length || index < 0) {
+      print("⚠️ Index $index out of bounds for quantityControllers (length: ${quantityControllers.length})");
+      // Return a temporary controller (will be fixed on next frame)
+      return TextEditingController(text: initialValue?.toString() ?? '');
+    }
+
+    final controller = quantityControllers[index];
+
+    // Only update text if different (avoid infinite loops)
+    if (initialValue != null) {
       String newText = initialValue % 1 == 0
           ? initialValue.toInt().toString()
           : initialValue.toString();
 
-      quantityControllers[index].text = newText;
-      print("📝 Set initial quantity at index $index to: $newText");
+      if (controller.text != newText) {
+        // Use post-frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!controller.hasListeners) return; // Skip if disposed
+          try {
+            controller.text = newText;
+          } catch (e) {
+            print("⚠️ Could not update controller: $e");
+          }
+        });
+      }
     }
 
-    return quantityControllers[index];
+    return controller;
   }
 
 // // Keep this method for programmatic updates:
@@ -1848,6 +1968,7 @@ class NewInvoiceController extends GetxController {
     // ✅ UPDATE CONTROLLERS for the current index
     //updateQuantityController(index, currentItem.quantity);
     updatePriceController(index, item.price.toDouble());
+    ensureControllersMatch();
 
     calculateTotals();
   }
@@ -1907,7 +2028,7 @@ class NewInvoiceController extends GetxController {
 
       itemsWithStockViolation.assignAll(newViolations);
       violationMessages.assignAll(newMessages);
-
+      ensureControllersMatch();
 
       calculateTotals();
 
@@ -2314,7 +2435,14 @@ class NewInvoiceController extends GetxController {
           AppConstants.userId,
         );
 
+        // ✅ CRITICAL FIX: Close any open snackbars BEFORE navigation
+        try {
+          Get.closeAllSnackbars();
+        } catch (e) {
+          print("⚠️ Could not close snackbars: $e");
+        }
 
+        // ✅ Navigate back first
         Get.back(result: true);
         _refreshParentControllers();
 
@@ -2484,6 +2612,16 @@ class NewInvoiceController extends GetxController {
             // Don't fail the whole operation if this fails
           }
         }
+        // ✅ CRITICAL FIX: Close all snackbars BEFORE navigation
+        try {
+          Get.closeAllSnackbars();
+        } catch (e) {
+          print("⚠️ Could not close snackbars: $e");
+        }
+
+        // ✅ Clear form and navigate back FIRST
+        clearForm();
+        Get.back(result: true);
 
         showCustomSnackbar(
           title: "Success",
@@ -2492,16 +2630,19 @@ class NewInvoiceController extends GetxController {
           icon: Icons.check_circle_outline,
         );
 
-
-        clearForm();
-        Get.back(result: true);
-
         return true;
       }
 
     } catch (e, stackTrace) {
       print("Error saving invoice: $e");
       print("Stack trace: $stackTrace");
+
+      // ✅ Close any open snackbars before showing error
+      try {
+        Get.closeAllSnackbars();
+      } catch (e) {
+        print("⚠️ Could not close snackbars: $e");
+      }
 
       showCustomSnackbar(
         title: "Error",
@@ -2519,6 +2660,11 @@ class NewInvoiceController extends GetxController {
 
   void clearForm() {
     formKey.currentState?.reset();
+    // ✅ Dispose description controllers before clearing items
+    for (var item in invoiceItems) {
+      item.descriptionController?.dispose();
+    }
+
     invoiceItems.clear();
     clearCustomerSelection();
     notesController.clear();
@@ -2526,6 +2672,10 @@ class NewInvoiceController extends GetxController {
     receivedAmountController.clear();
     receivedAmount.value = 0.0;
     pendingAmount.value = 0.0;
+    // ✅ Clear violations
+    itemsWithStockViolation.clear();
+    violationMessages.clear();
+
     calculateTotals();
     // ✅ Clear all controllers
     for (var controller in priceControllers) {
@@ -2536,6 +2686,7 @@ class NewInvoiceController extends GetxController {
     for (var controller in quantityControllers) {
       controller.dispose();
     }
+    quantityControllers.clear();
 
     initializeInvoice();
   }
@@ -2547,19 +2698,29 @@ class NewInvoiceController extends GetxController {
     required IconData icon,
     Duration? duration,
   }) {
-    Get.snackbar(
-      title,
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: baseColor,
-      colorText: Colors.white,
-      icon: Icon(icon, color: Colors.white),
-      duration: duration ?? Duration(seconds: 3),
-      margin: EdgeInsets.all(10),
-      borderRadius: 8,
-      isDismissible: true,
-      dismissDirection: DismissDirection.horizontal,
-    );
+    try {
+      // ✅ Check if we're still on a valid route
+      if (Get.context == null) {
+        print("⚠️ No context available for snackbar");
+        return;
+      }
+
+      Get.snackbar(
+        title,
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: baseColor,
+        colorText: Colors.white,
+        icon: Icon(icon, color: Colors.white),
+        duration: duration ?? Duration(seconds: 3),
+        margin: EdgeInsets.all(10),
+        borderRadius: 8,
+        isDismissible: true,
+        dismissDirection: DismissDirection.horizontal,
+      );
+    } catch (e) {
+      print("⚠️ Error showing snackbar: $e");
+    }
   }
 
   Future<void> selectFromDate(BuildContext context) async {

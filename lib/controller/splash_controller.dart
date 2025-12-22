@@ -167,11 +167,17 @@ class SplashController extends BaseController {
       final isChallanEnabled = data['isChallanEnabled'] ?? false;
       final isGstEnabled = data['isGstEnabled'] ?? false;
       final businessType = data['businessType'] ?? 'Trading';
+      final isDueDateEnabled = data['isDueDateEnabled'] ?? false;
+      final dueDateDays = data['dueDateDays'] ?? 0;
+
 
       // Store in SharedPreferences
       await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
       await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
       await AppConstants.setBusinessType(businessType);
+      await AppConstants.setDueDateEnabled(isDueDateEnabled);
+      await AppConstants.setDueDateDays(dueDateDays is int ? dueDateDays : int.tryParse(dueDateDays.toString()) ?? 0);
+
 
       // Update AppConstants
       AppConstants.isChallan.value = isChallanEnabled;

@@ -82,13 +82,7 @@ class ItemScreen extends GetView<ItemController> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => Get.back(),
-          ),
-        ),
+        foregroundColor: Colors.white,
         title: const Text(
           "Items Management",
           style: TextStyle(

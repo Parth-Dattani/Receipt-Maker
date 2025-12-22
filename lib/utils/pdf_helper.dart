@@ -2,7 +2,9 @@ import 'dart:io' as io;
 import 'dart:ui';
 import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/animation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
@@ -117,20 +119,22 @@ class InvoiceHelper {
                                   color: primaryColor,
                                   fontSize: 18,
                                   fontWeight: pw.FontWeight.bold)),
-                          pw.SizedBox(height: 5),
+                          pw.SizedBox(height: 3),
                           pw.Text(companyAddress,
-                              style: pw.TextStyle(color: primaryColor, fontSize: 10)),
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
                           pw.Text('$companyCity, $companyState - $companyPin',
-                              style: pw.TextStyle(color: primaryColor, fontSize: 10)),
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
                           pw.SizedBox(height: 3),
                           pw.Text("Phone: $companyPhone",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                          pw.Text("PAN: $companyPan",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
-                          pw.Text("GST: $companyGst",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyPan.isNotEmpty)
+                            pw.Text("PAN: $companyPan",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyGst.isNotEmpty)
+                            pw.Text("GST: $companyGst",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                         ],
                       ),
                     ),
@@ -169,10 +173,12 @@ class InvoiceHelper {
                                       color: PdfColors.grey700, fontSize: 9)),
                             ],
                           ),
-                          pw.SizedBox(height: 2),
-                          // ✅ Due Date
-                          pw.Row(
-                            children: [
+                          // ✅ DUE DATE - Only show if enabled
+                            if (AppConstants.isDueDateEnabled.value) ...[
+                            pw.SizedBox(height: 2),
+                            // ✅ Due Date
+                            pw.Row(
+                              children: [
                               pw.Text('Due: ',
                                   style: pw.TextStyle(
                                       fontSize: 9,
@@ -184,7 +190,8 @@ class InvoiceHelper {
                                       fontSize: 9,
                                       fontWeight: pw.FontWeight.bold)),
                             ],
-                          ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -192,11 +199,11 @@ class InvoiceHelper {
                 ),
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 10),
 
               /// Bill To
               pw.Container(
-                padding: pw.EdgeInsets.all(15),
+                padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: PdfColors.grey50,
                   borderRadius: pw.BorderRadius.circular(8),
@@ -208,31 +215,30 @@ class InvoiceHelper {
                     pw.Text('TO:',
                         style: pw.TextStyle(
                             fontWeight: pw.FontWeight.bold,
-                            color: primaryColor,
                             fontSize: 12)),
                     pw.SizedBox(height: 6),
                     pw.Text(userName,
                         style: pw.TextStyle(
                             fontWeight: pw.FontWeight.bold, fontSize: 12)),
                     if (customerAddress.isNotEmpty)
-                      pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
+                      pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8.5)),
                     pw.SizedBox(height: 3),
                     pw.Text('Phone: $phoneNumber',
-                        style: pw.TextStyle(fontSize: 9)),
+                        style: pw.TextStyle(fontSize: 8.5),),
                     if (customerEmail.isNotEmpty)
                       pw.Text('Email: $customerEmail',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                     if (customerPAN.isNotEmpty)
                       pw.Text('PAN: $customerPAN',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                     if (customerGST.isNotEmpty)
                       pw.Text('GST: $customerGST',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                   ],
                 ),
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 10),
 
               /// Items Table
               pw.Container(
@@ -312,7 +318,7 @@ class InvoiceHelper {
 
                           // ✅ FIXED: Show item name + optional description
                           pw.Padding(
-                            padding: pw.EdgeInsets.all(8),
+                            padding: pw.EdgeInsets.all(4),
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
@@ -320,7 +326,7 @@ class InvoiceHelper {
                                 pw.Text(
                                   displayItemName,
                                   style: pw.TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 8.5,
                                     color: primaryColor,
                                     fontWeight: pw.FontWeight.bold,
                                   ),
@@ -376,31 +382,89 @@ class InvoiceHelper {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('NOTES',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: primaryColor,
-                                  fontSize: 11)),
-                          pw.SizedBox(height: 6),
-                          pw.Text(
-                            notes.isNotEmpty
-                                ? notes
-                                : 'Thank you for your business!',
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                          pw.SizedBox(height: 15),
+
                           pw.Text('BANK DETAILS',
                               style: pw.TextStyle(
                                   fontWeight: pw.FontWeight.bold,
-                                  color: primaryColor,
                                   fontSize: 11)),
                           pw.SizedBox(height: 5),
+                          if (companyBank.isNotEmpty)
                           pw.Text('Bank: $companyBank',
                               style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('A/C: $companyAccount',
-                              style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('IFSC: $companyIfsc',
-                              style: pw.TextStyle(fontSize: 9)),
+                          if (companyAccount.isNotEmpty)
+                            pw.Text('A/C: $companyAccount',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (companyIfsc.isNotEmpty)
+                            pw.Text('IFSC: $companyIfsc',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (companyUpi.isNotEmpty)
+                            pw.Text('Upi: $companyUpi',
+                                style: pw.TextStyle(fontSize: 9)),
+
+                          pw.SizedBox(height: 15),
+                          pw.Text('NOTES',
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 11)),
+                          pw.SizedBox(height: 6),
+
+                            // Main invoice notes
+                          if (notes.isNotEmpty.toString().trim().isNotEmpty)
+
+                            pw.Text(notes, style: pw.TextStyle(fontSize: 7.5)),
+
+                          // 🆕 EXTRA NOTES - Only show if enabled
+                          if (companyData['isExtraNotesEnabled'] == true) ...[
+                            // Extra Note 1
+                            if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 3.5),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote1'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Extra Note 2
+                            if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 6),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote2'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Extra Note 3
+                            if ((companyData['extraNote3'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 6),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote3'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+
                         ],
                       ),
                     ),
@@ -431,7 +495,7 @@ class InvoiceHelper {
                               isTotal: true,
                               isBold: true,
                               primaryColor: primaryColor),
-                          pw.SizedBox(height: 12),
+                          pw.SizedBox(height: 10),
                           pw.Container(
                             width: double.infinity,
                             padding: pw.EdgeInsets.all(8),
@@ -452,7 +516,7 @@ class InvoiceHelper {
                 ],
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 15),
 
               /// Signatures
               pw.Row(
@@ -479,7 +543,7 @@ class InvoiceHelper {
                 ],
               ),
 
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 15),
               pw.Center(
                 child: pw.Text(
                   'Thank you for your business! • This is a computer generated invoice',
@@ -490,74 +554,75 @@ class InvoiceHelper {
                 ),
               ),
 
-              pw.Spacer(),
+              ///this footer Is Only Last page
+              //pw.Spacer(),
 
               /// Advertise Footer - Single Line Compact
-              pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 8),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey50,
-                  border: pw.Border(
-                    top: pw.BorderSide(color: borderColor, width: 1),
-                  ),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Left side - Application By & Address
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: App Name
-                        pw.Text(
-                          "Application By: Intelligent Tech",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: primaryColor,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Address
-                        pw.Text(
-                          "252, NEO Square, P.N.Marg Jamnagar",
-                          style: pw.TextStyle(
-                            fontSize: 7,
-                            color: PdfColors.grey600,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Right side - Website & Email
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: Website
-                        pw.Text(
-                          "www.intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: PdfColors.blue700,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Email
-                        pw.Text(
-                          "info@intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.blue700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // pw.Container(
+              //   padding: pw.EdgeInsets.symmetric(vertical: 8),
+              //   decoration: pw.BoxDecoration(
+              //     color: PdfColors.grey50,
+              //     border: pw.Border(
+              //       top: pw.BorderSide(color: borderColor, width: 1),
+              //     ),
+              //   ),
+              //   child: pw.Row(
+              //     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              //     children: [
+              //       // Left side - Application By & Address
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.start,
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: App Name
+              //           pw.Text(
+              //             "Application By: Intelligent Tech",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: primaryColor,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Address
+              //           pw.Text(
+              //             "252, NEO Square, P.N.Marg Jamnagar",
+              //             style: pw.TextStyle(
+              //               fontSize: 7,
+              //               color: PdfColors.grey600,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //
+              //       // Right side - Website & Email
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: Website
+              //           pw.Text(
+              //             "www.intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: PdfColors.blue700,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Email
+              //           pw.Text(
+              //             "info@intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 8,
+              //               color: PdfColors.blue700,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ];
           },
         ),
@@ -579,35 +644,68 @@ class InvoiceHelper {
      // final filePath = '${directory.path}/${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
       final String filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
 
+      // if (kIsWeb) {
+      //   // -------------------------------------------
+      //   // 💻 WEB: Download the PDF
+      //   // -------------------------------------------
+      //
+      //   // Create Blob from bytes
+      //   final blob = html.Blob([bytes], 'application/pdf');
+      //
+      //   // Create an object URL for the Blob
+      //   final url = html.Url.createObjectUrlFromBlob(blob);
+      //
+      //   // Create a hidden anchor element to trigger download
+      //   final anchor = html.AnchorElement()
+      //     ..href = url
+      //     ..style.display = 'none'
+      //     ..download = filename; // This attribute forces download
+      //
+      //   // Add to DOM, click, and remove
+      //   html.document.body?.children.add(anchor);
+      //   anchor.click();
+      //   html.document.body?.children.remove(anchor);
+      //
+      //   // Revoke the URL to free memory
+      //   html.Url.revokeObjectUrl(url);
+      //
+      //   print("✅ Web Download Triggered: $filename");
+      //
+      // }
       if (kIsWeb) {
-        // -------------------------------------------
-        // 💻 WEB: Download the PDF
-        // -------------------------------------------
+        try {
+          print("🌐 Opening print dialog for: $filename");
 
-        // Create Blob from bytes
-        final blob = html.Blob([bytes], 'application/pdf');
+          await Printing.layoutPdf(
+            onLayout: (PdfPageFormat format) async => bytes,
+            name: filename,
+          );
 
-        // Create an object URL for the Blob
-        final url = html.Url.createObjectUrlFromBlob(blob);
+          print("✅ Print dialog opened successfully");
 
-        // Create a hidden anchor element to trigger download
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = filename; // This attribute forces download
+          Get.snackbar(
+            'Ready to Print',
+            'Print dialog opened successfully',
+            backgroundColor: Colors.green.shade100,
+            colorText: Colors.green.shade800,
+            icon: Icon(Icons.print, color: Colors.green.shade700),
+          );
 
-        // Add to DOM, click, and remove
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        html.document.body?.children.remove(anchor);
+        } catch (e) {
+          print("❌ Error opening print dialog: $e");
 
-        // Revoke the URL to free memory
-        html.Url.revokeObjectUrl(url);
+          Get.snackbar(
+            'Print Error',
+            'Could not open print dialog: ${e.toString()}',
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade800,
+            icon: Icon(Icons.error_outline, color: Colors.red.shade700),
+          );
+        }
 
-        print("✅ Web Download Triggered: $filename");
-
+        return null;
       }
-      else {
+    else {
         // -------------------------------------------
         // 📱 MOBILE: Save to Storage & Share
         // -------------------------------------------
@@ -690,6 +788,7 @@ class InvoiceHelper {
       String companyGst = companyData['gst'] ?? 'XXXXXXXXXXXXXXX';
       String companyBank = companyData['bankName'] ?? 'Bank Name';
       String companyAccount = companyData['accountNumber'] ?? 'Account Number';
+      String companyUpi = companyData['upiId'] ?? 'Upi Id';
       String companyIfsc = companyData['ifsc'] ?? 'IFSC Code';
       String companyPan = companyData['pan'] ?? 'PAN Number';
 
@@ -707,12 +806,13 @@ class InvoiceHelper {
           pageFormat: PdfPageFormat.a4,
           theme: theme,
           margin: pw.EdgeInsets.all(25),
+          footer: _buildFooter,
           build: (pw.Context context) {
             return [
               /// Header
               pw.Container(
                 width: double.infinity,
-                padding: pw.EdgeInsets.all(18),
+                padding: pw.EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: headerBg,
                   borderRadius: pw.BorderRadius.circular(10),
@@ -733,20 +833,22 @@ class InvoiceHelper {
                                   color: primaryColor,
                                   fontSize: 18,
                                   fontWeight: pw.FontWeight.bold)),
-                          pw.SizedBox(height: 5),
+                          pw.SizedBox(height: 3),
                           pw.Text(companyAddress,
-                              style: pw.TextStyle(color: primaryColor, fontSize: 10)),
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
                           pw.Text('$companyCity, $companyState - $companyPin',
-                              style: pw.TextStyle(color: primaryColor, fontSize: 10)),
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
                           pw.SizedBox(height: 3),
                           pw.Text("Phone: $companyPhone",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyPan.isNotEmpty)
                           pw.Text("PAN: $companyPan",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyGst.isNotEmpty)
                           pw.Text("GST: $companyGst",
-                              style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                         ],
                       ),
                     ),
@@ -812,7 +914,7 @@ class InvoiceHelper {
 
               /// Bill To & Challan Date Range
               pw.Container(
-                padding: pw.EdgeInsets.all(15),
+                padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: PdfColors.grey50,
                   borderRadius: pw.BorderRadius.circular(8),
@@ -831,27 +933,26 @@ class InvoiceHelper {
                           pw.Text('TO:',
                               style: pw.TextStyle(
                                   fontWeight: pw.FontWeight.bold,
-                                  color: primaryColor,
                                   fontSize: 12)),
                           pw.SizedBox(height: 6),
                           pw.Text(userName,
                               style: pw.TextStyle(
                                   fontWeight: pw.FontWeight.bold, fontSize: 12)),
                           if (customerAddress.isNotEmpty)
-                            pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
+                            pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8.5)),
                           pw.SizedBox(height: 3),
                           if (phoneNumber.isNotEmpty)
                             pw.Text('Phone: $phoneNumber',
-                                style: pw.TextStyle(fontSize: 9)),
+                                style: pw.TextStyle(fontSize: 8.5)),
                           if (customerEmail.isNotEmpty)
                             pw.Text('Email: $customerEmail',
-                                style: pw.TextStyle(fontSize: 9)),
+                                style: pw.TextStyle(fontSize: 8.5)),
                           if (customerPAN.isNotEmpty)
                             pw.Text('PAN: $customerPAN',
-                                style: pw.TextStyle(fontSize: 9)),
+                                style: pw.TextStyle(fontSize: 8.5)),
                           if (customerGST.isNotEmpty)
                             pw.Text('GST: $customerGST',
-                                style: pw.TextStyle(fontSize: 9)),
+                                style: pw.TextStyle(fontSize: 8.5)),
                         ],
                       ),
                     ),
@@ -864,7 +965,7 @@ class InvoiceHelper {
                             style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
                                 color: primaryColor,
-                                fontSize: 11)),
+                                fontSize: 10)),
                         pw.SizedBox(height: 4),
                         pw.Text('From: ${AppUtil.formatDate(fromDate)}',
                             style: pw.TextStyle(fontSize: 9)),
@@ -876,7 +977,7 @@ class InvoiceHelper {
                 ),
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 10),
 
               /// Items Table - FIXED COLUMN WIDTHS
               pw.Container(
@@ -1021,31 +1122,90 @@ class InvoiceHelper {
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text('NOTES',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: primaryColor,
-                                  fontSize: 11)),
-                          pw.SizedBox(height: 6),
-                          pw.Text(
-                            notes.isNotEmpty
-                                ? notes
-                                : 'Thank you for your business!',
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                          pw.SizedBox(height: 15),
                           pw.Text('BANK DETAILS',
                               style: pw.TextStyle(
                                   fontWeight: pw.FontWeight.bold,
                                   color: primaryColor,
                                   fontSize: 11)),
                           pw.SizedBox(height: 5),
-                          pw.Text('Bank: $companyBank',
-                              style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('A/C: $companyAccount',
-                              style: pw.TextStyle(fontSize: 9)),
-                          pw.Text('IFSC: $companyIfsc',
-                              style: pw.TextStyle(fontSize: 9)),
+                          if (companyBank.isNotEmpty)
+                            pw.Text('Bank: $companyBank',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (companyAccount.isNotEmpty)
+                            pw.Text('A/C: $companyAccount',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (companyIfsc.isNotEmpty)
+                            pw.Text('IFSC: $companyIfsc',
+                                style: pw.TextStyle(fontSize: 9)),
+                          if (companyUpi.isNotEmpty)
+                            pw.Text('Upi: $companyUpi',
+                                style: pw.TextStyle(fontSize: 9)),
+
+                          pw.SizedBox(height: 15),
+                          pw.Text('NOTES',
+                              style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: primaryColor,
+                                  fontSize: 11)),
+                          pw.SizedBox(height: 6),
+                          // Main invoice notes
+                          if (notes.isNotEmpty.toString().trim().isNotEmpty)
+
+                            pw.Text(notes, style: pw.TextStyle(fontSize: 7.5)),
+
+                          // 🆕 EXTRA NOTES - Only show if enabled
+                          if (companyData['isExtraNotesEnabled'] == true) ...[
+                            // Extra Note 1
+                            if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 3.5),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote1'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Extra Note 2
+                            if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 6),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote2'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            // Extra Note 3
+                            if ((companyData['extraNote3'] ?? '').toString().trim().isNotEmpty) ...[
+                              pw.SizedBox(height: 6),
+                              pw.Row(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                  pw.Expanded(
+                                    child: pw.Text(
+                                      companyData['extraNote3'].toString().trim(),
+                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+
+
                         ],
                       ),
                     ),
@@ -1097,7 +1257,7 @@ class InvoiceHelper {
                 ],
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 15),
 
               /// Signatures
               pw.Row(
@@ -1124,7 +1284,7 @@ class InvoiceHelper {
                 ],
               ),
 
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 15),
               pw.Center(
                 child: pw.Text(
                   'Thank you for your business! • This is a computer generated invoice',
@@ -1135,74 +1295,74 @@ class InvoiceHelper {
                 ),
               ),
 
-              pw.Spacer(),
-
-              /// Advertise Footer - Single Line Compact
-              pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 8),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey50,
-                  border: pw.Border(
-                    top: pw.BorderSide(color: borderColor, width: 1),
-                  ),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Left side - Application By & Address
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: App Name
-                        pw.Text(
-                          "Application By: Intelligent Tech",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: primaryColor,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Address
-                        pw.Text(
-                          "252, NEO Square, P.N.Marg Jamnagar",
-                          style: pw.TextStyle(
-                            fontSize: 7,
-                            color: PdfColors.grey600,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Right side - Website & Email
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: Website
-                        pw.Text(
-                          "www.intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: PdfColors.blue700,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Email
-                        pw.Text(
-                          "info@intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.blue700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // pw.Spacer(),
+              //
+              // /// Advertise Footer - Single Line Compact
+              // pw.Container(
+              //   padding: pw.EdgeInsets.symmetric(vertical: 8),
+              //   decoration: pw.BoxDecoration(
+              //     color: PdfColors.grey50,
+              //     border: pw.Border(
+              //       top: pw.BorderSide(color: borderColor, width: 1),
+              //     ),
+              //   ),
+              //   child: pw.Row(
+              //     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              //     children: [
+              //       // Left side - Application By & Address
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.start,
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: App Name
+              //           pw.Text(
+              //             "Application By: Intelligent Tech",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: primaryColor,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Address
+              //           pw.Text(
+              //             "252, NEO Square, P.N.Marg Jamnagar",
+              //             style: pw.TextStyle(
+              //               fontSize: 7,
+              //               color: PdfColors.grey600,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //
+              //       // Right side - Website & Email
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: Website
+              //           pw.Text(
+              //             "www.intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: PdfColors.blue700,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Email
+              //           pw.Text(
+              //             "info@intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 8,
+              //               color: PdfColors.blue700,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ];
           },
         ),
@@ -1223,33 +1383,66 @@ class InvoiceHelper {
 
       final filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
 
+      // if (kIsWeb) {
+      //   // -------------------------------------------
+      //   // 💻 WEB: Download the PDF
+      //   // -------------------------------------------
+      //
+      //   // Create Blob from bytes
+      //   final blob = html.Blob([bytes], 'application/pdf');
+      //
+      //   // Create an object URL for the Blob
+      //   final url = html.Url.createObjectUrlFromBlob(blob);
+      //
+      //   // Create a hidden anchor element to trigger download
+      //   final anchor = html.AnchorElement()
+      //     ..href = url
+      //     ..style.display = 'none'
+      //     ..download = filename; // This attribute forces download
+      //
+      //   // Add to DOM, click, and remove
+      //   html.document.body?.children.add(anchor);
+      //   anchor.click();
+      //   html.document.body?.children.remove(anchor);
+      //
+      //   // Revoke the URL to free memory
+      //   html.Url.revokeObjectUrl(url);
+      //
+      //   print("✅ Web Download Triggered: $filename");
+      //
+      // }
       if (kIsWeb) {
-        // -------------------------------------------
-        // 💻 WEB: Download the PDF
-        // -------------------------------------------
+        try {
+          print("🌐 Opening print dialog for: $filename");
 
-        // Create Blob from bytes
-        final blob = html.Blob([bytes], 'application/pdf');
+          await Printing.layoutPdf(
+            onLayout: (PdfPageFormat format) async => bytes,
+            name: filename,
+          );
 
-        // Create an object URL for the Blob
-        final url = html.Url.createObjectUrlFromBlob(blob);
+          print("✅ Print dialog opened successfully");
 
-        // Create a hidden anchor element to trigger download
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = filename; // This attribute forces download
+          Get.snackbar(
+            'Ready to Print',
+            'Print dialog opened successfully',
+            backgroundColor: Colors.green.shade100,
+            colorText: Colors.green.shade800,
+            icon: Icon(Icons.print, color: Colors.green.shade700),
+          );
 
-        // Add to DOM, click, and remove
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        html.document.body?.children.remove(anchor);
+        } catch (e) {
+          print("❌ Error opening print dialog: $e");
 
-        // Revoke the URL to free memory
-        html.Url.revokeObjectUrl(url);
+          Get.snackbar(
+            'Print Error',
+            'Could not open print dialog: ${e.toString()}',
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade800,
+            icon: Icon(Icons.error_outline, color: Colors.red.shade700),
+          );
+        }
 
-        print("✅ Web Download Triggered: $filename");
-
+        return null;
       }
       else {
         // -------------------------------------------
@@ -1343,12 +1536,13 @@ class InvoiceHelper {
           pageFormat: PdfPageFormat.a4,
           theme: theme,
           margin: pw.EdgeInsets.all(25),
+          footer: _buildFooter,
           build: (pw.Context context) {
             return [
               /// Header
               pw.Container(
                 width: double.infinity,
-                padding: pw.EdgeInsets.all(18),
+                padding: pw.EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: headerBg,
                   borderRadius: pw.BorderRadius.circular(10),
@@ -1369,7 +1563,7 @@ class InvoiceHelper {
                                   color: primaryColor,
                                   fontSize: 18,
                                   fontWeight: pw.FontWeight.bold)),
-                          pw.SizedBox(height: 5),
+                          pw.SizedBox(height: 3),
                           pw.Text(companyAddress,
                               style: pw.TextStyle(color: primaryColor, fontSize: 10)),
                           pw.Text('$companyCity, $companyState - $companyPin',
@@ -1379,8 +1573,10 @@ class InvoiceHelper {
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                           pw.Text("Email: $companyEmail",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                          if (companyPan.isNotEmpty)
                           pw.Text("PAN: $companyPan",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                          if (companyGst.isNotEmpty)
                           pw.Text("GST: $companyGst",
                               style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                         ],
@@ -1420,7 +1616,7 @@ class InvoiceHelper {
 
               /// To Section
               pw.Container(
-                padding: pw.EdgeInsets.all(15),
+                padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                 decoration: pw.BoxDecoration(
                   color: PdfColors.grey50,
                   borderRadius: pw.BorderRadius.circular(8),
@@ -1432,7 +1628,6 @@ class InvoiceHelper {
                     pw.Text('TO:',
                         style: pw.TextStyle(
                             fontWeight: pw.FontWeight.bold,
-                            color: primaryColor,
                             fontSize: 12)),
                     pw.SizedBox(height: 6),
                     pw.Text(userName,
@@ -1442,21 +1637,21 @@ class InvoiceHelper {
                       pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
                     pw.SizedBox(height: 3),
                     pw.Text('Phone: $phoneNumber',
-                        style: pw.TextStyle(fontSize: 9)),
+                        style: pw.TextStyle(fontSize: 8.5)),
                     if (customerEmail.isNotEmpty)
                       pw.Text('Email: $customerEmail',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                     if (customerPan.isNotEmpty)
                       pw.Text('PAN: $customerPan',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                     if (customerGst.isNotEmpty)
                       pw.Text('GST: $customerGst',
-                          style: pw.TextStyle(fontSize: 9)),
+                          style: pw.TextStyle(fontSize: 8.5)),
                   ],
                 ),
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 10),
 
               /// Items Table - FIXED COLUMN WIDTHS
               pw.Container(
@@ -1632,7 +1827,7 @@ class InvoiceHelper {
                 ],
               ),
 
-              pw.SizedBox(height: 25),
+              pw.SizedBox(height: 15),
 
               /// Signatures
               pw.Row(
@@ -1673,72 +1868,72 @@ class InvoiceHelper {
               /// Spacer pushes footer to bottom
               pw.Spacer(),
 
-              /// Advertise Footer - Single Line Compact
-              pw.Container(
-                padding: pw.EdgeInsets.symmetric(vertical: 8),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey50,
-                  border: pw.Border(
-                    top: pw.BorderSide(color: borderColor, width: 1),
-                  ),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Left side - Application By & Address
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: App Name
-                        pw.Text(
-                          "Application By: Intelligent Tech",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: primaryColor,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Address
-                        pw.Text(
-                          "252, NEO Square, P.N.Marg Jamnagar",
-                          style: pw.TextStyle(
-                            fontSize: 7,
-                            color: PdfColors.grey600,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Right side - Website & Email
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
-                      mainAxisSize: pw.MainAxisSize.min,
-                      children: [
-                        // 1st Line: Website
-                        pw.Text(
-                          "www.intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 9,
-                            color: PdfColors.blue700,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        // 2nd Line: Email
-                        pw.Text(
-                          "info@intelligenttech.in",
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.blue700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              // /// Advertise Footer - Single Line Compact
+              // pw.Container(
+              //   padding: pw.EdgeInsets.symmetric(vertical: 8),
+              //   decoration: pw.BoxDecoration(
+              //     color: PdfColors.grey50,
+              //     border: pw.Border(
+              //       top: pw.BorderSide(color: borderColor, width: 1),
+              //     ),
+              //   ),
+              //   child: pw.Row(
+              //     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              //     children: [
+              //       // Left side - Application By & Address
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.start,
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: App Name
+              //           pw.Text(
+              //             "Application By: Intelligent Tech",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: primaryColor,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Address
+              //           pw.Text(
+              //             "252, NEO Square, P.N.Marg Jamnagar",
+              //             style: pw.TextStyle(
+              //               fontSize: 7,
+              //               color: PdfColors.grey600,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //
+              //       // Right side - Website & Email
+              //       pw.Column(
+              //         crossAxisAlignment: pw.CrossAxisAlignment.end, // Align text to the right
+              //         mainAxisSize: pw.MainAxisSize.min,
+              //         children: [
+              //           // 1st Line: Website
+              //           pw.Text(
+              //             "www.intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 9,
+              //               color: PdfColors.blue700,
+              //               fontWeight: pw.FontWeight.bold,
+              //             ),
+              //           ),
+              //           pw.SizedBox(height: 2),
+              //           // 2nd Line: Email
+              //           pw.Text(
+              //             "info@intelligenttech.in",
+              //             style: pw.TextStyle(
+              //               fontSize: 8,
+              //               color: PdfColors.blue700,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ];
           },
         ),
@@ -1749,24 +1944,57 @@ class InvoiceHelper {
       //final directory = await getApplicationDocumentsDirectory();
       final filename = 'Challan_${challanId}_$userName.pdf';
 
+      // if (kIsWeb) {
+      //   // -------------------------------------------
+      //   // 💻 WEB: Download the PDF
+      //   // -------------------------------------------
+      //   final blob = html.Blob([bytes], 'application/pdf');
+      //   final url = html.Url.createObjectUrlFromBlob(blob);
+      //   final anchor = html.AnchorElement()
+      //     ..href = url
+      //     ..style.display = 'none'
+      //     ..download = filename;
+      //
+      //   html.document.body?.children.add(anchor);
+      //   anchor.click();
+      //   html.document.body?.children.remove(anchor);
+      //   html.Url.revokeObjectUrl(url);
+      //
+      //   print("✅ Web Download Triggered: $filename");
+      //
+      // }
       if (kIsWeb) {
-        // -------------------------------------------
-        // 💻 WEB: Download the PDF
-        // -------------------------------------------
-        final blob = html.Blob([bytes], 'application/pdf');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = filename;
+        try {
+          print("🌐 Opening print dialog for: $filename");
 
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        html.document.body?.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
+          await Printing.layoutPdf(
+            onLayout: (PdfPageFormat format) async => bytes,
+            name: filename,
+          );
 
-        print("✅ Web Download Triggered: $filename");
+          print("✅ Print dialog opened successfully");
 
+          Get.snackbar(
+            'Ready to Print',
+            'Print dialog opened successfully',
+            backgroundColor: Colors.green.shade100,
+            colorText: Colors.green.shade800,
+            icon: Icon(Icons.print, color: Colors.green.shade700),
+          );
+
+        } catch (e) {
+          print("❌ Error opening print dialog: $e");
+
+          Get.snackbar(
+            'Print Error',
+            'Could not open print dialog: ${e.toString()}',
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade800,
+            icon: Icon(Icons.error_outline, color: Colors.red.shade700),
+          );
+        }
+
+        return null;
       }
       else {
         // -------------------------------------------
@@ -3422,6 +3650,7 @@ class InvoiceHelper {
     String companyGst = companyData['gst'] ?? 'XXXXXXXXXXXXXXX';
     String companyBank = companyData['bankName'] ?? 'Bank Name';
     String companyAccount = companyData['accountNumber'] ?? 'Account Number';
+    String companyUpi = companyData['upiId'] ?? 'Upi Id';
     String companyIfsc = companyData['ifsc'] ?? 'IFSC Code';
     String companyPan = companyData['pan'] ?? 'PAN Number';
 
@@ -3458,12 +3687,13 @@ class InvoiceHelper {
         pageFormat: PdfPageFormat.a4,
         theme: theme,
         margin: pw.EdgeInsets.all(25),
+        footer: _buildFooter,
         build: (pw.Context context) {
           return [
             /// Header
             pw.Container(
               width: double.infinity,
-              padding: pw.EdgeInsets.all(18),
+              padding: pw.EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: pw.BoxDecoration(
                 color: headerBg,
                 borderRadius: pw.BorderRadius.circular(10),
@@ -3484,20 +3714,22 @@ class InvoiceHelper {
                                 color: primaryColor,
                                 fontSize: 18,
                                 fontWeight: pw.FontWeight.bold)),
-                        pw.SizedBox(height: 5),
+                        pw.SizedBox(height: 3),
                         pw.Text(companyAddress,
                             style: pw.TextStyle(color: primaryColor, fontSize: 10)),
                         pw.Text('$companyCity, $companyState - $companyPin',
                             style: pw.TextStyle(color: primaryColor, fontSize: 10)),
                         pw.SizedBox(height: 3),
                         pw.Text("Phone: $companyPhone",
-                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                            style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                         pw.Text("Email: $companyEmail",
-                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                            style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                        if (companyPan.isNotEmpty)
                         pw.Text("PAN: $companyPan",
-                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                            style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                        if (companyPan.isNotEmpty)
                         pw.Text("GST: $companyGst",
-                            style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                            style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
                       ],
                     ),
                   ),
@@ -3535,7 +3767,7 @@ class InvoiceHelper {
 
             /// Bill To Section
             pw.Container(
-              padding: pw.EdgeInsets.all(15),
+              padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey50,
                 borderRadius: pw.BorderRadius.circular(8),
@@ -3553,27 +3785,26 @@ class InvoiceHelper {
                         pw.Text('TO:',
                             style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
                                 fontSize: 12)),
                         pw.SizedBox(height: 6),
                         pw.Text(customerName,
                             style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold, fontSize: 12)),
                         if (customerAddress.isNotEmpty)
-                          pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
+                          pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8.5)),
                         pw.SizedBox(height: 3),
                         pw.Text('Phone: $customerPhone',
-                            style: pw.TextStyle(fontSize: 9)),
+                            style: pw.TextStyle(fontSize: 8.5)),
                         if (customerEmail.isNotEmpty)
                           pw.Text('Email: $customerEmail',
-                              style: pw.TextStyle(fontSize: 9)),
+                              style: pw.TextStyle(fontSize: 8.5)),
                         if (customerPAN.isNotEmpty)
                           pw.Text('PAN: $customerPAN',
-                              style: pw.TextStyle(fontSize: 9)),
+                              style: pw.TextStyle(fontSize: 8.5)),
 
                         if (customerGST.isNotEmpty)
                           pw.Text('GST: $customerGST',
-                              style: pw.TextStyle(fontSize: 9)),
+                              style: pw.TextStyle(fontSize: 8.5)),
 
                       ],
                     ),
@@ -3735,10 +3966,30 @@ class InvoiceHelper {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
+
+                        pw.Text('BANK DETAILS',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                fontSize: 11)),
+                        pw.SizedBox(height: 5),
+                        if (companyBank.isNotEmpty)
+                          pw.Text('Bank: $companyBank',
+                              style: pw.TextStyle(fontSize: 9)),
+                        if (companyAccount.isNotEmpty)
+                          pw.Text('A/C: $companyAccount',
+                              style: pw.TextStyle(fontSize: 9)),
+                        if (companyIfsc.isNotEmpty)
+                          pw.Text('IFSC: $companyIfsc',
+                              style: pw.TextStyle(fontSize: 9)),
+                        if (companyUpi.isNotEmpty)
+                          pw.Text('Upi: $companyUpi',
+                              style: pw.TextStyle(fontSize: 9)),
+
+                        pw.SizedBox(height: 15),
+
                         pw.Text('NOTES',
                             style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
                                 fontSize: 11)),
                         pw.SizedBox(height: 6),
                         pw.Text(
@@ -3749,19 +4000,7 @@ class InvoiceHelper {
                               : "Delivered as requested.",
                           style: pw.TextStyle(fontSize: 10),
                         ),
-                        pw.SizedBox(height: 15),
-                        pw.Text('BANK DETAILS',
-                            style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                                color: primaryColor,
-                                fontSize: 11)),
-                        pw.SizedBox(height: 5),
-                        pw.Text('Bank: $companyBank',
-                            style: pw.TextStyle(fontSize: 9)),
-                        pw.Text('A/C: $companyAccount',
-                            style: pw.TextStyle(fontSize: 9)),
-                        pw.Text('IFSC: $companyIfsc',
-                            style: pw.TextStyle(fontSize: 9)),
+
                       ],
                     ),
                   ),
@@ -3813,7 +4052,7 @@ class InvoiceHelper {
               ],
             ),
 
-            pw.SizedBox(height: 25),
+            pw.SizedBox(height: 15),
 
             /// Signatures
             pw.Row(
@@ -3840,7 +4079,7 @@ class InvoiceHelper {
               ],
             ),
 
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 15),
             pw.Center(
               child: pw.Text(
                 'Thank you for your business! • This is a computer generated ${docTitle.toLowerCase()}',
@@ -3851,56 +4090,56 @@ class InvoiceHelper {
               ),
             ),
 
-            /// Spacer pushes footer to bottom
-            pw.Spacer(),
-
-            /// Advertise Footer
-            pw.Container(
-              padding: pw.EdgeInsets.symmetric(vertical: 8),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey50,
-                border: pw.Border(
-                  top: pw.BorderSide(color: borderColor, width: 1),
-                ),
-              ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left side - Application info
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    mainAxisSize: pw.MainAxisSize.min,
-                    children: [
-                      pw.Text(
-                        "Application By: www.intelligenttech.in",
-                        style: pw.TextStyle(
-                          fontSize: 9,
-                          color: primaryColor,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
-                        style: pw.TextStyle(
-                          fontSize: 7,
-                          color: PdfColors.grey600,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Right side - Contact
-                  pw.Text(
-                    "info@intelligenttech.in",
-                    style: pw.TextStyle(
-                      fontSize: 8,
-                      color: PdfColors.blue700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // /// Spacer pushes footer to bottom
+            // pw.Spacer(),
+            //
+            // /// Advertise Footer
+            // pw.Container(
+            //   padding: pw.EdgeInsets.symmetric(vertical: 8),
+            //   decoration: pw.BoxDecoration(
+            //     color: PdfColors.grey50,
+            //     border: pw.Border(
+            //       top: pw.BorderSide(color: borderColor, width: 1),
+            //     ),
+            //   ),
+            //   child: pw.Row(
+            //     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            //     children: [
+            //       // Left side - Application info
+            //       pw.Column(
+            //         crossAxisAlignment: pw.CrossAxisAlignment.start,
+            //         mainAxisSize: pw.MainAxisSize.min,
+            //         children: [
+            //           pw.Text(
+            //             "Application By: www.intelligenttech.in",
+            //             style: pw.TextStyle(
+            //               fontSize: 9,
+            //               color: primaryColor,
+            //               fontWeight: pw.FontWeight.bold,
+            //             ),
+            //           ),
+            //           pw.SizedBox(height: 2),
+            //           pw.Text(
+            //             "iNTELLIGENTTECH tECH. 252, NEO Square, Jamnagar-8",
+            //             style: pw.TextStyle(
+            //               fontSize: 7,
+            //               color: PdfColors.grey600,
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //
+            //       // Right side - Contact
+            //       pw.Text(
+            //         "info@intelligenttech.in",
+            //         style: pw.TextStyle(
+            //           fontSize: 8,
+            //           color: PdfColors.blue700,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
           ];
         },
       ),
@@ -3911,25 +4150,58 @@ class InvoiceHelper {
     String safeDate = DateFormat('yyyyMMdd').format(docDate);
     String safeName = customerName?.replaceAll(' ', '_').replaceAll('/', '-') ?? 'Customer';
     final String filename = '${docTitle}_${docId}_${safeName}_${safeDate}.pdf';
+    // if (kIsWeb) {
+    //   // -------------------------------------------
+    //   // 💻 WEB: Download the PDF
+    //   // -------------------------------------------
+    //   final blob = html.Blob([bytes], 'application/pdf');
+    //   final url = html.Url.createObjectUrlFromBlob(blob);
+    //   final anchor = html.AnchorElement()
+    //     ..href = url
+    //     ..style.display = 'none'
+    //     ..download = filename;
+    //
+    //   html.document.body?.children.add(anchor);
+    //   anchor.click();
+    //   html.document.body?.children.remove(anchor);
+    //   html.Url.revokeObjectUrl(url);
+    //
+    //   print("✅ Web Download Triggered: $filename");
+    //   return null; // No File object on Web
+    //
+    // }
     if (kIsWeb) {
-      // -------------------------------------------
-      // 💻 WEB: Download the PDF
-      // -------------------------------------------
-      final blob = html.Blob([bytes], 'application/pdf');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement()
-        ..href = url
-        ..style.display = 'none'
-        ..download = filename;
+      try {
+        print("🌐 Opening print dialog for: $filename");
 
-      html.document.body?.children.add(anchor);
-      anchor.click();
-      html.document.body?.children.remove(anchor);
-      html.Url.revokeObjectUrl(url);
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => bytes,
+          name: filename,
+        );
 
-      print("✅ Web Download Triggered: $filename");
-      return null; // No File object on Web
+        print("✅ Print dialog opened successfully");
 
+        Get.snackbar(
+          'Ready to Print',
+          'Print dialog opened successfully',
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade800,
+          icon: Icon(Icons.print, color: Colors.green.shade700),
+        );
+
+      } catch (e) {
+        print("❌ Error opening print dialog: $e");
+
+        Get.snackbar(
+          'Print Error',
+          'Could not open print dialog: ${e.toString()}',
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade800,
+          icon: Icon(Icons.error_outline, color: Colors.red.shade700),
+        );
+      }
+
+      return null;
     }
     else {
       // -------------------------------------------
@@ -5078,6 +5350,74 @@ class InvoiceHelper {
       default:
         return PdfColors.grey;
     }
+  }
+
+  // Add this method inside your InvoiceHelper class
+  static pw.Widget _buildFooter(pw.Context context) {
+    final PdfColor primaryColor = PdfColors.grey800;
+    final PdfColor borderColor = PdfColors.grey300;
+
+    return pw.Container(
+      padding: pw.EdgeInsets.symmetric(vertical: 4),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey50,
+        border: pw.Border(
+          top: pw.BorderSide(color: borderColor, width: 1),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          // Left side - Application By & Address
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                "Application By: iNTELLIGNT tECH",
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: primaryColor,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                "252, NEO Square, P.N.Marg Jamnagar",
+                style: pw.TextStyle(
+                  fontSize: 7,
+                  color: PdfColors.grey600,
+                ),
+              ),
+            ],
+          ),
+
+          // Right side - Website & Email
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                "www.intelligenttech.in",
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.blue700,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                "info@intelligenttech.in",
+                style: pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.blue700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

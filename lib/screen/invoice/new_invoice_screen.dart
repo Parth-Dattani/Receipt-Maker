@@ -315,55 +315,128 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
             SizedBox(height: 16),
 
-            // Invoice Date and Payment Due Date in Row
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() => TextFormField(
-                    controller: controller.invoiceDateController,
-                    decoration: InputDecoration(
-                      labelText: '${controller.invoiceType.value.name} Date',
-                      prefixIcon: Icon(Icons.calendar_today, size: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            /// Invoice Date and Payment Due Date in Row
+            // Row(
+            //   children: [
+            //     Expanded(
+            //       child: Obx(() => TextFormField(
+            //         controller: controller.invoiceDateController,
+            //         decoration: InputDecoration(
+            //           labelText: '${controller.invoiceType.value.name} Date',
+            //           prefixIcon: Icon(Icons.calendar_today, size: 20),
+            //           border: OutlineInputBorder(
+            //             borderRadius: BorderRadius.circular(8),
+            //           ),
+            //           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            //         ),
+            //         readOnly: true,
+            //         onTap: controller.selectInvoiceDate,
+            //         style: TextStyle(fontSize: 14),
+            //       )),
+            //     ),
+            //
+            //     SizedBox(width: 12),
+            //
+            //     Expanded(
+            //       child: Column(
+            //         crossAxisAlignment: CrossAxisAlignment.start,
+            //         children: [
+            //           Obx(() => TextFormField(
+            //             controller: controller.paymentDueDateController,
+            //             decoration: InputDecoration(
+            //               labelText: controller.invoiceType.value == InvoiceType.invoice
+            //                   ? 'Due Date'
+            //                   : 'Valid Until',
+            //               prefixIcon: Icon(Icons.event_available, size: 20),
+            //               border: OutlineInputBorder(
+            //                 borderRadius: BorderRadius.circular(8),
+            //               ),
+            //               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            //             ),
+            //             readOnly: true,
+            //             onTap: controller.selectPaymentDueDate,
+            //             style: TextStyle(fontSize: 14),
+            //           )),
+            //         ],
+            //       ),
+            //     ),
+            //   ],
+            // ),
+
+            Obx(() {
+              final showDueDate = AppConstants.isDueDateEnabled.value;
+
+              if (showDueDate) {
+                // Show both Invoice Date and Due Date side by side
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Obx(() => TextFormField(
+                        controller: controller.invoiceDateController,
+                        decoration: InputDecoration(
+                          labelText: '${controller.invoiceType.value.name} Date',
+                          prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
+                        ),
+                        readOnly: true,
+                        onTap: controller.selectInvoiceDate,
+                        style: const TextStyle(fontSize: 14),
+                      )),
                     ),
-                    readOnly: true,
-                    onTap: controller.selectInvoiceDate,
-                    style: TextStyle(fontSize: 14),
-                  )),
-                ),
-
-                SizedBox(width: 12),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Obx(() => TextFormField(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Obx(() => TextFormField(
                         controller: controller.paymentDueDateController,
                         decoration: InputDecoration(
                           labelText: controller.invoiceType.value == InvoiceType.invoice
                               ? 'Due Date'
                               : 'Valid Until',
-                          prefixIcon: Icon(Icons.event_available, size: 20),
+                          prefixIcon: const Icon(Icons.event_available, size: 20),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 14),
                         ),
                         readOnly: true,
                         onTap: controller.selectPaymentDueDate,
-                        style: TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: 14),
                       )),
-                    ],
+                    ),
+                  ],
+                );
+              } else {
+                // Show only Invoice Date (full width)
+                return Obx(() => TextFormField(
+                  controller: controller.invoiceDateController,
+                  decoration: InputDecoration(
+                    labelText: '${controller.invoiceType.value.name} Date',
+                    prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 14),
                   ),
-                ),
-              ],
-            ),
+                  readOnly: true,
+                  onTap: controller.selectInvoiceDate,
+                  style: const TextStyle(fontSize: 14),
+                ));
+              }
+            }),
 
+
+            // Days until due info
             Obx(() {
+              // Only show message if due date is enabled
+              if (!AppConstants.isDueDateEnabled.value) {
+                return const SizedBox.shrink();
+              }
+
               if (!controller.isEditMode.value && !controller.isFromQuotation.value) {
                 final daysUntilDue = controller.paymentDueDate.value.difference(controller.invoiceDate.value).inDays;
 
@@ -392,7 +465,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       ),
                     ),
                   );
-                } else {
+                }
+                else {
                   return Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Container(
@@ -420,6 +494,36 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 }
               }
               return SizedBox.shrink();
+            }),
+
+            Obx(() {
+              if (controller.isEditMode.value &&
+                  controller.originalInvoiceData != null) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    Text(
+                      'original_invoice_information:'.tr,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Date: ${controller.formatOriginalInvoiceDate()}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const SizedBox();
             }),
 
             Obx(() {
@@ -1451,11 +1555,11 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           return Container(
                                             height: 40,
                                             child: TextFormField(
-                                              //key: ValueKey('qty_create_$index'),
-                                              key: ValueKey('qty_create_${item.itemId}_$index}_${controller.invoiceItems.length}'),
+                                              key: ValueKey('qty_create_$index'),
+                                              //key: ValueKey('qty_create_${item.itemId}_$index}_${controller.invoiceItems.length}'),
                                               //initialValue: showQuantity ? item.quantity.toString() : null,
                                               //controller: controller.getQuantityController(index),
-                                              controller: controller.getQuantityController(index, initialValue: item.quantity), // ✅ USE CONTROLLER
+                                              controller: controller.getQuantityController(index, initialValue: showQuantity ? item.quantity : null,), // ✅ USE CONTROLLER
 
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
