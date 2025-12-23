@@ -134,6 +134,15 @@ class NewInvoiceController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+// ✅ FIX: Set default dates based on Demo Mode
+    if (AppConstants.isDemo.value) {
+      selectedFromDate.value = DateTime(1990, 1, 1);
+      selectedToDate.value = DateTime(1992, 12, 31);
+    } else {
+      // Standard defaults
+      selectedToDate.value = DateTime.now();
+      selectedFromDate.value = DateTime.now().subtract(Duration(days: 30));
+    }
 
     // Set up date controllers
     invoiceDateController.text = _formatDateForDisplay(invoiceDate.value);
@@ -2470,8 +2479,21 @@ class NewInvoiceController extends GetxController {
 
         await GoogleSheetService.addInvoiceItemsBatch(itemsData, AppConstants.userId);
 
+// ✅ FIX: Prevent Double Stock Deduction
+        // Filter items: Only deduct stock for items that do NOT come from a Challan.
+        // If an item has a challanId, stock was already deducted when the Challan was made.
+        List<InvoiceItem> itemsToDeductStock = invoiceItems.where((item) {
+          return (item.challanId == null || item.challanId!.isEmpty);
+        }).toList();
 
-        await GoogleSheetService.updateStockAfterInvoice(invoiceItems);
+        if (itemsToDeductStock.isNotEmpty) {
+          print("📉 Deducting stock for ${itemsToDeductStock.length} manual items (Challan items skipped)");
+          await GoogleSheetService.updateStockAfterInvoice(itemsToDeductStock);
+        } else {
+          print("ℹ️ No stock deduction needed (All items are from Challan)");
+        }
+
+        //await GoogleSheetService.updateStockAfterInvoice(invoiceItems);
 
         List<String> challanIds = invoiceItems
             .where((item) => (item.challanId ?? '').isNotEmpty)
@@ -2724,12 +2746,30 @@ class NewInvoiceController extends GetxController {
   }
 
   Future<void> selectFromDate(BuildContext context) async {
+    // 1. Define constraints
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : DateTime(2000);
+
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime.now();
+
+    // 2. Ensure initialDate is valid within range
+    DateTime initial = selectedFromDate.value;
+    if (initial.isBefore(firstDate)) initial = firstDate;
+    if (initial.isAfter(lastDate)) initial = lastDate;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedFromDate.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value
+          ? 'Select From Date (Demo: 1990-1992)'
+          : 'Select From Date',
     );
+
     if (picked != null && picked != selectedFromDate.value) {
       selectedFromDate.value = picked;
       fromDateController.text = _formatDateForDisplay(picked);
@@ -2738,11 +2778,28 @@ class NewInvoiceController extends GetxController {
   }
 
   Future<void> selectToDate(BuildContext context) async {
+    // 1. Define constraints
+    final DateTime firstDate = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : DateTime(2000);
+
+    final DateTime lastDate = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime.now();
+
+    // 2. Ensure initialDate is valid within range
+    DateTime initial = selectedToDate.value;
+    if (initial.isBefore(firstDate)) initial = firstDate;
+    if (initial.isAfter(lastDate)) initial = lastDate;
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedToDate.value,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: AppConstants.isDemo.value
+          ? 'Select To Date (Demo: 1990-1992)'
+          : 'Select To Date',
     );
     if (picked != null && picked != selectedToDate.value) {
       selectedToDate.value = picked;

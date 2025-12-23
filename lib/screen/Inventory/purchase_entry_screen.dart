@@ -652,21 +652,21 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               ],
             ),
             SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.tealColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-                  Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-                  Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-                  SizedBox(width: 30),
-                ],
-              ),
-            ),
+            // Container(
+            //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            //   decoration: BoxDecoration(
+            //     color: AppColors.tealColor.withOpacity(0.1),
+            //     borderRadius: BorderRadius.circular(12),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+            //       Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+            //       Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+            //       SizedBox(width: 30),
+            //     ],
+            //   ),
+            // ),
             SizedBox(height: 12),
             Obx(() => Column(
               children: [
@@ -691,6 +691,48 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     ),
                     child: Column(
                       children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.teal.shade600,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '#${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                               'Item',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade600,
+                                fontSize: 11,
+                              ),
+                            ),
+                            Spacer(),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 30.0),
+                              child: Text(
+                                'Price',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+
+                          ],
+                        ),
+                        SizedBox(height: 8),
                         // Row 1: Item Name + Price + Qty
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,6 +802,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                   //controller: controller.priceControllers,
                                   textAlign: TextAlign.center,
                                   decoration: InputDecoration(
+                                    hintText: 'price',
+
                                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
@@ -773,28 +817,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                 ),
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              flex: 1,
-                              child: SizedBox(
-                                height: 40,
-                                child: TextFormField(
-                                  textAlign: TextAlign.center,
-                                  initialValue: item.quantity > 0 ? item.quantity.toString() : '',
-                                  decoration: InputDecoration(
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                  onChanged: (value) {
-                                    double? qty = double.tryParse(value);
-                                    if (qty != null && qty > 0) {
-                                      controller.updateItem(index, quantity: qty);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
+
                             if (controller.purchaseItems.length > 1)
                               SizedBox(
                                 width: 20,
@@ -813,6 +836,35 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                         SizedBox(height: 12),
                         Row(
                           children: [
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Qty', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                  SizedBox(height: 4),
+                                  SizedBox(
+                                    height: 40,
+                                    child: TextFormField(
+                                      textAlign: TextAlign.center,
+                                      initialValue: item.quantity > 0 ? item.quantity.toString() : '',
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                      onChanged: (value) {
+                                        double? qty = double.tryParse(value);
+                                        if (qty != null && qty > 0) {
+                                          controller.updateItem(index, quantity: qty);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 12),
                             Expanded(
                               flex: 1,
                               child: Column(
@@ -1108,6 +1160,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
     );
   }
 }
+
 
 ///mobile view
 // class PurchaseEntryScreen extends GetView<PurchaseEntryController> {

@@ -990,7 +990,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           final isInactive = currentItem != null && !(currentItem.isActive ?? true);
 
                                           // Show read-only field for inactive items from challan
-                                          if (isFromChallan && (isInactive || currentItem == null) && item.itemName.isNotEmpty) {
+                                          if (isFromChallan /*&& (isInactive || currentItem == null) && item.itemName.isNotEmpty*/) {
                                             return Container(
                                               height: 40,
                                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1099,6 +1099,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
                                     if (controller.itemList.isEmpty)
                                       TextFormField(
+                                        readOnly: (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty),
                                         initialValue: item.description,
                                         decoration: InputDecoration(
                                           labelText: 'Item Description',
@@ -1106,8 +1107,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                          filled: (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty),
+                                          fillColor: (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty)
+                                              ? Colors.grey.shade200
+                                              : null,
                                         ),
                                         onChanged: (value) {
+                                          if (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty) return;
                                           controller.updateItem(index, description: value);
                                         },
                                       ),
@@ -1219,14 +1225,18 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           border: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(6),
                                           ),
+                                          filled: isFromChallan,
+                                          fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                         ),
                                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                                         onChanged: (value) {
+                                          if (isFromChallan) return;
                                           double? price = double.tryParse(value);
                                           if (price != null && price >= 0) {
                                             controller.updateItem(index, rate: price);
                                           }
                                         },
+                                        readOnly: isFromChallan,
                                       ),
                                     ),
                                   ],
@@ -1560,7 +1570,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                               //initialValue: showQuantity ? item.quantity.toString() : null,
                                               //controller: controller.getQuantityController(index),
                                               controller: controller.getQuantityController(index, initialValue: showQuantity ? item.quantity : null,), // ✅ USE CONTROLLER
-
+                                              readOnly: isFromChallan,
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 14,
@@ -1586,12 +1596,15 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                   fontSize: 10,
                                                   color: Colors.orange,
                                                 ),
+                                                filled: isFromChallan,
+                                                fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                               ),
                                               keyboardType: TextInputType.numberWithOptions(decimal: true),
                                               inputFormatters: [
                                                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                                               ],
                                               onChanged: (value) {
+                                                if (isFromChallan) return;
                                                 print("📝 Quantity input changed: $value for item index: $index");
 
                                                 if (value.isEmpty) {

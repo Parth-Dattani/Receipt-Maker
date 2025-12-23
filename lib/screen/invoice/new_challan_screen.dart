@@ -26,10 +26,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 4,
-        leading: IconButton(
-          onPressed: () => Get.back(),
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-        ),
+        foregroundColor: Colors.white,
         backgroundColor: AppColors.tealColor,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -1370,43 +1367,43 @@ class NewChallanScreen extends GetView<NewChallanController> {
               ],
             )),
             SizedBox(height: 20),
-            Divider(),
-            Text(
-              "payment_status".tr,
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() => Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButton<String>(
-                      value: controller.paymentStatus.value,
-                      isExpanded: true,
-                      underline: SizedBox(),
-                      items: [
-                        DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                        DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                        DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          controller.updatePaymentStatus(value);
-                        }
-                      },
-                    ),
-                  )),
-                ),
-              ],
-            ),
+            // Divider(),
+            // Text(
+            //   "payment_status".tr,
+            //   style: TextStyle(
+            //     fontWeight: FontWeight.w500,
+            //     color: Colors.grey.shade700,
+            //   ),
+            // ),
+            // SizedBox(height: 8),
+            // Row(
+            //   children: [
+            //     Expanded(
+            //       child: Obx(() => Container(
+            //         padding: EdgeInsets.symmetric(horizontal: 12),
+            //         decoration: BoxDecoration(
+            //           border: Border.all(color: Colors.grey.shade300),
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         child: DropdownButton<String>(
+            //           value: controller.paymentStatus.value,
+            //           isExpanded: true,
+            //           underline: SizedBox(),
+            //           items: [
+            //             DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+            //             DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+            //             DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+            //           ],
+            //           onChanged: (value) {
+            //             if (value != null) {
+            //               controller.updatePaymentStatus(value);
+            //             }
+            //           },
+            //         ),
+            //       )),
+            //     ),
+            //   ],
+            // ),
           ],
         ),
       ),

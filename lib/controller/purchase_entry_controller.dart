@@ -1092,23 +1092,22 @@ class PurchaseEntryController extends BaseController {
     }
   }
 
+  // REPLACE your existing getPriceController with this:
   TextEditingController getPriceController(int index, {double? initialValue}) {
     // Create controller if it doesn't exist
-    while (priceControllers.length < purchaseItems.length) {
-      final itemIndex = priceControllers.length;
-      final item = purchaseItems[itemIndex];
+    while (priceControllers.length <= index) {
+      // If we are creating a new controller, give it the initial value
+      double val = (index < purchaseItems.length) ? purchaseItems[index].purchasePrice : 0.0;
+      // ✅ LOGIC: Initialize with empty string if 0
+      String initialText = (val == 0) ? '' : val.toStringAsFixed(2);
+
       priceControllers.add(
-        TextEditingController(text: item.purchasePrice.toStringAsFixed(2)),
+        TextEditingController(text:initialText),
       );
     }
-    while (priceControllers.length > purchaseItems.length) {
-      priceControllers.removeLast().dispose();
-    }
 
-    if (initialValue != null &&
-        priceControllers[index].text != initialValue.toString()) {
-      priceControllers[index].text = initialValue.toStringAsFixed(2);
-    }
+    // REMOVED THE LOGIC THAT OVERWRITES TEXT HERE
+    // We trust the controller's current text while the user is typing.
 
     return priceControllers[index];
   }
@@ -1132,15 +1131,30 @@ class PurchaseEntryController extends BaseController {
     return qtyControllers[index]!;
   }
 
+  // REPLACE your existing _initializeItemControllers with this:
   void _initializeItemControllers(int index, PurchaseItem item) {
-    /// Create controllers if they don't exist
+    // --- 1. Handle Qty Controller (Existing Logic) ---
     if (!qtyControllers.containsKey(index)) {
       qtyControllers[index] = TextEditingController(
         text: item.quantity.toString(),
       );
     } else {
-      // Update existing controller
       qtyControllers[index]!.text = item.quantity.toString();
+    }
+
+    // --- 2. Handle Price Controller (NEW LOGIC) ---
+    // Ensure the price controller exists
+    getPriceController(index);
+
+    // Force update the price text because this function is only called
+    // when we Add a New Item or Select from Dropdown (not when typing)
+    if (index < priceControllers.length) {
+      priceControllers[index].text = item.purchasePrice.toStringAsFixed(2);
+      if (item.purchasePrice == 0) {
+        priceControllers[index].text = '';
+      } else {
+        priceControllers[index].text = item.purchasePrice.toStringAsFixed(2);
+      }
     }
   }
 
@@ -1484,10 +1498,12 @@ class PurchaseEntryController extends BaseController {
       itemName: item.itemName,
       description: item.itemName,
       quantity: currentItem.quantity,
-      purchasePrice: item.price.toDouble(),
+     // purchasePrice: item.price.toDouble(),
+      purchasePrice: 0.0,
       gstRate: gstRateToUse,
       unit: item.unitOfMeasurement,
-      totalPrice: currentItem.quantity * item.price.toDouble(),
+      //totalPrice: currentItem.quantity * item.price.toDouble(),
+      totalPrice: 0.0,
       createdAt: currentItem.createdAt,
     );
 

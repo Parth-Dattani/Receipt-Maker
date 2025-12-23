@@ -95,14 +95,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
           );
         }),
       ),
-      // Only show FAB on Mobile
-      floatingActionButton: MediaQuery.of(context).size.width <= 900
-          ? FloatingActionButton(
-        onPressed: () => Get.toNamed('/new-quotation'),
-        backgroundColor: AppColors.tealColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      )
-          : null,
+
     );
   }
 

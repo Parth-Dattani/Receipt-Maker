@@ -78,14 +78,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           );
         }),
       ),
-      // Mobile FAB
-      floatingActionButton: MediaQuery.of(context).size.width <= 900
-          ? FloatingActionButton(
-        onPressed: () => Get.toNamed('/new-invoice'),
-        backgroundColor: AppColors.tealColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      )
-          : null,
+
     );
   }
 

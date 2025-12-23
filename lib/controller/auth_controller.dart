@@ -278,11 +278,18 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
 
   /// Login methods
+  // -----------------------------------------------------------------------
+  // 1. UPDATED HANDLE LOGIN
+  // -----------------------------------------------------------------------
   void handleLogin() async {
+    // Trim removes spaces from start/end
     String email = loginUsernameController.text.trim();
     String password = loginPasswordController.text.trim();
 
-    if (!_validateLoginForm(email, password)) return;
+    // ✅ VALIDATION STEP: Check fields before doing anything else
+    if (!_validateLoginForm(email, password)) {
+      return; // Stop here if validation fails
+    }
 
     try {
       if (_isDisposed) return;
@@ -293,20 +300,19 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (_isDisposed) return;
 
-      showCustomSnackbar(
+      // Success Message
+      showNativeSnackbar(
         title: "Success",
         message: "Login successful!",
-        baseColor: AppColors.greenColor2,
-        icon: Icons.done_all,
+        isError: false,
       );
 
       // Store basic user info in shared preferences
       final currentUser = _auth.currentUser!;
       await AppConstants.setUserId(currentUser.uid);
       await sharedPreferencesHelper.storePrefData("email", currentUser.email ?? "");
-      //AppConstants.userId = currentUser.uid;
 
-      /// Try to get user document from Firestore (with error handling)
+      /// Try to get user document from Firestore
       try {
         final userDoc = await FirebaseFirestore.instance
             .collection("users")
@@ -323,49 +329,80 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
           await sharedPreferencesHelper.storePrefData("username", username);
 
-          print("User has AppSheet SpreadsheetId  Key: $hasSpreadsheetId");
-
           if (hasSpreadsheetId) {
             await sharedPreferencesHelper.storePrefData(
                 "spreadsheetId", userData['spreadsheetId']);
-
             AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
-
           }
-            print("Username stored: $username");
+          print("Username stored: $username");
         } else {
           print("User document does not exist in Firestore");
-          // Optional: Create user document if it doesn't exist
-           await _createUserDocument(currentUser);
+          await _createUserDocument(currentUser);
         }
       } catch (e) {
         print("Warning: Could not fetch user data from Firestore: $e");
-        // Continue without user data - this might be expected for new users
       }
 
       // Check company registration and navigate accordingly
       await _checkAndNavigateAfterLogin();
 
     } on FirebaseAuthException catch (e) {
-      showCustomSnackbar(
-        title: "Error-------",
-        message: e.message ?? "Login failed",
-        baseColor: AppColors.errorColor,
-        icon: Icons.sms_failed_outlined,
+      // Handle Firebase specific errors (wrong password, user not found)
+      // Firebase Error
+      showNativeSnackbar(
+        title: "Login Failed",
+        message: e.message ?? "Authentication failed",
+        isError: true,
       );
     } catch (e) {
       print("Unexpected error during login: $e");
-      showCustomSnackbar(
-        title: "Error====================",
-        message: "An unexpected error occurred during login",
-        baseColor: AppColors.errorColor,
-        icon: Icons.sms_failed_outlined,
+      showNativeSnackbar(
+        title: "Error",
+        message: "An unexpected error occurred",
+        isError: true,
       );
     } finally {
       if (!_isDisposed) {
         isLoading.value = false;
       }
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // 2. UPDATED VALIDATION LOGIC (Add this to your Controller)
+  // -----------------------------------------------------------------------
+  bool _validateLoginForm(String email, String password) {
+    // Check Empty Email
+    if (email.isEmpty) {
+      showNativeSnackbar(
+        title: "Required",
+        message: "Please enter your email address",
+        isError: true,
+      );
+      return false;
+    }
+
+    // Check Email Format
+    if (!GetUtils.isEmail(email)) {
+      showNativeSnackbar(
+        title: "Invalid Email",
+        message: "Please enter a valid email address",
+        isError: true,
+      );
+      return false;
+    }
+
+    // Check Empty Password
+    if (password.isEmpty) {
+      showNativeSnackbar(
+        title: "Required",
+        message: "Please enter your password",
+        isError: true,
+      );
+      return false;
+    }
+
+    return true; // Validation Passed
   }
 
   Future<void> _createUserDocument(User user) async {
@@ -386,29 +423,47 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     }
   }
 
-  bool _validateLoginForm(String username, String password) {
-    if (username.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Username is required",
-          baseColor: AppColors.appColor);
-      return false;
+  // -----------------------------------------------------------------------
+  // 3. NEW HELPER: Native Snackbar (Guaranteed to show)
+  // -----------------------------------------------------------------------
+  void showNativeSnackbar({required String title, required String message, required bool isError}) {
+    // This uses Flutter's native ScaffoldMessenger, which works even if GetX context is lost
+    if (Get.context != null) {
+      ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar(); // Hide previous
+      ScaffoldMessenger.of(Get.context!).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    Text(message, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+          behavior: SnackBarBehavior.floating, // Floats above bottom nav/fab
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else {
+      print("⚠️ Context is null, cannot show snackbar: $message");
     }
-    if (password.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Password is required",
-          baseColor: AppColors.appColor);
-      return false;
-    }
-    if (password.length < 6) {
-      showCustomSnackbar(
-          title: "Invalid",
-          message: "Password must be at least 6 characters",
-          baseColor: AppColors.appColor);
-      return false;
-    }
-    return true;
   }
 
   // Registration methods demo for Api
@@ -484,11 +539,10 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (_isDisposed) return;
 
-      showCustomSnackbar(
+      showNativeSnackbar(
         title: "Success",
         message: "Registration successful!",
-        baseColor: AppColors.greenColor2,
-        icon: Icons.done_all,
+        isError: false,
       );
 
       await AppConstants.setUserId(userCred.user!.uid);
@@ -510,11 +564,10 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     } on FirebaseAuthException catch (e) {
       // Handle authentication errors
       if (!_isDisposed) {
-        showCustomSnackbar(
-          title: "Authentication Error",
-          message: e.message ?? "Registration failed",
-          baseColor: AppColors.errorColor,
-          icon: Icons.sms_failed_outlined,
+        showNativeSnackbar(
+          title: "Registration Failed",
+          message: e.message ?? "Could not register user",
+          isError: true,
         );
       }
     } catch (e) {
@@ -527,20 +580,18 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           errorMessage = "User created but profile data couldn't be saved. Please check your internet connection and try logging in.";
         }
 
-        showCustomSnackbar(
-          title: "Error....",
+        showNativeSnackbar(
+          title: "Error",
           message: errorMessage,
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
+          isError: true,
         );
 
         // If user was created but Firestore failed, still consider it partial success
         if (userCred?.user != null) {
-          showCustomSnackbar(
+          showNativeSnackbar(
             title: "Info",
-            message: "Account created successfully. You can now login.",
-            baseColor: AppColors.appColor,
-            icon: Icons.info,
+            message: "Account created successfully. You can login now.",
+            isError: false,
           );
 
           _clearRegistrationForm();
@@ -653,59 +704,36 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     String country = selectedCountry.value;
 
     if (username.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Username is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "Full Name is required", isError: true);
       return false;
     }
     if (email.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Email is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "Email ID is required", isError: true);
       return false;
     }
     if (!GetUtils.isEmail(email)) {
-      showCustomSnackbar(
-          title: "Invalid",
-          message: "Please enter a valid email",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Invalid", message: "Please enter a valid email address", isError: true);
       return false;
     }
+
     if (mobile1.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Mobile number is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "Mobile Number is required", isError: true);
       return false;
     }
     if (!GetUtils.isPhoneNumber(mobile1)) {
-      showCustomSnackbar(
-          title: "Invalid",
-          message: "Please enter a valid mobile number",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Invalid", message: "Please enter a valid mobile number", isError: true);
       return false;
     }
     if (city.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "City is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "City is required", isError: true);
       return false;
     }
     if (state.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "State is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "Please select your State", isError: true);
       return false;
     }
     if (country.isEmpty) {
-      showCustomSnackbar(
-          title: "Required",
-          message: "Country is required",
-          baseColor: AppColors.errorColor);
+      showNativeSnackbar(title: "Required", message: "Please select your Country", isError: true);
       return false;
     }
 
