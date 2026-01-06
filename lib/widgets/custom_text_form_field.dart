@@ -8,6 +8,8 @@ class CustomTextFormField extends StatelessWidget {
   final TextInputType keyboardType;
   final IconData? prefixIcon; // ✅ make prefixIcon optional
   final bool readOnly;
+  final int? maxLines; // ✅ NEW: number of lines to display
+  final int? minLines; // ✅ NEW: minimum lines
 
   const CustomTextFormField({
     Key? key,
@@ -18,6 +20,8 @@ class CustomTextFormField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.prefixIcon, // ✅ optional
     this.readOnly = false,
+    this.maxLines = 1, // ✅ default is single line
+    this.minLines, // ✅ optional minimum lines
   }) : super(key: key);
 
   @override
@@ -27,11 +31,15 @@ class CustomTextFormField extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
+        maxLines: maxLines, // ✅ allows multi-line input
+        minLines: minLines, // ✅ minimum lines to show
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
           border: const OutlineInputBorder(),
           prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null, // ✅ only show if provided
+          // ✅ Align icon to top when multi-line
+          alignLabelWithHint: maxLines != null && maxLines! > 1,
         ),
           readOnly: readOnly,
         validator: (value) {

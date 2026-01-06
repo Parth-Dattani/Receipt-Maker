@@ -1,3 +1,4 @@
+import 'package:demo_prac_getx/screen/invoice/new_invoice_screen.dart' show NewInvoiceScreen;
 import 'package:demo_prac_getx/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -64,7 +65,11 @@ class QuotationListScreen extends GetView<QuotationListController> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0, top: 10, bottom: 10),
               child: ElevatedButton.icon(
-                onPressed: () => Get.toNamed('/new-quotation'),
+                onPressed: () async {
+                  Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
+
+                  await Get.to(() => NewInvoiceScreen());
+                },
                 icon:  Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label:  Text("New Quotation", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
@@ -197,9 +202,9 @@ class QuotationListScreen extends GetView<QuotationListController> {
                     return GridView.builder(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // 3 Columns
-                        childAspectRatio: 2.0, // Rectangular card
-                        crossAxisSpacing: 20,
-                        mainAxisSpacing: 20,
+                        childAspectRatio: 3.2, // Rectangular card
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
                       ),
                       itemCount: controller.filteredQuotationList.length,
                       itemBuilder: (context, index) {
@@ -620,7 +625,11 @@ class QuotationListScreen extends GetView<QuotationListController> {
           Text('no_quotations_found'.tr, style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Get.toNamed('/new-quotation'),
+            onPressed: () async {
+              Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
+
+              await Get.to(() => NewInvoiceScreen());
+            },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
             child: Text('create_quotation'.tr, style: const TextStyle(color: Colors.white)),
           ),

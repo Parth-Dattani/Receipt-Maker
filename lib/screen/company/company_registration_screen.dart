@@ -101,53 +101,65 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
   }
 
   // ===========================================================================
-  // 💻 WEB LAYOUT (Split View)
+  // 💻 WEB LAYOUT (Split View with Optimized Rows)
   // ===========================================================================
   Widget _buildWebLayout(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: Form(
-          key: controller.formKey,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // LEFT COLUMN: Company Info & Bank Info (Flex 6)
-              Expanded(
-                flex: 6,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+        constraints: const BoxConstraints(maxWidth: 1400),
+        child: SingleChildScrollView(
+          child: Form(
+            key: controller.formKey,
+            child: Column(
+              children: [
+                // ✅ TWO COLUMN ROW
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildCompanyInfoCard(),
-                      const SizedBox(height: 24),
-                      _buildBankInfoCard(),
-                    ],
-                  ),
-                ),
-              ),
+                      // LEFT COLUMN: Company Info & Bank Info
+                      Expanded(
+                        flex: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              _buildCompanyInfoCardWeb(),
+                              const SizedBox(height: 16),
+                              _buildBusinessInfoCardWeb(),
 
-              // RIGHT COLUMN: Business, Auth, Features (Flex 4)
-              Expanded(
-                flex: 4,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      _buildBusinessInfoCard(),
-                      const SizedBox(height: 24),
-                      _buildAuthorisationCard(),
-                      const SizedBox(height: 24),
-                      _buildFeaturesCard(),
-                      const SizedBox(height: 24),
-                      _buildGstCard(),
-                      const SizedBox(height: 40),
-                      _buildRegisterButton(),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // RIGHT COLUMN: Business, Auth, Features
+                      Expanded(
+                        flex: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              _buildBankInfoCardWeb(),
+                              const SizedBox(height: 16),
+                              _buildAuthorisationCard(),
+                              const SizedBox(height: 16),
+                              _buildFeaturesCard(),
+                              const SizedBox(height: 16),
+                              _buildGstCard(),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                // ✅ CENTERED BUTTON AT BOTTOM (NORMAL FLOW)
+                const SizedBox(height: 30),
+                _buildRegisterButton(),
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
@@ -155,7 +167,332 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
   }
 
   // ===========================================================================
-  // 🧩 SHARED WIDGETS (Cards)
+  // 🧩 WEB-SPECIFIC CARD LAYOUTS (Optimized with Rows)
+  // ===========================================================================
+
+  Widget _buildCompanyInfoCardWeb() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
+        child: Column(
+          children: [
+            _sectionTitle("Company Info", Icons.business),
+            // Row 1: Company Code + Company Name
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() => CustomTextFormField(
+                    controller: controller.companyCodeController,
+                    label: "Company Code *",
+                    prefixIcon: Icons.qr_code,
+                    isRequired: true,
+                    readOnly: controller.isEditMode.value,
+                  )),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Obx(() => CustomTextFormField(
+                    controller: controller.companyNameController,
+                    label: "Company Name *",
+                    prefixIcon: Icons.apartment,
+                    isRequired: true,
+                    readOnly: controller.isEditMode.value,
+                  )),
+                ),
+              ],
+            ),
+
+            // Row 2: Address (Full Width)
+            CustomTextFormField(
+              controller: controller.addressController,
+              label: "Address",
+              maxLines: 3,
+              minLines: 2,
+              prefixIcon: Icons.location_on,
+            ),
+
+            // Row 3: Phone + Invoice Starting Number
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.phoneController,
+                    label: "Phone Number *",
+                    prefixIcon: Icons.phone,
+                    keyboardType: TextInputType.phone,
+                    isRequired: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.invoiceStartingNumberController,
+                    label: "Invoice Starting Number",
+                    prefixIcon: Icons.receipt_long,
+                    keyboardType: TextInputType.number,
+                    hintText: "Default: 1",
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.only(left: 16, bottom: 12),
+              child: Text(
+                "Set the starting number for invoices (e.g., 1000 will create INV1000, INV1001, etc.)",
+                style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Row 4: Country + State
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() => _customDropdown(
+                    label: "Country *",
+                    prefixIcon: Icons.flag,
+                    value: controller.selectedCountry.value.isEmpty ? null : controller.selectedCountry.value,
+                    items: controller.countries.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) {
+                      controller.selectedCountry.value = val ?? '';
+                      controller.selectedState.value = '';
+                    },
+                    isRequired: true,
+                    hint: "Select Country",
+                  )),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.selectedCountry.value.isNotEmpty) {
+                      return _customDropdown(
+                        label: "State *",
+                        prefixIcon: Icons.map,
+                        value: controller.selectedState.value.isEmpty ? null : controller.selectedState.value,
+                        items: controller.getStatesForCountry().map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        onChanged: (val) => controller.selectedState.value = val ?? '',
+                        isRequired: true,
+                        hint: "Select State",
+                      );
+                    }
+                    return Container();
+                  }),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Row 5: City + Pincode
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.cityController,
+                    label: "City *",
+                    prefixIcon: Icons.location_city,
+                    isRequired: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.pincodeController,
+                    label: "Pincode *",
+                    prefixIcon: Icons.pin,
+                    keyboardType: TextInputType.number,
+                    isRequired: true,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessInfoCardWeb() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
+        child: Column(
+          children: [
+            _sectionTitle("Business Info", Icons.pie_chart),
+            const SizedBox(height: 16),
+
+            // Row 1: Business Type + Business Category
+            Row(
+              children: [
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isEditMode.value) {
+                      return CustomTextFormField(
+                        controller: TextEditingController(text: controller.selectedBusinessType.value),
+                        label: "Business Type *",
+                        prefixIcon: Icons.business_center,
+                        readOnly: true,
+                      );
+                    } else {
+                      return _customDropdown(
+                        label: "Business Type *",
+                        prefixIcon: Icons.business_center,
+                        value: controller.selectedBusinessType.value.isEmpty ? null : controller.selectedBusinessType.value,
+                        items: controller.businessTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                        onChanged: (val) => controller.selectedBusinessType.value = val ?? '',
+                        isRequired: true,
+                        hint: "Select Business Type",
+                      );
+                    }
+                  }),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.businessCategoryController,
+                    label: "Business Category *",
+                    prefixIcon: Icons.category,
+                    isRequired: true,
+                  ),
+                ),
+              ],
+            ),
+
+            // Row 2: GST Number + PAN Number
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.gstController,
+                    label: "G.S.T. Number",
+                    prefixIcon: Icons.confirmation_number,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.panController,
+                    label: "PAN No",
+                    prefixIcon: Icons.credit_card,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Due Date Switch
+            Obx(() => SwitchListTile(
+              value: controller.isDueDateEnabled.value,
+              onChanged: (value) {
+                controller.isDueDateEnabled.value = value;
+                if (!value) {
+                  controller.dueDateDaysController.clear();
+                }
+              },
+              activeColor: Colors.white,
+              activeTrackColor: AppColors.tealColor,
+              inactiveThumbColor: Colors.grey,
+              title: const Text(
+                "Enable Due Date",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                "Set payment due date in days from invoice date",
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+              secondary: Icon(Icons.calendar_today, color: AppColors.tealColor),
+            )),
+
+            // Due Date Days Field
+            Obx(() {
+              if (controller.isDueDateEnabled.value) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: CustomTextFormField(
+                    controller: controller.dueDateDaysController,
+                    label: "Due Date (Days) *",
+                    prefixIcon: Icons.event_available,
+                    keyboardType: TextInputType.number,
+                    hintText: "e.g., 30",
+                    isRequired: true,
+                  ),
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBankInfoCardWeb() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
+        child: Column(
+          children: [
+            _sectionTitle("Bank Info", Icons.account_balance),
+
+            // Row 1: Bank Name + IFSC Code
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.bankNameController,
+                    label: "Bank Name",
+                    prefixIcon: Icons.account_balance_wallet,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.ifscController,
+                    label: "IFSC Code",
+                    prefixIcon: Icons.code,
+                  ),
+                ),
+              ],
+            ),
+
+            // Row 2: Account Number + UPI ID
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.accountNumberController,
+                    label: "Account Number",
+                    prefixIcon: Icons.numbers,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextFormField(
+                    controller: controller.upiController,
+                    label: "UPI ID",
+                    prefixIcon: Icons.paypal,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 🧩 MOBILE CARD LAYOUTS (Original - Unchanged)
   // ===========================================================================
 
   Widget _buildCompanyInfoCard() {
@@ -184,6 +521,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             CustomTextFormField(
               controller: controller.addressController,
               label: "Address",
+              minLines: 2,
+              maxLines: 3,
               prefixIcon: Icons.location_on,
             ),
             CustomTextFormField(
@@ -284,7 +623,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             CustomTextFormField(controller: controller.panController, label: "PAN No", prefixIcon: Icons.credit_card),
 
             const SizedBox(height: 16),
-            // 🆕 NEW: Due Date Switch
             Obx(() => SwitchListTile(
               value: controller.isDueDateEnabled.value,
               onChanged: (value) {
@@ -306,7 +644,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
               ),
               secondary: Icon(Icons.calendar_today, color: AppColors.tealColor),
             )),
-            // 🆕 NEW: Days TextField (Conditional)
             Obx(() {
               if (controller.isDueDateEnabled.value) {
                 return Padding(
@@ -349,7 +686,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             CustomTextFormField(controller: controller.accountNumberController, label: "Account Number", prefixIcon: Icons.numbers, keyboardType: TextInputType.number),
             CustomTextFormField(
               controller: controller.upiController,
-              label: "Upi Id",
+              label: "UPI ID",
               prefixIcon: Icons.paypal,
             ),
           ],
@@ -363,7 +700,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
         child: Column(
           children: [
             _sectionTitle("Authorisation", Icons.edit_document),
@@ -371,13 +708,11 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 
             const SizedBox(height: 16),
 
-            // 🆕 NEW: Extra Notes Switch
             Obx(() => SwitchListTile(
               value: controller.isExtraNotesEnabled.value,
               onChanged: (value) {
                 controller.isExtraNotesEnabled.value = value;
                 if (!value) {
-                  // Clear all notes when disabled
                   controller.extraNote1Controller.clear();
                   controller.extraNote2Controller.clear();
                   controller.extraNote3Controller.clear();
@@ -397,7 +732,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
               secondary: Icon(Icons.note_add, color: AppColors.tealColor),
             )),
 
-            // 🆕 NEW: Extra Notes Text Fields (Conditional)
             Obx(() {
               if (controller.isExtraNotesEnabled.value) {
                 return Column(
@@ -408,7 +742,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                       label: "Note 1",
                       prefixIcon: Icons.notes,
                       hintText: "e.g., Terms & Conditions",
-                      //maxLines: 2,
                     ),
                     const SizedBox(height: 8),
                     CustomTextFormField(
@@ -416,7 +749,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                       label: "Note 2",
                       prefixIcon: Icons.notes,
                       hintText: "e.g., Payment Terms",
-                      // maxLines: 2,
                     ),
                     const SizedBox(height: 8),
                     CustomTextFormField(
@@ -424,7 +756,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                       label: "Note 3",
                       prefixIcon: Icons.notes,
                       hintText: "e.g., Delivery Instructions",
-                      //maxLines: 2,
                     ),
                     const SizedBox(height: 8),
                     Padding(
@@ -455,7 +786,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
         child: Column(
           children: [
             _sectionTitle("Features", Icons.featured_play_list),
@@ -482,7 +813,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(top: 12, left: 16,bottom: 16, right: 16),
         child: Column(
           children: [
             _sectionTitle("GST", Icons.receipt_long),

@@ -328,10 +328,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
       }
       return GridView.builder(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 400,
+          maxCrossAxisExtent: 350,
           childAspectRatio: 1.6,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
         ),
         itemCount: controller.filteredCustomerList.length,
         itemBuilder: (context, index) {

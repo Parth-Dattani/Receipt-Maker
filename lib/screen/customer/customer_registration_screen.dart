@@ -1,3 +1,5 @@
+import 'package:demo_prac_getx/constant/app_colors.dart';
+import 'package:demo_prac_getx/constant/app_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controller/controller.dart';
@@ -10,7 +12,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
   const CustomerRegistrationScreen({super.key});
 
   // Theme Color (Purple)
-  static const Color _themeColor = Color(0xFF6A11CB);
+  static final Color _themeColor = AppColors.tealColor;
 
   @override
   Widget build(BuildContext context) {
@@ -115,76 +117,189 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
   // ===========================================================================
   // 💻 WEB LAYOUT (2-Column Grid)
   // ===========================================================================
+  // Replace your _buildWebLayout method with this updated version
+
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: _themeColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () =>Navigator.pop(context),
-        ),
-        title: Obx(() => Text(
-          controller.isEditMode.value ? "Edit Customer" : "New Customer",
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        )),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Form(
-              key: controller.formKey,
-              child: Column(
-                children: [
-                  _buildAnimatedHeader(context),
-                  const SizedBox(height: 32),
+      body: Column(
+        children: [
+          // ✅ Full-width header (outside the constrained box)
+          _buildMergedWebHeader(context),
 
-                  // Split View: Left (Personal + Notes) | Right (Business + Contact)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- LEFT COLUMN ---
-                      Expanded(
-                        child: Column(
-                          children: [
-                            // Always expanded on web
-                            _buildWebSectionCard("Personal Information", Icons.person, _buildPersonalFields()),
-                            const SizedBox(height: 24),
-                            _buildWebSectionCard("Additional Notes", Icons.subject, _buildNotesFields()),
-                          ],
+          // Main content with width constraint
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1400),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Form(
+                    key: controller.formKey,
+                    child: Column(
+                      children: [
+                        // ✅ TWO COLUMN LAYOUT
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // LEFT COLUMN - Personal + Notes
+                              Expanded(
+                                flex: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Column(
+                                    children: [
+                                      _buildWebSectionCardOptimized(
+                                        "Personal Information",
+                                        Icons.person,
+                                        _buildPersonalFieldsWeb(),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildWebSectionCardOptimized(
+                                        "Additional Notes",
+                                        Icons.subject,
+                                        _buildNotesFields(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // RIGHT COLUMN - Business + Contact
+                              Expanded(
+                                flex: 5,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 12),
+                                  child: Column(
+                                    children: [
+                                      _buildWebSectionCardOptimized(
+                                        "Business Information",
+                                        Icons.business,
+                                        _buildBusinessFieldsWeb(),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildWebSectionCardOptimized(
+                                        "Contact Information",
+                                        Icons.contact_phone,
+                                        _buildContactFieldsWeb(),
+                                      ),
+
+                                      SizedBox(height: 40,),
+                                      Center(
+                                        child: Container(
+                                          constraints: const BoxConstraints(maxWidth: 500),
+                                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                                          child: _buildActionButtons(isWeb: true),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      const SizedBox(width: 24),
 
-                      // --- RIGHT COLUMN ---
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _buildWebSectionCard("Business Information", Icons.business, _buildBusinessFields()),
-                            const SizedBox(height: 24),
-                            _buildWebSectionCard("Contact Information", Icons.contact_phone, _buildContactFields()),
-                          ],
-                        ),
-                      ),
-                    ],
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
-
-                  const SizedBox(height: 40),
-
-                  // Centered Action Buttons
-                  SizedBox(
-                    width: 400,
-                    child: _buildActionButtons(isWeb: true),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// ✅ NEW: Compact Merged Header (AppBar + Animated Header Combined)
+  Widget _buildMergedWebHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Row(
+            children: [
+              // Back Button
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+              const SizedBox(width: 24),
+
+              // Animated  Title (Compact)
+              Expanded(
+                child: Obx(() => Row(
+                  children: [
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            controller.isEditMode.value ? "Edit Customer" : "New Customer",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.isEditMode.value
+                                ? "Update customer information"
+                                : "Fill in the details to add a new customer",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )),
+              ),
+
+              // Help Button
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.help_outline, color: Colors.white),
+                  onPressed: _showHelpDialog,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -249,12 +364,164 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     ];
   }
 
+
+  List<Widget> _buildPersonalFieldsWeb() {
+    return [
+      // Row 1: Customer Name (Full Width)
+      _buildTextField(
+        controller.nameController,
+        "Customer Name*",
+        Icons.person_outline,
+        isRequired: true,
+      ),
+
+      // Row 2: Address (Full Width, 3 lines)
+      _buildTextField(
+        controller.addressController,
+        "Address*",
+        Icons.home_outlined,
+        isRequired: true,
+        maxLines: 2,
+      ),
+
+      // Row 3: Debtors/Creditors Radio (Full Width)
+      _buildSundryTypeRadio(),
+
+      // Row 4: Country + State
+      Row(
+        children: [
+          Expanded(
+            child: Obx(() => _customDropdown(
+              label: "Country *",
+              prefixIcon: Icons.flag,
+              value: controller.selectedCountry.value.isEmpty
+                  ? null
+                  : controller.selectedCountry.value,
+              items: controller.countries
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (val) {
+                controller.selectedCountry.value = val ?? '';
+                controller.selectedState.value = '';
+              },
+              isRequired: true,
+              hint: "Select Country",
+            )),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Obx(() => _customDropdown(
+              label: "State *",
+              prefixIcon: Icons.map,
+              value: controller.selectedState.value.isEmpty
+                  ? null
+                  : controller.selectedState.value,
+              items: controller
+                  .getStatesForCountry()
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: controller.selectedCountry.value.isEmpty
+                  ? null
+                  : (val) => controller.selectedState.value = val ?? '',
+              isRequired: true,
+              hint: "Select State",
+            )),
+          ),
+        ],
+      ),
+
+      // Row 5: City + Pincode
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              controller.cityController,
+              "City*",
+              Icons.location_city_outlined,
+              isRequired: true,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildTextField(
+              controller.pincodeController,
+              "Pincode*",
+              Icons.pin_drop_outlined,
+              keyboard: TextInputType.number,
+              isRequired: true,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(6),
+                FilteringTextInputFormatter.digitsOnly
+              ],
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _buildBusinessFields() {
     return [
       _buildTextField(controller.gstController, "GST Number (Optional)", Icons.receipt_long_outlined, hint: "e.g., 12ABCDE1234F1Z5", inputFormatters: [LengthLimitingTextInputFormatter(15), UpperCaseTextFormatter()]),
       _buildTextField(controller.panController, "PAN Number (Optional)", Icons.badge_outlined, hint: "e.g., ABCDE1234F", inputFormatters: [LengthLimitingTextInputFormatter(10), UpperCaseTextFormatter()]),
       _buildTextField(controller.businessNameController, "Business Name (Optional)", Icons.store_outlined),
       _buildTextField(controller.businessTypeController, "Business Type (Optional)", Icons.category_outlined),
+    ];
+  }
+
+  List<Widget> _buildBusinessFieldsWeb() {
+    return [
+      // Row 1: GST + PAN
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              controller.gstController,
+              "GST Number (Optional)",
+              Icons.receipt_long_outlined,
+              hint: "e.g., 12ABCDE1234F1Z5",
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(15),
+                UpperCaseTextFormatter()
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildTextField(
+              controller.panController,
+              "PAN Number (Optional)",
+              Icons.badge_outlined,
+              hint: "e.g., ABCDE1234F",
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                UpperCaseTextFormatter()
+              ],
+            ),
+          ),
+        ],
+      ),
+
+      // Row 2: Business Name + Business Type
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              controller.businessNameController,
+              "Business Name (Optional)",
+              Icons.store_outlined,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildTextField(
+              controller.businessTypeController,
+              "Business Type (Optional)",
+              Icons.category_outlined,
+            ),
+          ),
+        ],
+      ),
     ];
   }
 
@@ -265,6 +532,97 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
       _buildTextField(controller.emailController, "Email Address (Optional)", Icons.email_outlined, keyboard: TextInputType.emailAddress),
       _buildTextField(controller.websiteController, "Website (Optional)", Icons.language_outlined, keyboard: TextInputType.url),
     ];
+  }
+
+  List<Widget> _buildContactFieldsWeb() {
+    return [
+      // Row 1: Primary Mobile + Secondary Mobile
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              controller.mobile1Controller,
+              "Primary Mobile*",
+              Icons.phone_outlined,
+              keyboard: TextInputType.phone,
+              isRequired: true,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.digitsOnly
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildTextField(
+              controller.mobile2Controller,
+              "Secondary Mobile (Optional)",
+              Icons.phone_android_outlined,
+              keyboard: TextInputType.phone,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.digitsOnly
+              ],
+            ),
+          ),
+        ],
+      ),
+
+      // Row 2: Email + Website
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              controller.emailController,
+              "Email Address (Optional)",
+              Icons.email_outlined,
+              keyboard: TextInputType.emailAddress,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildTextField(
+              controller.websiteController,
+              "Website (Optional)",
+              Icons.language_outlined,
+              keyboard: TextInputType.url,
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Widget _buildWebSectionCardOptimized(String title, IconData icon, List<Widget> children) {
+    return Card(
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: _themeColor, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style:  TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _themeColor,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 32),
+            ...children,
+          ],
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildNotesFields() {
@@ -420,7 +778,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               children: [
                 Icon(icon, color: _themeColor, size: 24),
                 const SizedBox(width: 12),
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _themeColor)),
+                Text(title, style:  TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _themeColor)),
               ],
             ),
             const Divider(height: 32),
@@ -440,7 +798,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         maxLines: maxLines,
         inputFormatters: inputFormatters,
         decoration: InputDecoration(
-          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF6A11CB).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: const Color(0xFF6A11CB), size: 20)),
+          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF6A11CB).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color:  AppColors.tealColor, size: 20)),
           labelText: label,
           hintText: hint,
           filled: true,
@@ -463,7 +821,9 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+        decoration: BoxDecoration(color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200)),
         child: Obx(() => Row(
           children: [
             Expanded(child: _buildRadioOption(value: 'Debtors', label: 'Debtors', isSelected: controller.sundryType.value == 'Debtors', onChanged: (val) => controller.sundryType.value = val!)),
@@ -482,16 +842,20 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6A11CB).withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? AppColors.tealColor.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? const Color(0xFF6A11CB) : Colors.grey.shade300, width: isSelected ? 2 : 1),
+          border: Border.all(color: isSelected ? AppColors.tealColor: Colors.grey.shade300, width: isSelected ? 2 : 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Radio<String>(value: value, groupValue: isSelected ? value : null, onChanged: onChanged, activeColor: const Color(0xFF6A11CB)),
+            Radio<String>(value: value,
+                groupValue: isSelected ? value : null,
+                onChanged: onChanged,
+                activeColor: AppColors.tealColor),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontWeight: FontWeight.w500, color: isSelected ? const Color(0xFF6A11CB) : Colors.grey.shade700)),
+            Text(label, style: TextStyle(fontWeight: FontWeight.w500,
+                color: isSelected ? AppColors.tealColor : Colors.grey.shade700)),
           ],
         ),
       ),
@@ -507,7 +871,9 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         isExpanded: true,
         onChanged: onChanged,
         decoration: InputDecoration(
-          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF6A11CB).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(prefixIcon, color: const Color(0xFF6A11CB), size: 20)),
+          prefixIcon: Container(margin:  EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(prefixIcon, color: AppColors.tealColor, size: 20)),
           labelText: label,
           hintText: hint,
           filled: true,

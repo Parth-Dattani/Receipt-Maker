@@ -18,6 +18,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
 
+  // ✅ Add this for better GetX performance in release mode
+  Get.config(
+    enableLog: true,  // Keep true even in release for debugging if needed
+    defaultTransition: Transition.fade,
+  );
 
   await sharedPreferencesHelper.getSharedPreferencesInstance();
   //await Firebase.initializeApp();

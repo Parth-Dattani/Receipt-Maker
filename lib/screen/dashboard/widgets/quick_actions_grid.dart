@@ -11,20 +11,21 @@ class QuickActionsGrid extends GetView<DashboardController> {
     // 1. Detect if we are on Web (Screen > 900)
     bool isWeb = MediaQuery.of(context).size.width > 900;
 
-    // 2. Configure Columns based on your request:
-    // Mobile = 4 Columns | Web = 2 Columns
+    // 2. Configure Columns: Mobile = 4 Columns | Web = 2 Columns
     int crossAxisCount = isWeb ? 2 : 4;
 
-    // 3. Adjust Aspect Ratio to prevent Overflow
-    // Mobile (4 cols): Items are narrow, so we make them taller (0.75)
-    // Web (2 cols): Standard ratio (0.9) to ensure text fits without overflow
-    double aspectRatio = isWeb ? 0.9 : 0.70;
+    // 3. Adjust Aspect Ratio - More compact on web to reduce vertical space
+    double aspectRatio = isWeb ? 1.2 : 0.9;
+
+    // 4. Reduce spacing on web to minimize padding
+    double mainAxisSpacing = isWeb ? 8 : 10;
+    double crossAxisSpacing = isWeb ? 8 : 10;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+
       children: [
         // Only show the header title on Mobile.
-        // On Web, the parent container already has a title, so we hide this to save space.
         if (!isWeb) ...[
           Text(
             'Quick Actions',
@@ -42,9 +43,9 @@ class QuickActionsGrid extends GetView<DashboardController> {
           childAspectRatio: aspectRatio,
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          padding: EdgeInsets.zero, // Remove default padding to fit better
+          mainAxisSpacing: mainAxisSpacing,
+          crossAxisSpacing: crossAxisSpacing,
+          padding: EdgeInsets.zero,
           children: [
             _buildActionCard(
               icon: Icons.add_circle,
@@ -106,26 +107,26 @@ class QuickActionsGrid extends GetView<DashboardController> {
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min, // Fixes vertical overflow
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(isWeb ? 10 : 8), // Smaller padding on mobile
+              padding: EdgeInsets.all(isWeb ? 12 : 8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: color, size: isWeb ? 24 : 20), // Smaller icon on mobile
+              child: Icon(icon, color: color, size: isWeb ? 28 : 20),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: isWeb ? 10 : 8),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 8.0 : 4.0),
               child: Text(
                 label,
                 textAlign: TextAlign.center,
-                maxLines: 2, // Allow text to wrap to 2 lines
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: isWeb ? 12 : 10, // Smaller text on mobile to fit 4 cols
+                  fontSize: isWeb ? 13 : 10,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey.shade700,
                 ),

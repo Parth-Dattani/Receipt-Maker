@@ -26,6 +26,8 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 
+import '../screen.dart';
+
 
 
 class ChallanListScreen extends GetView<ChallanListController> {
@@ -53,7 +55,14 @@ class ChallanListScreen extends GetView<ChallanListController> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0, top: 10, bottom: 10),
               child: ElevatedButton.icon(
-                onPressed: () => Get.toNamed('/new-challan'),
+                onPressed: () async {
+                  if (Get.isRegistered<NewChallanController>()) {
+                    Get.delete<NewChallanController>();
+                  }
+                  Get.put(NewChallanController());
+
+                  await Get.to(() => NewChallanScreen());
+                },
                 icon: Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label: Text("New Challan", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
@@ -324,7 +333,14 @@ class ChallanListScreen extends GetView<ChallanListController> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Get.toNamed('/new-challan'),
+            onPressed: () async {
+              if (Get.isRegistered<NewChallanController>()) {
+                Get.delete<NewChallanController>();
+              }
+              Get.put(NewChallanController());
+
+              await Get.to(() => NewChallanScreen());
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.tealColor,
               foregroundColor: Colors.white,
@@ -345,9 +361,9 @@ class ChallanListScreen extends GetView<ChallanListController> {
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            childAspectRatio: 2.0,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            childAspectRatio: 4.2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           itemCount: controller.filteredChallanList.length,
           itemBuilder: (context, index) {
@@ -798,6 +814,5 @@ class ChallanListScreen extends GetView<ChallanListController> {
     );
   }
 }
-
 
 

@@ -110,16 +110,14 @@ class DashboardScreen extends GetView<DashboardController> {
                         flex: 1,
                         child: Column(
                           children: [
-                            _buildExportCard(
-                              context: context,
+                            _buildWebReportCard(
                               icon: Icons.summarize,
                               title: "summary_report".tr,
                               subtitle: "get_summary_report".tr,
                               onTap: () => showReportDialog(context),
                             ),
                             SizedBox(height: 16),
-                            _buildExportCard(
-                              context: context,
+                            _buildWebReportCard(
                               icon: Icons.file_download,
                               title: "Export Data",
                               subtitle: "for_auditing_report".tr,
@@ -130,7 +128,7 @@ class DashboardScreen extends GetView<DashboardController> {
                       ),
                     ],
                   ),
-
+///h r Wr Pyy
                   const SizedBox(height: 14),
                   SizedBox(height: 20),
 
@@ -149,12 +147,20 @@ class DashboardScreen extends GetView<DashboardController> {
   // ===========================================================================
   // 💻 WEB LAYOUT (Vertical Cards) - COMPACT VERSION
   // ===========================================================================
+// Updated _buildWebLayout method - Replace in DashboardScreen
+// Updated _buildWebLayout method - Replace in DashboardScreen
+
+
+  // Updated _buildWebLayout method - Complete restructure
+
+// Updated _buildWebLayout method - Complete restructure
+
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Row(
         children: [
-          // 1. Fixed Sidebar (Made slightly narrower: 250px)
+          // 1. Fixed Sidebar
           SizedBox(
             width: 250,
             child: _buildWebSidebar(context),
@@ -164,13 +170,10 @@ class DashboardScreen extends GetView<DashboardController> {
           Expanded(
             child: Column(
               children: [
-                // Web Header (Compacted)
                 _buildWebHeader(),
 
-                // Scrollable Content
                 Expanded(
                   child: SingleChildScrollView(
-                    // Reduced padding from 24 to 16
                     padding: const EdgeInsets.all(16),
                     child: Obx(() {
                       if (controller.isLoading.value && controller.invoiceList.isEmpty) {
@@ -180,46 +183,48 @@ class DashboardScreen extends GetView<DashboardController> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildWelcomeBanner(), // Compacted inside
-
-                          // Reduced vertical gap from 24 to 16
+                          _buildWelcomeBanner(),
                           const SizedBox(height: 16),
 
-                          // 2-Column Layout for Web
+                          // 2-Column Layout
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // LEFT COLUMN (Main Stats & Charts) - Flex 3
+                              // LEFT COLUMN - Main Content (Flex 3)
                               Expanded(
                                 flex: 3,
                                 child: Column(
                                   children: [
-                                    DashboardStatsCard(),
-                                    const SizedBox(height: 16), // Reduced gap
-                                    InvoiceStatusChart(),
-                                    const SizedBox(height: 16), // Reduced gap
+                                    // Financial Metrics with Invoice Status
+                                    _buildFinancialMetricsWithStatus(),
+
+                                    const SizedBox(height: 16),
+
+                                    // Recent Invoices
                                     RecentInvoicesCard(),
                                   ],
                                 ),
                               ),
 
-                              // Reduced horizontal gap from 24 to 16
                               const SizedBox(width: 16),
 
-                              // RIGHT COLUMN (Quick Actions & Reports) - Flex 1
+                              // RIGHT COLUMN - Quick Actions + Reports (Flex 1)
                               Expanded(
                                 flex: 1,
                                 child: Column(
                                   children: [
-                                    // Quick Actions Container
+                                    // Quick Actions
                                     Container(
-                                      // Reduced padding from 20 to 16
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: const [
-                                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                          BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          )
                                         ],
                                       ),
                                       child: QuickActionsGrid(),
@@ -227,38 +232,22 @@ class DashboardScreen extends GetView<DashboardController> {
 
                                     const SizedBox(height: 16),
 
-                                    // Reports & Export Section
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                            "Reports & Export",
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15, // Slightly smaller font
-                                                color: Colors.grey[700]
-                                            )
-                                        ),
-                                        const SizedBox(height: 12),
+                                    // Summary Report
+                                    _buildWebReportCard(
+                                      icon: Icons.summarize,
+                                      title: "Summary Report",
+                                      subtitle: "Get monthly summary",
+                                      onTap: () => showReportDialog(context),
+                                    ),
 
-                                        // Vertical Card 1: Summary
-                                        _buildWebReportCard(
-                                            icon: Icons.summarize,
-                                            title: "Summary Report",
-                                            subtitle: "Get monthly summary",
-                                            onTap: () => showReportDialog(context)
-                                        ),
+                                    const SizedBox(height: 12),
 
-                                        const SizedBox(height: 12), // Reduced gap
-
-                                        // Vertical Card 2: Export Data
-                                        _buildWebReportCard(
-                                            icon: Icons.file_download,
-                                            title: "Export Data",
-                                            subtitle: "Excel format",
-                                            onTap: () => showExportDialog(context)
-                                        ),
-                                      ],
+                                    // Export Data
+                                    _buildWebReportCard(
+                                      icon: Icons.file_download,
+                                      title: "Export Data",
+                                      subtitle: "Excel format",
+                                      onTap: () => showExportDialog(context),
                                     ),
                                   ],
                                 ),
@@ -278,6 +267,419 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
+// NEW: Financial Metrics WITH Invoice Status in 2-column layout
+  Widget _buildFinancialMetricsWithStatus() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Financial Metrics',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ),
+
+        // 2-Column Layout: Metrics + Invoice Status
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // COLUMN 1: Financial Metrics (6 cards)
+              Expanded(
+                flex: 2,
+                child: Column(
+                  children: [
+                    // Row 1: Sales, To Receive, Invoices
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'Sales',
+                            value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}',
+                            icon: Icons.trending_up,
+                            iconColor: Colors.green,
+                            bgColor: Colors.green.shade50,
+                          )),
+                        ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'To Receive',
+                            value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+                            icon: Icons.download_rounded,
+                            iconColor: Colors.orange,
+                            bgColor: Colors.orange.shade50,
+                          )),
+                        ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'Invoices',
+                            value: '${controller.invoiceList.length}',
+                            icon: Icons.receipt_rounded,
+                            iconColor: Colors.blue,
+                            bgColor: Colors.blue.shade50,
+                            badge: controller.overdueCount.value > 0
+                                ? controller.overdueCount.value.toString()
+                                : null,
+                          )),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 14),
+
+                    // Row 2: Purchase, To Pay, Orders
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'Purchase',
+                            value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}',
+                            icon: Icons.shopping_cart,
+                            iconColor: Colors.red,
+                            bgColor: Colors.red.shade50,
+                          )),
+                        ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'To Pay',
+                            value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}',
+                            icon: Icons.upload_rounded,
+                            iconColor: Colors.deepOrange,
+                            bgColor: Colors.deepOrange.shade50,
+                          )),
+                        ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Obx(() => _buildCompactMetricCard(
+                            title: 'Orders',
+                            value: '${controller.totalPurchases.value}',
+                            icon: Icons.shopping_bag_rounded,
+                            iconColor: Colors.indigo,
+                            bgColor: Colors.indigo.shade50,
+                            badge: controller.overduePurchases.value > 0
+                                ? controller.overduePurchases.value.toString()
+                                : null,
+                          )),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(width: 14),
+
+              // COLUMN 2: Invoice Status (full height)
+              Expanded(
+                flex: 1,
+                child: InvoiceStatusChart(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+// Compact Metric Card
+  Widget _buildCompactMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    String? badge,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: badge != null ? Colors.red.shade200 : Colors.grey.shade200,
+          width: badge != null ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (badge != null)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade900,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+// Action Card for Summary/Export
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 28, color: color),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+// NEW: Financial Metrics in 3-column grid format
+  Widget _buildFinancialMetricsGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Financial Overview',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ),
+
+        // Row 1: Sales, To Receive, Invoices
+        Row(
+          children: [
+            Obx(() => _buildCompactMetricCard(
+              title: 'Sales',
+              value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}',
+              icon: Icons.trending_up,
+              iconColor: Colors.green,
+              bgColor: Colors.green.shade50,
+            )),
+            SizedBox(width: 14),
+            Obx(() => _buildCompactMetricCard(
+              title: 'To Receive',
+              value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+              icon: Icons.download_rounded,
+              iconColor: Colors.orange,
+              bgColor: Colors.orange.shade50,
+            )),
+            SizedBox(width: 14),
+            Obx(() => _buildCompactMetricCard(
+              title: 'Invoices',
+              value: '${controller.invoiceList.length}',
+              icon: Icons.receipt_rounded,
+              iconColor: Colors.blue,
+              bgColor: Colors.blue.shade50,
+              badge: controller.overdueCount.value > 0
+                  ? controller.overdueCount.value.toString()
+                  : null,
+            )),
+            Spacer(), // Push cards to the left
+          ],
+        ),
+
+        SizedBox(height: 14),
+
+        // Row 2: Purchase, To Pay, Orders
+        Row(
+          children: [
+            Obx(() => _buildCompactMetricCard(
+              title: 'Purchase',
+              value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}',
+              icon: Icons.shopping_cart,
+              iconColor: Colors.red,
+              bgColor: Colors.red.shade50,
+            )),
+            SizedBox(width: 14),
+            Obx(() => _buildCompactMetricCard(
+              title: 'To Pay',
+              value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}',
+              icon: Icons.upload_rounded,
+              iconColor: Colors.deepOrange,
+              bgColor: Colors.deepOrange.shade50,
+            )),
+            SizedBox(width: 14),
+            Obx(() => _buildCompactMetricCard(
+              title: 'Orders',
+              value: '${controller.totalPurchases.value}',
+              icon: Icons.shopping_bag_rounded,
+              iconColor: Colors.indigo,
+              bgColor: Colors.indigo.shade50,
+              badge: controller.overduePurchases.value > 0
+                  ? controller.overduePurchases.value.toString()
+                  : null,
+            )),
+            Spacer(), // Push cards to the left
+          ],
+        ),
+      ],
+    );
+  }
+
+// NEW: Bottom Action Row (Invoice Status, Summary Report, Export Data)
+  Widget _buildBottomActionRow(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Invoice Status
+        Expanded(
+          child: Container(
+            height: 180, // Fixed height
+            child: InvoiceStatusChart(),
+          ),
+        ),
+
+        SizedBox(width: 12),
+
+        // 2. Summary Report
+        Expanded(
+          child: Container(
+            height: 180, // Fixed height
+            child: _buildActionCard(
+              icon: Icons.summarize,
+              title: "Summary Report",
+              subtitle: "Get monthly summary",
+              color: AppColors.tealColor,
+              onTap: () => showReportDialog(context),
+            ),
+          ),
+        ),
+
+        SizedBox(width: 12),
+
+        // 3. Export Data
+        Expanded(
+          child: Container(
+            height: 180, // Fixed height
+            child: _buildActionCard(
+              icon: Icons.file_download,
+              title: "Export Data",
+              subtitle: "Excel format",
+              color: AppColors.tealColor, // Same color as Summary
+              onTap: () => showExportDialog(context),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+
   // ===========================================================================
   // 🎨 CARD HELPERS
   // ===========================================================================
@@ -295,7 +697,7 @@ class DashboardScreen extends GetView<DashboardController> {
       child: Container(
         width: double.infinity,
         // Drastically reduced vertical padding from 24 to 16
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -342,56 +744,6 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
-  // 2. Horizontal Card (For Mobile)
-  Widget _buildExportCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300, width: 1),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.15),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: AppColors.tealColor),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.tealColor,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ===========================================================================
   // 🎨 WEB COMPONENTS
@@ -423,18 +775,28 @@ class DashboardScreen extends GetView<DashboardController> {
               children: [
                 _buildWebMenuItem(Icons.dashboard, "Dashboard", true, () {}),
 
-                if (AppConstants.businessType == "Trading") ...[
-                  _buildWebSectionHeader("PURCHASE"),
-                  _buildWebMenuItem(Icons.shopping_cart, "Purchase", false, () => controller.navigateToInventory()),
-                  _buildWebMenuItem(Icons.list_alt, "Purchase List", false, () => controller.navigateToPurchaseList()),
-                ],
-
-                _buildWebSectionHeader("SALES"),
                 if (AppConstants.businessType == "Trading")
-                  _buildWebMenuItem(Icons.note_alt, "Challans", false, () => controller.navigateToChallanList()),
+                  _buildWebExpansionTile(
+                    icon: Icons.shopping_cart,
+                    title: "Purchase",
+                    children: [
+                      _buildWebSubMenuItem(Icons.shopping_cart, "Purchase", () => controller.navigateToInventory()),
+                      _buildWebSubMenuItem(Icons.list_alt, "Purchase List", () => controller.navigateToPurchaseList()),
+                    ],
+                  ),
 
-                _buildWebMenuItem(Icons.receipt, "Invoice", false, () => controller.navigateToInvoiceList()),
-                _buildWebMenuItem(Icons.request_quote, "Quotations", false, () => controller.navigateToQuotList()),
+                // SALES SECTION (Expandable)
+                _buildWebExpansionTile(
+                  icon: Icons.receipt_long,
+                  title: "Sales",
+                  children: [
+                    if (AppConstants.businessType == "Trading")
+                      _buildWebSubMenuItem(Icons.request_quote, "Quotations", () => controller.navigateToQuotList()),
+                      _buildWebSubMenuItem(Icons.note_alt, "Challans", () => controller.navigateToChallanList()),
+                    _buildWebSubMenuItem(Icons.receipt, "Invoice", () => controller.navigateToInvoiceList()),
+
+                  ],
+                ),
 
                 if (AppConstants.businessType == "Trading")
                   _buildWebMenuItem(Icons.assessment, "Stock Report", false, () => controller.navigateToStockReport()),
@@ -561,10 +923,52 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
+  // Widget _buildWebHeader() {
+  //   return Container(
+  //     height: 60, // Reduced from 70
+  //     padding: const EdgeInsets.symmetric(horizontal: 20), // Reduced horizontal padding
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+  //     ),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //       children: [
+  //         Text("Dashboard", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+  //         Row(
+  //           children: [
+  //             IconButton(
+  //               icon: const Icon(Icons.refresh, color: Colors.grey),
+  //               onPressed: controller.refreshDashboard,
+  //               splashRadius: 20, // Tighter splash
+  //             ),
+  //             const SizedBox(width: 16),
+  //             Obx(() => Column(
+  //               crossAxisAlignment: CrossAxisAlignment.end,
+  //               mainAxisAlignment: MainAxisAlignment.center,
+  //               children: [
+  //                 Text(controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
+  //                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+  //                 Text(controller.companyName, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+  //               ],
+  //             )),
+  //             const SizedBox(width: 12),
+  //             CircleAvatar(
+  //                 radius: 18, // Slightly smaller avatar
+  //                 backgroundColor: AppColors.tealColor.withOpacity(0.1),
+  //                 child: Icon(Icons.person, color: AppColors.tealColor, size: 20)
+  //             ),
+  //           ],
+  //         )
+  //       ],
+  //     ),
+  //   );
+  // }
+
   Widget _buildWebHeader() {
     return Container(
-      height: 60, // Reduced from 70
-      padding: const EdgeInsets.symmetric(horizontal: 20), // Reduced horizontal padding
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
@@ -578,23 +982,161 @@ class DashboardScreen extends GetView<DashboardController> {
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.grey),
                 onPressed: controller.refreshDashboard,
-                splashRadius: 20, // Tighter splash
+                splashRadius: 20,
               ),
               const SizedBox(width: 16),
               Obx(() => Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(
+                      controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
+                  ),
                   Text(controller.companyName, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               )),
               const SizedBox(width: 12),
-              CircleAvatar(
-                  radius: 18, // Slightly smaller avatar
-                  backgroundColor: AppColors.tealColor.withOpacity(0.1),
-                  child: Icon(Icons.person, color: AppColors.tealColor, size: 20)
+
+              // User Avatar with Popup Menu
+              PopupMenuButton<String>(
+                offset: Offset(0, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
+                    child: Icon(Icons.person, color: AppColors.tealColor, size: 20)
+                ),
+                onSelected: (String value) {
+                  if (value == 'logout') {
+                    Get.dialog(
+                        AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: Row(
+                                children: [
+                                  Icon(Icons.logout, color: Colors.red.shade600),
+                                  SizedBox(width: 12),
+                                  Text("confirm_logout".tr)
+                                ]
+                            ),
+                            content: Text("logout_message".tr),
+                            actions: [
+                              TextButton(
+                                child: Text("cancel".tr),
+                                onPressed: () => Get.back(),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade600,
+                                ),
+                                onPressed: () async {
+                                  Get.back();
+                                  await controller.logout();
+                                },
+                                child: Text("logout".tr),
+                              )
+                            ]
+                        )
+                    );
+                  } else if (value == 'edit_company') {
+                    final data = controller.currentCompany.value;
+                    if (data != null) {
+                      controller.navigateToEditCompany(data, controller.companyId.value);
+                    }
+                  } else if (value == 'switch_company') {
+                    controller.showCompanySwitcher();
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  // User Info Header
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    child: Obx(() => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          controller.userEmail.value,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.tealColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            controller.companyName.isNotEmpty ? controller.companyName : "No Company",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.tealColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )),
+                  ),
+                  PopupMenuDivider(),
+
+                  // Edit Company
+                  PopupMenuItem<String>(
+                    value: 'edit_company',
+                    child: Row(
+                      children: [
+                        Icon(Icons.business, size: 20, color: Colors.grey.shade700),
+                        SizedBox(width: 12),
+                        Text("edit_company".tr),
+                      ],
+                    ),
+                  ),
+
+                  // Switch Company (if multiple companies)
+                  if (controller.hasMultipleCompanies.value)
+                    PopupMenuItem<String>(
+                      value: 'switch_company',
+                      child: Row(
+                        children: [
+                          Icon(Icons.swap_horiz, size: 20, color: Colors.grey.shade700),
+                          SizedBox(width: 12),
+                          Text("Switch Company"),
+                        ],
+                      ),
+                    ),
+
+                  PopupMenuDivider(),
+
+                  // Logout
+                  PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, size: 20, color: Colors.red.shade600),
+                        SizedBox(width: 12),
+                        Text(
+                          "logout".tr,
+                          style: TextStyle(color: Colors.red.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           )
@@ -1128,6 +1670,53 @@ class DashboardScreen extends GetView<DashboardController> {
       ),
     );
   }
+
+  // Web Expansion Tile for collapsible sections
+  Widget _buildWebExpansionTile({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Theme(
+      data: ThemeData(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+        leading: Icon(icon, color: Colors.white70, size: 20),
+        title: Text(
+          title,
+          style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500
+          ),
+        ),
+        iconColor: Colors.white,
+        collapsedIconColor: Colors.white70,
+        children: children,
+      ),
+    );
+  }
+
+// Web Sub-menu item (indented under expansion tile)
+  Widget _buildWebSubMenuItem(IconData icon, String title, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.only(left: 52, right: 20, top: 8, bottom: 8),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white60, size: 18),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: const TextStyle(color: Colors.white60, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildSectionHeader(String title) {
     return Padding(padding: EdgeInsets.fromLTRB(20, 8, 20, 8), child: Text(title.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1.2)));

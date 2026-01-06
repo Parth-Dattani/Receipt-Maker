@@ -131,60 +131,289 @@ class NewInvoiceController extends GetxController {
   bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
   var forceRefreshTriggers = <int, int>{}.obs;
 
+//  @override
+//   void onInit() {
+//     super.onInit();
+//     invoiceType.value = InvoiceType.invoice;
+//
+//     // Set up date controllers
+//     invoiceDateController.text = _formatDateForDisplay(invoiceDate.value);
+//     paymentDueDateController.text = _formatDateForDisplay(paymentDueDate.value);
+//
+//
+// // ✅ FIX: Set default dates based on Demo Mode
+//     if (AppConstants.isDemo.value) {
+//       selectedFromDate.value = DateTime(1990, 1, 1);
+//       selectedToDate.value = DateTime(1992, 12, 31);
+//     } else {
+//       // Standard defaults
+//       selectedToDate.value = DateTime.now();
+//       selectedFromDate.value = DateTime.now().subtract(Duration(days: 30));
+//     }
+//
+//     fromDateController.text = _formatDateForDisplay(selectedFromDate.value);
+//     toDateController.text = _formatDateForDisplay(selectedToDate.value);
+//
+//     // Check if coming from quotation conversion FIRST
+//     final arguments = Get.arguments;
+//     if (arguments != null &&
+//         arguments is Map &&
+//         arguments['isFromQuotation'] == true) {
+//
+//       print("🔄 Quotation conversion detected in onInit");
+//       isFromQuotation.value = true;
+//
+//       // Load essential data first, then handle quotation
+//       _loadEssentialDataWithoutInit().then((_) {
+//         _handleQuotationConversion();
+//       });
+//
+//     } else {
+//       // Handle arguments for edit mode only
+//       _handleArguments();
+//
+//       if (!isEditMode.value) {
+//         // Normal new invoice flow
+//         _loadEssentialData();
+//       } else {
+//         // Edit mode flow
+//         _loadEssentialData();
+//         if (invoiceItems.isEmpty) {
+//           addNewItem();
+//         }
+//       }
+//     }
+//
+//     // Load other data after a delay
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       _loadSecondaryData();
+//       ensureControllersMatch();
+//     });
+//   }
+
+// Replace your onInit() method in NewInvoiceController with this:
   @override
   void onInit() {
     super.onInit();
-// ✅ FIX: Set default dates based on Demo Mode
-    if (AppConstants.isDemo.value) {
-      selectedFromDate.value = DateTime(1990, 1, 1);
-      selectedToDate.value = DateTime(1992, 12, 31);
-    } else {
-      // Standard defaults
-      selectedToDate.value = DateTime.now();
-      selectedFromDate.value = DateTime.now().subtract(Duration(days: 30));
-    }
+    print("🚀 [INIT] Starting NewInvoiceController initialization");
 
-    // Set up date controllers
+    // ✅ CRITICAL: Initialize ALL observables with direct assignment
+    // This FORCES GetX to track them properly in release mode
+
+    invoiceType.value = InvoiceType.invoice;
+    isEditMode.value = false;
+    isFromQuotation.value = false;
+    isLoading.value = false;
+    showCustomerForm.value = false;
+    createFromChallan.value = false;
+
+    selectedCustomerId.value = '';
+    editingInvoiceId.value = '';
+    selectedCustomerForInvoice.value = '';
+    sourceQuotationId.value = '';
+    paymentStatus.value = 'Pending';
+
+    // ✅ CRITICAL: Force GetX to register observables for release mode
+    invoiceType.listen((value) {
+      print("📊 InvoiceType changed to: $value");
+    });
+
+    isEditMode.listen((value) {
+      print("✏️ EditMode changed to: $value");
+    });
+
+    isFromQuotation.listen((value) {
+      print("📄 FromQuotation changed to: $value");
+    });
+
+    // Initialize dates
+    DateTime defaultDate = AppConstants.isDemo.value
+        ? DateTime(1991, 1, 1)
+        : DateTime.now();
+
+    invoiceDate.value = defaultDate;
+
+    int daysToAdd = AppConstants.isDueDateEnabled.value
+        ? AppConstants.dueDateDays
+        : 15;
+
+    paymentDueDate.value = defaultDate.add(Duration(days: daysToAdd));
+
+    selectedFromDate.value = AppConstants.isDemo.value
+        ? DateTime(1990, 1, 1)
+        : DateTime.now().subtract(Duration(days: 30));
+
+    selectedToDate.value = AppConstants.isDemo.value
+        ? DateTime(1992, 12, 31)
+        : DateTime.now();
+
+    // Initialize text controllers
     invoiceDateController.text = _formatDateForDisplay(invoiceDate.value);
     paymentDueDateController.text = _formatDateForDisplay(paymentDueDate.value);
     fromDateController.text = _formatDateForDisplay(selectedFromDate.value);
     toDateController.text = _formatDateForDisplay(selectedToDate.value);
 
-    // Check if coming from quotation conversion FIRST
-    final arguments = Get.arguments;
-    if (arguments != null &&
-        arguments is Map &&
-        arguments['isFromQuotation'] == true) {
+    print("📅 [INIT] Dates initialized:");
+    print("   - Invoice Date: ${invoiceDate.value}");
+    print("   - Payment Due Date: ${paymentDueDate.value}");
 
-      print("🔄 Quotation conversion detected in onInit");
-      isFromQuotation.value = true;
+    // ✅ CRITICAL: Use addPostFrameCallback to handle arguments AFTER widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeHandleArguments();
+    });
 
-      // Load essential data first, then handle quotation
-      _loadEssentialDataWithoutInit().then((_) {
-        _handleQuotationConversion();
-      });
+    print("✅ [INIT] NewInvoiceController initialization complete");
+  }
 
-    } else {
-      // Handle arguments for edit mode only
-      _handleArguments();
+// ✅ NEW: Safe argument handling method
+  void _safeHandleArguments() {
+    print("🔍 [ARGS] Starting safe argument handling...");
 
-      if (!isEditMode.value) {
-        // Normal new invoice flow
+    try {
+      final arguments = Get.arguments;
+      print("📥 [ARGS] Raw arguments: $arguments");
+
+      if (arguments == null) {
+        print("ℹ️ [ARGS] No arguments provided - loading as new invoice");
         _loadEssentialData();
-      } else {
-        // Edit mode flow
-        _loadEssentialData();
+        return;
+      }
+
+      // ✅ PRIORITY 1: Check for quotation conversion
+      if (arguments is Map && arguments['isFromQuotation'] == true) {
+        print("🔄 [ARGS] Quotation conversion detected");
+        isFromQuotation.value = true;
+        isFromQuotation.refresh(); // Force UI update
+
+        _loadEssentialDataWithoutInit().then((_) {
+          _handleQuotationConversion();
+        });
+        return;
+      }
+
+      // ✅ PRIORITY 2: Check for direct Invoice object (edit mode)
+      if (arguments is Invoice) {
+        print("🏷️ [ARGS] Direct Invoice object - edit mode");
+        _handleDirectInvoiceEdit(arguments);
+        return;
+      }
+
+      // ✅ PRIORITY 3: Check for Map with edit mode flag
+      if (arguments is Map && arguments['editMode'] == true) {
+        print("✏️ [ARGS] Edit mode via Map");
+        _handleMapEditMode(arguments);
+        return;
+      }
+
+      // ✅ DEFAULT: Normal new invoice
+      print("📝 [ARGS] Default new invoice flow");
+      _loadEssentialData();
+
+    } catch (e, stackTrace) {
+      print("❌ [ARGS ERROR] Exception during argument handling: $e");
+      print("📄 [ARGS ERROR] Stack trace: $stackTrace");
+
+      // Fallback to new invoice on error
+      _loadEssentialData();
+    }
+  }
+
+// ✅ NEW: Handle direct invoice object edit
+  void _handleDirectInvoiceEdit(Invoice invoice) {
+    print("🔧 [EDIT] Processing direct Invoice object");
+
+    isEditMode.value = true;
+    editingInvoiceId.value = invoice.invoiceId ?? '';
+
+    try {
+      originalInvoiceData.value = _invoiceToMap(invoice);
+      print("✅ [EDIT] Invoice data mapped successfully");
+
+      _loadEssentialData().then((_) {
+        _prefillInvoiceData();
         if (invoiceItems.isEmpty) {
           addNewItem();
         }
-      }
-    }
+      });
+    } catch (e, stackTrace) {
+      print("❌ [EDIT ERROR] Failed to process Invoice: $e");
+      print("📄 [EDIT ERROR] Stack trace: $stackTrace");
 
-    // Load other data after a delay
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadSecondaryData();
-      ensureControllersMatch();
-    });
+      Get.snackbar(
+        'Error',
+        'Failed to load invoice for editing',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      Get.back();
+    }
+  }
+
+// ✅ NEW: Handle Map-based edit mode
+  void _handleMapEditMode(Map arguments) {
+    print("🔧 [EDIT] Processing Map-based edit mode");
+
+    isEditMode.value = true;
+    editingInvoiceId.value = arguments['invoiceId']?.toString() ?? '';
+
+    print("📝 [EDIT] Invoice ID: ${editingInvoiceId.value}");
+
+    try {
+      if (arguments['invoiceData'] == null) {
+        throw Exception('No invoice data provided');
+      }
+
+      if (arguments['invoiceData'] is Invoice) {
+        final invoiceObj = arguments['invoiceData'] as Invoice;
+        originalInvoiceData.value = _invoiceToMap(invoiceObj);
+        print("✅ [EDIT] Converted Invoice object to Map");
+      } else if (arguments['invoiceData'] is Map) {
+        originalInvoiceData.value =
+        Map<String, dynamic>.from(arguments['invoiceData'] as Map);
+        print("✅ [EDIT] Used Map data directly");
+      } else {
+        throw Exception('Invalid invoice data type: ${arguments['invoiceData'].runtimeType}');
+      }
+
+      _loadEssentialData().then((_) {
+        _prefillInvoiceData();
+        if (invoiceItems.isEmpty) {
+          addNewItem();
+        }
+      });
+
+    } catch (e, stackTrace) {
+      print("❌ [EDIT ERROR] Failed to process Map edit: $e");
+      print("📄 [EDIT ERROR] Stack trace: $stackTrace");
+
+      Get.snackbar(
+        'Error',
+        'Failed to load invoice: ${e.toString()}',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      Get.back();
+    }
+  }
+
+
+  @override
+  void onReady() {
+    super.onReady();
+
+    print("🎯 [READY] NewInvoiceController onReady called");
+    print("📊 [READY] Current state:");
+    print("   - Invoice Type: ${invoiceType.value.name}");
+    print("   - Edit Mode: ${isEditMode.value}");
+    print("   - From Quotation: ${isFromQuotation.value}");
+    print("   - Invoice Date: ${invoiceDate.value}");
+    print("   - Payment Due Date: ${paymentDueDate.value}");
+
+    // Load secondary data
+    _loadSecondaryData();
+    ensureControllersMatch();
+
+    print("✅ [READY] onReady complete");
   }
 
 // Updated _handleArguments - no longer handles quotation conversion
@@ -252,24 +481,49 @@ class NewInvoiceController extends GetxController {
     print("   - editingInvoiceId.value: '${editingInvoiceId.value}'");
   }
 
-  void _handleQuotationConversion() async {  // Add async here
+  void _handleQuotationConversion() async {
+    print("🔄 [QUOTATION] Starting quotation conversion...");
+
     final arguments = Get.arguments;
 
-    if (arguments != null &&
-        arguments is Map &&
-        arguments['isFromQuotation'] == true) {
+    if (arguments == null || arguments is! Map) {
+      print("❌ [QUOTATION] Invalid arguments for quotation conversion");
+      return;
+    }
 
-      print("🔄 Loading quotation data for conversion...");
-
+    try {
       final Invoice quotation = arguments['quotation'];
       final List<InvoiceItem> quotationItems = arguments['quotationItems'];
       final String originalQuotationId = arguments['quotationId'] ?? quotation.invoiceId;
 
+      print("📋 [QUOTATION] Converting quotation: $originalQuotationId");
+      print("📦 [QUOTATION] Items count: ${quotationItems.length}");
+
       isFromQuotation.value = true;
       sourceQuotationId.value = originalQuotationId;
 
-      await _prefillFromQuotation(quotation, quotationItems, originalQuotationId);  // Add await
+      await _prefillFromQuotation(quotation, quotationItems, originalQuotationId);
+
+      print("✅ [QUOTATION] Conversion complete");
+
+    } catch (e, stackTrace) {
+      print("❌ [QUOTATION ERROR] Failed to convert: $e");
+      print("📄 [QUOTATION ERROR] Stack trace: $stackTrace");
+
+      Get.snackbar(
+        'Error',
+        'Failed to load quotation data',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
+  }
+
+  void forceRefresh() {
+    invoiceType.refresh();
+    isEditMode.refresh();
+    isFromQuotation.refresh();
+    update();
   }
 
   String formatOriginalInvoiceDate() {
@@ -653,6 +907,7 @@ class NewInvoiceController extends GetxController {
       }
 
       _isEssentialDataLoaded = true;
+      forceRefresh();
     } finally {
       _initializationLock = false;
     }
@@ -1209,13 +1464,13 @@ class NewInvoiceController extends GetxController {
 
         if (companyId.isEmpty) {
           print("⚠️ No company ID found");
-          Get.snackbar(
-            'Company Required',
-            'Please select a company first',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange,
-            colorText: Colors.white,
-          );
+          // Get.snackbar(
+          //   'Company Required',
+          //   'Please select a company first',
+          //   snackPosition: SnackPosition.BOTTOM,
+          //   backgroundColor: Colors.orange,
+          //   colorText: Colors.white,
+          // );
           return;
         }
 
@@ -1266,19 +1521,19 @@ class NewInvoiceController extends GetxController {
 
         if (customers.isEmpty) {
           print("⚠️ No active debtor customers found");
-          showCustomSnackbar(
-            title: "No Customers",
-            message: "No debtor customers available. Please add customers first.",
-            baseColor: Colors.orange.shade700,
-            icon: Icons.info_outline,
-          );
+          // showCustomSnackbar(
+          //   title: "No Customers",
+          //   message: "No debtor customers available. Please add customers first.",
+          //   baseColor: Colors.orange.shade700,
+          //   icon: Icons.info_outline,
+          // );
         } else {
-          showCustomSnackbar(
-            title: "Customers Loaded",
-            message: "Found $activeDebtorsCount debtor customer${activeDebtorsCount != 1 ? 's' : ''}",
-            baseColor: Colors.green.shade700,
-            icon: Icons.check_circle_outline,
-          );
+          // showCustomSnackbar(
+          //   title: "Customers Loaded",
+          //   message: "Found $activeDebtorsCount debtor customer${activeDebtorsCount != 1 ? 's' : ''}",
+          //   baseColor: Colors.green.shade700,
+          //   icon: Icons.check_circle_outline,
+          // );
         }
 
         return null;
@@ -1288,14 +1543,14 @@ class NewInvoiceController extends GetxController {
       print("❌ Error loading customers: $e");
       print("📄 Stack trace: $stackTrace");
 
-      Get.snackbar(
-        'Error',
-        'Failed to load customers: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: Duration(seconds: 4),
-      );
+      // Get.snackbar(
+      //   'Error',
+      //   'Failed to load customers: ${e.toString()}',
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   backgroundColor: Colors.red,
+      //   colorText: Colors.white,
+      //   duration: Duration(seconds: 4),
+      // );
     } finally {
       isLoading.value = false;
     }
@@ -1313,31 +1568,34 @@ class NewInvoiceController extends GetxController {
         itemList.assignAll(items);
 
         if (items.isEmpty) {
-          showCustomSnackbar(
-            title: "No Items",
-            message: "No items found for the current user",
-            baseColor: Colors.orange.shade700,
-            icon: Icons.info_outline,
-          );
+          print("⚠️ No items found");
+          // showCustomSnackbar(
+          //   title: "No Items",
+          //   message: "No items found for the current user",
+          //   baseColor: Colors.orange.shade700,
+          //   icon: Icons.info_outline,
+          // );
         } else {
-          showCustomSnackbar(
-            title: "Success",
-            message: "Found ${items.length} items",
-            baseColor: Colors.green.shade700,
-            icon: Icons.check_circle_outline,
-          );
+          print("✅ Found ${items.length} items");
+          // showCustomSnackbar(
+          //   title: "Success",
+          //   message: "Found ${items.length} items",
+          //   baseColor: Colors.green.shade700,
+          //   icon: Icons.check_circle_outline,
+          // );
         }
 
         return null;
       });
 
     } catch (e) {
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load items: $e",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
+      print("❌ Failed to load items: $e");
+      // showCustomSnackbar(
+      //   title: "Error",
+      //   message: "Failed to load items: $e",
+      //   baseColor: Colors.red.shade700,
+      //   icon: Icons.error_outline,
+      // );
     } finally {
       isLoading.value = false;
     }
@@ -1360,12 +1618,13 @@ class NewInvoiceController extends GetxController {
       });
 
     } catch (e) {
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to load invoices: $e",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error_outline,
-      );
+      print("❌ Failed to load invoices: $e");
+      // showCustomSnackbar(
+      //   title: "Error",
+      //   message: "Failed to load invoices: $e",
+      //   baseColor: Colors.red.shade700,
+      //   icon: Icons.error_outline,
+      // );
     } finally {
       isLoading.value = false;
     }
@@ -1441,9 +1700,16 @@ class NewInvoiceController extends GetxController {
       final data = companyDoc.data();
 
       // Get counter based on invoice type
-      final String counterField = invoiceType.value == InvoiceType.invoice
-          ? 'currentInvoiceNumber'
-          : 'currentQuotationNumber';
+      String counterField;
+      switch (invoiceType.value) {
+        case InvoiceType.invoice:
+        case InvoiceType.quickInvoice:  // ✅ Use same counter as invoice
+          counterField = 'currentInvoiceNumber';
+          break;
+        case InvoiceType.quotation:
+          counterField = 'currentQuotationNumber';
+          break;
+      }
 
       final currentNumber = data?[counterField] ?? 1;
 
@@ -1476,9 +1742,17 @@ class NewInvoiceController extends GetxController {
 
         final data = companyDoc.data();
         // Use different counter field based on invoice type
-        final String counterField = invoiceType.value == InvoiceType.invoice
-            ? 'currentInvoiceNumber'
-            : 'currentQuotationNumber';
+        // Quick Invoice and Invoice use SAME counter
+        String counterField;
+        switch (invoiceType.value) {
+          case InvoiceType.invoice:
+          case InvoiceType.quickInvoice:  // ✅ Use same counter as invoice
+            counterField = 'currentInvoiceNumber';
+            break;
+          case InvoiceType.quotation:
+            counterField = 'currentQuotationNumber';
+            break;
+        }
 
         final currentNumber = data?[counterField] ?? 1;
         final nextNumber = currentNumber + 1;
@@ -1496,8 +1770,24 @@ class NewInvoiceController extends GetxController {
 
   void setInvoiceType(InvoiceType type) async {
     invoiceType.value = type;
+    invoiceType.refresh();
+    update();
+
     final nextNumber = await getNextInvoiceNumber();
     invoiceNumberController.text = nextNumber;
+
+    // Show info when switching to Quick Invoice
+    if (type.isQuickMode) {
+      Get.snackbar(
+        'Quick Invoice Mode',
+        'Only mobile number is required. Create invoices instantly!',
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+        icon: Icon(Icons.flash_on, color: Colors.green.shade700),
+        duration: Duration(seconds: 3),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void selectCustomer(Map<String, dynamic>? customer) {
@@ -2347,19 +2637,49 @@ class NewInvoiceController extends GetxController {
 
   Future<bool> saveInvoice({required bool isDraft}) async {
     try {
-      if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
-        validateManualCustomerEntry();
-      }
+      // ✅ Quick Invoice validation - only mobile required
+      if (invoiceType.value.isQuickMode) {
+        if (customerMobileController.text.trim().isEmpty) {
+          showCustomSnackbar(
+            title: "Mobile Required",
+            message: "Please enter customer mobile number for Quick Invoice",
+            baseColor: Colors.red.shade700,
+            icon: Icons.phone_missed,
+          );
+          return false;
+        }
 
-      // ✅ NEW: Validate customer is selected/entered
-      if (customerNameController.text.trim().isEmpty) {
-        showCustomSnackbar(
-          title: "Customer Required",
-          message: "Please select a customer or enter customer details",
-          baseColor: Colors.red.shade700,
-          icon: Icons.person_outline,
-        );
-        return false;
+        // Validate mobile number format
+        String mobile = customerMobileController.text.trim();
+        if (mobile.length < 10) {
+          showCustomSnackbar(
+            title: "Invalid Mobile",
+            message: "Please enter a valid 10-digit mobile number",
+            baseColor: Colors.orange.shade700,
+            icon: Icons.warning,
+          );
+          return false;
+        }
+
+        // Auto-populate customer name as "Customer-{last 4 digits}" if empty
+        if (customerNameController.text.trim().isEmpty) {
+          customerNameController.text = "Customer-${mobile.substring(mobile.length - 4)}";
+        }
+      } else {
+        // Regular invoice/quotation validation
+        if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
+          validateManualCustomerEntry();
+        }
+
+        if (customerNameController.text.trim().isEmpty) {
+          showCustomSnackbar(
+            title: "Customer Required",
+            message: "Please select a customer or enter customer details",
+            baseColor: Colors.red.shade700,
+            icon: Icons.person_outline,
+          );
+          return false;
+        }
       }
 
       if (!formKey.currentState!.validate()) {
@@ -2428,6 +2748,7 @@ class NewInvoiceController extends GetxController {
         'userId': AppConstants.userId,
         'receivedAmount': receivedAmount.value,
         'pendingAmount': pendingAmount.value,
+        'invoiceType': invoiceType.value.name,
       };
 
       if (isInEditMode) {
@@ -2839,6 +3160,7 @@ class NewInvoiceController extends GetxController {
 enum InvoiceType {
   invoice,
   quotation,
+  quickInvoice,  // NEW: Quick Invoice type
 }
 
 extension InvoiceTypeExtension on InvoiceType {
@@ -2848,6 +3170,8 @@ extension InvoiceTypeExtension on InvoiceType {
         return 'Invoice';
       case InvoiceType.quotation:
         return 'Quotation';
+      case InvoiceType.quickInvoice:
+        return 'Quick Invoice';
     }
   }
 
@@ -2857,6 +3181,13 @@ extension InvoiceTypeExtension on InvoiceType {
         return 'INV';
       case InvoiceType.quotation:
         return 'QUO';
+      case InvoiceType.quickInvoice:
+        return 'INV';  // Use same prefix as regular invoice
     }
+  }
+
+  // NEW: Check if minimal fields are required
+  bool get isQuickMode {
+    return this == InvoiceType.quickInvoice;
   }
 }
