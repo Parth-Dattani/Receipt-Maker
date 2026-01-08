@@ -175,9 +175,9 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            childAspectRatio: 2.0,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            childAspectRatio: 3.2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           itemCount: controller.filteredPurchaseList.length,
           itemBuilder: (context, index) {
@@ -473,7 +473,11 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 3)),
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: ClipRRect(
@@ -487,6 +491,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                 children: [
                   // Left Colored Bar
                   Container(width: 6, color: statusColor),
+
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -504,49 +509,82 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                                   children: [
                                     Text(
                                       "${purchase.purchaseId} - ${purchase.vendorName}",
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.tealColor),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: AppColors.tealColor,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       "Date: ${DateFormat('MMM dd, yyyy').format(purchase.purchaseDate ?? DateTime.now())}",
-                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
+
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: statusColor.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       purchase.paymentStatus?.toUpperCase() ?? "UNKNOWN",
-                                      style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   GestureDetector(
-                                    onTapDown: (details) => _showPopupMenu(details.globalPosition, purchase),
-                                    child: Icon(Icons.more_vert, size: 20, color: Colors.grey.shade400),
+                                    onTapDown: (details) => _showPopupMenu(
+                                      details.globalPosition,
+                                      purchase,
+                                    ),
+                                    child: Icon(
+                                      Icons.more_vert,
+                                      size: 20,
+                                      color: Colors.grey.shade400,
+                                    ),
                                   ),
                                 ],
                               )
                             ],
                           ),
+
                           // Bottom
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("Total Amount:", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                              Text(
+                                "Total Amount:",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
                               Text(
                                 "₹${purchase.totalAmount?.toStringAsFixed(2) ?? '0.00'}",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.tealColor,
+                                ),
                               ),
                             ],
                           ),

@@ -158,9 +158,20 @@ class NewChallanScreen extends GetView<NewChallanController> {
                           padding: EdgeInsets.all(24),
                           child: Column(
                             children: [
-                              _buildChallanDetailsCardWeb(),
-                              SizedBox(height: 24),
-                              _buildCustomerSectionWeb(),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 1,
+                                    child: _buildChallanDetailsCardWeb(),
+                                  ),
+                                  SizedBox(width: 16), // ✅ Horizontal spacing, not height!
+                                  Expanded(
+                                    flex: 1,
+                                    child: _buildCustomerSectionWeb(),
+                                  ),
+                                ],
+                              ),
                               SizedBox(height: 24),
                               _buildItemsSectionWeb(),
                             ],

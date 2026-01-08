@@ -122,8 +122,7 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
               children: [
                 _buildChallanHeader(challan),
                 const SizedBox(height: 24),
-                _buildCustomerInfo(challan),
-                const SizedBox(height: 24),
+
                 _buildChallanItems(challan),
               ],
             ),
@@ -143,6 +142,8 @@ class ChallanDetailsScreen extends GetView<ChallanDetailsController> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
+                  _buildCustomerInfo(challan),
+                  const SizedBox(height: 24),
                   _buildPaymentSummary(challan),
                   // const SizedBox(height: 24),
                   // _buildActionButtons(challan), // Add actions if needed

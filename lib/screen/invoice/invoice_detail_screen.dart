@@ -30,16 +30,6 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         title: Text('invoice_details'.tr),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Refresh invoice list before going back
-            // if (Get.isRegistered<InvoiceListController>()) {
-            //   Get.find<InvoiceListController>().loadInvoices();
-            // }
-            Get.back();
-          },
-        ),
         actions: [
           // Edit button
           Obx(() {
@@ -125,8 +115,6 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
               children: [
                 _buildInvoiceHeader(inv),
                 const SizedBox(height: 24),
-                _buildCustomerInfo(inv),
-                const SizedBox(height: 24),
                 _buildInvoiceItems(inv),
               ],
             ),
@@ -146,6 +134,8 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
+                  _buildCustomerInfo(inv),
+                  const SizedBox(height: 24),
                   _buildPaymentInfo(inv),
                   const SizedBox(height: 24),
                   // Add any extra web-specific actions here (Download PDF, Print, etc.)

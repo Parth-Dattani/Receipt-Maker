@@ -154,9 +154,17 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               padding: EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildPurchaseDetailsCard(),
-                  SizedBox(height: 12),
-                  _buildVendorSection(),
+                Row(
+                  children: [
+                    Expanded(
+                        flex:1,
+                        child: _buildPurchaseDetailsCard()),
+                    SizedBox(width: 12),
+                    Expanded(
+                        flex: 1,
+                        child: _buildVendorSection()),
+                  ],
+                ),
                   SizedBox(height: 12),
                   _buildItemsSection(),
                   SizedBox(height: 80), // Bottom padding for action buttons
@@ -604,12 +612,374 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
     );
   }
 
+  // Widget _buildItemsSection() {
+  //   return Card(
+  //     elevation: 4,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+  //     child: Padding(
+  //       padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Row(
+  //             children: [
+  //               Icon(Icons.inventory_2, color: AppColors.tealColor),
+  //               SizedBox(width: 8),
+  //               Text(
+  //                 'Purchase Items',
+  //                 style: TextStyle(
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: AppColors.tealColor,
+  //                 ),
+  //               ),
+  //               Spacer(),
+  //               Obx(() => Container(
+  //                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+  //                 decoration: BoxDecoration(
+  //                   color: controller.useItemMaster.value
+  //                       ? AppColors.tealColor.withOpacity(0.15)
+  //                       : Colors.orange.withOpacity(0.15),
+  //                   borderRadius: BorderRadius.circular(8),
+  //                   border: Border.all(
+  //                     color: controller.useItemMaster.value
+  //                         ? AppColors.tealColor.withOpacity(0.3)
+  //                         : Colors.orange.withOpacity(0.3),
+  //                   ),
+  //                 ),
+  //                 child: Row(
+  //                   mainAxisSize: MainAxisSize.min,
+  //                   children: [
+  //                     Icon(
+  //                       controller.useItemMaster.value
+  //                           ? Icons.arrow_drop_down_circle
+  //                           : Icons.edit,
+  //                       size: 16,
+  //                       color: controller.useItemMaster.value
+  //                           ? AppColors.tealColor
+  //                           : Colors.orange,
+  //                     ),
+  //                     SizedBox(width: 4),
+  //                     Text(
+  //                       controller.useItemMaster.value ? 'List' : 'Manual',
+  //                       style: TextStyle(
+  //                         fontSize: 12,
+  //                         fontWeight: FontWeight.bold,
+  //                         color: controller.useItemMaster.value
+  //                             ? AppColors.tealColor
+  //                             : Colors.orange,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               )),
+  //               SizedBox(width: 8),
+  //               IconButton(
+  //                 icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
+  //                 onPressed: controller.toggleItemEntryMode,
+  //                 tooltip: 'Toggle between dropdown and manual entry',
+  //               ),
+  //             ],
+  //           ),
+  //           SizedBox(height: 16),
+  //           // Container(
+  //           //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //           //   decoration: BoxDecoration(
+  //           //     color: AppColors.tealColor.withOpacity(0.1),
+  //           //     borderRadius: BorderRadius.circular(12),
+  //           //   ),
+  //           //   child: Row(
+  //           //     children: [
+  //           //       Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+  //           //       Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+  //           //       Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+  //           //       SizedBox(width: 30),
+  //           //     ],
+  //           //   ),
+  //           // ),
+  //           SizedBox(height: 12),
+  //           Obx(() => Column(
+  //             children: [
+  //               ...controller.purchaseItems.asMap().entries.map((entry) {
+  //                 int index = entry.key;
+  //                 var item = entry.value;
+  //
+  //                 return Container(
+  //                   margin: EdgeInsets.only(bottom: 12),
+  //                   padding: EdgeInsets.all(12),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.white,
+  //                     border: Border.all(color: Colors.grey.shade200),
+  //                     borderRadius: BorderRadius.circular(12),
+  //                     boxShadow: [
+  //                       BoxShadow(
+  //                         color: AppColors.tealColor.withOpacity(0.1),
+  //                         blurRadius: 4,
+  //                         offset: Offset(0, 2),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                   child: Column(
+  //                     children: [
+  //                       Row(
+  //                         children: [
+  //                           Container(
+  //                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //                             decoration: BoxDecoration(
+  //                               color: Colors.teal.shade600,
+  //                               borderRadius: BorderRadius.circular(4),
+  //                             ),
+  //                             child: Text(
+  //                               '#${index + 1}',
+  //                               style: TextStyle(
+  //                                 fontWeight: FontWeight.bold,
+  //                                 color: Colors.white,
+  //                                 fontSize: 11,
+  //                               ),
+  //                             ),
+  //                           ),
+  //                           SizedBox(width: 8),
+  //                           Text(
+  //                              'Item',
+  //                             style: TextStyle(
+  //                               fontWeight: FontWeight.w600,
+  //                               color: Colors.grey.shade600,
+  //                               fontSize: 11,
+  //                             ),
+  //                           ),
+  //                           Spacer(),
+  //                           Padding(
+  //                             padding: const EdgeInsets.only(right: 30.0),
+  //                             child: Text(
+  //                               'Price',
+  //                               style: TextStyle(
+  //                                 fontWeight: FontWeight.w600,
+  //                                 color: Colors.grey.shade600,
+  //                                 fontSize: 11,
+  //                               ),
+  //                             ),
+  //                           ),
+  //
+  //                         ],
+  //                       ),
+  //                       SizedBox(height: 8),
+  //                       // Row 1: Item Name + Price + Qty
+  //                       Row(
+  //                         crossAxisAlignment: CrossAxisAlignment.start,
+  //                         children: [
+  //                           Expanded(
+  //                             flex: 3,
+  //                             child: Column(
+  //                               crossAxisAlignment: CrossAxisAlignment.start,
+  //                               children: [
+  //                                 if (controller.useItemMaster.value)
+  //                                   Builder(
+  //                                     builder: (context) {
+  //                                       final activeItems = controller.itemList
+  //                                           .where((i) => i.isActive == true)
+  //                                           .toList();
+  //                                       Item? selectedItem;
+  //                                       try {
+  //                                         selectedItem = activeItems.firstWhere((element) => element.itemId == item.itemId);
+  //                                       } catch (e) {
+  //                                         selectedItem = null;
+  //                                       }
+  //                                       return SearchableDropdown<Item>(
+  //                                         value: selectedItem,
+  //                                         items: activeItems,
+  //                                         itemLabel: (item) => item.itemName.toUpperCase(),
+  //                                         hintText: 'Select Item',
+  //                                         searchHintText: 'Search items...',
+  //                                         itemBuilder: (item) => Column(
+  //                                           crossAxisAlignment: CrossAxisAlignment.start,
+  //                                           children: [
+  //                                             Text(item.itemName.toUpperCase(), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+  //                                           ],
+  //                                         ),
+  //                                         onChanged: (selectedItem) {
+  //                                           if (selectedItem != null) {
+  //                                             controller.selectItemForIndex(index, selectedItem);
+  //                                           }
+  //                                         },
+  //                                       );
+  //                                     },
+  //                                   ),
+  //
+  //                                 if (!controller.useItemMaster.value)
+  //                                   SizedBox(
+  //                                     height: 40,
+  //                                     child: TextFormField(
+  //                                       initialValue: item.itemName,
+  //                                       decoration: InputDecoration(
+  //                                         hintText: 'Enter item name',
+  //                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  //                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  //                                       ),
+  //                                       onChanged: (value) => controller.updateItem(index, itemName: value, itemId: ''),
+  //                                     ),
+  //                                   ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                           SizedBox(width: 12),
+  //                           Expanded(
+  //                             flex: 1,
+  //                             child: SizedBox(
+  //                               height: 40,
+  //                               child: TextFormField(
+  //                                 ///no want Price every Time User manully enter not from Gettin gList
+  //                                 controller: controller.getPriceController(index, initialValue: item.purchasePrice),
+  //                                 //controller: controller.priceControllers,
+  //                                 textAlign: TextAlign.center,
+  //                                 decoration: InputDecoration(
+  //                                   hintText: 'price',
+  //
+  //                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  //                                 ),
+  //                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                                 onChanged: (value) {
+  //                                   double? price = double.tryParse(value);
+  //                                   if (price != null && price >= 0) {
+  //                                     controller.updateItem(index, purchasePrice: price);
+  //                                   }
+  //                                 },
+  //                               ),
+  //                             ),
+  //                           ),
+  //
+  //                           if (controller.purchaseItems.length > 1)
+  //                             SizedBox(
+  //                               width: 20,
+  //                               child: Padding(
+  //                                 padding: EdgeInsets.only(top: 1, left: 5),
+  //                                 child: IconButton(
+  //                                   onPressed: () => controller.removeItem(index),
+  //                                   icon: Icon(Icons.delete, color: Colors.red, size: 20),
+  //                                   padding: EdgeInsets.zero,
+  //                                   constraints: BoxConstraints(),
+  //                                 ),
+  //                               ),
+  //                             ),
+  //                         ],
+  //                       ),
+  //                       SizedBox(height: 12),
+  //                       Row(
+  //                         children: [
+  //                           Expanded(
+  //                             flex: 1,
+  //                             child: Column(
+  //                               crossAxisAlignment: CrossAxisAlignment.start,
+  //                               children: [
+  //                                 Text('Qty', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+  //                                 SizedBox(height: 4),
+  //                                 SizedBox(
+  //                                   height: 40,
+  //                                   child: TextFormField(
+  //                                     textAlign: TextAlign.center,
+  //                                     initialValue: item.quantity > 0 ? item.quantity.toString() : '',
+  //                                     decoration: InputDecoration(
+  //                                       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  //                                     ),
+  //                                     keyboardType: TextInputType.numberWithOptions(decimal: true),
+  //                                     onChanged: (value) {
+  //                                       double? qty = double.tryParse(value);
+  //                                       if (qty != null && qty > 0) {
+  //                                         controller.updateItem(index, quantity: qty);
+  //                                       }
+  //                                     },
+  //                                   ),
+  //                                 ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                           SizedBox(width: 12),
+  //                           Expanded(
+  //                             flex: 1,
+  //                             child: Column(
+  //                               crossAxisAlignment: CrossAxisAlignment.start,
+  //                               children: [
+  //                                 Text('GST %', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+  //                                 SizedBox(height: 4),
+  //                                 SizedBox(
+  //                                   height: 40,
+  //                                   child: DropdownButtonFormField<double>(
+  //                                     value: item.gstRate,
+  //                                     decoration: InputDecoration(
+  //                                       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  //                                     ),
+  //                                     items: [0.0, 5.0, 12.0, 18.0].map((rate) {
+  //                                       return DropdownMenuItem(value: rate, child: Text("${rate.toInt()}%"));
+  //                                     }).toList(),
+  //                                     onChanged: (value) => controller.updateItem(index, gstRate: value),
+  //                                   ),
+  //                                 ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                           SizedBox(width: 12),
+  //                           Expanded(
+  //                             flex: 1,
+  //                             child: Column(
+  //                               crossAxisAlignment: CrossAxisAlignment.start,
+  //                               children: [
+  //                                 Text('Unit', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+  //                                 SizedBox(height: 4),
+  //                                 SizedBox(
+  //                                   height: 40,
+  //                                   child: DropdownButtonFormField<String>(
+  //                                     value: item.unit.isNotEmpty && controller.unitOptions.contains(item.unit) ? item.unit : controller.unitOptions.first,
+  //                                     decoration: InputDecoration(
+  //                                       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  //                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  //                                     ),
+  //                                     items: controller.unitOptions.map((unit) {
+  //                                       return DropdownMenuItem(value: unit, child: Text(unit, style: TextStyle(fontSize: 12)));
+  //                                     }).toList(),
+  //                                     onChanged: (value) => controller.updateItem(index, unit: value),
+  //                                   ),
+  //                                 ),
+  //                               ],
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 );
+  //               }).toList(),
+  //               SizedBox(height: 16),
+  //               Container(
+  //                 width: double.infinity,
+  //                 child: ElevatedButton.icon(
+  //                   onPressed: controller.addNewItem,
+  //                   icon: Icon(Icons.add_circle_outline, size: 20),
+  //                   label: Text('Add Another Item'),
+  //                   style: ElevatedButton.styleFrom(
+  //                     backgroundColor: AppColors.tealColor,
+  //                     foregroundColor: Colors.white,
+  //                     padding: EdgeInsets.symmetric(vertical: 12),
+  //                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           )),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+
   Widget _buildItemsSection() {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -674,159 +1044,153 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               ],
             ),
             SizedBox(height: 16),
-            // Container(
-            //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            //   decoration: BoxDecoration(
-            //     color: AppColors.tealColor.withOpacity(0.1),
-            //     borderRadius: BorderRadius.circular(12),
-            //   ),
-            //   child: Row(
-            //     children: [
-            //       Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-            //       Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-            //       Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-            //       SizedBox(width: 30),
-            //     ],
-            //   ),
-            // ),
+
+            // ✅ HEADER ROW for web layout
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Only show headers in web view (width > 900)
+                if (constraints.maxWidth > 600) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 40), // Space for index badge
+                        Expanded(flex: 4, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+                        SizedBox(width: 12),
+                        Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        SizedBox(width: 12),
+                        Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        SizedBox(width: 12),
+                        Expanded(flex: 1, child: Text('GST%', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        SizedBox(width: 12),
+                        Expanded(flex: 1, child: Text('Unit', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        SizedBox(width: 40), // Space for delete button
+                      ],
+                    ),
+                  );
+                }
+                return SizedBox.shrink();
+              },
+            ),
+
             SizedBox(height: 12),
+
             Obx(() => Column(
               children: [
                 ...controller.purchaseItems.asMap().entries.map((entry) {
                   int index = entry.key;
                   var item = entry.value;
 
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.tealColor.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.teal.shade600,
-                                borderRadius: BorderRadius.circular(4),
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      // ✅ WEB LAYOUT (Single Row - width > 600)
+                      if (constraints.maxWidth > 600) {
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade200),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.tealColor.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
                               ),
-                              child: Text(
-                                '#${index + 1}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                               'Item',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
-                                fontSize: 11,
-                              ),
-                            ),
-                            Spacer(),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 30.0),
-                              child: Text(
-                                'Price',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade600,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        // Row 1: Item Name + Price + Qty
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (controller.useItemMaster.value)
-                                    Builder(
-                                      builder: (context) {
-                                        final activeItems = controller.itemList
-                                            .where((i) => i.isActive == true)
-                                            .toList();
-                                        Item? selectedItem;
-                                        try {
-                                          selectedItem = activeItems.firstWhere((element) => element.itemId == item.itemId);
-                                        } catch (e) {
-                                          selectedItem = null;
-                                        }
-                                        return SearchableDropdown<Item>(
-                                          value: selectedItem,
-                                          items: activeItems,
-                                          itemLabel: (item) => item.itemName.toUpperCase(),
-                                          hintText: 'Select Item',
-                                          searchHintText: 'Search items...',
-                                          itemBuilder: (item) => Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(item.itemName.toUpperCase(), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                                            ],
-                                          ),
-                                          onChanged: (selectedItem) {
-                                            if (selectedItem != null) {
-                                              controller.selectItemForIndex(index, selectedItem);
-                                            }
-                                          },
-                                        );
-                                      },
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Index Badge
+                              Container(
+                                width: 40,
+                                alignment: Alignment.center,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.shade600,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '#${index + 1}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontSize: 11,
                                     ),
+                                  ),
+                                ),
+                              ),
 
-                                  if (!controller.useItemMaster.value)
-                                    SizedBox(
-                                      height: 40,
-                                      child: TextFormField(
-                                        initialValue: item.itemName,
-                                        decoration: InputDecoration(
-                                          hintText: 'Enter item name',
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              // Item Name (Dropdown or TextField)
+                              Expanded(
+                                flex: 4,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: controller.useItemMaster.value
+                                      ? Builder(
+                                    builder: (context) {
+                                      final activeItems = controller.itemList
+                                          .where((i) => i.isActive == true)
+                                          .toList();
+                                      Item? selectedItem;
+                                      try {
+                                        selectedItem = activeItems.firstWhere(
+                                                (element) => element.itemId == item.itemId);
+                                      } catch (e) {
+                                        selectedItem = null;
+                                      }
+                                      return SearchableDropdown<Item>(
+                                        value: selectedItem,
+                                        items: activeItems,
+                                        itemLabel: (item) => item.itemName.toUpperCase(),
+                                        hintText: 'Select Item',
+                                        searchHintText: 'Search items...',
+                                        itemBuilder: (item) => Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(item.itemName.toUpperCase(),
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.w600, fontSize: 14)),
+                                          ],
                                         ),
-                                        onChanged: (value) => controller.updateItem(index, itemName: value, itemId: ''),
-                                      ),
+                                        onChanged: (selectedItem) {
+                                          if (selectedItem != null) {
+                                            controller.selectItemForIndex(index, selectedItem);
+                                          }
+                                        },
+                                      );
+                                    },
+                                  )
+                                      : TextFormField(
+                                    initialValue: item.itemName,
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter item name',
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                ],
+                                    onChanged: (value) => controller.updateItem(index, itemName: value, itemId: ''),
+                                  ),
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              flex: 1,
-                              child: SizedBox(
-                                height: 40,
+
+                              SizedBox(width: 12),
+
+                              // Price
+                              Expanded(
+                                flex: 2,
                                 child: TextFormField(
-                                  ///no want Price every Time User manully enter not from Gettin gList
                                   controller: controller.getPriceController(index, initialValue: item.purchasePrice),
-                                  //controller: controller.priceControllers,
                                   textAlign: TextAlign.center,
                                   decoration: InputDecoration(
-                                    hintText: 'price',
-
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    hintText: 'Price',
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                   keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -838,110 +1202,372 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                   },
                                 ),
                               ),
-                            ),
 
-                            if (controller.purchaseItems.length > 1)
-                              SizedBox(
-                                width: 20,
-                                child: Padding(
-                                  padding: EdgeInsets.only(top: 1, left: 5),
-                                  child: IconButton(
-                                    onPressed: () => controller.removeItem(index),
-                                    icon: Icon(Icons.delete, color: Colors.red, size: 20),
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
+                              SizedBox(width: 12),
+
+                              // Quantity
+                              Expanded(
+                                flex: 1,
+                                child: TextFormField(
+                                  textAlign: TextAlign.center,
+                                  initialValue: item.quantity > 0 ? item.quantity.toString() : '',
+                                  decoration: InputDecoration(
+                                    hintText: 'Qty',
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  onChanged: (value) {
+                                    double? qty = double.tryParse(value);
+                                    if (qty != null && qty > 0) {
+                                      controller.updateItem(index, quantity: qty);
+                                    }
+                                  },
                                 ),
                               ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+
+                              SizedBox(width: 12),
+
+                              // GST Rate
+                              Expanded(
+                                flex: 1,
+                                child: DropdownButtonFormField<double>(
+                                  value: item.gstRate,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  items: [0.0, 5.0, 12.0, 18.0].map((rate) {
+                                    return DropdownMenuItem(
+                                        value: rate, child: Text("${rate.toInt()}%"));
+                                  }).toList(),
+                                  onChanged: (value) => controller.updateItem(index, gstRate: value),
+                                ),
+                              ),
+
+                              SizedBox(width: 12),
+
+                              // Unit
+                              Expanded(
+                                flex: 1,
+                                child: DropdownButtonFormField<String>(
+                                  value: item.unit.isNotEmpty && controller.unitOptions.contains(item.unit)
+                                      ? item.unit
+                                      : controller.unitOptions.first,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  items: controller.unitOptions.map((unit) {
+                                    return DropdownMenuItem(
+                                        value: unit,
+                                        child: Text(unit, style: TextStyle(fontSize: 12)));
+                                  }).toList(),
+                                  onChanged: (value) => controller.updateItem(index, unit: value),
+                                ),
+                              ),
+
+                              // Delete Button
+                              Container(
+                                width: 40,
+                                alignment: Alignment.center,
+                                child: controller.purchaseItems.length > 1
+                                    ? IconButton(
+                                  onPressed: () => controller.removeItem(index),
+                                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
+                                  padding: EdgeInsets.zero,
+                                  constraints: BoxConstraints(),
+                                  tooltip: 'Remove',
+                                )
+                                    : SizedBox(width: 40),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      // ✅ MOBILE LAYOUT (Stacked - width <= 600) - Your Original
+                      else {
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade200),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.tealColor.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
                                 children: [
-                                  Text('Qty', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                  SizedBox(height: 4),
-                                  SizedBox(
-                                    height: 40,
-                                    child: TextFormField(
-                                      textAlign: TextAlign.center,
-                                      initialValue: item.quantity > 0 ? item.quantity.toString() : '',
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.shade600,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '#${index + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 11,
                                       ),
-                                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                      onChanged: (value) {
-                                        double? qty = double.tryParse(value);
-                                        if (qty != null && qty > 0) {
-                                          controller.updateItem(index, quantity: qty);
-                                        }
-                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Item',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 30.0),
+                                    child: Text(
+                                      'Price',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade600,
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              flex: 1,
-                              child: Column(
+                              SizedBox(height: 8),
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('GST %', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                  SizedBox(height: 4),
-                                  SizedBox(
-                                    height: 40,
-                                    child: DropdownButtonFormField<double>(
-                                      value: item.gstRate,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (controller.useItemMaster.value)
+                                          Builder(
+                                            builder: (context) {
+                                              final activeItems = controller.itemList
+                                                  .where((i) => i.isActive == true)
+                                                  .toList();
+                                              Item? selectedItem;
+                                              try {
+                                                selectedItem = activeItems.firstWhere(
+                                                        (element) => element.itemId == item.itemId);
+                                              } catch (e) {
+                                                selectedItem = null;
+                                              }
+                                              return SearchableDropdown<Item>(
+                                                value: selectedItem,
+                                                items: activeItems,
+                                                itemLabel: (item) => item.itemName.toUpperCase(),
+                                                hintText: 'Select Item',
+                                                searchHintText: 'Search items...',
+                                                itemBuilder: (item) => Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(item.itemName.toUpperCase(),
+                                                        style: TextStyle(
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: 14)),
+                                                  ],
+                                                ),
+                                                onChanged: (selectedItem) {
+                                                  if (selectedItem != null) {
+                                                    controller.selectItemForIndex(
+                                                        index, selectedItem);
+                                                  }
+                                                },
+                                              );
+                                            },
+                                          ),
+                                        if (!controller.useItemMaster.value)
+                                          SizedBox(
+                                            height: 40,
+                                            child: TextFormField(
+                                              initialValue: item.itemName,
+                                              decoration: InputDecoration(
+                                                hintText: 'Enter item name',
+                                                contentPadding: EdgeInsets.symmetric(
+                                                    horizontal: 12, vertical: 8),
+                                                border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                              onChanged: (value) => controller.updateItem(
+                                                  index, itemName: value, itemId: ''),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: SizedBox(
+                                      height: 40,
+                                      child: TextFormField(
+                                        controller: controller.getPriceController(index,
+                                            initialValue: item.purchasePrice),
+                                        textAlign: TextAlign.center,
+                                        decoration: InputDecoration(
+                                          hintText: 'price',
+                                          contentPadding:
+                                          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8)),
+                                        ),
+                                        keyboardType:
+                                        TextInputType.numberWithOptions(decimal: true),
+                                        onChanged: (value) {
+                                          double? price = double.tryParse(value);
+                                          if (price != null && price >= 0) {
+                                            controller.updateItem(index, purchasePrice: price);
+                                          }
+                                        },
                                       ),
-                                      items: [0.0, 5.0, 12.0, 18.0].map((rate) {
-                                        return DropdownMenuItem(value: rate, child: Text("${rate.toInt()}%"));
-                                      }).toList(),
-                                      onChanged: (value) => controller.updateItem(index, gstRate: value),
+                                    ),
+                                  ),
+                                  if (controller.purchaseItems.length > 1)
+                                    SizedBox(
+                                      width: 20,
+                                      child: Padding(
+                                        padding: EdgeInsets.only(top: 1, left: 5),
+                                        child: IconButton(
+                                          onPressed: () => controller.removeItem(index),
+                                          icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                                          padding: EdgeInsets.zero,
+                                          constraints: BoxConstraints(),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Qty',
+                                            style: TextStyle(
+                                                fontSize: 12, color: Colors.grey.shade600)),
+                                        SizedBox(height: 4),
+                                        SizedBox(
+                                          height: 40,
+                                          child: TextFormField(
+                                            textAlign: TextAlign.center,
+                                            initialValue: item.quantity > 0
+                                                ? item.quantity.toString()
+                                                : '',
+                                            decoration: InputDecoration(
+                                              contentPadding: EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 8),
+                                              border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            keyboardType:
+                                            TextInputType.numberWithOptions(decimal: true),
+                                            onChanged: (value) {
+                                              double? qty = double.tryParse(value);
+                                              if (qty != null && qty > 0) {
+                                                controller.updateItem(index, quantity: qty);
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('GST %',
+                                            style: TextStyle(
+                                                fontSize: 12, color: Colors.grey.shade600)),
+                                        SizedBox(height: 4),
+                                        SizedBox(
+                                          height: 40,
+                                          child: DropdownButtonFormField<double>(
+                                            value: item.gstRate,
+                                            decoration: InputDecoration(
+                                              contentPadding: EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 8),
+                                              border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            items: [0.0, 5.0, 12.0, 18.0].map((rate) {
+                                              return DropdownMenuItem(
+                                                  value: rate,
+                                                  child: Text("${rate.toInt()}%"));
+                                            }).toList(),
+                                            onChanged: (value) =>
+                                                controller.updateItem(index, gstRate: value),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Unit',
+                                            style: TextStyle(
+                                                fontSize: 12, color: Colors.grey.shade600)),
+                                        SizedBox(height: 4),
+                                        SizedBox(
+                                          height: 40,
+                                          child: DropdownButtonFormField<String>(
+                                            value: item.unit.isNotEmpty &&
+                                                controller.unitOptions.contains(item.unit)
+                                                ? item.unit
+                                                : controller.unitOptions.first,
+                                            decoration: InputDecoration(
+                                              contentPadding: EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 8),
+                                              border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            items: controller.unitOptions.map((unit) {
+                                              return DropdownMenuItem(
+                                                  value: unit,
+                                                  child: Text(unit,
+                                                      style: TextStyle(fontSize: 12)));
+                                            }).toList(),
+                                            onChanged: (value) =>
+                                                controller.updateItem(index, unit: value),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Unit', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                  SizedBox(height: 4),
-                                  SizedBox(
-                                    height: 40,
-                                    child: DropdownButtonFormField<String>(
-                                      value: item.unit.isNotEmpty && controller.unitOptions.contains(item.unit) ? item.unit : controller.unitOptions.first,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      items: controller.unitOptions.map((unit) {
-                                        return DropdownMenuItem(value: unit, child: Text(unit, style: TextStyle(fontSize: 12)));
-                                      }).toList(),
-                                      onChanged: (value) => controller.updateItem(index, unit: value),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
                   );
                 }).toList(),
+
                 SizedBox(height: 16),
                 Container(
                   width: double.infinity,
