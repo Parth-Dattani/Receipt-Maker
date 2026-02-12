@@ -120,6 +120,7 @@ class NewInvoiceController extends GetxController {
   final receivedAmountController = TextEditingController();
   var receivedAmount = 0.0.obs;
   var pendingAmount = 0.0.obs;
+  var paymentMode = 'Cash'.obs;
 
   var invoiceDate = DateTime.now().obs;  // Invoice issue date
   var paymentDueDate = DateTime.now().add(Duration(days: 15)).obs;  // Payment due date
@@ -794,7 +795,10 @@ class NewInvoiceController extends GetxController {
 
       paymentStatus.value = invoiceData['status']?.toString() ?? 'Pending';
       notesController.text = invoiceData['notes']?.toString() ?? '';
-
+      if (invoiceData['paymentMode'] != null) {
+        paymentMode.value = invoiceData['paymentMode'].toString();
+        print("✅ Restored payment mode: ${paymentMode.value}");
+      }
       if (invoiceData['subtotal'] != null) {
         subtotal.value = double.tryParse(invoiceData['subtotal'].toString()) ?? 0.0;
       }
@@ -2422,13 +2426,18 @@ class NewInvoiceController extends GetxController {
       receivedAmount.value = totalAmount.value;
       receivedAmountController.text = totalAmount.value.toString();
       pendingAmount.value = 0.0;
-    } else if (status == 'Pending') {
+      paymentMode.value = 'Cash';
+    }
+    else if (status == 'Pending') {
       receivedAmount.value = 0.0;
       receivedAmountController.clear();
       pendingAmount.value = totalAmount.value;
-    } else if (status == 'Partial') {
+      paymentMode.value = '';
+    }
+    else if (status == 'Partial') {
       // Keep current received amount or set to 0
       pendingAmount.value = calculatedPendingAmount;
+      paymentMode.value = 'Cash';
     }
   }
 
@@ -2749,6 +2758,9 @@ class NewInvoiceController extends GetxController {
         'receivedAmount': receivedAmount.value,
         'pendingAmount': pendingAmount.value,
         'invoiceType': invoiceType.value.name,
+        'paymentMode': (paymentStatus.value == 'Paid' || paymentStatus.value == 'Partial')
+            ? paymentMode.value
+            : '',  // Empty if Pending
       };
 
       if (isInEditMode) {
@@ -2999,6 +3011,11 @@ class NewInvoiceController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void updatePaymentMode(String mode) {
+    paymentMode.value = mode;
+    print("Payment mode updated to: $mode");
   }
 
   void clearForm() {

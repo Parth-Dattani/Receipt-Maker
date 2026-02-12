@@ -23,86 +23,111 @@ class NewChallanScreen extends GetView<NewChallanController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        elevation: 4,
-        foregroundColor: Colors.white,
-        backgroundColor: AppColors.tealColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
-        title: Obx(() => Text(
-          controller.isEditMode.value ? 'edit_challan'.tr : 'new_challan'.tr,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        )),
-        centerTitle: true,
-        actions: [
-          Obx(() => controller.isEditMode.value
-              ? _buildEditModeActions()
-              : const SizedBox.shrink()),
-        ],
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // RESPONSIVE LAYOUT BUILDER
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth > 900) {
-                  return _buildWebLayout(context);
-                } else {
-                  return _buildMobileLayout(context);
-                }
-              },
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Check if it's web layout (width > 900)
+        bool isWeb = constraints.maxWidth > 900;
 
-            // LOADING OVERLAY
-            Obx(() => controller.isLoading.value
-                ? Container(
-              color: Colors.black.withOpacity(0.3),
-              child: Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
+        return Scaffold(
+          backgroundColor: Colors.grey.shade100,
+          appBar: AppBar(
+            elevation: 4,
+            foregroundColor: Colors.white,
+            backgroundColor: AppColors.tealColor,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
+            title: Row(
+              children: [
+                // Left side: Challan title
+                Obx(() => Text(
+                  controller.isEditMode.value ? 'edit_challan'.tr : 'new_challan'.tr,
+                  style: const TextStyle(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        controller.isEditMode.value ? 'updating...'.tr : 'loading...'.tr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
+                )),
+
+                // ✅ NEW: Add company name on right side for web layout
+                if (isWeb) ...[
+                  Spacer(),
+                  Obx(() => Text(
+                    AppConstants.companyName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  )),
+                ],
+              ],
+            ),
+            // Center only on mobile
+            actions: [
+              Obx(() => controller.isEditMode.value
+                  ? _buildEditModeActions()
+                  : const SizedBox.shrink()),
+            ],
+          ),
+          body: SafeArea(
+            child: Stack(
+              children: [
+                // RESPONSIVE LAYOUT BUILDER
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth > 900) {
+                      return _buildWebLayout(context);
+                    } else {
+                      return _buildMobileLayout(context);
+                    }
+                  },
                 ),
-              ),
-            )
-                : SizedBox.shrink()),
-          ],
-        ),
-      ),
+
+                // LOADING OVERLAY
+                Obx(() => controller.isLoading.value
+                    ? Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: Center(
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            controller.isEditMode.value ? 'updating...'.tr : 'loading...'.tr,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                    : SizedBox.shrink()),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

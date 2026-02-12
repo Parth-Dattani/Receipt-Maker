@@ -24,27 +24,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-
 // Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
 
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
 
-// Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
 
 // Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
 
@@ -220,10 +202,7 @@ class ItemScreen extends GetView<ItemController> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.tealColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Get.back(),
-        ),
+
         title: const Text(
           "Item Management", // Matching image title style
           style: TextStyle(

@@ -47,10 +47,10 @@ class RecentInvoicesCard extends GetView<DashboardController> {
           ListView.separated(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),
-            itemCount: controller.invoiceList.take(5).length,
+            itemCount: controller.invoiceList.take(6).length,
             separatorBuilder: (context, index) => Divider(height: 1),
             itemBuilder: (context, index) {
-              final invoice = controller.invoiceList.reversed.take(5).toList()[index];
+              final invoice = controller.invoiceList.reversed.take(6).toList()[index];
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: _getStatusColor('paid').withOpacity(0.1),

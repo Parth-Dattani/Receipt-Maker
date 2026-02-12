@@ -2885,6 +2885,7 @@ class GoogleSheetService {
         'receivedAmount',
         'pendingAmount',
         'status',
+        'paymentMode',
         'notes',
         'paymentMethod',
         'paymentStatus',
@@ -2955,6 +2956,7 @@ class GoogleSheetService {
     }
   }
 
+
 // 🔧 Helper: Prepares a single invoice row in header order
   static List<dynamic> _prepareInvoiceRow(
       Map<String, dynamic> invoiceData,
@@ -2983,91 +2985,7 @@ class GoogleSheetService {
 
 
 
-  // Helper method to prepare invoice row data based on actual sheet headers
 
-
-  /// At aTime one Row
-  // static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
-  //   print("🔄 Adding invoice item to Google Sheet...");
-  //
-  //   try {
-  //     final client = await _getAuthClient();
-  //     final sheetsApi = SheetsApi(client);
-  //
-  //     // Get header row
-  //     final headerResponse = await sheetsApi.spreadsheets.values.get(
-  //       spreadsheetId,
-  //       "$invoiceItemSheetName!1:1",
-  //     );
-  //
-  //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
-  //       throw Exception("No header row found in sheet '$invoiceItemSheetName'");
-  //     }
-  //
-  //     final headers = headerResponse.values![0];
-  //     print("InvoiceItems headers: $headers");
-  //
-  //     // ✅ Prepare row data based on exact header names (same as challan method)
-  //     List<dynamic> rowData = [];
-  //
-  //     for (var header in headers) {
-  //       final headerName = header.toString();
-  //       final headerNameLower = headerName.toLowerCase();
-  //
-  //       if (headerNameLower.contains('userid')) {
-  //         // Add userId
-  //         rowData.add(userId);
-  //       }
-  //       else {
-  //         // ✅ Add other fields - look for exact match first, then case-insensitive
-  //         var value = '';
-  //
-  //         // First try exact match
-  //         if (itemData.containsKey(headerName)) {
-  //           value = itemData[headerName]?.toString() ?? '';
-  //         } else {
-  //           // Then try case-insensitive match
-  //           for (var key in itemData.keys) {
-  //             if (key.toString().toLowerCase() == headerNameLower) {
-  //               value = itemData[key]?.toString() ?? '';
-  //               break;
-  //             }
-  //           }
-  //         }
-  //         rowData.add(value);
-  //       }
-  //     }
-  //
-  //     print("Prepared invoice item row: $rowData");
-  //
-  //     // ✅ Debug: Print the mapping to verify GST data
-  //     print("=== INVOICE ITEM MAPPING DEBUG ===");
-  //     for (int i = 0; i < headers.length && i < rowData.length; i++) {
-  //       print("${headers[i]}: ${rowData[i]}");
-  //     }
-  //
-  //     // Append row
-  //     final valueRange = ValueRange.fromJson({
-  //       "values": [rowData],
-  //     });
-  //
-  //     final response = await sheetsApi.spreadsheets.values.append(
-  //       valueRange,
-  //       spreadsheetId,
-  //       "$invoiceItemSheetName!A:Z",
-  //       valueInputOption: "USER_ENTERED",
-  //     );
-  //
-  //     if (response.updates?.updatedRows != null) {
-  //       print("✅ Invoice item added successfully. Rows affected: ${response.updates!.updatedRows}");
-  //     } else {
-  //       print("✅ Invoice item added successfully.");
-  //     }
-  //   } catch (e) {
-  //     print("❌ Error adding invoice item: $e");
-  //     throw Exception("Failed to add invoice item: ${e.toString()}");
-  //   }
-  // }
 
   /// At aTime all
   static Future<void> addInvoiceItemsBatch(
@@ -3287,9 +3205,11 @@ class GoogleSheetService {
           value = invoiceData['customerEmail']?.toString();
         } else if (headerLower == 'mobile') {
           value = invoiceData['mobile']?.toString();
-        } else if (headerLower.contains('customeraddress')) {
+        }
+        else if (headerLower.contains('customeraddress')) {
           value = invoiceData['customerAddress']?.toString();
-        } else if (headerLower.contains('issuedate')) {
+        }
+        else if (headerLower.contains('issuedate')) {
           if (invoiceData['issueDate'] != null) {
             try {
               DateTime date = invoiceData['issueDate'] is String
@@ -3300,7 +3220,8 @@ class GoogleSheetService {
               value = invoiceData['issueDate']?.toString();
             }
           }
-        } else if (headerLower.contains('duedate')) {
+        }
+        else if (headerLower.contains('duedate')) {
           if (invoiceData['dueDate'] != null) {
             try {
               DateTime date = invoiceData['dueDate'] is String
@@ -3311,23 +3232,36 @@ class GoogleSheetService {
               value = invoiceData['dueDate']?.toString();
             }
           }
-        } else if (headerLower == 'subtotal') {
+        }
+        else if (headerLower == 'subtotal') {
           value = invoiceData['subtotal']?.toString();
-        } else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
+        }
+        else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
           value = invoiceData['gstAmount']?.toString();
-        } else if (headerLower.contains('totalamount')) {
+        }
+        else if (headerLower.contains('totalamount')) {
           value = invoiceData['totalAmount']?.toString();
-        } else if (headerLower.contains('receivedamount')) {
+        }
+        else if (headerLower.contains('receivedamount')) {
           value = invoiceData['receivedAmount']?.toString();
-        } else if (headerLower.contains('pendingamount')) {
+        }
+        else if (headerLower.contains('pendingamount')) {
           value = invoiceData['pendingAmount']?.toString();
-        } else if (headerLower == 'status') {
+        }
+        else if (headerLower == 'status') {
           value = invoiceData['status']?.toString();
-        } else if (headerLower == 'notes') {
+        }
+        else if (headerLower.contains('paymentmode')) {
+          value = invoiceData['paymentMode']?.toString();
+          print("💳 Payment Mode: $value");
+        }
+        else if (headerLower == 'notes') {
           value = invoiceData['notes']?.toString();
-        } else if (headerLower.contains('userid')) {
+        }
+        else if (headerLower.contains('userid')) {
           value = userId;
-        } else {
+        }
+        else {
           // Try direct match
           value = invoiceData[header.toString()]?.toString();
         }
@@ -7491,6 +7425,450 @@ class GoogleSheetService {
       print("❌ Error deleting customer: $e");
       rethrow;
     }
+  }
+
+  /// Validate all sheets and add missing columns
+  static Future<void> validateAndUpdateAllSheets() async {
+    print("");
+    print("=" * 70);
+    print("🔍 VALIDATING ALL SHEETS AND COLUMNS");
+    print("=" * 70);
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Define expected structure for all sheets
+      final sheetStructures = {
+        itemSheetName: [
+          'itemId',
+          'itemName',
+          'price',
+          'gstPercent',
+          'unitOfMeasurement',
+          'currentStock',
+          'detailRequirement',
+          'isActive',
+          'userId',
+          'createdAt',
+          'updatedAt',
+        ],
+        invoiceSheetName: [
+          'invoiceId',
+          'customerId',
+          'customerName',
+          'customerEmail',
+          'customerPan',          // ✅ NEW
+          'customerGst',          // ✅ NEW
+          'mobile',
+          'customerAddress',
+          'issueDate',
+          'dueDate',
+          'subtotal',
+          'gstAmount',
+          'totalAmount',
+          'receivedAmount',
+          'pendingAmount',
+          'status',
+          'paymentMode',          // ✅ NEW - PAYMENT MODE
+          'notes',
+          'paymentMethod',
+          'paymentStatus',
+          'userId',
+          'companyId',
+          'createdAt',
+          'updatedAt',
+        ],
+        invoiceItemSheetName: [
+          'invoiceId',
+          'customerId',
+          'itemId',
+          'itemName',
+          'description',
+          'quantity',
+          'rate',
+          'price',
+          'issueDate',
+          'gstRate',
+          'gstAmount',
+          'totalPrice',
+          'unit',
+          'userId',
+        ],
+        challanSheetName: [
+          'challanId',
+          'customerId',
+          'customerName',
+          'customerEmail',
+          'customerMobile',
+          'customerAddress',
+          'challanDate',
+          'subtotal',
+          'gstRate',
+          'gstAmount',
+          'totalAmount',
+          'status',
+          'paymentStatus',
+          'notes',
+          'userId',
+        ],
+        challanItemSheetName: [
+          'challanId',
+          'customerId',
+          'itemId',
+          'itemName',
+          'description',
+          'quantity',
+          'price',
+          'challanDate',
+          'gstRate',
+          'gstAmount',
+          'amountWithGst',
+          'totalPrice',
+        ],
+        purchaseSheetName: [
+          'purchaseId',
+          'vendorId',
+          'vendorName',
+          'vendorEmail',
+          'vendorMobile',
+          'vendorAddress',
+          'purchaseDate',
+          'dueDate',
+          'subtotal',
+          'gstRate',
+          'gstAmount',
+          'totalAmount',
+          'paidAmount',
+          'pendingAmount',
+          'paymentStatus',
+          'notes',
+          'userId',
+        ],
+        purchaseItemSheetName: [
+          'purchaseId',
+          'vendorId',
+          'itemId',
+          'itemName',
+          'description',
+          'quantity',
+          'purchasePrice',
+          'purchaseDate',
+          'gstRate',
+          'totalPrice',
+          'unit',
+          'userId',
+        ],
+        inventoryTransactionSheetName: [
+          'transactionId',
+          'itemId',
+          'itemName',
+          'quantity',
+          'type',
+          'reason',
+          'timestamp',
+          'notes',
+          'userId',
+        ],
+        customerSheetName: [
+          'customerId',
+          'companyId',
+          'companyName',
+          'name',
+          'address',
+          'city',
+          'state',
+          'country',
+          'pincode',
+          'gst',
+          'pan',
+          'businessName',
+          'businessType',
+          'mobile1',
+          'mobile2',
+          'email',
+          'website',
+          'notes',
+          'sundryType',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'createdByEmail',
+        ],
+      };
+
+      int totalSheets = sheetStructures.length;
+      int validatedSheets = 0;
+      int createdSheets = 0;
+      int updatedSheets = 0;
+      int errorSheets = 0;
+
+      // Process each sheet
+      for (var entry in sheetStructures.entries) {
+        final sheetName = entry.key;
+        final expectedHeaders = entry.value;
+
+        try {
+          print("");
+          print("─" * 70);
+          print("📋 Checking: $sheetName");
+
+          // Check if sheet exists
+          final sheetExists = await _sheetExists(sheetsApi, sheetName);
+
+          if (!sheetExists) {
+            print("   ⚠️  Sheet doesn't exist - creating...");
+            await _createSheet(sheetsApi, sheetName);
+            await Future.delayed(Duration(milliseconds: 500));
+            createdSheets++;
+          }
+
+          // Get current headers
+          final headerResponse = await sheetsApi.spreadsheets.values.get(
+            spreadsheetId,
+            "$sheetName!1:1",
+          );
+
+          List<String> currentHeaders = [];
+          if (headerResponse.values != null && headerResponse.values!.isNotEmpty) {
+            currentHeaders = headerResponse.values![0]
+                .map((h) => h.toString().trim())
+                .toList();
+          }
+
+          if (currentHeaders.isEmpty) {
+            // No headers - create them
+            print("   ⚠️  No headers found - creating...");
+            await sheetsApi.spreadsheets.values.update(
+              ValueRange.fromJson({"values": [expectedHeaders]}),
+              spreadsheetId,
+              "$sheetName!A1",
+              valueInputOption: "USER_ENTERED",
+            );
+            print("   ✅ Headers created: ${expectedHeaders.length} columns");
+            updatedSheets++;
+          } else {
+            // Check for missing columns
+            final missingHeaders = <String>[];
+            for (var expected in expectedHeaders) {
+              final found = currentHeaders.any(
+                      (current) => current.toLowerCase() == expected.toLowerCase()
+              );
+              if (!found) {
+                missingHeaders.add(expected);
+              }
+            }
+
+            if (missingHeaders.isNotEmpty) {
+              print("   ⚠️  Missing columns: ${missingHeaders.join(', ')}");
+
+              // Add missing columns
+              final updatedHeaders = [...currentHeaders, ...missingHeaders];
+
+              final lastColLetter = _getColumnLetter(updatedHeaders.length);
+              await sheetsApi.spreadsheets.values.update(
+                ValueRange.fromJson({"values": [updatedHeaders]}),
+                spreadsheetId,
+                "$sheetName!A1:${lastColLetter}1",
+                valueInputOption: "USER_ENTERED",
+              );
+
+              print("   ✅ Added ${missingHeaders.length} missing column(s)");
+              updatedSheets++;
+            } else {
+              print("   ✅ All columns present (${currentHeaders.length} columns)");
+            }
+          }
+
+          validatedSheets++;
+
+        } catch (e) {
+          print("   ❌ Error processing $sheetName: $e");
+          errorSheets++;
+        }
+      }
+
+      // Print summary
+      print("");
+      print("=" * 70);
+      print("📊 VALIDATION SUMMARY");
+      print("=" * 70);
+      print("Total Sheets:        $totalSheets");
+      print("✅ Validated:        $validatedSheets");
+      print("🆕 Created:          $createdSheets");
+      print("🔧 Updated:          $updatedSheets");
+      print("❌ Errors:           $errorSheets");
+      print("=" * 70);
+
+      if (errorSheets == 0) {
+        print("🎉 ALL SHEETS VALIDATED SUCCESSFULLY!");
+      } else {
+        print("⚠️  Some sheets had errors - please check logs above");
+      }
+      print("=" * 70);
+      print("");
+
+    } catch (e, stackTrace) {
+      print("❌ Critical error in validateAndUpdateAllSheets: $e");
+      print("Stack trace: $stackTrace");
+      rethrow;
+    }
+  }
+
+
+  /// Quick validation check (doesn't modify, just reports)
+  static Future<Map<String, dynamic>> checkSheetHealth() async {
+    print("🏥 Running sheet health check...");
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final requiredSheets = [
+        itemSheetName,
+        invoiceSheetName,
+        invoiceItemSheetName,
+        challanSheetName,
+        challanItemSheetName,
+        purchaseSheetName,
+        purchaseItemSheetName,
+        inventoryTransactionSheetName,
+        customerSheetName,
+      ];
+
+      Map<String, bool> sheetStatus = {};
+      Map<String, List<String>> sheetHeaders = {};
+
+      for (var sheetName in requiredSheets) {
+        final exists = await _sheetExists(sheetsApi, sheetName);
+        sheetStatus[sheetName] = exists;
+
+        if (exists) {
+          try {
+            final response = await sheetsApi.spreadsheets.values.get(
+              spreadsheetId,
+              "$sheetName!1:1",
+            );
+            if (response.values != null && response.values!.isNotEmpty) {
+              sheetHeaders[sheetName] = response.values![0]
+                  .map((h) => h.toString().trim())
+                  .toList();
+            }
+          } catch (e) {
+            print("⚠️ Could not read headers for $sheetName");
+          }
+        }
+      }
+
+      return {
+        'allSheetsExist': !sheetStatus.values.contains(false),
+        'sheetStatus': sheetStatus,
+        'sheetHeaders': sheetHeaders,
+      };
+
+    } catch (e) {
+      print("❌ Error in checkSheetHealth: $e");
+      return {'error': e.toString()};
+    }
+  }
+
+
+  // ✅ ADD THIS METHOD TO GoogleSheetService class
+// This will print ALL columns in the Invoice sheet to help debug
+
+  /// Print all columns in Invoice sheet for debugging
+  static Future<void> printInvoiceSheetColumns() async {
+    print("ttttttttttttt");
+    print("=" * 70);
+    print("🔍 PRINTING ALL INVOICE SHEET COLUMNS");
+    print("=" * 70);
+
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Get header row from Invoice sheet
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceSheetName!1:1",
+      );
+
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("❌ No headers found in Invoice sheet");
+        print("=" * 70);
+        return;
+      }
+
+      final headers = headerResponse.values![0]
+          .map((h) => h.toString().trim())
+          .toList();
+
+      print("");
+      print("📋 Total Columns: ${headers.length}");
+      print("");
+      print("Column #  | Column Name");
+      print("-" * 70);
+
+      for (int i = 0; i < headers.length; i++) {
+        final colNumber = (i + 1).toString().padLeft(8);
+        final colLetter = _getColumnLetter(i + 1).padRight(3);
+        print("$colNumber ($colLetter) | ${headers[i]}");
+      }
+
+      print("-" * 70);
+
+      // Check for specific columns
+      print("");
+      print("🔍 Checking for specific columns:");
+      print("");
+
+      final requiredColumns = [
+        'invoiceId',
+        'customerId',
+        'customerName',
+        'status',
+        'paymentMode',    // ← THE MISSING ONE
+        'customerPan',
+        'customerGst',
+        'totalAmount',
+      ];
+
+      for (var reqCol in requiredColumns) {
+        final found = headers.any(
+                (h) => h.toLowerCase() == reqCol.toLowerCase()
+        );
+
+        if (found) {
+          final index = headers.indexWhere(
+                  (h) => h.toLowerCase() == reqCol.toLowerCase()
+          );
+          print("   ✅ '$reqCol' - EXISTS at column ${index + 1} (${_getColumnLetter(index + 1)})");
+        } else {
+          print("   ❌ '$reqCol' - MISSING!");
+        }
+      }
+
+      print("");
+      print("=" * 70);
+      print("");
+
+    } catch (e, stackTrace) {
+      print("❌ Error printing Invoice columns: $e");
+      print("Stack trace: $stackTrace");
+      print("=" * 70);
+    }
+  }
+
+// Helper method (if not already present)
+  static String _getColumnLetter(int colIndex) {
+    String columnName = '';
+    while (colIndex > 0) {
+      int modulo = (colIndex - 1) % 26;
+      columnName = String.fromCharCode(65 + modulo) + columnName;
+      colIndex = ((colIndex - modulo) ~/ 26);
+    }
+    return columnName;
   }
 }
 

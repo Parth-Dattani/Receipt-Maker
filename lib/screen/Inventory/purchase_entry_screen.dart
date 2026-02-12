@@ -19,6 +19,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
 
   @override
   Widget build(BuildContext context) {
+    bool isWeb = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
@@ -29,14 +30,29 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
-        title: Obx(() => Text(
-          controller.isEditMode.value ? 'Edit Purchase Entry' : 'New Purchase Entry',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        )),
+        title: Row(
+          children: [
+            Obx(() => Text(
+              controller.isEditMode.value ? 'Edit Purchase Entry' : 'New Purchase Entry',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+              ),
+            )),
+            if (isWeb) ...[
+              const Spacer(),
+              Text(
+                AppConstants.companyName, // No Obx needed for static string
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
         centerTitle: true,
         actions: [
           Obx(() => controller.isEditMode.value

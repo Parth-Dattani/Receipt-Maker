@@ -16,10 +16,26 @@ class StockReportScreen extends GetView<StockReportController> {
 
   @override
   Widget build(BuildContext context) {
+    bool isWeb = MediaQuery.of(context).size.width > 900;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
+    backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
-        title: const Text('Stock Report'),
+        title: Row(
+          children: [
+            const Text('Stock Report'),
+            if (isWeb) ...[
+              const Spacer(),
+              Text(
+                AppConstants.companyName, // No Obx needed for static string
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
         elevation: 0,

@@ -83,7 +83,8 @@ class DashboardScreen extends GetView<DashboardController> {
                   _buildWelcomeBanner(),
 
                   SizedBox(height: 20),
-
+                  _buildCashBoxCard(),
+                  SizedBox(height: 20),
                   // Statistics Cards
                   DashboardStatsCard(),
 
@@ -170,21 +171,23 @@ class DashboardScreen extends GetView<DashboardController> {
           Expanded(
             child: Column(
               children: [
-                _buildWebHeader(),
+                // ✅ NEW: Merged Header with Welcome Banner
+                _buildWebHeaderWithWelcome(),
 
+                // Content Area
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.only(left:16, right:16, bottom: 12, top:0),
                     child: Obx(() {
-                      if (controller.isLoading.value && controller.invoiceList.isEmpty) {
+                      if (controller.isLoading.value &&
+                          controller.invoiceList.isEmpty) {
                         return const DashboardShimmer(isWeb: true);
                       }
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildWelcomeBanner(),
-                          const SizedBox(height: 16),
+                          // ❌ REMOVED: _buildWelcomeBanner() - now merged in header
 
                           // 2-Column Layout
                           Row(
@@ -215,7 +218,7 @@ class DashboardScreen extends GetView<DashboardController> {
                                   children: [
                                     // Quick Actions
                                     Container(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
@@ -230,6 +233,8 @@ class DashboardScreen extends GetView<DashboardController> {
                                       child: QuickActionsGrid(),
                                     ),
 
+                                    const SizedBox(height: 16),
+                                    InvoiceStatusChart(isWeb: true),
                                     const SizedBox(height: 16),
 
                                     // Summary Report
@@ -268,13 +273,14 @@ class DashboardScreen extends GetView<DashboardController> {
   }
 
 // NEW: Financial Metrics WITH Invoice Status in 2-column layout
+  // that you're already using for Sales, Purchase, etc.
+
   Widget _buildFinancialMetricsWithStatus() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Header
         Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'Financial Metrics',
             style: TextStyle(
@@ -285,110 +291,74 @@ class DashboardScreen extends GetView<DashboardController> {
           ),
         ),
 
-        // 2-Column Layout: Metrics + Invoice Status
+        // ✅ IntrinsicHeight: આનાથી બાજુના બે કાર્ડની હાઈટ પહેલા કાર્ડ જેટલી થશે
         IntrinsicHeight(
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.stretch, // ✅ ખેંચીને લાંબુ કરશે
             children: [
-              // COLUMN 1: Financial Metrics (6 cards)
+              // --- COLUMN 1: Financial Metrics (તમારા 6 નાના કાર્ડ્સ) ---
               Expanded(
-                flex: 2,
+                flex: 3, // પહોળાઈ 3 ગણી
                 child: Column(
                   children: [
-                    // Row 1: Sales, To Receive, Invoices
+                    // લાઈન 1: Sales, To Receive, Invoices
                     Row(
                       children: [
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'Sales',
-                            value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}',
-                            icon: Icons.trending_up,
-                            iconColor: Colors.green,
-                            bgColor: Colors.green.shade50,
-                          )),
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'To Receive',
-                            value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
-                            icon: Icons.download_rounded,
-                            iconColor: Colors.orange,
-                            bgColor: Colors.orange.shade50,
-                          )),
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'Invoices',
-                            value: '${controller.invoiceList.length}',
-                            icon: Icons.receipt_rounded,
-                            iconColor: Colors.blue,
-                            bgColor: Colors.blue.shade50,
-                            badge: controller.overdueCount.value > 0
-                                ? controller.overdueCount.value.toString()
-                                : null,
-                          )),
-                        ),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Sales', value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}', icon: Icons.trending_up, iconColor: Colors.green, bgColor: Colors.green.shade50))),
+                        const SizedBox(width: 14),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Receive', value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}', icon: Icons.download_rounded, iconColor: Colors.orange, bgColor: Colors.orange.shade50))),
+                        const SizedBox(width: 14),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Invoices', value: '${controller.invoiceList.length}', icon: Icons.receipt_rounded, iconColor: Colors.blue, bgColor: Colors.blue.shade50, badge: controller.overdueCount.value > 0 ? controller.overdueCount.value.toString() : null))),
                       ],
                     ),
 
-                    SizedBox(height: 14),
+                    const SizedBox(height: 14), // વચ્ચેની જગ્યા
 
-                    // Row 2: Purchase, To Pay, Orders
+                    // લાઈન 2: Purchase, To Pay, Orders
                     Row(
                       children: [
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'Purchase',
-                            value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}',
-                            icon: Icons.shopping_cart,
-                            iconColor: Colors.red,
-                            bgColor: Colors.red.shade50,
-                          )),
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'To Pay',
-                            value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}',
-                            icon: Icons.upload_rounded,
-                            iconColor: Colors.deepOrange,
-                            bgColor: Colors.deepOrange.shade50,
-                          )),
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Obx(() => _buildCompactMetricCard(
-                            title: 'Orders',
-                            value: '${controller.totalPurchases.value}',
-                            icon: Icons.shopping_bag_rounded,
-                            iconColor: Colors.indigo,
-                            bgColor: Colors.indigo.shade50,
-                            badge: controller.overduePurchases.value > 0
-                                ? controller.overduePurchases.value.toString()
-                                : null,
-                          )),
-                        ),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Purchase', value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}', icon: Icons.shopping_cart, iconColor: Colors.red, bgColor: Colors.red.shade50))),
+                        const SizedBox(width: 14),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Pay', value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}', icon: Icons.upload_rounded, iconColor: Colors.deepOrange, bgColor: Colors.deepOrange.shade50))),
+                        const SizedBox(width: 14),
+                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Orders', value: '${controller.totalPurchases.value}', icon: Icons.shopping_bag_rounded, iconColor: Colors.indigo, bgColor: Colors.indigo.shade50, badge: controller.overduePurchases.value > 0 ? controller.overduePurchases.value.toString() : null))),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              SizedBox(width: 14),
+              const SizedBox(width: 14),
 
-              // COLUMN 2: Invoice Status (full height)
+              // --- COLUMN 2: Invoice Status (હવે આની હાઈટ Col 1 જેટલી થશે) ---
               Expanded(
                 flex: 1,
-                child: InvoiceStatusChart(),
+                child: Column(
+                  children: [
+                    Expanded(
+
+                      child: _buildCashBoxCard(isWeb: true),
+                    ),
+
+
+                  ],
+                ),
               ),
+
+              const SizedBox(width: 14),
+
+              // // --- COLUMN 3: Cash Box (હવે આની હાઈટ Col 1 જેટલી થશે) ---
+              // Expanded(
+              //   flex: 1,
+              //   child: _buildCashBoxCard(isWeb: true),
+              // ),
             ],
           ),
         ),
       ],
     );
   }
+
 
 
 // Compact Metric Card
@@ -631,53 +601,6 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
-// NEW: Bottom Action Row (Invoice Status, Summary Report, Export Data)
-  Widget _buildBottomActionRow(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. Invoice Status
-        Expanded(
-          child: Container(
-            height: 180, // Fixed height
-            child: InvoiceStatusChart(),
-          ),
-        ),
-
-        SizedBox(width: 12),
-
-        // 2. Summary Report
-        Expanded(
-          child: Container(
-            height: 180, // Fixed height
-            child: _buildActionCard(
-              icon: Icons.summarize,
-              title: "Summary Report",
-              subtitle: "Get monthly summary",
-              color: AppColors.tealColor,
-              onTap: () => showReportDialog(context),
-            ),
-          ),
-        ),
-
-        SizedBox(width: 12),
-
-        // 3. Export Data
-        Expanded(
-          child: Container(
-            height: 180, // Fixed height
-            child: _buildActionCard(
-              icon: Icons.file_download,
-              title: "Export Data",
-              subtitle: "Excel format",
-              color: AppColors.tealColor, // Same color as Summary
-              onTap: () => showExportDialog(context),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
 
   // ===========================================================================
@@ -1180,6 +1103,485 @@ class DashboardScreen extends GetView<DashboardController> {
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildWebHeaderWithWelcome() {
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right:16, top:10, bottom: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.tealColor,
+            AppColors.tealColor.withOpacity(0.8)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          children: [
+            // LEFT SIDE: Company Name + Tagline
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Obx(() => Text(
+                    controller.companyName.isNotEmpty
+                        ? controller.companyName
+                        : "No Company Selected",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Here is what's happening with your business today.",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // RIGHT SIDE: Column with Name on top, Buttons below
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Row 1: User Name
+                Obx(() => Text(
+                  controller.userName.value.isNotEmpty
+                      ? controller.userName.value
+                      : 'User',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                )),
+
+                const SizedBox(height: 8),
+
+                // Row 2: Refresh + Avatar (Horizontal)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+                      onPressed: controller.refreshDashboard,
+                      splashRadius: 20,
+                      tooltip: 'Refresh Dashboard',
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    PopupMenuButton<String>(
+                      offset: Offset(0, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        child: Icon(Icons.person, color: Colors.white, size: 20),
+                      ),
+                      onSelected: (String value) {
+                        if (value == 'logout') {
+                          Get.dialog(
+                            AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              title: Row(
+                                children: [
+                                  Icon(Icons.logout, color: Colors.red.shade600),
+                                  SizedBox(width: 12),
+                                  Text("confirm_logout".tr),
+                                ],
+                              ),
+                              content: Text("logout_message".tr),
+                              actions: [
+                                TextButton(
+                                  child: Text("cancel".tr),
+                                  onPressed: () => Get.back(),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade600,
+                                  ),
+                                  onPressed: () async {
+                                    Get.back();
+                                    await controller.logout();
+                                  },
+                                  child: Text("logout".tr),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else if (value == 'edit_company') {
+                          final data = controller.currentCompany.value;
+                          if (data != null) {
+                            controller.navigateToEditCompany(
+                                data, controller.companyId.value);
+                          }
+                        } else if (value == 'switch_company') {
+                          controller.showCompanySwitcher();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                        // User Info Header
+                        PopupMenuItem<String>(
+                          enabled: false,
+                          child: Obx(() => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                controller.userName.value.isNotEmpty
+                                    ? controller.userName.value
+                                    : 'User',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                controller.userEmail.value,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.tealColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  controller.companyName.isNotEmpty
+                                      ? controller.companyName
+                                      : "No Company",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.tealColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )),
+                        ),
+                        PopupMenuDivider(),
+
+                        // Edit Company
+                        PopupMenuItem<String>(
+                          value: 'edit_company',
+                          child: Row(
+                            children: [
+                              Icon(Icons.business, size: 20,
+                                  color: Colors.grey.shade700),
+                              SizedBox(width: 12),
+                              Text("edit_company".tr),
+                            ],
+                          ),
+                        ),
+
+                        // Switch Company (if multiple companies)
+                        if (controller.hasMultipleCompanies.value)
+                          PopupMenuItem<String>(
+                            value: 'switch_company',
+                            child: Row(
+                              children: [
+                                Icon(Icons.swap_horiz, size: 20,
+                                    color: Colors.grey.shade700),
+                                SizedBox(width: 12),
+                                Text("Switch Company"),
+                              ],
+                            ),
+                          ),
+
+                        PopupMenuDivider(),
+
+                        // Logout
+                        PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout, size: 20,
+                                  color: Colors.red.shade600),
+                              SizedBox(width: 12),
+                              Text(
+                                "logout".tr,
+                                style: TextStyle(color: Colors.red.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+// 💵 CASH BOX CARD (Responsive for Web & Mobile)
+// ===========================================================================
+  // 💵 CASH BOX CARD (Updated for Full Amount Visibility)
+  Widget _buildCashBoxCard({bool isWeb = false}) {
+    final now = DateTime.now();
+    final dateStr = "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      // ✅ Web માં હાઈટ પેરેન્ટ કોલમ જેટલી જ રહેશે
+      height: isWeb ? double.infinity : null,
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: isWeb ? Border.all(color: Colors.grey.shade200) : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        // ✅ Web માં કન્ટેન્ટને સરખી રીતે વહેંચવા માટે
+        mainAxisAlignment: isWeb ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+        children: [
+
+          // --- HEADER SECTION ---
+          if (isWeb)
+          // ✅ WEB માટે નવું લેઆઉટ: રકમ નીચે આવશે (જેથી મોટી રકમ સમાઈ જાય)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Total Collection",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    // Date Right Side
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12), // થોડી જગ્યા
+
+                // Amount Badge (Full Width Center)
+                Obx(() {
+                  final total = controller.todayCashAmount.value +
+                      controller.todayUpiAmount.value +
+                      controller.todayCardAmount.value;
+                  return Container(
+                    width: double.infinity, // ✅ પૂરી પહોળાઈ
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center( // ✅ રકમ વચ્ચે દેખાશે
+                      child: Text(
+                        "₹${AppUtil.formatCurrency(total)}",
+                        style: TextStyle(
+                          fontSize: 18, // થોડા મોટા અક્ષર
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.tealColor,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            )
+          else
+          // ✅ MOBILE માટે જૂનું લેઆઉટ: રકમ બાજુમાં (Side-by-Side)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Total Collection",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Obx(() {
+                  final total = controller.todayCashAmount.value +
+                      controller.todayUpiAmount.value +
+                      controller.todayCardAmount.value;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "₹${AppUtil.formatCurrency(total)}",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                    ),
+                  );
+                }),
+              ],
+            ),
+
+          if (!isWeb) const SizedBox(height: 16),
+
+          // --- COLLECTION BREAKDOWN ---
+          // Use Expanded on Web to push content properly
+          isWeb
+              ? Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly, // સરખું અંતર
+              children: _buildBreakdownRows(),
+            ),
+          )
+              : Column(
+            children: _buildBreakdownRows_MobileSpaced(), // Mobile spacing
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper for Web Rows (No SizedBox needed, handled by spaceEvenly)
+  List<Widget> _buildBreakdownRows() {
+    return [
+      Obx(() => _buildCollectionRow(color: Colors.green, label: "Cash", amount: controller.todayCashAmount.value, count: controller.todayCashInvoices.value)),
+      Obx(() => _buildCollectionRow(color: Colors.blueAccent, label: "UPI", amount: controller.todayUpiAmount.value, count: controller.todayUpiInvoices.value)),
+      Obx(() => _buildCollectionRow(color: Colors.orange, label: "Card", amount: controller.todayCardAmount.value, count: controller.todayCardInvoices.value)),
+    ];
+  }
+
+  // Helper for Mobile Rows (Needs SizedBox)
+  List<Widget> _buildBreakdownRows_MobileSpaced() {
+    return [
+      Obx(() => _buildCollectionRow(color: Colors.green, label: "Cash", amount: controller.todayCashAmount.value, count: controller.todayCashInvoices.value)),
+      const SizedBox(height: 12),
+      Obx(() => _buildCollectionRow(color: Colors.blueAccent, label: "UPI", amount: controller.todayUpiAmount.value, count: controller.todayUpiInvoices.value)),
+      const SizedBox(height: 12),
+      Obx(() => _buildCollectionRow(color: Colors.orange, label: "Card", amount: controller.todayCardAmount.value, count: controller.todayCardInvoices.value)),
+    ];
+  }
+
+  // Helper widget for the rows (Square Icon + Text + Amount)
+  Widget _buildCollectionRow({
+    required Color color,
+    required String label,
+    required double amount,
+    required int count,
+  }) {
+    return Row(
+      children: [
+        // Colored Square Indicator
+        Container(
+          height: 16,
+          width: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Label
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+          ),
+        ),
+
+        const Spacer(),
+
+        // Amount & Invoice Count
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              "₹${AppUtil.formatCurrency(amount)}",
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            // if (count > 0)
+            //   Text(
+            //     "$count invoices",
+            //     style: TextStyle(
+            //       fontSize: 10,
+            //       color: Colors.grey.shade500,
+            //     ),
+            //   ),
+          ],
+        ),
+      ],
     );
   }
 

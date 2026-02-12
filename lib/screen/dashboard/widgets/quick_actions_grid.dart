@@ -15,7 +15,7 @@ class QuickActionsGrid extends GetView<DashboardController> {
     int crossAxisCount = isWeb ? 2 : 4;
 
     // 3. Adjust Aspect Ratio - More compact on web to reduce vertical space
-    double aspectRatio = isWeb ? 1.2 : 0.9;
+    double aspectRatio = isWeb ? 1.6 : 0.9;
 
     // 4. Reduce spacing on web to minimize padding
     double mainAxisSpacing = isWeb ? 8 : 10;
@@ -110,12 +110,12 @@ class QuickActionsGrid extends GetView<DashboardController> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(isWeb ? 12 : 8),
+              padding: EdgeInsets.all(isWeb ? 10 : 8),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: color, size: isWeb ? 28 : 20),
+              child: Icon(icon, color: color, size: isWeb ? 24 : 20),
             ),
             SizedBox(height: isWeb ? 10 : 8),
             Padding(

@@ -17,7 +17,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
-
+import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
 import '../constant/constant.dart';
 import '../model/model.dart';
 import '../screen/dashboard/widgets/revenue_chart_card.dart';
@@ -87,6 +89,12 @@ class DashboardController extends BaseController {
   var userName = ''.obs;
   var userEmail = ''.obs;
   StreamSubscription<DocumentSnapshot>? _subscriptionListener;
+  var todayCashAmount = 0.0.obs;
+  var todayCashInvoices = 0.obs;
+  var todayUpiAmount = 0.0.obs;
+  var todayUpiInvoices = 0.obs;
+  var todayCardAmount = 0.0.obs;
+  var todayCardInvoices = 0.obs;
 
   @override
   void onInit() {
@@ -444,6 +452,11 @@ class DashboardController extends BaseController {
         currentCompany.value!['id'] = doc.id;
         companyId.value = doc.id;
 
+        String fetchedName = data['companyName'] ?? '';
+        if (fetchedName.isNotEmpty) {
+          await AppConstants.setCompanyName(fetchedName);
+        }
+
         AppConstants.companyId = companyId.value;
         await sharedPreferencesHelper.storePrefData("CompanyId", doc.id);
 
@@ -677,6 +690,74 @@ class DashboardController extends BaseController {
     print("   💰 Overdue Amount: ₹${overdueAmount.toStringAsFixed(2)}");
   }
 
+  void _calculateTodayPaymentMethods() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    double cashTotal = 0.0;
+    int cashCount = 0;
+
+    double upiTotal = 0.0;
+    int upiCount = 0;
+
+    double cardTotal = 0.0;
+    int cardCount = 0;
+
+    print("🔍 Calculating Today's Payment Methods:");
+    print("   Today: ${_formatDate(today)}");
+
+    for (var invoice in invoiceList) {
+      if (invoice.issueDate == null) continue;
+
+      final invoiceDate = DateTime(
+        invoice.issueDate!.year,
+        invoice.issueDate!.month,
+        invoice.issueDate!.day,
+      );
+
+      // Check if invoice is from today
+      if (invoiceDate.isAtSameMomentAs(today)) {
+        // Safe string handling: convert to lowercase and trim whitespace
+        final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
+        final amount = invoice.totalAmount ?? 0.0;
+
+        // 1. CASH
+        if (paymentMode == "cash") {
+          cashTotal += amount;
+          cashCount++;
+          print("   💵 Cash Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
+        }
+        // 2. UPI
+        else if (paymentMode == "upi") {
+          upiTotal += amount;
+          upiCount++;
+          print("   📱 UPI Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
+        }
+        // 3. CARD
+        else if (paymentMode == "card") {
+          cardTotal += amount;
+          cardCount++;
+          print("   💳 Card Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
+        }
+        // Any other payment mode (e.g., 'cheque', 'bank') is ignored for these specific counters
+      }
+    }
+
+    // Update Observable Variables
+    todayCashAmount.value = cashTotal;
+    todayCashInvoices.value = cashCount;
+
+    todayUpiAmount.value = upiTotal;
+    todayUpiInvoices.value = upiCount;
+
+    todayCardAmount.value = cardTotal;
+    todayCardInvoices.value = cardCount;
+
+    print("✅ Today's Payment Summary:");
+    print("   Cash: ₹${cashTotal.toStringAsFixed(2)} ($cashCount invoices)");
+    print("   UPI: ₹${upiTotal.toStringAsFixed(2)} ($upiCount invoices)");
+    print("   Card: ₹${cardTotal.toStringAsFixed(2)} ($cardCount invoices)");
+  }
 
   void _clearStats() {
     paidCount.value = 0;
@@ -777,7 +858,7 @@ class DashboardController extends BaseController {
       ChartData("Pending", pendingCnt.toDouble(), Colors.orange),
       ChartData("Overdue", overdueCnt.toDouble(), Colors.red),
     ]);
-
+    _calculateTodayPaymentMethods();
     print("✅ Stats: Paid=$paidCnt, Pending=$pendingCnt, Overdue=$overdueCnt");
     print("   💰 Total Revenue: ₹${totalRev.toStringAsFixed(2)}");
     print("   💰 Pending Amount: ₹${pendingAmt.toStringAsFixed(2)}");
@@ -794,6 +875,7 @@ class DashboardController extends BaseController {
 
   void calculateStats() {
     _calculateStatsInternal();
+    _calculateTodayPaymentMethods();
   }
 
 
@@ -1676,129 +1758,143 @@ class DashboardController extends BaseController {
     }
   }
 
+  // ✅ Updated Export Function for Traders App (Web + Mobile)
   Future<void> exportInvoiceDataWithDateFilter(DateTime fromDate, DateTime toDate) async {
-    // Get invoices and items
-    final invoices = await GoogleSheetService.getInvoices(type: "INV");
-    final items = await GoogleSheetService.getInvoiceItems();
+    try {
+      // 1. Get Data
+      final invoices = await GoogleSheetService.getInvoices(type: "INV");
+      final items = await GoogleSheetService.getInvoiceItems();
 
-    if (invoices.isEmpty) {
-      print("⚠️ No invoices found");
-      return;
-    }
-
-    // 🔹 Normalize from/to dates (ignore time part)
-    final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-    final end = DateTime(toDate.year, toDate.month, toDate.day);
-
-    print("📅 Filtering invoices from ${_formatDate(start)} to ${_formatDate(end)}");
-    print("📊 Total invoices loaded: ${invoices.length}");
-
-    // 🔹 Filter invoices by date range
-    final filteredInvoices = invoices.where((inv) {
-      if (inv.issueDate == null) {
-        print("⚠️ Invoice ${inv.invoiceId} has no issue date, skipping");
-        return false;
+      if (invoices.isEmpty) {
+        Get.snackbar("Error", "No invoices found");
+        return;
       }
 
-      // Normalize invoice date (remove time part)
-      final issueDate = DateTime(
-        inv.issueDate!.year,
-        inv.issueDate!.month,
-        inv.issueDate!.day,
-      );
+      // 2. Filter Logic
+      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      final end = DateTime(toDate.year, toDate.month, toDate.day);
 
-      // Check if date is in range (inclusive)
-      final isInRange = (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
-          (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
+      print("📅 Filtering invoices from ${_formatDate(start)} to ${_formatDate(end)}");
 
-      return isInRange;
-    }).toList();
+      final filteredInvoices = invoices.where((inv) {
+        if (inv.issueDate == null) return false;
+        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
+        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
+            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
+      }).toList();
 
-    if (filteredInvoices.isEmpty) {
-      print("⚠️ No invoices found in date range ${_formatDate(start)} to ${_formatDate(end)}");
-      return;
-    }
+      if (filteredInvoices.isEmpty) {
+        Get.snackbar("Info", "No invoices found in date range");
+        return;
+      }
 
-    print("✅ Found ${filteredInvoices.length} invoices in date range");
+      // 3. Create Excel
+      var excel = Excel.createExcel();
+      Sheet sheetObject = excel['Invoice_Export'];
 
-    // Create Excel workbook
-    var excel = Excel.createExcel();
-    Sheet sheetObject = excel['Invoice_Export'];
+      // Add Headers
+      sheetObject.appendRow([
+        TextCellValue('Invoice ID'),
+        TextCellValue('Customer Name'),
+        TextCellValue('Issue Date'),
+        TextCellValue('Status'),
+        TextCellValue('Item Name'),
+        TextCellValue('Quantity'),
+        TextCellValue('Rate'),
+        TextCellValue('Total'),
+        TextCellValue('GST Rate'),
+        TextCellValue('GST Amount'),
+        TextCellValue('Amount With GST'),
+      ]);
 
-    // Add header row
-    sheetObject.appendRow([
-      TextCellValue('Invoice ID'),
-      TextCellValue('Customer Name'),
-      TextCellValue('Issue Date'),
-      TextCellValue('Status'),
-      TextCellValue('Item Name'),
-      TextCellValue('Quantity'),
-      TextCellValue('Rate'),
-      TextCellValue('Total'),
-      TextCellValue('GST Rate'),
-      TextCellValue('GST Amount'),
-      TextCellValue('Amount With GST'),
-    ]);
+      // Add Data Rows
+      int rowCount = 0;
+      for (var inv in filteredInvoices) {
+        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
+        String dateStr = _formatDate(inv.issueDate);
 
-    int rowCount = 0;
-
-    // Add rows
-    for (var inv in filteredInvoices) {
-      final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
-
-      // Format the date as dd/MM/yyyy
-      String dateStr = _formatDate(inv.issueDate);
-
-      if (invItems.isEmpty) {
-        // No items, export invoice with blank item fields
-        sheetObject.appendRow([
-          TextCellValue(inv.invoiceId ?? ""),
-          TextCellValue(inv.customerName ?? ""),
-          TextCellValue(dateStr),
-          TextCellValue(inv.status ?? ""),
-          TextCellValue(""), // Item name
-          DoubleCellValue(0), // Qty
-          DoubleCellValue(0), // Rate
-          DoubleCellValue(0), // Total
-          DoubleCellValue(0), // GST Rate
-          DoubleCellValue(0), // GST Amount
-          DoubleCellValue(0), // Amount with GST
-        ]);
-        rowCount++;
-      } else {
-        for (var item in invItems) {
+        if (invItems.isEmpty) {
           sheetObject.appendRow([
             TextCellValue(inv.invoiceId ?? ""),
             TextCellValue(inv.customerName ?? ""),
             TextCellValue(dateStr),
             TextCellValue(inv.status ?? ""),
-            TextCellValue(item.itemName ?? ""),
-            DoubleCellValue(item.quantity ?? 0),
-            DoubleCellValue(item.rate ?? 0),
-            DoubleCellValue(item.totalPrice ?? ((item.rate ?? 0) * (item.quantity ?? 0))),
-            DoubleCellValue(item.gstRate ?? 0),
-            DoubleCellValue(item.gstAmount ?? ((item.rate ?? 0) * (item.quantity ?? 0) * (item.gstRate ?? 0) / 100)),
-            DoubleCellValue(item.amountWithGst ?? (((item.rate ?? 0) * (item.quantity ?? 0)) + ((item.rate ?? 0) * (item.quantity ?? 0) * (item.gstRate ?? 0) / 100))),
+            TextCellValue(""),
+            DoubleCellValue(0), DoubleCellValue(0), DoubleCellValue(0),
+            DoubleCellValue(0), DoubleCellValue(0), DoubleCellValue(0),
           ]);
           rowCount++;
+        } else {
+          for (var item in invItems) {
+            sheetObject.appendRow([
+              TextCellValue(inv.invoiceId ?? ""),
+              TextCellValue(inv.customerName ?? ""),
+              TextCellValue(dateStr),
+              TextCellValue(inv.status ?? ""),
+              TextCellValue(item.itemName ?? ""),
+              DoubleCellValue(item.quantity ?? 0),
+              DoubleCellValue(item.rate ?? 0),
+              DoubleCellValue(item.totalPrice ?? 0),
+              DoubleCellValue(item.gstRate ?? 0),
+              DoubleCellValue(item.gstAmount ?? 0),
+              DoubleCellValue(item.amountWithGst ?? 0),
+            ]);
+            rowCount++;
+          }
         }
       }
+      print("✅ Exported $rowCount rows");
+
+      // ---------------------------------------------------------
+      // ✅ 4. SAVE FILE (Unified Filename Logic)
+      // ---------------------------------------------------------
+      String fromDateStr = _formatDateForFilename(start);
+      String toDateStr = _formatDateForFilename(end);
+      String fileName = "Invoice_Export_${fromDateStr}_to_${toDateStr}.xlsx";
+
+      // 🔹 Use encode() instead of save() to prevent auto-download of 'FlutterExcel.xlsx'
+      var fileBytes = excel.encode();
+
+      if (fileBytes == null) {
+        Get.snackbar("Error", "Failed to generate excel file");
+        return;
+      }
+
+      if (kIsWeb) {
+        // 🌐 WEB LOGIC
+        final blob = html.Blob([fileBytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+
+        final anchor = html.document.createElement('a') as html.AnchorElement
+          ..href = url
+          ..style.display = 'none'
+          ..download = fileName; // ✅ Web Filename
+
+        html.document.body?.children.add(anchor);
+        anchor.click();
+
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+
+        Get.snackbar('Success', 'Excel downloaded: $fileName', backgroundColor: Colors.green.shade100);
+      } else {
+        // 📱 MOBILE LOGIC
+        final dir = await getApplicationDocumentsDirectory();
+        String outputFile = "${dir.path}/$fileName"; // ✅ Mobile Filename
+
+        File(outputFile)
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(fileBytes);
+
+        print("✅ Export saved at $outputFile");
+        Get.snackbar('Success', 'Saved to Documents', backgroundColor: Colors.green.shade100);
+        OpenFile.open(outputFile);
+      }
+
+    } catch (e) {
+      print("❌ Error exporting excel: $e");
+      Get.snackbar('Error', 'Failed to export: $e', backgroundColor: Colors.red.shade100);
     }
-
-    print("✅ Exported $rowCount rows from ${filteredInvoices.length} invoices");
-
-    // Save file with date range in filename
-    final dir = await getApplicationDocumentsDirectory();
-    String fromDateStr = _formatDateForFilename(start);
-    String toDateStr = _formatDateForFilename(end);
-    String outputFile = "${dir.path}/Invoice_Export_${fromDateStr}_to_${toDateStr}.xlsx";
-
-    File(outputFile)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(excel.encode()!);
-
-    print("✅ Export saved at $outputFile");
-    OpenFile.open(outputFile);
   }
 
 // 🔹 Helper function to format date as dd/MM/yyyy for display
@@ -1863,10 +1959,29 @@ class DashboardController extends BaseController {
       double grandTotal = 0;
       int rowCount = 0;
 
+      // ✅ NEW: Payment Mode Totals Variables
+      double totalCashCollection = 0;
+      double totalUpiCollection = 0;
+      double totalCardCollection = 0;
+
       // Group by GST Rate for summary
       Map<double, Map<String, double>> gstRateSummary = {};
 
       for (var inv in filteredInvoices) {
+        // ✅ NEW: Calculate Payment Mode Totals (Per Invoice)
+        // We do this in the outer loop so we don't count the same invoice amount multiple times
+        String mode = (inv.paymentMode ?? "").toLowerCase().trim();
+        double invAmount = inv.totalAmount ?? 0.0;
+
+        if (mode == "cash") {
+          totalCashCollection += invAmount;
+        } else if (mode == "upi") {
+          totalUpiCollection += invAmount;
+        } else if (mode == "card") {
+          totalCardCollection += invAmount;
+        }
+
+        // --- Existing Logic for Items ---
         final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
 
         for (var item in invItems) {
@@ -1925,8 +2040,7 @@ class DashboardController extends BaseController {
                       pw.Text(
                         companyName.isNotEmpty
                             ? companyName
-                            :
-                        'GST SUMMARY REPORT',
+                            : 'GST SUMMARY REPORT',
                         style: pw.TextStyle(
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold,
@@ -1961,6 +2075,78 @@ class DashboardController extends BaseController {
                     ],
                   ),
                 ),
+
+                pw.SizedBox(height: 20),
+
+                // ✅ NEW: Payment Collection Summary Row
+                pw.Text(
+                  'Collection Summary',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 10),
+
+                pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Cash Box
+                      pw.Expanded(
+                        child: pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.green50,
+                              border: pw.Border.all(color: PdfColors.green700),
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                            child: pw.Column(
+                                children: [
+                                  pw.Text("CASH", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text(AppUtil.formatCurrency(totalCashCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                                ]
+                            )
+                        ),
+                      ),
+                      pw.SizedBox(width: 10),
+                      // UPI Box
+                      pw.Expanded(
+                        child: pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.blue50,
+                              border: pw.Border.all(color: PdfColors.blue700),
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                            child: pw.Column(
+                                children: [
+                                  pw.Text("UPI", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text(AppUtil.formatCurrency(totalUpiCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                                ]
+                            )
+                        ),
+                      ),
+                      pw.SizedBox(width: 10),
+                      // Card Box
+                      pw.Expanded(
+                        child: pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.orange50,
+                              border: pw.Border.all(color: PdfColors.orange700),
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                            child: pw.Column(
+                                children: [
+                                  pw.Text("CARD", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.orange900)),
+                                  pw.SizedBox(height: 4),
+                                  pw.Text(AppUtil.formatCurrency(totalCardCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                                ]
+                            )
+                        ),
+                      ),
+                    ]
+                ),
+
                 pw.SizedBox(height: 20),
 
                 // GST Rate-wise Summary Table
@@ -2125,17 +2311,17 @@ class DashboardController extends BaseController {
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
               columnWidths: {
-                0: pw.FixedColumnWidth(50),   // Invoice ID - reduced from 60
-                1: pw.FixedColumnWidth(60),   // Customer - reduced from 70
-                2: pw.FixedColumnWidth(45),   // Date - reduced from 50
-                3: pw.FixedColumnWidth(70),   // Item - reduced from 80
-                4: pw.FixedColumnWidth(28),   // Qty - reduced from 30
-                5: pw.FixedColumnWidth(40),   // Rate - reduced from 45
-                6: pw.FixedColumnWidth(45),   // Subtotal - reduced from 50
-                7: pw.FixedColumnWidth(30),   // GST% - reduced from 35
-                8: pw.FixedColumnWidth(42),   // CGST - reduced from 45
-                9: pw.FixedColumnWidth(42),   // SGST - reduced from 45
-                10: pw.FixedColumnWidth(48),  // Total - reduced from 50 but still enough
+                0: pw.FixedColumnWidth(50),   // Invoice ID
+                1: pw.FixedColumnWidth(60),   // Customer
+                2: pw.FixedColumnWidth(45),   // Date
+                3: pw.FixedColumnWidth(70),   // Item
+                4: pw.FixedColumnWidth(28),   // Qty
+                5: pw.FixedColumnWidth(40),   // Rate
+                6: pw.FixedColumnWidth(45),   // Subtotal
+                7: pw.FixedColumnWidth(30),   // GST%
+                8: pw.FixedColumnWidth(42),   // CGST
+                9: pw.FixedColumnWidth(42),   // SGST
+                10: pw.FixedColumnWidth(48),  // Total
               },
               children: detailRows,
             ),
@@ -2144,17 +2330,28 @@ class DashboardController extends BaseController {
       );
 
       // Save PDF file
-      final dir = await getApplicationDocumentsDirectory();
+     // final dir = await getApplicationDocumentsDirectory();
       String fromDateStr = _formatDateForFilename(start);
       String toDateStr = _formatDateForFilename(end);
       String fileName = "${companyName.isNotEmpty ? companyName : 'SUMMARY'}_Report_${fromDateStr}_to_${toDateStr}.pdf";
 
-      String outputFile = "${dir.path}/$fileName";
-
-      final file = File(outputFile);
-      await file.writeAsBytes(await pdf.save());
-
-      print("✅ GST Report PDF saved at $outputFile");
+      if (kIsWeb) {
+        // ✅ WEB: Open Browser Print Preview
+        print("🖨️ Web Mode: Opening Print Preview");
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdf.save(),
+          name: fileName,
+        );
+      }
+      else {
+        // 📱 MOBILE: Save to File
+        final dir = await getApplicationDocumentsDirectory();
+        String outputFile = "${dir.path}/$fileName";
+        final file = File(outputFile);
+        await file.writeAsBytes(await pdf.save());
+        print("✅ Saved to: $outputFile");
+        OpenFile.open(outputFile);
+      }
 
       Get.snackbar(
         'Success',
@@ -2163,7 +2360,6 @@ class DashboardController extends BaseController {
         icon: Icon(Icons.check_circle, color: Colors.green),
       );
 
-      OpenFile.open(outputFile);
 
     } catch (e, st) {
       print("❌ Error generating GST report: $e");

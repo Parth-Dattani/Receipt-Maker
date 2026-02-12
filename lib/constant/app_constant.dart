@@ -9,6 +9,7 @@ class AppConstants{
 
    static String  userId = "";
    static String  companyId = "";
+   static String  companyName = "";
    static String appId = "";
    static String spreadsheetId = "";
    static String accessKey = "";
@@ -25,6 +26,7 @@ class AppConstants{
    static Future<void> loadFromPrefs() async {
       userId = await sharedPreferencesHelper.getPrefData("userId") ?? "";
       companyId = await sharedPreferencesHelper.getPrefData("companyId") ?? "";
+      companyName = await sharedPreferencesHelper.getPrefData("companyName") ?? ""; // ✅ Load Company Name
       appId = await sharedPreferencesHelper.getPrefData("appId") ?? "";
       spreadsheetId = await sharedPreferencesHelper.getPrefData("spreadsheetId") ?? "";
       accessKey = await sharedPreferencesHelper.getPrefData("accessKey") ?? "";
@@ -71,6 +73,13 @@ class AppConstants{
    static Future<void> setCompanyId(String id) async {
       companyId = id;
       await sharedPreferencesHelper.storePrefData("companyId", id);
+   }
+
+   /// 🔹 Update + persist companyName (✅ Add this method)
+   static Future<void> setCompanyName(String name) async {
+      companyName = name;
+      await sharedPreferencesHelper.storePrefData("companyName", name);
+      print("💾 Company Name Saved to Prefs: $name");
    }
 
    /// 🔹 Update + persist businessType

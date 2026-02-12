@@ -1691,6 +1691,7 @@
 ///
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:demo_prac_getx/services/remote_service.dart';
 import 'package:demo_prac_getx/utils/pdf_helper.dart';
 import 'package:excel/excel.dart';
@@ -1740,11 +1741,13 @@ class PaymentDetailsController extends GetxController {
   var fromDate = Rx<DateTime?>(null);
   var toDate = Rx<DateTime?>(null);
   var isGeneratingReport = false.obs;
+  var companyName = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadData();
+    loadCompanyName();
     // ✅ FIX: Set default dates based on Demo Mode
     if (AppConstants.isDemo.value) {
       // Demo Mode: Default to the allowed range (1990-1992)
@@ -1795,6 +1798,29 @@ class PaymentDetailsController extends GetxController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> loadCompanyName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+        if (companyId.isNotEmpty) {
+          final companyDoc = await FirebaseFirestore.instance
+              .collection("users")
+              .doc(user.uid)
+              .collection("companies")
+              .doc(companyId)
+              .get();
+
+          if (companyDoc.exists) {
+            companyName.value = companyDoc.data()?['companyName'];
+          }
+        }
+      }
+    } catch (e) {
+      print("Error loading company name: $e");
     }
   }
 
