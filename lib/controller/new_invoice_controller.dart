@@ -2927,7 +2927,7 @@ class NewInvoiceController extends GetxController {
             _formatDate(paymentDueDate.value),
           );
         } else {
-          await InvoiceHelper.generateAndShareInvoice(
+          await InvoiceHelper.generateAndShareInvoicePrint(
             invoiceModels,
             customerNameController.text.trim(),
             customerMobileController.text.trim(),

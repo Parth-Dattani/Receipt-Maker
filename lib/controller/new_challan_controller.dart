@@ -1489,7 +1489,7 @@ class NewChallanController extends BaseController {
         }).toList();
 
         if(!isInEditMode)
-          await InvoiceHelper.generateAndShareChallan(
+          await InvoiceHelper.generateAndShareChallanPrint(
           challanModel,
           customerNameController.text.trim(),
           customerMobileController.text.trim(),
@@ -1557,7 +1557,7 @@ class NewChallanController extends BaseController {
           );
         }).toList();
 
-        await InvoiceHelper.generateAndShareChallan(
+        await InvoiceHelper.generateAndShareChallanPrint(
           challanModel,
           customerNameController.text.trim(),
           customerMobileController.text.trim(),

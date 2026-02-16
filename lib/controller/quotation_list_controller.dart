@@ -669,7 +669,7 @@ class QuotationListController extends BaseController {
       }
 
       // ✅ Generate PDF using the same method as InvoiceListScreen
-      final pdfFile = await InvoiceHelper.generateDocument(
+      final pdfFile = await InvoiceHelper.generateDocumentPrint(
         isChallan: false,
         invoice: quotation,
         invoiceItems: cleanedItems,

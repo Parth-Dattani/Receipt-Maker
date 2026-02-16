@@ -116,6 +116,7 @@ class PurchaseEntry {
   final double? paidAmount;  // ✅ Added missing field
   final double? pendingAmount;  // ✅ Added missing field
   final String? paymentStatus;
+  final String? paymentMethod;
   final String? notes;
   final String? userId;
   final DateTime? createdAt;
@@ -137,6 +138,7 @@ class PurchaseEntry {
     this.paidAmount,  // ✅ Added
     this.pendingAmount,  // ✅ Added
     this.paymentStatus,
+    this.paymentMethod,
     this.notes,
     this.userId,
     this.createdAt,
@@ -183,6 +185,7 @@ class PurchaseEntry {
       paidAmount: double.tryParse(json['paidAmount']?.toString() ?? '0') ?? 0.0,
       pendingAmount: double.tryParse(json['pendingAmount']?.toString() ?? '0') ?? 0.0,
       paymentStatus: json['paymentStatus']?.toString() ?? '',
+      paymentMethod: json['paymentMethod'] ?? json['paymentMode'] ?? '',
       notes: json['notes']?.toString() ?? '',
       userId: json['userId']?.toString() ?? '',
     );
@@ -207,6 +210,7 @@ class PurchaseEntry {
       'paidAmount': paidAmount,  // ✅ Added
       'pendingAmount': pendingAmount,  // ✅ Added
       'paymentStatus': paymentStatus,
+      'paymentMethod': paymentMethod,
       'notes': notes,
       'userId': userId,
       'createdAt': createdAt?.toIso8601String(),

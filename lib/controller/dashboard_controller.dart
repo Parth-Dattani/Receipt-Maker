@@ -95,6 +95,7 @@ class DashboardController extends BaseController {
   var todayUpiInvoices = 0.obs;
   var todayCardAmount = 0.0.obs;
   var todayCardInvoices = 0.obs;
+  var purchaseStatusData = <ChartData>[].obs;
 
   @override
   void onInit() {
@@ -106,6 +107,13 @@ class DashboardController extends BaseController {
       ChartData("Overdue", 0.0, Colors.red),
     ]);
 
+    // Purchase Data Init
+    purchaseStatusData.assignAll([
+      ChartData("Paid", 0.0, Colors.green),
+      ChartData("Pending", 0.0, Colors.orange),
+      ChartData("Overdue", 0.0, Colors.red),
+    ]);
+    GoogleSheetService.validateAndUpdateAllSheets();
     // 2️⃣ Start the Real-time Listener immediately
     checkSubscriptionStatus();
 
@@ -683,6 +691,13 @@ class DashboardController extends BaseController {
     overduePurchases.value = overdueCount;
     overduePurchaseAmount.value = overdueAmount;
 
+    // ✅ 3. UPDATE CHART DATA HERE (આ લાઈન ઉમેરો)
+    purchaseStatusData.assignAll([
+      ChartData('Paid', paidCount.toDouble(), Colors.green),
+      ChartData('Pending', pendingCount.toDouble(), Colors.orange),
+      ChartData('Overdue', overdueCount.toDouble(), Colors.red),
+    ]);
+
     print("\n✅ FINAL Purchase Stats:");
     print("   Total: $totalCount, Paid: $paidCount, Pending: $pendingCount, Overdue: $overdueCount");
     print("   💰 Total Amount: ₹${totalAmount.toStringAsFixed(2)}");
@@ -793,76 +808,76 @@ class DashboardController extends BaseController {
     double overdueAmt = 0.0;
 
     final now = DateTime.now();
-    // 🔹 FIXED: Use today at midnight for accurate date comparison
     final today = DateTime(now.year, now.month, now.day);
 
     for (var invoice in invoiceList) {
-      final status = invoice.status?.toLowerCase().trim();
+      // 1. ડેટા મેળવો
+      String status = invoice.status?.toLowerCase().trim() ?? '';
       final amount = invoice.totalAmount ?? 0.0;
+      final pending = invoice.pendingAmount ?? amount;
+      final received = invoice.receivedAmount ?? 0.0;
+
+      // 🔹 FIX: જો Sheet માં Status ખાલી હોય, તો રકમ પરથી નક્કી કરો
+      if (status.isEmpty) {
+        if (pending <= 0.1) {
+          status = 'paid'; // બાકી 0 હોય તો Paid
+        } else if (received > 0) {
+          status = 'partial'; // થોડા મળ્યા હોય તો Partial
+        } else {
+          status = 'pending'; // કંઈ ન મળ્યું હોય તો Pending
+        }
+      }
 
       totalRev += amount;
 
-      if (status == "paid") {
+      // 2. ગણતરી (Calculation)
+      if (status == "paid" || status == "completed" || status == "accepted") {
         paidCnt++;
       } else {
-        // Check if invoice has a due date
+        // Due Date ચેક કરો
         bool isOverdue = false;
-
         if (invoice.dueDate != null) {
           final dueDate = DateTime(
             invoice.dueDate!.year,
             invoice.dueDate!.month,
             invoice.dueDate!.day,
           );
-
-          // 🔹 FIXED: Invoice is overdue if TODAY is AFTER the due date
-          // Example: Issue: 1-Oct, Due: 15-Oct
-          // - On 15-Oct (dueDate) → NOT overdue (isAfter returns false)
-          // - On 16-Oct and beyond → OVERDUE (isAfter returns true)
+          // જો આજની તારીખ Due Date પછીની હોય તો Overdue ગણવું
           isOverdue = today.isAfter(dueDate);
         }
 
         if (isOverdue) {
-          // Count as overdue (regardless of pending/partial/unpaid status)
           overdueCnt++;
-          overdueAmt += amount;
-
-          print("🔴 Overdue: ${invoice.invoiceId} | Status: $status | "
-              "Issue: ${_formatDate(invoice.issueDate)} | "
-              "Due: ${_formatDate(invoice.dueDate)} | "
-              "Amount: ₹$amount");
-        } else if (status == "pending" || status == "unpaid") {
-          // Not yet overdue, just pending
+          overdueAmt += pending;
+        } else {
+          // Pending, Unpaid અથવા Partial હોય તો Pending માં ગણવું
           pendingCnt++;
-          pendingAmt += amount;
-        }
-
-        // Partial payments count as pending but also check if overdue
-        if (status == "partial" && !isOverdue) {
-          pendingCnt++;
-          pendingAmt += amount;
+          pendingAmt += pending;
         }
       }
     }
 
-    // Update observables
+    // 3. અપડેટ કરો (Update Variables)
     paidCount.value = paidCnt;
     pendingCount.value = pendingCnt;
     overdueCount.value = overdueCnt;
     totalRevenue.value = totalRev;
     pendingAmount.value = pendingAmt;
     overdueAmount.value = overdueAmt;
-
+    paidInvoices.value = paidCnt;
+    unpaidInvoices.value = pendingCnt;
+    overdueInvoices.value = overdueCnt;
+    // Chart Data Update
     invoiceStatusData.assignAll([
       ChartData("Paid", paidCnt.toDouble(), Colors.green),
       ChartData("Pending", pendingCnt.toDouble(), Colors.orange),
       ChartData("Overdue", overdueCnt.toDouble(), Colors.red),
     ]);
+
+    // Payment Methods Update
     _calculateTodayPaymentMethods();
-    print("✅ Stats: Paid=$paidCnt, Pending=$pendingCnt, Overdue=$overdueCnt");
-    print("   💰 Total Revenue: ₹${totalRev.toStringAsFixed(2)}");
-    print("   💰 Pending Amount: ₹${pendingAmt.toStringAsFixed(2)}");
-    print("   💰 Overdue Amount: ₹${overdueAmt.toStringAsFixed(2)}");
+
+    print("✅ Stats Calculated: Paid=$paidCnt, Pending=$pendingCnt, Overdue=$overdueCnt");
   }
 
   double calculateTotalRevenue() {

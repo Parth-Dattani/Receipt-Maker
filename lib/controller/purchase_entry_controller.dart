@@ -842,6 +842,7 @@ class PurchaseEntryController extends BaseController {
   var paidAmount = 0.0.obs;
   var pendingAmount = 0.0.obs;
   final paidAmountController = TextEditingController();
+  var paymentMethod = 'Cash'.obs;
 
   // Date management (like Invoice)
   var paymentDueDate = DateTime.now().add(Duration(days: 15)).obs;
@@ -970,6 +971,7 @@ class PurchaseEntryController extends BaseController {
 
       paymentStatus.value = purchaseData['paymentStatus']?.toString() ?? 'Pending';
       notesController.text = purchaseData['notes']?.toString() ?? '';
+      paymentMethod.value = purchaseData['paymentMethod']?.toString() ?? 'Cash';
 
       if (purchaseData['subtotal'] != null) {
         subtotal.value = double.tryParse(purchaseData['subtotal'].toString()) ?? 0.0;
@@ -1958,6 +1960,7 @@ class PurchaseEntryController extends BaseController {
         'paidAmount': paidAmount.value,  // ✅ CHANGED
         'pendingAmount': pendingAmount.value,
         'paymentStatus': paymentStatus.value,
+        'paymentMethod': paymentStatus.value == 'Pending' ? '' : paymentMethod.value,
         'notes': notesController.text,
         'userId': AppConstants.userId,
       };

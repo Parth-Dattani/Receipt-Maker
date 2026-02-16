@@ -635,7 +635,7 @@ class InvoiceListController extends BaseController {
       final discount = invoice.discountAmount ?? 0.0;
       final grandTotal = subtotal + gstTotal - discount;
 
-      final pdfFile = await InvoiceHelper.generateDocument(
+      final pdfFile = await InvoiceHelper.generateDocumentPrint(
         isChallan: false,
         invoice: invoice,
         invoiceItems: cleanedItems,

@@ -352,11 +352,11 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text("View Details")]),
+          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details'.tr)]),
         ),
         PopupMenuItem(
           value: 'export',
-          child: Row(children: const [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text("Export PDF")]),
+          child: Row(children: [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text("export_as_pdf".tr)]),
         ),
       ],
     ).then((value) {

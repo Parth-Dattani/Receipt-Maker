@@ -488,7 +488,7 @@ class ChallanListController extends BaseController {
 
       final grandTotal = subtotal + gstTotal;
 
-      final pdfFile = await InvoiceHelper.generateDocument(
+      final pdfFile = await InvoiceHelper.generateDocumentPrint(
         isChallan: true,
         challan: challan,
         challanItems: cleanedItems,

@@ -562,11 +562,11 @@ class ChallanListScreen extends GetView<ChallanListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details')]),
+          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details'.tr)]),
         ),
         PopupMenuItem(
           value: 'export_pdf',
-          child: Row(children: const [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text('export_as_pdf')]),
+          child: Row(children: [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text('export_as_pdf'.tr)]),
         ),
       ],
     ).then((value) {

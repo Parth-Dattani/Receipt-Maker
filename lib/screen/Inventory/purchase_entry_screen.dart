@@ -1658,6 +1658,31 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                 onChanged: (value) => controller.updatePaymentStatus(value!),
               ),
             )),
+
+            // ✅ ADD THIS SECTION (Payment Mode UI)
+            Obx(() {
+              // જો Status "Paid" કે "Partial" હોય તો જ Payment Mode બતાવો
+              if (controller.paymentStatus.value == 'Paid' || controller.paymentStatus.value == 'Partial') {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 16),
+                    Text("Payment Mode", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildPaymentRadio('Cash'),
+                        SizedBox(width: 16),
+                        _buildPaymentRadio('UPI'),
+                        SizedBox(width: 16),
+                        _buildPaymentRadio('Card'),
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return SizedBox.shrink();
+            }),
             Obx(() {
               if (controller.paymentStatus.value == 'Partial') {
                 return Column(
@@ -1714,6 +1739,32 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
         ),
       ),
     );
+  }
+
+  // ✅ Helper Widget for Radio Buttons (આને ક્લાસની અંદર છેલ્લે મૂકી દો)
+  Widget _buildPaymentRadio(String value) {
+    return Obx(() => InkWell(
+      onTap: () => controller.paymentMethod.value = value,
+      child: Row(
+        children: [
+          Radio<String>(
+            value: value,
+            groupValue: controller.paymentMethod.value,
+            activeColor: AppColors.tealColor,
+            onChanged: (val) => controller.paymentMethod.value = val!,
+            visualDensity: VisualDensity.compact, // જગ્યા ઓછી રોકે
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    ));
   }
 
   Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {

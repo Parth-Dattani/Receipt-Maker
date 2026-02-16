@@ -373,16 +373,16 @@ class QuotationListScreen extends GetView<QuotationListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children:  [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text("View Details")]),
+          child: Row(children:  [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details'.tr)]),
         ),
         if (quotation.status?.toLowerCase() != 'accepted')
           PopupMenuItem(
             value: 'convert',
-            child: Row(children: [Icon(Icons.receipt_long, color: Colors.green.shade700), SizedBox(width: 8), Text('Convert to Invoice')]),
+            child: Row(children: [Icon(Icons.receipt_long, color: Colors.green.shade700), SizedBox(width: 8), Text('convert_to_invoice'.tr)]),
           ),
         PopupMenuItem(
           value: 'export',
-          child: Row(children: const [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text("Export PDF")]),
+          child: Row(children: [Icon(Icons.picture_as_pdf, color: Colors.orange), SizedBox(width: 8), Text('export_as_pdf'.tr)]),
         ),
       ],
     ).then((value) {
@@ -555,7 +555,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                               Row(
                                 children: [
                                   Text(
-                                    '₹${quotation.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                    '₹${AppUtil.formatCurrency(quotation.totalAmount!) ?? '0.00'}',
                                     style:  TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.tealColor),
                                   ),
                                   const SizedBox(width: 8),

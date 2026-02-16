@@ -739,6 +739,339 @@ class InvoiceHelper {
     }
   }
 
+
+  static Future<void> generateAndShareInvoicePrint(
+      List<Invoice> invoices,
+      String userName,
+      String phoneNumber,
+      String customerEmail,
+      String customerPAN,
+      String customerGST,
+      String customerAddress,
+      double subtotal,
+      String invoiceDate,
+      double totalAmount,
+      String notes,
+      Map<String, dynamic> companyData,
+      InvoiceType invoiceType,
+      double gstAmount,
+      String dueDate,
+      ) async {
+    try {
+      final pdf = pw.Document();
+
+      // Load Fonts
+      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+
+      final theme = pw.ThemeData.withFont(
+        base: customFont,
+        bold: customFont,
+        italic: customFont,
+        boldItalic: customFont,
+      );
+
+      final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
+      final String documentTitle = invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
+
+      // Company Data
+      String companyName = companyData['companyName'] ?? '';
+      String companyAddress = companyData['address'] ?? '';
+      String companyCity = companyData['city'] ?? '';
+      String companyPhone = companyData['phone'] ?? '';
+      String companyEmail = companyData['userEmail'] ?? '';
+      String companyGst = companyData['gst'] ?? '';
+      String companyPan = companyData['pan'] ?? '';
+
+      // Bank Data
+      String companyBank = companyData['bankName'] ?? '';
+      String companyAccount = companyData['accountNumber'] ?? '';
+      String companyIfsc = companyData['ifsc'] ?? '';
+      String companyUpi = companyData['upiId'] ?? '';
+
+      // 58mm Settings
+      final PdfPageFormat roll58mm = PdfPageFormat(
+          58 * PdfPageFormat.mm,
+          double.infinity,
+          marginAll: 2 * PdfPageFormat.mm
+      );
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: roll58mm,
+          theme: theme,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                // ---------------- 1. HEADER (Size 13) ----------------
+                pw.Text(companyName.toUpperCase(),
+                    style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold), // Increased
+                    textAlign: pw.TextAlign.center),
+
+                if(companyAddress.isNotEmpty)
+                  pw.Text("$companyAddress, $companyCity",
+                      style: pw.TextStyle(fontSize: 7),
+                      textAlign: pw.TextAlign.center),
+
+                pw.SizedBox(height: 3),
+
+                // Contact & Tax Info -> CENTER ALIGN
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if(companyPhone.isNotEmpty)
+                      pw.Text("Mo: $companyPhone", style: pw.TextStyle(fontSize: 7)),
+                    if(companyEmail.isNotEmpty)
+                      pw.Text("Email: $companyEmail", style: pw.TextStyle(fontSize: 7)),
+                    if(companyGst.isNotEmpty)
+                      pw.Text("GST: $companyGst", style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                    if(companyPan.isNotEmpty)
+                      pw.Text("PAN: $companyPan", style: pw.TextStyle(fontSize: 7)),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 2. INVOICE META (Size 11/9) ----------------
+                pw.Text(documentTitle, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)), // Increased
+                pw.SizedBox(height: 2),
+
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text("Inv: #$invoiceId", style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)), // Increased
+                    pw.Text("Dt: $invoiceDate", style: pw.TextStyle(fontSize: 9)), // Increased
+                  ],
+                ),
+                if (AppConstants.isDueDateEnabled.value)
+                  pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Text("Due: $dueDate", style: pw.TextStyle(fontSize: 9, color: PdfColors.black)), // Increased
+                  ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 3. CUSTOMER DETAILS (Size 10/8) ----------------
+                pw.Align(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text("Bill To: $userName", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)), // Increased
+                      if(customerAddress.isNotEmpty)
+                        pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8)), // Increased
+                      if(phoneNumber.isNotEmpty)
+                        pw.Text("Mo: $phoneNumber", style: pw.TextStyle(fontSize: 8)), // Increased
+                      if(customerGST.isNotEmpty)
+                        pw.Text("GST: $customerGST", style: pw.TextStyle(fontSize: 8)), // Increased
+                    ],
+                  ),
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 4. ITEMS TABLE (Size 8) ----------------
+                pw.Table(
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(4),
+                    1: const pw.FixedColumnWidth(20),
+                    2: const pw.FixedColumnWidth(35),
+                  },
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Text('Item', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)), // Increased
+                        pw.Text('Qty', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        pw.Text('Rate', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ],
+                    ),
+                    pw.TableRow(children: [pw.SizedBox(height: 3), pw.SizedBox(), pw.SizedBox()]),
+
+                    ...invoices.map((item) {
+                      InvoiceItem? actualItem;
+                      if (item.items != null && item.items!.isNotEmpty) {
+                        actualItem = item.items!.first;
+                      }
+                      String displayItemName = actualItem?.itemName ?? item.itemName ?? '';
+
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(displayItemName, style: pw.TextStyle(fontSize: 8), maxLines: 2), // Increased
+                          ),
+                          pw.Text(item.qty!.toStringAsFixed(0), style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.right),
+                          pw.Text(AppUtil.formatCurrency(item.price!), style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.right),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 5. TOTALS SECTION (Size 8/14) ----------------
+                pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("Subtotal", style: pw.TextStyle(fontSize: 8)),
+                            pw.Text(AppUtil.formatCurrency(subtotal), style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                          ]
+                      ),
+
+                      if (AppConstants.withGST.value && gstAmount > 0) ...[
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("CGST", style: pw.TextStyle(fontSize: 8)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 8)),
+                            ]
+                        ),
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("SGST", style: pw.TextStyle(fontSize: 8)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 8)),
+                            ]
+                        ),
+                      ],
+
+                      pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+
+                      // ✅ TOTAL: Bold and Size 14
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("TOTAL", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                            pw.Text(AppUtil.formatCurrency(totalAmount), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                          ]
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Amount in Words
+                pw.SizedBox(height: 4),
+                pw.Container(
+                  width: double.infinity,
+                  child: pw.Text(
+                      "(${_numberToWords(totalAmount)})",
+                      style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic), // Increased
+                      textAlign: pw.TextAlign.right
+                  ),
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 6. BANK DETAILS (Size 8) ----------------
+                if (companyBank.isNotEmpty || companyUpi.isNotEmpty) ...[
+                  pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text("BANK DETAILS:", style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                        if(companyBank.isNotEmpty) pw.Text("Bank: $companyBank", style: pw.TextStyle(fontSize: 8)),
+                        if(companyAccount.isNotEmpty) pw.Text("A/C: $companyAccount", style: pw.TextStyle(fontSize: 8)),
+                        if(companyIfsc.isNotEmpty) pw.Text("IFSC: $companyIfsc", style: pw.TextStyle(fontSize: 8)),
+                        if(companyUpi.isNotEmpty) pw.Text("UPI: $companyUpi", style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // ---------------- 7. NOTES & EXTRAS ----------------
+                if (notes.isNotEmpty) ...[
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  pw.Container(
+                      width: double.infinity,
+                      margin: const pw.EdgeInsets.only(bottom: 5),
+                      child: pw.Text("Note: $notes", style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.left) // Increased
+                  ),
+                ],
+
+                if (companyData['isExtraNotesEnabled'] == true) ...[
+                  if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty)
+                    pw.Text("* ${companyData['extraNote1']}", style: pw.TextStyle(fontSize: 7)), // Increased
+                  if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty)
+                    pw.Text("* ${companyData['extraNote2']}", style: pw.TextStyle(fontSize: 7)),
+                ],
+
+                pw.SizedBox(height: 10),
+
+                // ---------------- 8. FOOTER (Left Aligned - Size 7/9) ----------------
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfColors.black, width: 0.5, style: pw.BorderStyle.dashed))
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start, // ✅ LEFT ALIGNED
+                    children: [
+                      pw.Center(
+                          child: pw.Text("Thank you for your business!", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)) // Increased
+                      ),
+                      pw.SizedBox(height: 5),
+
+                      pw.Text(
+                        "Application By: Intelligent Tech",
+                        style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800), // Increased
+                      ),
+                      pw.SizedBox(height: 1),
+
+                      // ✅ Address Left Aligned
+                      pw.Text(
+                        "252, NEO Square, P.N.Marg Jamnagar",
+                        style: pw.TextStyle(fontSize: 7, color: PdfColors.black), // Increased
+                      ),
+
+                      pw.SizedBox(height: 1),
+
+                      // ✅ Website | Email Left Aligned
+                      pw.Text(
+                        "www.intelligenttech.in | info@intelligenttech.in",
+                        style: pw.TextStyle(fontSize: 7, color: PdfColors.black), // Increased
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save & Share Logic...
+      final Uint8List bytes = await pdf.save();
+      final String filePrefix = invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
+      String safeDate = invoiceDate.replaceAll('/', '_');
+      String safeName = userName.replaceAll(' ', '_');
+      final String filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
+
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (format) async => bytes, name: filename, format: roll58mm);
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      }
+
+    } catch (e) {
+      print("❌ Error generating Print PDF: $e");
+    }
+  }
+
   ///// Generate PDF specifically for challan-based invoiceItems
   static Future<void> generateAndShareInvoiceFromChallan(
       List<dynamic> invoiceItems,
@@ -2018,6 +2351,283 @@ class InvoiceHelper {
     }
   }
 
+  static Future<void> generateAndShareChallanPrint(
+      List<Challan> challans,
+      String userName,
+      String phoneNumber,
+      String customerEmail,
+      String customerPan,
+      String customerGst,
+      String customerAddress,
+      double subtotal,
+      String challanDate,
+      double totalAmount,
+      String paymentStatus, // Added Payment Status
+      String notes,
+      Map<String, dynamic> companyData,
+      double gstAmount,
+      ) async {
+    try {
+      final pdf = pw.Document();
+
+      // Load Fonts
+      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+
+      final theme = pw.ThemeData.withFont(
+        base: customFont,
+        bold: customFont,
+        italic: customFont,
+        boldItalic: customFont,
+      );
+
+      final String challanId = challans.isNotEmpty ? challans.first.challanId : "UNKNOWN";
+
+      // Company Data
+      String companyName = companyData['companyName'] ?? '';
+      String companyAddress = companyData['address'] ?? '';
+      String companyCity = companyData['city'] ?? '';
+      String companyPhone = companyData['phone'] ?? '';
+      String companyEmail = companyData['userEmail'] ?? '';
+      String companyGst = companyData['gst'] ?? '';
+      String companyPan = companyData['pan'] ?? '';
+
+      // 58mm Settings
+      final PdfPageFormat roll58mm = PdfPageFormat(
+          58 * PdfPageFormat.mm,
+          double.infinity,
+          marginAll: 2 * PdfPageFormat.mm
+      );
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: roll58mm,
+          theme: theme,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                // ---------------- 1. HEADER (Medium Large) ----------------
+                pw.Text(companyName.toUpperCase(),
+                    style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold), // Adjusted to 13
+                    textAlign: pw.TextAlign.center),
+
+                if(companyAddress.isNotEmpty)
+                  pw.Text("$companyAddress, $companyCity",
+                      style: pw.TextStyle(fontSize: 7), // Standard
+                      textAlign: pw.TextAlign.center),
+
+                pw.SizedBox(height: 3),
+
+                // Contact & Tax Info -> CENTER ALIGN
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if(companyPhone.isNotEmpty)
+                      pw.Text("Mo: $companyPhone", style: pw.TextStyle(fontSize: 7)),
+                    if(companyEmail.isNotEmpty)
+                      pw.Text("Email: $companyEmail", style: pw.TextStyle(fontSize: 7)),
+                    if(companyGst.isNotEmpty)
+                      pw.Text("GST: $companyGst", style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 2. CHALLAN META (Balanced) ----------------
+                pw.Text("DELIVERY CHALLAN", style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)), // Adjusted to 11
+                pw.SizedBox(height: 2),
+
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text("No: #$challanId", style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                    pw.Text("Dt: $challanDate", style: pw.TextStyle(fontSize: 9)),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 3. CUSTOMER DETAILS (Balanced) ----------------
+                pw.Align(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text("To: $userName", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)), // Adjusted to 10
+                      if(customerAddress.isNotEmpty)
+                        pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8)), // Adjusted to 8
+                      if(phoneNumber.isNotEmpty)
+                        pw.Text("Mo: $phoneNumber", style: pw.TextStyle(fontSize: 8)),
+                      if(customerGst.isNotEmpty)
+                        pw.Text("GST: $customerGst", style: pw.TextStyle(fontSize: 8)),
+                    ],
+                  ),
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 4. ITEMS TABLE (Readable Size 8) ----------------
+                pw.Table(
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(4),
+                    1: const pw.FixedColumnWidth(20),
+                    2: const pw.FixedColumnWidth(35),
+                  },
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Text('Item', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)), // Size 8
+                        pw.Text('Qty', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        pw.Text('Rate', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ],
+                    ),
+                    pw.TableRow(children: [pw.SizedBox(height: 3), pw.SizedBox(), pw.SizedBox()]),
+
+                    ...challans.map((item) {
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(item.itemName ?? '', style: pw.TextStyle(fontSize: 8), maxLines: 2), // Size 8
+                          ),
+                          pw.Text(item.qty!.toStringAsFixed(0), style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.right),
+                          pw.Text(AppUtil.formatCurrency(item.price!), style: pw.TextStyle(fontSize: 8), textAlign: pw.TextAlign.right),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- 5. TOTALS SECTION (Highlighted but not Huge) ----------------
+                pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("Subtotal", style: pw.TextStyle(fontSize: 8)), // Size 8
+                            pw.Text(AppUtil.formatCurrency(subtotal), style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                          ]
+                      ),
+
+                      if (AppConstants.withGST.value && gstAmount > 0) ...[
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("CGST", style: pw.TextStyle(fontSize: 8)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 8)),
+                            ]
+                        ),
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("SGST", style: pw.TextStyle(fontSize: 8)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 8)),
+                            ]
+                        ),
+                      ],
+
+                      pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+
+                      // TOTAL - Adjusted to 14
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("TOTAL", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                            pw.Text(AppUtil.formatCurrency(totalAmount), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)), // Size 14
+                          ]
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Payment Status
+                pw.SizedBox(height: 5),
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text("Status: ${paymentStatus.toUpperCase()}",
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
+                ),
+
+                // ---------------- 6. NOTES & FOOTER ----------------
+
+                if (notes.isNotEmpty) ...[
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  pw.Container(
+                      width: double.infinity,
+                      margin: const pw.EdgeInsets.only(bottom: 5),
+                      child: pw.Text("Note: $notes", style: pw.TextStyle(fontSize: 7), textAlign: pw.TextAlign.left)
+                  ),
+                ],
+
+                pw.SizedBox(height: 10),
+
+                // ---------------- 7. FOOTER (Left Aligned - Clear) ----------------
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfColors.black, width: 0.5, style: pw.BorderStyle.dashed))
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start, // ✅ LEFT ALIGNED
+                    children: [
+                      pw.Center(
+                          child: pw.Text("Thank you!", style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold))
+                      ),
+                      pw.SizedBox(height: 5),
+
+                      pw.Text(
+                        "Application By: Intelligent Tech",
+                        style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800), // Size 8
+                      ),
+                      pw.SizedBox(height: 1),
+
+                      pw.Text(
+                        "252, NEO Square, P.N.Marg Jamnagar",
+                        style: pw.TextStyle(fontSize: 7, color: PdfColors.black), // Size 7
+                      ),
+
+                      pw.SizedBox(height: 1),
+
+                      pw.Text(
+                        "www.intelligenttech.in | info@intelligenttech.in",
+                        style: pw.TextStyle(fontSize: 7, color: PdfColors.black), // Size 7
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save & Share Logic
+      final Uint8List bytes = await pdf.save();
+      final String filename = 'Challan_${challanId}_$userName.pdf';
+
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (format) async => bytes, name: filename, format: roll58mm);
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles([XFile(filePath)], text: 'Challan #$challanId');
+      }
+
+    } catch (e) {
+      print("❌ Error generating Challan Print PDF: $e");
+    }
+  }
 
   // NEW METHOD: Modern Minimalist Invoice Format
   static Future<void> generateModernInvoice(List<Invoice> invoices,
@@ -4217,6 +4827,349 @@ class InvoiceHelper {
       return file;
     }
 
+  }
+
+  static Future<io.File?> generateDocumentPrint({
+    required bool isChallan,
+    Invoice? invoice,
+    Challan? challan,
+    List<InvoiceItem>? invoiceItems,
+    List<ChallanItem>? challanItems,
+    required Map<String, dynamic> companyData,
+  }) async {
+    try {
+      final pdf = pw.Document();
+
+      // Load Fonts
+      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+
+      final theme = pw.ThemeData.withFont(
+        base: customFont,
+        bold: customFont,
+        italic: customFont,
+        boldItalic: customFont,
+      );
+
+      // Data Extraction
+      final String docTitle = isChallan ? "DELIVERY CHALLAN" : "INVOICE";
+      final String docId = isChallan ? (challan?.challanId ?? "UNK") : (invoice?.invoiceId ?? "UNK");
+      final String docDate = isChallan
+          ? (challan?.challanDate != null ? DateFormat('dd-MM-yyyy').format(challan!.challanDate!) : "")
+          : (invoice?.issueDate != null ? DateFormat('dd-MM-yyyy').format(invoice!.issueDate!) : "");
+
+      // Customer
+      final String customerName = isChallan ? (challan?.customerName ?? "") : (invoice?.customerName ?? "");
+      final String customerPhone = isChallan ? (challan?.customerMobile ?? "") : (invoice?.mobile ?? "");
+      final String customerAddress = isChallan ? (challan?.customerAddress ?? "") : (invoice?.customerAddress ?? "");
+      final String customerGst = !isChallan ? (invoice?.customerGst ?? "") : "";
+
+      // Financials
+      final double subtotal = isChallan ? (challan?.subtotal ?? 0.0) : (invoice?.subtotal ?? 0.0);
+      final double gstAmount = isChallan ? (challan?.gstAmount ?? 0.0) : (invoice?.gstAmount ?? 0.0);
+      final double totalAmount = subtotal + gstAmount;
+      final String notes = !isChallan ? (invoice?.notes ?? "") : (challan?.notes ?? "");
+
+      // Company Data
+      String companyName = companyData['companyName'] ?? '';
+      String companyAddress = companyData['address'] ?? '';
+      String companyCity = companyData['city'] ?? '';
+      String companyPhone = companyData['phone'] ?? '';
+      String companyEmail = companyData['userEmail'] ?? '';
+      String companyGst = companyData['gst'] ?? '';
+      String companyPan = companyData['pan'] ?? '';
+
+      // Bank
+      String companyBank = companyData['bankName'] ?? '';
+      String companyAccount = companyData['accountNumber'] ?? '';
+      String companyIfsc = companyData['ifsc'] ?? '';
+      String companyUpi = companyData['upiId'] ?? '';
+
+      // ✅ 80mm Page Setup (Updated from 58mm)
+      final PdfPageFormat roll80mm = PdfPageFormat(
+          80 * PdfPageFormat.mm,
+          double.infinity,
+          marginAll: 4 * PdfPageFormat.mm // Margins slightly increased for 80mm
+      );
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: roll80mm,
+          theme: theme,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                // ---------------- HEADER ----------------
+                pw.Text(companyName.toUpperCase(),
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold), // Big Header
+                    textAlign: pw.TextAlign.center),
+
+                if(companyAddress.isNotEmpty)
+                  pw.Text("$companyAddress, $companyCity",
+                      style: pw.TextStyle(fontSize: 10),
+                      textAlign: pw.TextAlign.center),
+
+                pw.SizedBox(height: 3),
+
+                // Contact & Tax Info
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if(companyPhone.isNotEmpty)
+                      pw.Text("Mo: $companyPhone", style: pw.TextStyle(fontSize: 10)),
+                    if(companyEmail.isNotEmpty)
+                      pw.Text("Email: $companyEmail", style: pw.TextStyle(fontSize: 10)),
+                    if(companyGst.isNotEmpty)
+                      pw.Text("GST: $companyGst", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                    if(companyPan.isNotEmpty)
+                      pw.Text("PAN: $companyPan", style: pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- META ----------------
+                pw.Text(docTitle, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 2),
+
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text("#$docId", style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                    pw.Text("Dt: $docDate", style: pw.TextStyle(fontSize: 11)),
+                  ],
+                ),
+                if (!isChallan && invoice?.dueDate != null)
+                  pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Text("Due: ${DateFormat('dd-MM-yyyy').format(invoice!.dueDate!)}",
+                        style: pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+                  ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- CUSTOMER ----------------
+                pw.Align(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text("To: $customerName", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                      if(customerAddress.isNotEmpty)
+                        pw.Text(customerAddress, style: pw.TextStyle(fontSize: 10)),
+                      if(customerPhone.isNotEmpty)
+                        pw.Text("Mo: $customerPhone", style: pw.TextStyle(fontSize: 10)),
+                      if(customerGst.isNotEmpty)
+                        pw.Text("GST: $customerGst", style: pw.TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- ITEMS TABLE (Adjusted for 80mm) ----------------
+                pw.Table(
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(4),   // Item Name (More space)
+                    1: const pw.FixedColumnWidth(30), // Qty (Wider)
+                    2: const pw.FixedColumnWidth(50), // Rate/Amount (Wider)
+                  },
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Text('Item', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Qty', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        pw.Text('Rate', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                      ],
+                    ),
+                    pw.TableRow(children: [pw.SizedBox(height: 4), pw.SizedBox(), pw.SizedBox()]),
+
+                    ...(isChallan ? challanItems! : invoiceItems!).map((item) {
+                      String itemName;
+                      double qty, price;
+
+                      if (isChallan) {
+                        final cItem = item as ChallanItem;
+                        itemName = cItem.itemName ?? '';
+                        qty = cItem.quantity ?? 0;
+                        price = cItem.price ?? 0;
+                      } else {
+                        final iItem = item as InvoiceItem;
+                        itemName = iItem.itemName ?? '';
+                        qty = iItem.quantity ?? 0;
+                        price = iItem.rate ?? 0;
+                      }
+
+                      return pw.TableRow(
+                        children: [
+                          pw.Padding(
+                            padding: const pw.EdgeInsets.only(bottom: 2),
+                            child: pw.Text(itemName, style: pw.TextStyle(fontSize: 11), maxLines: 2),
+                          ),
+                          pw.Text(qty.toStringAsFixed(0), style: pw.TextStyle(fontSize: 11), textAlign: pw.TextAlign.right),
+                          pw.Text(AppUtil.formatCurrency(price), style: pw.TextStyle(fontSize: 11), textAlign: pw.TextAlign.right),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- TOTALS ----------------
+                pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("Subtotal", style: pw.TextStyle(fontSize: 11)),
+                            pw.Text(AppUtil.formatCurrency(subtotal), style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          ]
+                      ),
+
+                      if (AppConstants.withGST.value && gstAmount > 0) ...[
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("CGST", style: pw.TextStyle(fontSize: 11)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 11)),
+                            ]
+                        ),
+                        pw.SizedBox(height: 1),
+                        pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text("SGST", style: pw.TextStyle(fontSize: 11)),
+                              pw.Text(AppUtil.formatCurrency(gstAmount / 2), style: pw.TextStyle(fontSize: 11)),
+                            ]
+                        ),
+                      ],
+
+                      pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+
+                      // Grand Total
+                      pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text("TOTAL", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                            pw.Text(AppUtil.formatCurrency(totalAmount), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                          ]
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Amount in Words
+                pw.SizedBox(height: 4),
+                pw.Container(
+                  width: double.infinity,
+                  child: pw.Text(
+                      "(${_numberToWords(totalAmount)})",
+                      style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic),
+                      textAlign: pw.TextAlign.right
+                  ),
+                ),
+
+                pw.Divider(borderStyle: pw.BorderStyle.dashed),
+
+                // ---------------- BANK ----------------
+                if (companyBank.isNotEmpty || companyUpi.isNotEmpty) ...[
+                  pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text("BANK DETAILS:", style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                        if(companyBank.isNotEmpty) pw.Text("Bank: $companyBank", style: pw.TextStyle(fontSize: 10)),
+                        if(companyAccount.isNotEmpty) pw.Text("A/C: $companyAccount", style: pw.TextStyle(fontSize: 10)),
+                        if(companyIfsc.isNotEmpty) pw.Text("IFSC: $companyIfsc", style: pw.TextStyle(fontSize: 10)),
+                        if(companyUpi.isNotEmpty) pw.Text("UPI: $companyUpi", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // ---------------- NOTES ----------------
+                if (notes.isNotEmpty) ...[
+                  pw.Divider(borderStyle: pw.BorderStyle.dashed),
+                  pw.Text("NOTES:", style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  pw.Container(
+                      width: double.infinity,
+                      margin: const pw.EdgeInsets.only(bottom: 5),
+                      child: pw.Text(notes, style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.left)
+                  ),
+                ],
+
+                if (companyData['isExtraNotesEnabled'] == true) ...[
+                  if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty)
+                    pw.Text("* ${companyData['extraNote1']}", style: pw.TextStyle(fontSize: 9)),
+                  if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty)
+                    pw.Text("* ${companyData['extraNote2']}", style: pw.TextStyle(fontSize: 9)),
+                ],
+
+                pw.SizedBox(height: 10),
+
+                // ---------------- FOOTER ----------------
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.only(top: 5),
+                  decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfColors.black, width: 0.5, style: pw.BorderStyle.dashed))
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Center(
+                          child: pw.Text("Thank you for your business!", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold))
+                      ),
+                      pw.SizedBox(height: 5),
+
+                      pw.Text(
+                        "Application By: Intelligent Tech",
+                        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                      ),
+                      pw.Text(
+                        "252, NEO Square, P.N.Marg Jamnagar",
+                        style: pw.TextStyle(fontSize: 9, color: PdfColors.black),
+                      ),
+                      pw.Text(
+                        "www.intelligenttech.in | info@intelligenttech.in",
+                        style: pw.TextStyle(fontSize: 9, color: PdfColors.black),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save & Return Logic
+      final Uint8List bytes = await pdf.save();
+      final String filename = '${isChallan ? "Challan" : "Invoice"}_$docId.pdf';
+
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (format) async => bytes, name: filename, format: roll80mm);
+        return null;
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$filename';
+        final file = io.File(filePath);
+        await file.writeAsBytes(bytes);
+        print("✅ Print PDF Saved (80mm): $filePath");
+        return file;
+      }
+
+    } catch (e) {
+      print("❌ Error generating Print PDF: $e");
+      return null;
+    }
   }
 
   static Future<io.File?> generate(Invoice invoice,
