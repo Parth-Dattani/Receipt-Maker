@@ -44,6 +44,7 @@ dependencies:
   pdf:
   share_plus:
   url_launcher:
+  webview_flutter: ^4.10.0
   flutter_pdfview:
   printing: ^5.14.2
   firebase_core:

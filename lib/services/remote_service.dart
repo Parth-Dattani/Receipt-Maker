@@ -2891,9 +2891,12 @@ class GoogleSheetService {
       }
 
       List<Invoice> invoices = [];
+      const int yieldEvery = 100;
 
-      // Skip header row
       for (int i = 1; i < response.values!.length; i++) {
+        if (i > 1 && (i - 1) % yieldEvery == 0) {
+          await Future.delayed(Duration.zero);
+        }
         final row = response.values![i];
         if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
 
@@ -2903,17 +2906,10 @@ class GoogleSheetService {
             final headerKey = headers[j].toString();
             final cellValue = row[j];
 
-            // 🔹 Parse date fields (issueDate, dueDate) - keep as STRING for now
             if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
               if (cellValue != null && cellValue.toString().isNotEmpty) {
-                // Store the parsed DateTime
                 final parsedDate = _parseDate(cellValue.toString());
-                rowData[headerKey] = parsedDate; // Store as DateTime
-
-                // Debug first few rows
-                if (i <= 3) {
-                  print("📅 Row $i - $headerKey: ${cellValue.toString()} → $parsedDate");
-                }
+                rowData[headerKey] = parsedDate;
               } else {
                 rowData[headerKey] = null;
               }
@@ -2922,27 +2918,14 @@ class GoogleSheetService {
             }
           }
 
-          // Debug first invoice
-          if (i == 1) {
-            print("🔍 First invoice rowData: $rowData");
-          }
-
           final invoice = Invoice.fromMap(rowData);
 
-          // Debug first invoice
-          if (i == 1) {
-            print("🔍 First invoice object: invoiceId=${invoice.invoiceId}, issueDate=${invoice.issueDate}");
-          }
-
-          // 🔑 Apply filter
           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
           if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
 
           invoices.add(invoice);
 
-        } catch (e, stackTrace) {
-          print("❌ Error parsing invoice row ${i}: $e");
-          print("Stack trace: $stackTrace");
+        } catch (e) {
           continue;
         }
       }
@@ -6001,23 +5984,22 @@ class GoogleSheetService {
         return <PurchaseEntry>[];
       }
 
-      // Extract headers from first row
       final headers =
-      response.values![0].map((h) => h.toString().trim()).toList();
-      print("✅ Headers: $headers");
+          response.values![0].map((h) => h.toString().trim()).toList();
 
       List<PurchaseEntry> purchases = [];
+      const int yieldEvery = 100;
 
-      // Iterate rows (skip header)
       for (int i = 1; i < response.values!.length; i++) {
+        if (i > 1 && (i - 1) % yieldEvery == 0) {
+          await Future.delayed(Duration.zero);
+        }
         final row = response.values![i];
 
-        // Skip completely empty rows
         if (row.isEmpty || row[0].toString().trim().isEmpty) {
           continue;
         }
 
-        // Build map header → value
         Map<String, dynamic> purchaseMap = {};
         for (int j = 0; j < headers.length && j < row.length; j++) {
           purchaseMap[headers[j]] = row[j].toString();
@@ -6026,10 +6008,8 @@ class GoogleSheetService {
         try {
           PurchaseEntry purchase = PurchaseEntry.fromJson(purchaseMap);
           purchases.add(purchase);
-          print("Processed purchase: ${purchase.purchaseId} - ${purchase.vendorName}");
         } catch (e) {
-          print("⚠️ Error parsing purchase row $i: $e");
-          print("Row data: $purchaseMap");
+          continue;
         }
       }
 

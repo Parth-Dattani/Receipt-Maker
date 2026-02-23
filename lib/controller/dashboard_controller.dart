@@ -115,20 +115,17 @@ class DashboardController extends BaseController {
       ChartData("Pending", 0.0, Colors.orange),
       ChartData("Overdue", 0.0, Colors.red),
     ]);
-    GoogleSheetService.validateAndUpdateAllSheets();
-    // 2️⃣ Start the Real-time Listener immediately
+    // Sheet validation runs from splash; skip here to avoid ANR and duplicate work
     checkSubscriptionStatus();
 
     _initializeDashboard();
     _loadAppVersion();
-    // 🔹 FIXED: Only recalculate when NOT initializing
     ever(invoiceList, (_) {
       if (!_isInitializing && _hasInitialized) {
         calculateStats();
       }
     });
-    ///loadChallanPreference();
-    _startOverdueChecker();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startOverdueChecker());
     _setupLifecycleObserver();
   }
 
@@ -555,7 +552,8 @@ class DashboardController extends BaseController {
         invoices = await GoogleSheetService.getInvoices();
       }
 
-      // Filter by user
+      await Future.delayed(Duration.zero);
+
       List<Invoice> userInvoices = invoices
           .where((invoice) => invoice.userId == currentUserId)
           .toList();
@@ -567,17 +565,16 @@ class DashboardController extends BaseController {
         return;
       }
 
-      // 🔹 FIXED: Update list once, calculate stats once
+      await Future.delayed(Duration.zero);
       invoiceList.assignAll(userInvoices);
 
-      // 🔹 Calculate everything in one pass (not during initialization trigger)
-      if (!_isInitializing) {
-        calculateStats();
-      } else {
-        // During init, calculate manually without triggering observers
-        _calculateStatsInternal();
-      }
-
+      Future.microtask(() {
+        if (!_isInitializing) {
+          calculateStats();
+        } else {
+          _calculateStatsInternal();
+        }
+      });
     } catch (e) {
       print("Error in loadInvoices(): $e");
     }
@@ -598,26 +595,23 @@ class DashboardController extends BaseController {
         return;
       }
 
-      // Fetch purchases from Google Sheets
       List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
 
-      // Filter by user
+      await Future.delayed(Duration.zero);
+
       List<PurchaseEntry> userPurchases = purchases
           .where((purchase) => purchase.userId == currentUserId)
           .toList();
 
       if (userPurchases.isEmpty) {
-       _clearPurchaseStats();
+        _clearPurchaseStats();
         return;
       }
 
+      await Future.delayed(Duration.zero);
       purchaseList.assignAll(userPurchases);
 
-      // Calculate purchase stats
-
-      _calculatePurchaseStats();
-
-
+      Future.microtask(() => _calculatePurchaseStats());
     } catch (e) {
       print("Error in loadPurchases(): $e");
     }
@@ -648,10 +642,6 @@ class DashboardController extends BaseController {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    print("🔍 PURCHASE STATS DEBUG:");
-    print("   Today: ${_formatDate(today)}");
-    print("   Total purchases: ${purchaseList.length}");
-
     for (var purchase in purchaseList) {
       totalCount++;
       totalAmount += purchase.totalAmount ?? 0.0;
@@ -660,52 +650,36 @@ class DashboardController extends BaseController {
       final amount = purchase.totalAmount ?? 0.0;
       final pendingAmt = purchase.pendingAmount ?? amount;
 
-      print("\n📦 Processing: ${purchase.purchaseId} | Status: $status");
-      print("   Due Date: ${_formatDate(purchase.dueDate)}");
-      print("   Total Amount: ₹${amount.toStringAsFixed(2)}");
-      print("   Pending Amount: ₹${pendingAmt.toStringAsFixed(2)}");
-
       if (status == "paid" || status == "completed") {
         paidCount++;
-        print("   ✅ COUNTED AS PAID");
-      }
-      else {
+      } else {
         bool isOverdue = false;
 
-        // Check if purchase has a due date and is overdue
         if (purchase.dueDate != null) {
           final dueDate = DateTime(
             purchase.dueDate!.year,
             purchase.dueDate!.month,
             purchase.dueDate!.day,
           );
-
           isOverdue = today.isAfter(dueDate);
 
           if (isOverdue) {
             overdueCount++;
             overdueAmount += pendingAmt;
-            print("   🔴 COUNTED AS OVERDUE");
           } else {
             pendingCount++;
             pendingAmount += pendingAmt;
-            print("   🟡 COUNTED AS PENDING (not overdue yet)");
           }
         } else {
           pendingCount++;
           pendingAmount += pendingAmt;
-          print("   🟡 COUNTED AS PENDING (no due date)");
         }
-
-        // because they are still pending payment, just overdue
         if (isOverdue) {
-          pendingAmount += pendingAmt; // Add overdue amount to pending total
-          print("   💰 ADDED OVERDUE AMOUNT TO PENDING: ₹${pendingAmt.toStringAsFixed(2)}");
+          pendingAmount += pendingAmt;
         }
       }
     }
 
-    // Update observables
     totalPurchases.value = totalCount;
     paidPurchases.value = paidCount;
     pendingPurchases.value = pendingCount;
@@ -714,18 +688,11 @@ class DashboardController extends BaseController {
     overduePurchases.value = overdueCount;
     overduePurchaseAmount.value = overdueAmount;
 
-    // ✅ 3. UPDATE CHART DATA HERE (આ લાઈન ઉમેરો)
     purchaseStatusData.assignAll([
       ChartData('Paid', paidCount.toDouble(), Colors.green),
       ChartData('Pending', pendingCount.toDouble(), Colors.orange),
       ChartData('Overdue', overdueCount.toDouble(), Colors.red),
     ]);
-
-    print("\n✅ FINAL Purchase Stats:");
-    print("   Total: $totalCount, Paid: $paidCount, Pending: $pendingCount, Overdue: $overdueCount");
-    print("   💰 Total Amount: ₹${totalAmount.toStringAsFixed(2)}");
-    print("   💰 Pending Amount: ₹${pendingAmount.toStringAsFixed(2)}");
-    print("   💰 Overdue Amount: ₹${overdueAmount.toStringAsFixed(2)}");
   }
 
   void _calculateTodayPaymentMethods() {
@@ -743,9 +710,6 @@ class DashboardController extends BaseController {
 
     double todayProf = 0.0;
 
-    print("🔍 Calculating Today's Payment Methods:");
-    print("   Today: ${_formatDate(today)}");
-
     for (var invoice in invoiceList) {
       if (invoice.issueDate == null) continue;
 
@@ -755,53 +719,32 @@ class DashboardController extends BaseController {
         invoice.issueDate!.day,
       );
 
-      // Check if invoice is from today
       if (invoiceDate.isAtSameMomentAs(today)) {
-        // Safe string handling: convert to lowercase and trim whitespace
         final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
         final amount = invoice.totalAmount ?? 0.0;
 
         todayProf += (invoice.profit ?? 0.0);
 
-        // 1. CASH
         if (paymentMode == "cash") {
           cashTotal += amount;
           cashCount++;
-          print("   💵 Cash Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
-        }
-        // 2. UPI
-        else if (paymentMode == "upi") {
+        } else if (paymentMode == "upi") {
           upiTotal += amount;
           upiCount++;
-          print("   📱 UPI Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
-        }
-        // 3. CARD
-        else if (paymentMode == "card") {
+        } else if (paymentMode == "card") {
           cardTotal += amount;
           cardCount++;
-          print("   💳 Card Invoice: ${invoice.invoiceId} | Amount: ₹${amount.toStringAsFixed(2)}");
         }
-        // Any other payment mode (e.g., 'cheque', 'bank') is ignored for these specific counters
       }
     }
 
-    // Update Observable Variables
     todayCashAmount.value = cashTotal;
     todayCashInvoices.value = cashCount;
-
     todayUpiAmount.value = upiTotal;
     todayUpiInvoices.value = upiCount;
-
     todayCardAmount.value = cardTotal;
     todayCardInvoices.value = cardCount;
-
     todayProfit.value = todayProf;
-
-    print("✅ Today's Payment Summary:");
-    print("   Cash: ₹${cashTotal.toStringAsFixed(2)} ($cashCount invoices)");
-    print("   UPI: ₹${upiTotal.toStringAsFixed(2)} ($upiCount invoices)");
-    print("   Card: ₹${cardTotal.toStringAsFixed(2)} ($cardCount invoices)");
-    print("✅ Today's Profit: ₹${todayProf.toStringAsFixed(2)}");
   }
 
   void _clearStats() {

@@ -8,6 +8,9 @@ import '../../controller/controller.dart';
 import '../../utils/calculations.dart';
 import '../screen.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
+import '../common/in_app_webview_screen.dart';
 
 
 class DashboardScreen extends GetView<DashboardController> {
@@ -2250,7 +2253,34 @@ class DashboardScreen extends GetView<DashboardController> {
                   Divider(height: 32, thickness: 1),
                   _buildMenuItem(icon: Icons.logout, iconColor: Colors.red.shade600, title: "logout".tr, titleStyle: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600), onTap: () { Get.dialog(AlertDialog(title: Row(children: [Icon(Icons.logout, color: Colors.red.shade600), SizedBox(width: 12), Text("confirm_logout".tr)]), content: Text("logout_message".tr), actions: [TextButton(child: Text("cancel".tr), onPressed: () => Get.back()), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600), onPressed: () async { Get.back(); await controller.logout(); }, child: Text("logout".tr))])); }),
                   SizedBox(height: 20),
-                  Container(padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20), decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1))), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12),), Obx(() => Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12),))])),
+                  Container(
+                    decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1))),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        InkWell(
+                          onTap: () async {
+                            Get.back();
+                            const url = 'https://drive.google.com/file/d/1hRCygh-bIP1rAJTgTI5cdmnt9eeZLtif/view?usp=drive_link';
+                            if (kIsWeb) {
+                              final uri = Uri.parse(url);
+                              try {
+                                await launchUrl(uri, mode: LaunchMode.platformDefault);
+                              } catch (_) {
+                                Get.snackbar('Error', 'Could not open Privacy Policy');
+                              }
+                            } else {
+                              Get.to(() => InAppWebViewScreen(url: url, title: 'Privacy Policy'));
+                            }
+                          },
+                          child: Padding(padding: EdgeInsets.only(bottom: 10), child: Text('Privacy Policy', style: TextStyle(fontSize: 12))),
+                        ),
+                        Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
