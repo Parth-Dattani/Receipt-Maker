@@ -1,0 +1,15539 @@
+// import 'dart:convert';
+// import 'dart:math';
+// import 'dart:math' as Math;
+//
+// import 'package:demo_prac_getx/constant/app_constant.dart';
+// import 'package:demo_prac_getx/model/comment_model.dart';
+// import 'package:demo_prac_getx/services/api.dart';
+// import 'package:demo_prac_getx/utils/shared_preferences_helper.dart';
+// import 'package:googleapis/drive/v3.dart' as drive;
+// import 'package:http/http.dart' as http;
+// import 'package:intl/intl.dart';
+//
+// import '../model/model.dart';
+// import '../utils/pdf_helper.dart';
+// import 'dart:convert';
+// import 'package:flutter/services.dart' show rootBundle;
+// import 'package:googleapis/sheets/v4.dart';
+// import 'package:googleapis_auth/googleapis_auth.dart';
+// import 'package:http/http.dart' as http;
+// ///old Working
+// // class RemoteService{
+// //
+// //   static const String appId = "24b22f90-835f-4202-a038-3f1dd7057aa8"; // Replace
+// //   static const String accessKey = "V2-9NVog-SGuQ6-prAu2-HG5GE-Y6K1d-w40RW-XAlD5-EbLcB"; // Replace
+// //   static const String invoiceTableName = "Invoice";
+// //   static const String itemsTableName = "Item"; // Replace
+// //   static const String apiKey = "cnp1X-AFICA-X25lf-NuAwm-jQfEr-Cj9nr-S9mqj-xOYni";
+// //
+// //
+// //
+// //   static Future<http.Response> getComment() async {
+// //     Map<String, String>header = {
+// //       'Content-Type': 'application/json',
+// //     };
+// //
+// //     final uri = Uri.parse(Apis.commetApi);
+// //
+// //     http.Response response = await http.get(
+// //         headers: header,
+// //         uri);
+// //     return response;
+// //   }
+// //
+// //
+// //   /// Add item to Items table
+// //   static Future<void> addItem(Item item) async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Add",
+// //       "Rows": [item.toMap()],
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     if (response.statusCode == 200) {
+// //       print("✅ Item added successfully: ${response.body}");
+// //     } else {
+// //       throw Exception("❌ Failed to add item: ${response.body}");
+// //     }
+// //   }
+// //
+// //
+// //
+// //   static Future<void> addInvoice(List<Invoice> invoices) async {
+// //    checkInvoiceTableStructure();
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Add",
+// //       "Rows": invoices.map((e) => e.toMap()).toList(),
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey, // ✅ must match AppSheet key
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("AppSheet Response:-saveRespo:---- ${response.statusCode} - ${response.body}");
+// //
+// //     if (response.statusCode == 200) {
+// //       print("-----Error on saveInvoice() in service,,,, e.toString()}");
+// //       final responseData = jsonDecode(response.body);
+// //       if (responseData is Map && responseData.containsKey("RowsAffected")) {
+// //         print("✅ Invoice sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+// //       }
+// //       else {
+// //         print("✅ Invoice sent successfully: ${response.body}");
+// //       }
+// //       // ⬇️ Share invoice after success
+// //       ///await InvoiceHelper.generateAndShareInvoice(invoices);
+// //     } else {
+// //       throw Exception("❌ Failed to send invoice: ${response.body}");
+// //     }
+// //   }
+// //
+// //   // Debug method to check table structure
+// //   static Future<void> checkInvoiceTableStructure() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Filter(1=1)',
+// //         "SelectColumns": ["pid", "productName", "qty", "price", "mobile", "userName", "date"]
+// //       }
+// //     });
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("Table Structure Response: ${response.statusCode} - ${response.body}");
+// //     } catch (e) {
+// //       print("Error checking table structure: $e");
+// //     }
+// //   }
+// //
+// //   static Future<List<Invoice>> fetchInvoices() async {
+// //     final url =
+// //     Uri.parse("https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Sort([{ColumnName: "date", Ascending: false}])',
+// //       }
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     if (response.statusCode == 200) {
+// //       final data = jsonDecode(response.body);
+// //       if (data is Map && data.containsKey("Rows")) {
+// //         final rows = data["Rows"] as List;
+// //         return rows.map((e) => Invoice.fromMap(e)).toList();
+// //       } else {
+// //         throw Exception("Invalid response format: ${response.body}");
+// //       }
+// //     }  else {
+// //       throw Exception("❌ Failed to load invoices: ${response.body}");
+// //     }
+// //   }
+// //
+// //
+// //   // Get all items from Items table
+// //   static Future<List<Item>> getItems() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {},
+// //       "Rows": []
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     if (response.statusCode == 200) {
+// //       final data = jsonDecode(response.body);
+// //       // final List items = data['Rows'] ?? [];
+// //       print("------------data:${data}");
+// //
+// //
+// //       // return items.map((e) => Item.fromMap(e)).toList();
+// //
+// //       if (data is List) {
+// //         return data.map((e) => Item.fromMap(e)).toList();
+// //       }
+// //        else if (data is Map && data["Rows"] is List) {
+// //         final rows = data["Rows"] as List;
+// //         return rows.map((e) => Item.fromMap(e)).toList();
+// //       }
+// //       else {
+// //         throw Exception("Invalid response format: ${response.body}");
+// //       }
+// //     } else {
+// //       throw Exception("❌ Failed to load items: ${response.body}");
+// //     }
+// //   }
+// //
+// //   static Future<void> addSingleInvoice(Map<String, dynamic> invoiceRow) async {
+// //   final url = Uri.parse(
+// //       "https://api.appsheet.com/api/v2/apps/$appId/tables/Invoice/Action");
+// //   final body = jsonEncode({
+// //     "Action": "Add",
+// //     "Rows": [invoiceRow],
+// //   });
+// //
+// //   final response = await http.post(
+// //     url,
+// //     headers: {
+// //       "ApplicationAccessKey": accessKey,
+// //       "Content-Type": "application/json",
+// //     },
+// //     body: body,
+// //   );
+// //
+// //   print("AppSheet Response: ${response.statusCode} - ${response.body}");
+// //
+// //   if (response.statusCode != 200) {
+// //     throw Exception("❌ Failed to send invoice: ${response.body}");
+// //   }
+// // }
+// //
+// //   static Future<void> editItem(String itemId, String newName, double newPrice) async {
+// //     final url = Uri.parse(
+// //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action",
+// //     );
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Edit",
+// //       "Rows": [
+// //         {
+// //           "itemId": itemId,
+// //           "itemName": newName,
+// //           "price": newPrice.toStringAsFixed(2), // keeping 2 decimals
+// //         }
+// //       ]
+// //     });
+// //
+// //     print("Editing item: $body");
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("Edit Item Response: ${response.statusCode} - ${response.body}");
+// //     if (response.statusCode != 200) {
+// //       throw Exception("❌ Failed to edit item: ${response.body}");
+// //     }
+// //   }
+// // }
+// import 'package:googleapis_auth/auth_io.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'dart:convert';
+// import 'package:googleapis_auth/googleapis_auth.dart';
+//
+// ///new
+// // class RemoteService {
+// //
+// //   String userId = AppConstants.userId;
+// //
+// //   //static const String appId = "7c98235e-c3c5-45f5-8eb5-821e663cfb18";
+// //   static  String appId = "${AppConstants.appId}";
+// //   static  String accessKey = "${AppConstants.accessKey}";
+// //   //static const String accessKey = "V2-5d3Ce-l3bYG-DdBdG-YeamP-d2BeZ-f9ono-4x5TT-CfCJP";
+// //   static const String invoiceTableName = "Invoice";
+// //   static const String invoiceItemTableName = "InvoiceItems";
+// //   static const String challanItemTableName = "ChallanItems";
+// //   static const String itemsTableName = "Item";
+// //   static const String challanTableName = "Challan";
+// //   ///static const String itemsTableName2 = "Item_";
+// //   static const String apiKey = "cnp1X-AFICA-X25lf-NuAwm-jQfEr-Cj9nr-S9mqj-xOYni";
+// //
+// //
+// //   static Future<http.Response> getComment() async {
+// //     Map<String, String> header = {
+// //       'Content-Type': 'application/json',
+// //     };
+// //
+// //     final uri = Uri.parse(Apis.commetApi);
+// //
+// //     http.Response response = await http.get(headers: header, uri);
+// //     return response;
+// //   }
+// //   /// its Workig With AppSheet
+// //   /// Add item to Items table with enhanced fields
+// //   // static Future<void> addItem(String userId,Item item) async {
+// //   //   final dynamicTableName = "${itemsTableName}_$userId";
+// //   //   print("Dynamic Item Tabel name   :--------- ${dynamicTableName}");
+// //   //   final url = Uri.parse(
+// //   //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
+// //   //       ///"https://api.appsheet.com/api/v2/apps/$appId/tables/$dynamicTableName/Action"
+// //   //   );
+// //   //
+// //   //   print("Dynamic Item Tabel Api Url :--------- ${url}");
+// //   //
+// //   //   // Ensure userId is included in the item data
+// //   //   final itemData = {
+// //   //     ...item.toMap(),
+// //   //     "userId": userId, // Make sure this matches your column name exactly
+// //   //   };
+// //   //
+// //   //   final body = jsonEncode({
+// //   //     "Action": "Add",
+// //   //     "Rows": [
+// //   //       itemData
+// //   //      ],
+// //   //   });
+// //   //
+// //   //   print("Adding item with data-01: $itemData");
+// //   //   print("Adding item with data: ${item.toMap()}");
+// //   //
+// //   //   final response = await http.post(
+// //   //     url,
+// //   //     headers: {
+// //   //       "Content-Type": "application/json",
+// //   //       "ApplicationAccessKey": accessKey,
+// //   //     },
+// //   //     body: body,
+// //   //   );
+// //   //
+// //   //   print("Add Item Response: ${response.statusCode} - ${response.body}");
+// //   //
+// //   //   if (response.statusCode == 200) {
+// //   //     print("Item added successfully: ${response.body}");
+// //   //   } else {
+// //   //     throw Exception("Failed to add item: ${response.body}");
+// //   //   }
+// //   // }
+// //
+// //
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<void> addInvoice(dynamic invoiceData, String userId) async {
+// //   //   checkInvoiceTableStructure();
+// //   //   final url = Uri.parse(
+// //   //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+// //   //
+// //   //   List<Map<String, dynamic>> rowsToSend = [];
+// //   //
+// //   //   if (invoiceData is Map<String, dynamic>) {
+// //   //     // Single invoice with items
+// //   //     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+// //   //       invoiceData['items'] = jsonEncode(invoiceData['items']);
+// //   //     }
+// //   //     rowsToSend.add({
+// //   //       ...invoiceData,
+// //   //       "userId": userId,
+// //   //     });
+// //   //   } else if (invoiceData is List<Invoice>) {
+// //   //     // Multiple invoice rows (legacy format)
+// //   //     rowsToSend = invoiceData.map((inv) {
+// //   //       return {
+// //   //         ...inv.toMap(),
+// //   //         "userId": userId,
+// //   //       };
+// //   //     }).toList();
+// //   //   }
+// //   //
+// //   //   final body = jsonEncode({
+// //   //     "Action": "Add",
+// //   //     "Rows": rowsToSend,
+// //   //   });
+// //   //
+// //   //   print("Sending to AppSheet: ${jsonEncode(body)}");
+// //   //
+// //   //   final response = await http.post(
+// //   //     url,
+// //   //     headers: {
+// //   //       "Content-Type": "application/json",
+// //   //       "ApplicationAccessKey": accessKey,
+// //   //     },
+// //   //     body: body,
+// //   //   );
+// //   //
+// //   //   print("AppSheet Response: ${response.statusCode} - ${response.body}");
+// //   //
+// //   //   if (response.statusCode == 200) {
+// //   //     final responseData = jsonDecode(response.body);
+// //   //     if (responseData is Map && responseData.containsKey("RowsAffected")) {
+// //   //       print("Invoice sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+// //   //     } else {
+// //   //       print("Invoice sent successfully: ${response.body}");
+// //   //     }
+// //   //   } else {
+// //   //     throw Exception("Failed to send invoice: ${response.body}");
+// //   //   }
+// //   // }
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
+// //   //   try {
+// //   //     print("Adding invoice item: ${jsonEncode(itemData)}");
+// //   //
+// //   //     final url = Uri.parse(
+// //   //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action");
+// //   //
+// //   //     final Map<String, dynamic> requestBody = {
+// //   //       "Action": "Add",
+// //   //       "Properties": {
+// //   //         "Locale": "en-US",
+// //   //       },
+// //   //       "Rows": [
+// //   //      {   ...itemData,
+// //   //        //"userId": userId,
+// //   //     }    ]
+// //   //     };
+// //   //
+// //   //     final response = await http.post(
+// //   //       url,
+// //   //       headers: {
+// //   //         "Content-Type": "application/json",
+// //   //         "ApplicationAccessKey": accessKey, // Use the same access key as addInvoice
+// //   //       },
+// //   //       body: jsonEncode(requestBody),
+// //   //     );
+// //   //
+// //   //     print("Add Invoice Item Response: ${response.statusCode} - ${response.body}");
+// //   //
+// //   //     if (response.statusCode == 200) {
+// //   //       final responseData = jsonDecode(response.body);
+// //   //       if (responseData is Map && responseData.containsKey("RowsAffected")) {
+// //   //         print("Invoice item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+// //   //       } else {
+// //   //         print("Invoice item sent successfully: ${response.body}");
+// //   //       }
+// //   //     } else {
+// //   //       throw Exception("Failed to add invoice item: ${response.statusCode} - ${response.body}");
+// //   //     }
+// //   //   } catch (e) {
+// //   //     print("Error adding invoice item: $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<void> addChallan(dynamic challanData, String userId) async {
+// //   //   checkChallanTableStructure();
+// //   //   try {
+// //   //     print("=== STARTING ADD CHALLAN ===");
+// //   //
+// //   //     final url = Uri.parse(
+// //   //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+// //   //
+// //   //     // Print the actual URL being called
+// //   //     print("API URL: $url");
+// //   //     print("App ID: $appId");
+// //   //     print("Table Name: $challanTableName");
+// //   //
+// //   //     List<Map<String, dynamic>> rowsToSend = [];
+// //   //
+// //   //     if (challanData is Map<String, dynamic>) {
+// //   //       if (challanData.containsKey('items') && challanData['items'] is List) {
+// //   //         challanData['items'] = jsonEncode(challanData['items']);
+// //   //       }
+// //   //       rowsToSend.add({
+// //   //         ...challanData,
+// //   //         "userId": userId,
+// //   //       });
+// //   //     } else if (challanData is List<Challan>) {
+// //   //       print("Processing as Challan object");
+// //   //       rowsToSend = challanData.map((chal){
+// //   //         return {
+// //   //           ...chal.toMap(),
+// //   //           "userId": userId,
+// //   //         };
+// //   //       }).toList();
+// //   //     }
+// //   //
+// //   //     print("Rows to send: ${jsonEncode(rowsToSend)}");
+// //   //
+// //   //     final body = jsonEncode({
+// //   //       "Action": "Add",
+// //   //       // "Properties": {
+// //   //       //   "Locale": "en-US",
+// //   //       // },
+// //   //       "Rows": rowsToSend,
+// //   //     });
+// //   //
+// //   //     print("Sending to AppSheet: ${jsonEncode(body)}");
+// //   //
+// //   //     final response = await http.post(
+// //   //       url,
+// //   //       headers: {
+// //   //         "Content-Type": "application/json",
+// //   //         "ApplicationAccessKey": accessKey,
+// //   //       },
+// //   //       body: body,
+// //   //     );
+// //   //
+// //   //     print("=== RESPONSE ===");
+// //   //     print("Status Code: ${response.statusCode}");
+// //   //     print("Response Body: ${response.body}");
+// //   //     print("Response Headers: ${response.headers}");
+// //   //
+// //   //     if (response.statusCode == 200) {
+// //   //       if (response.body.isNotEmpty) {
+// //   //         try {
+// //   //           final responseData = jsonDecode(response.body);
+// //   //           if (responseData is Map && responseData.containsKey("RowsAffected")) {
+// //   //             print("Challan sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+// //   //           } else {
+// //   //             print("Challan sent successfully: ${response.body}");
+// //   //           }
+// //   //         } catch (e) {
+// //   //           print("⚠️ Could not decode response JSON: $e");
+// //   //         }
+// //   //       } else {
+// //   //         print("✅ Challan added successfully (empty response body).");
+// //   //       }
+// //   //     }
+// //   //
+// //   //   } catch (e) {
+// //   //     print("❌ ERROR in addChallan: $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
+// //   //
+// //   //   try {
+// //   //     print("Adding challan item: ${jsonEncode(challanData)}");
+// //   //
+// //   //     final url = Uri.parse(
+// //   //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action");
+// //   //
+// //   //     final Map<String, dynamic> requestBody = {
+// //   //       "Action": "Add",
+// //   //       "Properties": {
+// //   //         "Locale": "en-US",
+// //   //       },
+// //   //       "Rows": [
+// //   //         {
+// //   //           ...challanData,
+// //   //           //"userId": userId,
+// //   //         }
+// //   //       ]
+// //   //     };
+// //   //
+// //   //     final response = await http.post(
+// //   //       url,
+// //   //       headers: {
+// //   //         "Content-Type": "application/json",
+// //   //         "ApplicationAccessKey": accessKey,
+// //   //       },
+// //   //       body: jsonEncode(requestBody),
+// //   //     );
+// //   //
+// //   //     print("Add Challan Item Response: ${response.statusCode} - ${response.body}");
+// //   //
+// //   //     if (response.statusCode == 200) {
+// //   //       // ✅ ADD THIS CHECK FOR EMPTY RESPONSE
+// //   //       if (response.body.isNotEmpty) {
+// //   //         final responseData = jsonDecode(response.body);
+// //   //         if (responseData is Map && responseData.containsKey("RowsAffected")) {
+// //   //           print("Challan item sent successfully. Rows affected: ${responseData["RowsAffected"]}");
+// //   //         } else {
+// //   //           print("Challan item sent successfully: ${response.body}");
+// //   //         }
+// //   //       } else {
+// //   //         // ✅ HANDLE EMPTY RESPONSE AS SUCCESS
+// //   //         print("Challan item sent successfully. Empty response received.");
+// //   //       }
+// //   //     } else {
+// //   //       throw Exception("Failed to add challan item: ${response.statusCode} - ${response.body}");
+// //   //     }
+// //   //   } catch (e) {
+// //   //     print("Error adding challan item: $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<List<Challan>> getChallans() async {
+// //   //   print("🔄 Fetching challans from AppSheet API...");
+// //   //
+// //   //   final url = Uri.parse(
+// //   //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+// //   //
+// //   //   final Map<String, dynamic> requestBody = {
+// //   //     "Action": "Find",
+// //   //     "Properties": {
+// //   //       "Locale": "en-US",
+// //   //     }
+// //   //   };
+// //   //
+// //   //   print("Challan request body: ${jsonEncode(requestBody)}");
+// //   //
+// //   //   try {
+// //   //     final response = await http.post(
+// //   //       url,
+// //   //       headers: {
+// //   //         "Content-Type": "application/json",
+// //   //         "ApplicationAccessKey": accessKey,
+// //   //       },
+// //   //       body: jsonEncode(requestBody),
+// //   //     );
+// //   //
+// //   //     print("Challan response status: ${response.statusCode}");
+// //   //
+// //   //     if (response.statusCode == 200) {
+// //   //       // Check for empty response
+// //   //       if (response.body.trim().isEmpty || response.body.trim() == "[]") {
+// //   //         print("Challan method returned empty data");
+// //   //         return <Challan>[];
+// //   //       }
+// //   //
+// //   //       dynamic data;
+// //   //       try {
+// //   //         data = jsonDecode(response.body);
+// //   //         print("Challan parsed data type: ${data.runtimeType}");
+// //   //       } catch (jsonError) {
+// //   //         print("Challan JSON decode error: $jsonError");
+// //   //         print("Raw response: ${response.body}");
+// //   //         return <Challan>[];
+// //   //       }
+// //   //
+// //   //       List<dynamic> challanData = [];
+// //   //
+// //   //       // Handle different response structures
+// //   //       if (data is List) {
+// //   //         challanData = data;
+// //   //         print("Direct list with ${challanData.length} challans");
+// //   //       } else if (data is Map) {
+// //   //         if (data.containsKey("Rows")) {
+// //   //           challanData = data["Rows"] ?? [];
+// //   //           print("Map with Rows: ${challanData.length} challans");
+// //   //         } else if (data.containsKey("Records")) {
+// //   //           challanData = data["Records"] ?? [];
+// //   //           print("Map with Records: ${challanData.length} challans");
+// //   //         } else if (data.containsKey("data")) {
+// //   //           challanData = data["data"] ?? [];
+// //   //           print("Map with data: ${challanData.length} challans");
+// //   //         } else {
+// //   //           print("Unknown map structure: ${data.keys}");
+// //   //           // Try to extract any list-like values
+// //   //           var listKeys = data.keys.where((key) => data[key] is List).toList();
+// //   //           if (listKeys.isNotEmpty) {
+// //   //             challanData = data[listKeys.first] ?? [];
+// //   //             print("Using first list key '${listKeys.first}': ${challanData.length} items");
+// //   //           } else {
+// //   //             // If it's a single record, wrap it in a list
+// //   //             challanData = [data];
+// //   //             print("Wrapping single record in list");
+// //   //           }
+// //   //         }
+// //   //       } else {
+// //   //         print("Unexpected data type: ${data.runtimeType}");
+// //   //         return <Challan>[];
+// //   //       }
+// //   //
+// //   //       // Handle empty data
+// //   //       if (challanData.isEmpty) {
+// //   //         print("No challan data found in response");
+// //   //         return <Challan>[];
+// //   //       }
+// //   //
+// //   //       // Convert to Challan objects with enhanced error handling
+// //   //       List<Challan> challans = [];
+// //   //       for (int i = 0; i < challanData.length; i++) {
+// //   //         try {
+// //   //           var item = challanData[i];
+// //   //
+// //   //           if (item is Map<String, dynamic>) {
+// //   //             print("Processing challan $i: $item");
+// //   //             Challan challan = Challan.fromJson(item);
+// //   //             challans.add(challan);
+// //   //           } else if (item is Map) {
+// //   //             // Convert dynamic map to String key map
+// //   //             var convertedMap = Map<String, dynamic>.from(item);
+// //   //             print("Processing challan $i: $convertedMap");
+// //   //             Challan challan = Challan.fromJson(convertedMap);
+// //   //             challans.add(challan);
+// //   //           } else {
+// //   //             print("Skipping invalid challan data at index $i: ${item.runtimeType}");
+// //   //             print("Problematic item: $item");
+// //   //           }
+// //   //         } catch (e) {
+// //   //           print("Error parsing challan item $i: $e");
+// //   //           print("Problematic item: ${challanData[i]}");
+// //   //           // Continue with other items instead of failing completely
+// //   //           continue;
+// //   //         }
+// //   //       }
+// //   //
+// //   //       print("Successfully parsed ${challans.length} challans");
+// //   //       return challans;
+// //   //
+// //   //     } else {
+// //   //       print("Challan HTTP error: ${response.statusCode}");
+// //   //       print("Error response: ${response.body}");
+// //   //       throw Exception('Failed to load challans: ${response.statusCode}');
+// //   //     }
+// //   //   } catch (e) {
+// //   //     print("Error in getChallans(): $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   /// its Workig With AppSheet
+// //   // static Future<List<ChallanItem>> getChallanItemsByChallanId(String challanId) async {
+// //   //   try {
+// //   //     print("Fetching challan items for challan: $challanId");
+// //   //
+// //   //     final Map<String, dynamic> requestBody = {
+// //   //       "Action": "Find",
+// //   //       "Properties": {
+// //   //         "Locale": "en-US",
+// //   //       },
+// //   //       "Filters": [
+// //   //         ["challanId", "equals", challanId] // FIX: Changed "invoiceId" to "challanId"
+// //   //       ]
+// //   //     };
+// //   //
+// //   //     final response = await http.post(
+// //   //       Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/$challanItemTableName/Action'),
+// //   //       headers: {
+// //   //         'Content-Type': 'application/json',
+// //   //         'ApplicationAccessKey': accessKey,
+// //   //       },
+// //   //       body: jsonEncode(requestBody),
+// //   //     );
+// //   //
+// //   //     print("Challan Items Response: ${response.statusCode} - ${response.body}");
+// //   //
+// //   //     if (response.statusCode == 200) {
+// //   //       final dynamic responseData = jsonDecode(response.body);
+// //   //
+// //   //       // FIX: AppSheet returns a Map, not a List directly
+// //   //       List<dynamic> itemsData = [];
+// //   //
+// //   //       if (responseData is Map<String, dynamic>) {
+// //   //         // Check if response has 'data' field (common in AppSheet)
+// //   //         if (responseData.containsKey('data')) {
+// //   //           itemsData = responseData['data'] ?? [];
+// //   //         } else {
+// //   //           // If no 'data' field, try to use the response as list
+// //   //           itemsData = responseData.values.toList();
+// //   //         }
+// //   //       } else if (responseData is List) {
+// //   //         itemsData = responseData;
+// //   //       }
+// //   //
+// //   //       print("API returned ${itemsData.length} items total");
+// //   //
+// //   //       // No need for additional filtering - the API filter should handle it
+// //   //       return itemsData.map((item) {
+// //   //         if (item is Map<String, dynamic>) {
+// //   //           return ChallanItem.fromJson(item);
+// //   //         } else {
+// //   //           print("Invalid item format: $item");
+// //   //           return ChallanItem.fromJson({}); // Return empty item
+// //   //         }
+// //   //       }).toList();
+// //   //     } else {
+// //   //       throw Exception('Failed to fetch challan items: ${response.statusCode}');
+// //   //     }
+// //   //   } catch (e) {
+// //   //     print("Error fetching Challan items: $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   ///
+// //   static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+// //     try {
+// //       print("Fetching invoice items for invoice: $invoiceId");
+// //
+// //       final Map<String, dynamic> requestBody = {
+// //         "Action": "Find",
+// //         "Properties": {
+// //           "Locale": "en-US",
+// //         },
+// //         "Filters": [
+// //           ["invoiceId", "equals", invoiceId]
+// //         ]
+// //       };
+// //
+// //       final response = await http.post(
+// //         Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/InvoiceItems/Action'),
+// //         headers: {
+// //           'Content-Type': 'application/json',
+// //           'ApplicationAccessKey': accessKey,
+// //         },
+// //         body: jsonEncode(requestBody),
+// //       );
+// //
+// //       print("Invoice Items Response: ${response.statusCode} - ${response.body}");
+// //
+// //       if (response.statusCode == 200) {
+// //         final List<dynamic> responseData = jsonDecode(response.body);
+// //         print("API returned ${responseData.length} items total");
+// //
+// //         // FILTER ITEMS BY INVOICE ID - THIS IS THE KEY FIX!
+// //         final List<dynamic> filteredItems = responseData.where((item) {
+// //           if (item is Map<String, dynamic>) {
+// //             return item['invoiceId'] == invoiceId;
+// //           }
+// //           return false;
+// //         }).toList();
+// //
+// //         print("Found ${filteredItems.length} items for invoice $invoiceId");
+// //
+// //         return filteredItems.map((item) {
+// //           if (item is Map<String, dynamic>) {
+// //             return InvoiceItem.fromJson(item);
+// //           } else {
+// //             throw Exception('Invalid item format: $item');
+// //           }
+// //         }).toList();
+// //       } else {
+// //         throw Exception('Failed to fetch invoice items: ${response.statusCode}');
+// //       }
+// //     } catch (e) {
+// //       print("Error fetching invoice items: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //
+// //   /// In your ApiService class
+// //   static Future<List<Challan>> getChallansByDateRange({
+// //     required DateTime fromDate,
+// //     required DateTime toDate,
+// //     required String userId,
+// //   }) async {
+// //     try {
+// //       // First get all challans for this user
+// //       final filterString = '[UserId] = "$userId",---- fromDate- :$fromDate, ----toDAte : $toDate ';
+// //       print("-------------Filter String: $filterString");
+// //
+// //       final requestBody = {
+// //         "Action": "Find",
+// //         "Properties": {
+// //           "Locale": "en-US"
+// //         },
+// //         "Filters": [
+// //           {
+// //             "Filter": filterString
+// //           }
+// //         ]
+// //       };
+// //
+// //       final response = await http.post(
+// //         Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action'),
+// //         headers: {
+// //           'Content-Type': 'application/json',
+// //           'ApplicationAccessKey': accessKey,
+// //         },
+// //         body: json.encode(requestBody),
+// //       );
+// //
+// //       if (response.statusCode == 200) {
+// //         final dynamic decodedData = json.decode(response.body);
+// //         List<dynamic> rows;
+// //
+// //         if (decodedData is List) {
+// //           rows = decodedData;
+// //         } else if (decodedData is Map && decodedData.containsKey('Rows')) {
+// //           rows = decodedData['Rows'] ?? [];
+// //         } else {
+// //           rows = [];
+// //         }
+// //
+// //         // Filter locally by date
+// //         final filteredRows = rows.where((challan) {
+// //           try {
+// //             // Parse the date string from AppSheet (MM/dd/yyyy format)
+// //             final dateStr = challan['challanDate'] as String;
+// //             final dateParts = dateStr.split('/');
+// //             final month = int.parse(dateParts[0]);
+// //             final day = int.parse(dateParts[1]);
+// //             final year = int.parse(dateParts[2]);
+// //             final challanDate = DateTime(year, month, day);
+// //
+// //             // Check if date is within range
+// //             return challanDate.isAfter(fromDate.subtract(Duration(days: 1))) &&
+// //                 challanDate.isBefore(toDate.add(Duration(days: 1)));
+// //           } catch (e) {
+// //             return false;
+// //           }
+// //         }).toList();
+// //
+// //         print("-------------Filtered Rows: ${filteredRows.length}");
+// //         return filteredRows.map((json) => Challan.fromJson(json)).toList();
+// //       } else {
+// //         throw Exception('Failed to load challans: ${response.statusCode}');
+// //       }
+// //     } catch (e) {
+// //       throw Exception('Failed to load challans: $e');
+// //     }
+// //   }
+// //
+// //   ///  In your ApiService class
+// //   static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
+// //     try {
+// //       // First get all challans for this customer
+// //       List<Challan> customerChallans = await GoogleSheetService.getChallansByDateRange(
+// //         fromDate: DateTime.now().subtract(Duration(days: 365)), // wider date range
+// //         toDate: DateTime.now(),
+// //         userId: AppConstants.userId,
+// //       );
+// //
+// //       // Filter by customer name
+// //       customerChallans = customerChallans.where((challan) =>
+// //       challan.customerName == customerName).toList();
+// //
+// //       print("Processing ${customerChallans.length} challans for $customerName to fetch items...");
+// //
+// //       // For each challan, fetch its items
+// //       for (int i = 0; i < customerChallans.length; i++) {
+// //         print("Fetching items for challan ${i + 1}/${customerChallans.length}: ${customerChallans[i].challanId}");
+// //
+// //         List<ChallanItem> items = await GoogleSheetService.getChallanItemsByChallanId(customerChallans[i].challanId);
+// //
+// //         // Update the challan with items
+// //         customerChallans[i] = customerChallans[i].copyWith(items: items);
+// //
+// //         print("Added ${items.length} items to challan ${customerChallans[i].challanId}");
+// //       }
+// //
+// //       return customerChallans;
+// //     } catch (e) {
+// //       print('Error fetching challans with items for customer $customerName: $e');
+// //       return [];
+// //     }
+// //   }
+// //
+// //
+// //
+// //
+// //   ///unUsed Api
+// //   ///
+// //   ///
+// //   ///
+// //
+// //   /// In RemoteService
+// //   // static Future<List<Challan>> getChallansWithItems() async {
+// //   //   try {
+// //   //     // First get all challans
+// //   //     List<Challan> challans = await getChallansByDateRange(
+// //   //       fromDate: DateTime.now().subtract(Duration(days: 30)),
+// //   //       toDate: DateTime.now(),
+// //   //       userId: AppConstants.userId,
+// //   //     );
+// //   //
+// //   //     print("Processing ${challans.length} challans to fetch items...");
+// //   //
+// //   //     // For each challan, fetch its items from ChallanItems table
+// //   //     for (int i = 0; i < challans.length; i++) {
+// //   //       print("Fetching items for challan ${i + 1}/${challans.length}: ${challans[i].challanId}");
+// //   //
+// //   //       List<ChallanItem> items = await getChallanItemsByChallanId(challans[i].challanId);
+// //   //
+// //   //       // Update the challan with items
+// //   //       challans[i] = challans[i].copyWith(items: items);
+// //   //
+// //   //       print("Added ${items.length} items to challan ${challans[i].challanId}");
+// //   //     }
+// //   //
+// //   //     return challans;
+// //   //   } catch (e) {
+// //   //     print('Error fetching challans with items: $e');
+// //   //     return [];
+// //   //   }
+// //   // }
+// //
+// //   /// Alternative 3: Delete and Add (as last resort)
+// //   static Future<void> editItemAlternative3(String userId, Item item) async {
+// //     print("=== TRYING ALTERNATIVE 3: DELETE AND ADD ===");
+// //
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     // Step 1: Delete the existing item
+// //     final deleteBody = jsonEncode({
+// //       "Action": "Delete",
+// //       "Rows": [
+// //         {"itemId": item.itemId}
+// //       ],
+// //     });
+// //
+// //     print("Delete request: $deleteBody");
+// //
+// //     final deleteResponse = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: deleteBody,
+// //     );
+// //
+// //     print("Delete response: ${deleteResponse.statusCode} - ${deleteResponse.body}");
+// //
+// //     if (deleteResponse.statusCode != 200) {
+// //       throw Exception("Failed to delete item: ${deleteResponse.body}");
+// //     }
+// //
+// //     // Step 2: Add the updated item
+// //     await Future.delayed(Duration(seconds: 1)); // Small delay
+// //
+// //     final addBody = jsonEncode({
+// //       "Action": "Add",
+// //       "Rows": [
+// //         {
+// //           "itemId": item.itemId,
+// //           "itemName": item.itemName,
+// //           "price": item.price,
+// //           "unitOfMeasurement": item.unitOfMeasurement,
+// //           "currentStock": item.currentStock,
+// //           "detailRequirement": item.detailRequirement ?? "",
+// //           "isActive": item.isActive,
+// //           "userId": userId,
+// //         }
+// //       ],
+// //     });
+// //
+// //     print("Add request: $addBody");
+// //
+// //     final addResponse = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: addBody,
+// //     );
+// //
+// //     print("Add response: ${addResponse.statusCode} - ${addResponse.body}");
+// //
+// //     if (addResponse.statusCode != 200) {
+// //       throw Exception("Failed to re-add item: ${addResponse.body}");
+// //     }
+// //   }
+// //
+// //   static Future<void> deleteInvoiceItems(String invoiceId) async {
+// //     try {
+// //       // First get all items for this invoice
+// //       List<InvoiceItem> items = await getInvoiceItemsByInvoiceId(invoiceId);
+// //
+// //       String url = 'https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceItemTableName/Action';
+// //
+// //       // Delete each item (you might need to adjust this based on your AppSheet setup)
+// //       for (var item in items) {
+// //         Map<String, dynamic> requestBody = {
+// //           "Action": "Delete",
+// //           "Properties": {},
+// //           "Rows": [
+// //             {
+// //               "invoiceId": invoiceId,
+// //               "itemId": item.itemId,
+// //             }
+// //           ]
+// //         };
+// //
+// //         await http.post(
+// //           Uri.parse(url),
+// //           headers: {
+// //             'ApplicationAccessKey': accessKey,
+// //             'Content-Type': 'application/json',
+// //           },
+// //           body: jsonEncode(requestBody),
+// //         );
+// //       }
+// //
+// //       print("Deleted ${items.length} invoice items for invoice $invoiceId");
+// //     } catch (e) {
+// //       print('Error deleting invoice items: $e');
+// //       throw Exception('Failed to delete invoice items: $e');
+// //     }
+// //   }
+// //
+// //   static Future<void> listAllChallans() async {
+// //     try {
+// //       print("=== LISTING ALL CHALLANS ===");
+// //
+// //       final url = Uri.parse(
+// //           "https://api.appsheet.com/api/v2/apps/$appId/tables/$challanTableName/Action");
+// //
+// //       final body = jsonEncode({
+// //         "Action": "Find",
+// //         "Properties": {
+// //           "Locale": "en-US",
+// //         },
+// //         "Rows": [] // Empty to get all rows
+// //       });
+// //
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("List all challans response: ${response.statusCode} - ${response.body}");
+// //     } catch (e) {
+// //       print("Error in listAllChallans: $e");
+// //     }
+// //   }
+// //
+// //   static Future<List<Invoice>> fetchInvoices() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$invoiceTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Sort([{ColumnName: "date", Ascending: false}])',
+// //       }
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     if (response.statusCode == 200) {
+// //       final data = jsonDecode(response.body);
+// //       if (data is Map && data.containsKey("Rows")) {
+// //         final rows = data["Rows"] as List;
+// //         return rows.map((e) => Invoice.fromMap(e)).toList();
+// //       } else {
+// //         throw Exception("Invalid response format: ${response.body}");
+// //       }
+// //     } else {
+// //       throw Exception("Failed to load invoices: ${response.body}");
+// //     }
+// //   }
+// //
+// //   /// Method 3: Try different AppSheet API approach
+// //   static Future<List<Item>> getItemsAlternative(String userId) async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     // Try different Action types
+// //     final actions = ["Find", "Read"];
+// //
+// //     for (String action in actions) {
+// //       print("=== TRYING ACTION: $action ===");
+// //
+// //       final body = jsonEncode({
+// //         "Action": action,
+// //         "Properties": {
+// //           "Locale": "en-US",
+// //           "Selector": 'Filter([userId] = "$userId")',
+// //         }
+// //       });
+// //
+// //       try {
+// //         final response = await http.post(
+// //           url,
+// //           headers: {
+// //             "Content-Type": "application/json",
+// //             "ApplicationAccessKey": accessKey,
+// //           },
+// //           body: body,
+// //         );
+// //
+// //         print("$action Response: ${response.statusCode} - ${response.body}");
+// //
+// //         if (response.statusCode == 200 &&
+// //             response.body.trim().isNotEmpty &&
+// //             response.body.trim() != "[]") {
+// //
+// //           final data = jsonDecode(response.body);
+// //
+// //           if (data is List && data.isNotEmpty) {
+// //             print("Success with $action! Found ${data.length} items");
+// //             return data.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+// //           }
+// //         }
+// //       } catch (e) {
+// //         print("Error with $action: $e");
+// //       }
+// //     }
+// //
+// //     print("All alternative methods failed, falling back to manual filter");
+// //     return await getAllAndFilterManually(userId);
+// //   }
+// //
+// //   /// Method 1: Force AppSheet to sync before filtering
+// //   static Future<List<Item>> getItems({String? userId}) async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     // First, let's try without any selector to see if we can get data
+// //     Map<String, dynamic> requestBody = {
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //       }
+// //     };
+// //
+// //     // Only add selector if we have a userId
+// //     if (userId != null && userId.isNotEmpty) {
+// //       // Try the exact format that should work
+// //       requestBody["Properties"]["Selector"] = 'Filter([userId] = "$userId")';
+// //     }
+// //
+// //     final body = jsonEncode(requestBody);
+// //     print("Request body: $body");
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("Response Status: ${response.statusCode}");
+// //       print("Response Body: '${response.body}'");
+// //       print("Response Body Length: ${response.body.length}");
+// //
+// //       if (response.statusCode == 200) {
+// //         if (response.body.trim().isEmpty || response.body.trim() == "[]") {
+// //           print("Empty response received");
+// //           return <Item>[];
+// //         }
+// //
+// //         dynamic data;
+// //         try {
+// //           data = jsonDecode(response.body);
+// //           print("Parsed data: $data");
+// //         } catch (jsonError) {
+// //           print("JSON decode error: $jsonError");
+// //           throw Exception("Failed to parse response: $jsonError");
+// //         }
+// //
+// //         List<dynamic> itemsData = [];
+// //
+// //         if (data is List) {
+// //           itemsData = data;
+// //           print("Direct list with ${itemsData.length} items");
+// //         } else if (data is Map) {
+// //           if (data.containsKey("Rows")) {
+// //             itemsData = data["Rows"];
+// //             print("Map with Rows: ${itemsData.length} items");
+// //           } else if (data.containsKey("Records")) {
+// //             itemsData = data["Records"];
+// //             print("Map with Records: ${itemsData.length} items");
+// //           } else {
+// //             print("Unknown map structure: ${data.keys}");
+// //           }
+// //         }
+// //
+// //         // If we have userId but no filtered results, get all and filter manually
+// //         if (userId != null && userId.isNotEmpty && itemsData.isEmpty) {
+// //           print("No filtered results, trying to get all data and filter manually...");
+// //           return await getAllAndFilterManually(userId);
+// //         }
+// //
+// //         return itemsData.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+// //
+// //       } else {
+// //         throw Exception("HTTP ${response.statusCode}: ${response.body}");
+// //       }
+// //     } catch (e) {
+// //       print("Error in getItems: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Method 2: Get all data and filter manually (fallback)
+// //   static Future<List<Item>> getAllAndFilterManually(String userId) async {
+// //     print("=== MANUAL FILTERING FALLBACK ===");
+// //
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         // No selector - get all data
+// //       }
+// //     });
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
+// //         final data = jsonDecode(response.body);
+// //
+// //         List<dynamic> allItems = [];
+// //         if (data is List) {
+// //           allItems = data;
+// //         } else if (data is Map && data.containsKey("Rows")) {
+// //           allItems = data["Rows"];
+// //         }
+// //
+// //         print("Got ${allItems.length} total items, filtering for userId: $userId");
+// //
+// //         // Filter manually
+// //         final filteredItems = allItems.where((item) {
+// //           final map = item as Map<String, dynamic>;
+// //           final itemUserId = map['userId']?.toString() ?? '';
+// //           print("Checking item userId: '$itemUserId' vs target: '$userId'");
+// //           return itemUserId == userId;
+// //         }).toList();
+// //
+// //         print("Manual filter found ${filteredItems.length} matching items");
+// //
+// //         return filteredItems.map((e) => Item.fromMap(e as Map<String, dynamic>)).toList();
+// //       }
+// //
+// //       return <Item>[];
+// //     } catch (e) {
+// //       print("Error in manual filtering: $e");
+// //       return <Item>[];
+// //     }
+// //   }
+// //
+// //   static Future<List<ChallanItem>> getChallanItems(String challanId) async {
+// //     try {
+// //       final Map<String, dynamic> requestBody = {
+// //         "Action": "Find",
+// //         "Properties": {
+// //           "Locale": "en-US",
+// //         },
+// //         "Rows": [
+// //           {
+// //             "ChallanId": challanId // Filter by challanId
+// //           }
+// //         ]
+// //       };
+// //
+// //       final response = await http.post(
+// //         Uri.parse('https://api.appsheet.com/api/v2/apps/$appId/tables/ChallanItems/Action'),
+// //         headers: {
+// //           'Content-Type': 'application/json',
+// //           'ApplicationAccessKey': accessKey, // Add your AppSheet access key
+// //         },
+// //         body: json.encode(requestBody),
+// //       );
+// //
+// //       if (response.statusCode == 200) {
+// //         final Map<String, dynamic> responseData = json.decode(response.body);
+// //         final List<dynamic> data = responseData['data'] ?? [];
+// //
+// //         print("Found ${data.length} items for challan $challanId");
+// //
+// //         return data.map((item) => ChallanItem.fromJson(item)).toList();
+// //       } else {
+// //         print("Failed to load challan items. Status: ${response.statusCode}");
+// //         throw Exception('Failed to load challan items');
+// //       }
+// //     } catch (e) {
+// //       print('Error fetching challan items: $e');
+// //       return [];
+// //     }
+// //   }
+// //
+// //   /// Get all items from Items table with enhanced fields
+// //   static Future<List<Item>> getItemsoldwork() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Filter(1=1)', // Get all items
+// //         "SelectColumns": [
+// //           "itemId",
+// //           "itemName",
+// //           "price",
+// //           "unitOfMeasurement",
+// //           "currentStock",
+// //           "detailRequirement",
+// //           "isActive"
+// //         ]
+// //       }
+// //     });
+// //
+// //     print("Fetching items with request: $body");
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("Get Items Response: ${response.statusCode} - ${response.body}");
+// //
+// //     if (response.statusCode == 200) {
+// //       final data = jsonDecode(response.body);
+// //
+// //       if (data is List) {
+// //         return data.map((e) => Item.fromMap(e)).toList();
+// //       } else if (data is Map && data["Rows"] is List) {
+// //         final rows = data["Rows"] as List;
+// //         return rows.map((e) => Item.fromMap(e)).toList();
+// //       } else {
+// //         throw Exception("Invalid response format: ${response.body}");
+// //       }
+// //     } else {
+// //       throw Exception("Failed to load items: ${response.body}");
+// //     }
+// //   }
+// //
+// //   static Future<List<Item>> getItems1() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Filter([userId] = "${AppConstants.userId}")'
+// //         //"Selector": 'Filter(1=1)' , // Get just one specific item
+// //        // "Selector": "Filter([itemId] = '1756881063842')",
+// //         // "Selector": 'Filter(1=1)', // Get all items
+// //         // "SelectColumns": [
+// //         //   "itemId",
+// //         //   "itemName",
+// //         //   "price",
+// //         //   "unitOfMeasurement",
+// //         //   "currentStock",
+// //         //   "detailRequirement",
+// //         //   "isActive"
+// //         // ]
+// //       }
+// //     });
+// //
+// //     print("Fetching items with request: $body");
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("Get Items Response: ${response.statusCode}");
+// //       print("Response Headers: ${response.headers}");
+// //       print("Response Body Length: ${response.body.length}");
+// //       print("Response Body: '${response.body}'"); // Added quotes to see exact content
+// //
+// //       if (response.statusCode == 200) {
+// //         // Check if response body is empty or just whitespace
+// //
+// //         print("------=-=:${response.body.trim().isEmpty}");
+// //         if (response.body.trim().isEmpty) {
+// //           print("Warning: Response body is empty, returning empty list");
+// //           return <Item>[];
+// //         }
+// //
+// //         dynamic data;
+// //         try {
+// //           data = jsonDecode(response.body);
+// //           print("dattta:------------${data}");
+// //         } catch (jsonError) {
+// //           print("JSON Decode Error: $jsonError");
+// //           print("Raw response body: ${response.body.codeUnits}"); // Show as code units for debugging
+// //           throw Exception("Failed to parse JSON response: $jsonError");
+// //         }
+// //
+// //         print("Parsed data type: ${data.runtimeType}");
+// //         print("Parsed data: $data");
+// //
+// //         if (data is List) {
+// //           print("Processing data as direct list with ${data.length} items");
+// //           return data.map((e) {
+// //             print("Processing item: $e");
+// //             return Item.fromMap(e as Map<String, dynamic>);
+// //           }).toList();
+// //         }
+// //         else if (data is Map && data["Rows"] is List) {
+// //           final rows = data["Rows"] as List;
+// //           print("Processing data as map with Rows containing ${rows.length} items");
+// //           return rows.map((e) {
+// //             print("Processing row: $e");
+// //             return Item.fromMap(e as Map<String, dynamic>);
+// //           }).toList();
+// //         }
+// //         else if (data is Map && data.isEmpty) {
+// //           print("Received empty map, returning empty list");
+// //           return <Item>[];
+// //         }
+// //         else {
+// //           print("Unexpected data structure received");
+// //           print("Data keys: ${data is Map ? data.keys.toList() : 'Not a map'}");
+// //           throw Exception("Invalid response format. Expected List or Map with 'Rows', got: ${data.runtimeType}");
+// //         }
+// //       }
+// //       else {
+// //         print("HTTP Error: ${response.statusCode}");
+// //         print("Error response: ${response.body}");
+// //         throw Exception("HTTP ${response.statusCode}: ${response.body}");
+// //       }
+// //     } catch (e) {
+// //       print("Network or processing error: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //   String? getCurrentUserId() {
+// //     // DEBUG: Print what you're returning
+// //     String? userId = "your_actual_user_id"; // Replace with your actual method
+// //
+// //     print("getCurrentUserId() returning: '$userId'");
+// //     return userId;
+// //   }
+// //
+// //   /// Optional: Add method to get user-specific items
+// //   static Future<List<Item>> getUserItems(String userId) async {
+// //     print("=== DEBUG getUserItems ===");
+// //     print("UserId: $userId");
+// //     print("AppId: $appId");
+// //     print("Table Name: $itemsTableName");
+// //     print("Access Key: ${accessKey.substring(0, 10)}...");
+// //
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
+// //     );
+// //
+// //     print("API URL: $url");
+// //
+// //     // Try different approaches based on your AppSheet setup
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //     "Locale": "en-US"
+// //         // Option 1: If using security filters
+// //         //"Selector": "SELECT($itemsTableName[userId], [userId] = '$userId')",
+// //
+// //         // Option 2: Alternative selector (uncomment if option 1 doesn't work)
+// //          //"Selector": "Filter($itemsTableName, [userId] = '$userId')",
+// //
+// //         // Option 3: If you want all columns (uncomment if needed)
+// //         // "Selector": "SELECT($itemsTableName[*], [userId] = '$userId')",
+// //       },
+// //     });
+// //
+// //     print("Request Body: $body");
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("Response Status Code: ${response.statusCode}");
+// //       print("Response Headers: ${response.headers}");
+// //       print("Response Body: ${response.body}");
+// //
+// //       if (response.statusCode == 200) {
+// //         final responseData = jsonDecode(response.body);
+// //         print("Parsed Response Data: $responseData");
+// //
+// //         // Check different possible response structures
+// //         List<dynamic> rows = [];
+// //
+// //         if (responseData is List) {
+// //           rows = responseData;
+// //         } else if (responseData is Map) {
+// //           rows = responseData['Rows'] ??
+// //               responseData['rows'] ??
+// //               responseData['data'] ??
+// //               responseData['result'] ?? [];
+// //         }
+// //
+// //         print("Extracted Rows: $rows");
+// //         print("Number of rows: ${rows.length}");
+// //
+// //         if (rows.isEmpty) {
+// //           print("WARNING: No rows found for userId: $userId");
+// //
+// //           // Let's also try to get ALL items to see what's in the table
+// //           await debugGetAllItems();
+// //         }
+// //
+// //         List<Item> items = [];
+// //         for (var row in rows) {
+// //           try {
+// //             print("Processing row: $row");
+// //             Item item = Item.fromMap(row);
+// //             items.add(item);
+// //           } catch (e) {
+// //             print("Error parsing row $row: $e");
+// //           }
+// //         }
+// //
+// //         print("Successfully parsed ${items.length} items");
+// //         return items;
+// //       } else {
+// //         print("ERROR: HTTP ${response.statusCode}");
+// //         print("Error Body: ${response.body}");
+// //         throw Exception("Failed to fetch items: ${response.statusCode} - ${response.body}");
+// //       }
+// //     } catch (e) {
+// //       print("EXCEPTION in getUserItems: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Debug method to get all items (for testing)
+// //   static Future<void> debugGetAllItems() async {
+// //     print("=== DEBUG: Fetching ALL items ===");
+// //
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
+// //     );
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Selector": "SELECT($itemsTableName[*])",
+// //       },
+// //     });
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       if (response.statusCode == 200) {
+// //         final responseData = jsonDecode(response.body);
+// //         print("ALL ITEMS in table: $responseData");
+// //       } else {
+// //         print("Failed to fetch all items: ${response.statusCode} - ${response.body}");
+// //       }
+// //     } catch (e) {
+// //       print("Error fetching all items: $e");
+// //     }
+// //   }
+// //
+// // // Alternative approach using different API pattern
+// //   static Future<List<Item>> getUserItemsAlternative(String userId) async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action"
+// //     );
+// //
+// //     // Try the Read action instead of Find
+// //     final body = jsonEncode({
+// //       "Action": "Read",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Timezone": "Pacific Standard Time"
+// //       },
+// //     });
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       if (response.statusCode == 200) {
+// //         final responseData = jsonDecode(response.body);
+// //         print("Read All Response: $responseData");
+// //
+// //         // Filter on client side
+// //         List<dynamic> rows = responseData is List ? responseData : (responseData['Rows'] ?? []);
+// //         List<dynamic> filteredRows = rows.where((row) => row['userId'] == userId).toList();
+// //
+// //         return filteredRows.map((row) => Item.fromMap(row)).toList();
+// //       } else {
+// //         throw Exception("Failed to fetch items: ${response.statusCode}");
+// //       }
+// //     } catch (e) {
+// //       print("Error in alternative method: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   static Future<void> addSingleInvoice(Map<String, dynamic> invoiceRow) async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/Invoice/Action");
+// //     final body = jsonEncode({
+// //       "Action": "Add",
+// //       "Rows": [invoiceRow],
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "ApplicationAccessKey": accessKey,
+// //         "Content-Type": "application/json",
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("AppSheet Response: ${response.statusCode} - ${response.body}");
+// //
+// //     if (response.statusCode != 200) {
+// //       throw Exception("Failed to send invoice: ${response.body}");
+// //     }
+// //   }
+// //
+// //   /// Update only stock for an item
+// //   static Future<void> updateItemStock(String itemId, int newStock) async {
+// //     final url = Uri.parse(
+// //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action",
+// //     );
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Edit",
+// //       "Rows": [
+// //         {
+// //           "itemId": itemId,
+// //           "currentStock": newStock,
+// //         }
+// //       ]
+// //     });
+// //
+// //     print("Updating stock for item $itemId to $newStock");
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("Update Stock Response: ${response.statusCode} - ${response.body}");
+// //
+// //     if (response.statusCode != 200) {
+// //       throw Exception("Failed to update stock: ${response.body}");
+// //     }
+// //   }
+// //
+// //   /// Delete item (set as inactive)
+// //   static Future<void> deleteItem(String itemId) async {
+// //     final url = Uri.parse(
+// //       "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action",
+// //     );
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Edit",
+// //       "Rows": [
+// //         {
+// //           "itemId": itemId,
+// //           "isActive": 0, // Set as inactive instead of deleting
+// //         }
+// //       ]
+// //     });
+// //
+// //     final response = await http.post(
+// //       url,
+// //       headers: {
+// //         "Content-Type": "application/json",
+// //         "ApplicationAccessKey": accessKey,
+// //       },
+// //       body: body,
+// //     );
+// //
+// //     print("Delete Item Response: ${response.statusCode} - ${response.body}");
+// //
+// //     if (response.statusCode != 200) {
+// //       throw Exception("Failed to delete item: ${response.body}");
+// //     }
+// //   }
+// //
+// //   /// Check if item table structure is correct for enhanced fields
+// //   static Future<void> checkItemTableStructure() async {
+// //     final url = Uri.parse(
+// //         "https://api.appsheet.com/api/v2/apps/$appId/tables/$itemsTableName/Action");
+// //
+// //     final body = jsonEncode({
+// //       "Action": "Find",
+// //       "Properties": {
+// //         "Locale": "en-US",
+// //         "Selector": 'Filter(1=1)',
+// //         "SelectColumns": [
+// //           "itemId",
+// //           "itemName",
+// //           "price",
+// //           "unitOfMeasurement",
+// //           "currentStock",
+// //           "detailRequirement",
+// //           "isActive"
+// //         ]
+// //       }
+// //     });
+// //
+// //     try {
+// //       final response = await http.post(
+// //         url,
+// //         headers: {
+// //           "Content-Type": "application/json",
+// //           "ApplicationAccessKey": accessKey,
+// //         },
+// //         body: body,
+// //       );
+// //
+// //       print("Item Table Structure Response: ${response.statusCode} - ${response.body}");
+// //
+// //       if (response.statusCode != 200) {
+// //         print("Warning: Item table may not have all required columns");
+// //         print("Expected columns: itemId, itemName, price, unitOfMeasurement, currentStock, detailRequirement, isActive");
+// //       }
+// //     } catch (e) {
+// //       print("Error checking item table structure: $e");
+// //     }
+// //   }
+// // }
+//
+//
+// ///workig till 24-10: 12:06 pm
+// // class GoogleSheetService {
+// //   //static const spreadsheetId = "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ"; // from Sheet URL
+// //   static String spreadsheetId = "${AppConstants.spreadsheetId}"; // from Sheet URL
+// //   static const itemSheetName = "Item"; // your sheet/tab name
+// //   static const invoiceSheetName = "Invoice"; // your sheet/tab name
+// //   static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
+// //   static const challanSheetName = "Challan"; // your sheet/tab name
+// //   static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
+// //   static const inventoryTransactionSheetName = "InventoryTransactions"; // Create this sheet in Google Sheets
+// //
+// //   static const purchaseSheetName = "Purchase";
+// //   static const purchaseItemSheetName = "PurchaseItems";
+// //
+// //   static List<String>? _cachedHeaders;
+// //   static final Map<String, List<ChallanItem>> _challanCache = {};
+// //   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
+// //
+// //   static final Map<String, List<dynamic>> _itemCache = {};
+// //   static final Map<String, DateTime> _cacheTimestamps = {};
+// //   static const Duration _cacheValidDuration = Duration(minutes: 5);
+// //
+// //
+// //   /// Load credentials from assets/credentials.json
+// //   static Future<AuthClient> _getAuthClient() async {
+// //     final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+// //
+// //    print("------------Creddd-------------${credentialsJson}");
+// //     final accountCredentials =
+// //     ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+// //     final scopes = [SheetsApi.spreadsheetsScope];
+// //
+// //     return await clientViaServiceAccount(accountCredentials, scopes);
+// //   }
+// //
+// //   /// Add a new item row to Google Sheet
+// //   static Future<void> addItem(String userId, Item item) async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     print("---------========Sheet API...........-----${sheetsApi}");
+// //     // Prepare row values in correct column order
+// //     final values = [
+// //       item.itemId,
+// //       item.itemName,
+// //       item.price.toString(),
+// //       item.gstPercent.toString(),
+// //       item.unitOfMeasurement,
+// //       item.currentStock.toString(),
+// //       item.detailRequirement,
+// //       item.isActive ? "TRUE" : "FALSE",
+// //       userId,
+// //     ];
+// //
+// //     // Append row
+// //     await sheetsApi.spreadsheets.values.append(
+// //       ValueRange.fromJson({
+// //         "values": [values]
+// //       }),
+// //       spreadsheetId,
+// //       "$itemSheetName!A:I", // Adjust columns (A-H based on your schema)
+// //       valueInputOption: "RAW",
+// //     );
+// //
+// //     print("✅ Item added successfully to Google Sheet");
+// //   }
+// //
+// //   // Get items from Google Sheet with optional user filtering
+// //   static Future<List<Item>> getItems({String? userId}) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       print("---------========Sheets API Get Items...........-----${sheetsApi}");
+// //
+// //       // Get all data from the sheet
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:I", // Adjust range based on your columns
+// //       );
+// //
+// //       print("Response: ${response.values}");
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("No data found in sheet");
+// //         return <Item>[];
+// //       }
+// //
+// //       List<Item> items = [];
+// //
+// //       // Skip header row (index 0) if it exists
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //
+// //         // Ensure row has enough columns
+// //         if (row.length < 9) {
+// //           print("Skipping incomplete row ${i}: $row");
+// //           continue;
+// //         }
+// //
+// //         try {
+// //           // Parse row data according to your schema
+// //           final item = Item(
+// //             itemId: row[0]?.toString() ?? '',
+// //             itemName: row[1]?.toString() ?? '',
+// //             price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
+// //             gstPercent : double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
+// //             unitOfMeasurement: row[4]?.toString() ?? '',
+// //             currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
+// //             detailRequirement: row[6]?.toString() ?? '',
+// //             isActive: (row[7]?.toString().toLowerCase() == 'true'),
+// //             // Assuming userId is in column I (index 8)
+// //           );
+// //
+// //           // Filter by userId if provided
+// //           if (userId != null && userId.isNotEmpty) {
+// //             String rowUserId = row[8]?.toString() ?? '';
+// //             if (rowUserId == userId) {
+// //               items.add(item);
+// //             }
+// //           } else {
+// //             // No filter, add all items
+// //             items.add(item);
+// //           }
+// //
+// //         } catch (e) {
+// //           print("Error parsing row ${i}: $e");
+// //           print("Row data: $row");
+// //           continue;
+// //         }
+// //       }
+// //
+// //       print("✅ Retrieved ${items.length} items from Google Sheet");
+// //       return items;
+// //
+// //     } catch (e) {
+// //       print("Error in getItems: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   // Edit item using Google Sheets API (delete and re-add approach)
+// //   static Future<void> editItemAlternative3(String userId, Item item) async {
+// //     print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //
+// //     // Get sheet metadata to find the correct sheetId (safer than hardcoding 0)
+// //     final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+// //     final sheet = spreadsheet.sheets!
+// //         .firstWhere((s) => s.properties?.title == itemSheetName);
+// //     final sheetId = sheet.properties!.sheetId!;
+// //       // Step 1: Find and delete the existing item
+// //       print("Step 1: Finding item to delete...");
+// //
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:I",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("No data found in sheet");
+// //       }
+// //
+// //       int? targetRowIndex;
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isNotEmpty && row[0]?.toString() == item.itemId) {
+// //           targetRowIndex = i; // 0-based index for delete operation
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (targetRowIndex == null) {
+// //         throw Exception("Item with ID ${item.itemId} not found");
+// //       }
+// //
+// //       print("Found item at row index: $targetRowIndex");
+// //
+// //       // Delete the row using batch update
+// //       final deleteRequests = [
+// //         Request()
+// //           ..deleteDimension = (DeleteDimensionRequest()
+// //             ..range = (DimensionRange()
+// //               ..sheetId = sheetId // Adjust if your sheet has different ID
+// //               ..dimension = 'ROWS'
+// //               ..startIndex = targetRowIndex
+// //               ..endIndex = targetRowIndex + 1))
+// //       ];
+// //
+// //       final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
+// //         ..requests = deleteRequests;
+// //
+// //       print("Deleting row...");
+// //       await sheetsApi.spreadsheets.batchUpdate(
+// //         deleteBatchRequest,
+// //         spreadsheetId,
+// //       );
+// //
+// //       print("Delete successful");
+// //
+// //       // Step 2: Add the updated item (small delay for consistency)
+// //       await Future.delayed(Duration(seconds: 1));
+// //
+// //       print("Step 2: Adding updated item...");
+// //
+// //       // Prepare updated row values
+// //       final values = [
+// //         item.itemId,
+// //         item.itemName,
+// //         item.price.toString(),
+// //         item.gstPercent.toString(),
+// //         item.unitOfMeasurement,
+// //         item.currentStock.toString(),
+// //         item.detailRequirement,
+// //         item.isActive ? "TRUE" : "FALSE",
+// //         userId,
+// //       ];
+// //
+// //       print("Adding values: $values");
+// //
+// //       // Append the updated row
+// //       await sheetsApi.spreadsheets.values.append(
+// //         ValueRange.fromJson({
+// //           "values": [values]
+// //         }),
+// //         spreadsheetId,
+// //         "$itemSheetName!A:H",
+// //         valueInputOption: "RAW",
+// //       );
+// //
+// //       print("Add successful - Item edited using delete and add approach");
+// //
+// //     } catch (e) {
+// //       print("Error in editItemAlternative3: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //   // static Future<List<Invoice>> getInvoices({String? type}) async {
+// //   //   print("🔄 Fetching invoices from Google Sheet...");
+// //   //
+// //   //   try {
+// //   //     final client = await _getAuthClient();
+// //   //     final sheetsApi = SheetsApi(client);
+// //   //
+// //   //     // Get header row
+// //   //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$invoiceSheetName!1:1",
+// //   //     );
+// //   //
+// //   //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //   //       print("No header row found in sheet");
+// //   //       return <Invoice>[];
+// //   //     }
+// //   //
+// //   //     final headers = headerResponse.values![0];
+// //   //     final columnIndices = {
+// //   //       for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
+// //   //     };
+// //   //
+// //   //     // Get all data
+// //   //     final response = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$invoiceSheetName!A:Z",
+// //   //     );
+// //   //
+// //   //     if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
+// //   //       print("No invoice data found in sheet");
+// //   //       return <Invoice>[];
+// //   //     }
+// //   //
+// //   //     List<Invoice> invoices = [];
+// //   //
+// //   //     // Skip header row
+// //   //     for (int i = 1; i < response.values!.length; i++) {
+// //   //       final row = response.values![i];
+// //   //       if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+// //   //
+// //   //       try {
+// //   //         Map<String, dynamic> rowData = {};
+// //   //         for (int j = 0; j < min(row.length, headers.length); j++) {
+// //   //           rowData[headers[j].toString()] = row[j];
+// //   //         }
+// //   //
+// //   //         final invoice = Invoice.fromMap(rowData);
+// //   //
+// //   //         // 🔑 Apply filter
+// //   //         if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+// //   //         if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+// //   //
+// //   //         invoices.add(invoice);
+// //   //
+// //   //       } catch (e) {
+// //   //         print("Error parsing invoice row ${i}: $e");
+// //   //         continue;
+// //   //       }
+// //   //     }
+// //   //
+// //   //     print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
+// //   //     return invoices;
+// //   //
+// //   //   } catch (e) {
+// //   //     print("❌ Error in getInvoices: $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   static Future<List<Invoice>> getInvoices({String? type}) async {
+// //     print("🔄 Fetching invoices from Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$invoiceSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("No header row found in sheet");
+// //         return <Invoice>[];
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       final columnIndices = {
+// //         for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
+// //       };
+// //
+// //       // Get all data
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$invoiceSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
+// //         print("No invoice data found in sheet");
+// //         return <Invoice>[];
+// //       }
+// //
+// //       List<Invoice> invoices = [];
+// //
+// //       // Skip header row
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+// //
+// //         try {
+// //           Map<String, dynamic> rowData = {};
+// //           for (int j = 0; j < min(row.length, headers.length); j++) {
+// //             final headerKey = headers[j].toString();
+// //             final cellValue = row[j];
+// //
+// //             // 🔹 Parse date fields (issueDate, dueDate) - keep as STRING for now
+// //             if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+// //               if (cellValue != null && cellValue.toString().isNotEmpty) {
+// //                 // Store the parsed DateTime
+// //                 final parsedDate = _parseDate(cellValue.toString());
+// //                 rowData[headerKey] = parsedDate; // Store as DateTime
+// //
+// //                 // Debug first few rows
+// //                 if (i <= 3) {
+// //                   print("📅 Row $i - $headerKey: ${cellValue.toString()} → $parsedDate");
+// //                 }
+// //               } else {
+// //                 rowData[headerKey] = null;
+// //               }
+// //             } else {
+// //               rowData[headerKey] = cellValue;
+// //             }
+// //           }
+// //
+// //           // Debug first invoice
+// //           if (i == 1) {
+// //             print("🔍 First invoice rowData: $rowData");
+// //           }
+// //
+// //           final invoice = Invoice.fromMap(rowData);
+// //
+// //           // Debug first invoice
+// //           if (i == 1) {
+// //             print("🔍 First invoice object: invoiceId=${invoice.invoiceId}, issueDate=${invoice.issueDate}");
+// //           }
+// //
+// //           // 🔑 Apply filter
+// //           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+// //           if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+// //
+// //           invoices.add(invoice);
+// //
+// //         } catch (e, stackTrace) {
+// //           print("❌ Error parsing invoice row ${i}: $e");
+// //           print("Stack trace: $stackTrace");
+// //           continue;
+// //         }
+// //       }
+// //
+// //       print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
+// //       return invoices;
+// //
+// //     } catch (e) {
+// //       print("❌ Error in getInvoices: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// // // 🔹 Helper method to parse dates from Google Sheets
+// //   static DateTime? _parseDate(String dateString) {
+// //     if (dateString.isEmpty) return null;
+// //
+// //     try {
+// //       // Format: dd/MM/yyyy (most common in Google Sheets)
+// //       if (dateString.contains("/")) {
+// //         final parts = dateString.split("/");
+// //         if (parts.length == 3) {
+// //           return DateTime(
+// //             int.parse(parts[2]), // yyyy
+// //             int.parse(parts[1]), // MM
+// //             int.parse(parts[0]), // dd
+// //           );
+// //         }
+// //       }
+// //
+// //       // Format: yyyy-MM-dd (ISO format)
+// //       if (dateString.contains("-")) {
+// //         return DateTime.tryParse(dateString);
+// //       }
+// //
+// //       print("⚠️ Could not parse date: $dateString");
+// //       return null;
+// //     } catch (e) {
+// //       print("❌ Error parsing date '$dateString': $e");
+// //       return null;
+// //     }
+// //   }
+// //
+// // // Add invoice to Google Sheet
+// //   static Future<void> addInvoice(dynamic invoiceData, String userId) async {
+// //     print("🔄 Adding invoice to Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       print("Sheets API initialized for adding invoice");
+// //
+// //       // Determine which sheet to use based on your structure
+// //       String targetSheetName = "Invoice"; // Default sheet name
+// //       print("Using sheet: $targetSheetName");
+// //
+// //       // First, get the header row to understand column order
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$targetSheetName!1:1", // Get only the header row
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$targetSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("Sheet headers: $headers");
+// //
+// //       List<List<dynamic>> rowsToAdd = [];
+// //
+// //       if (invoiceData is Map<String, dynamic>) {
+// //         // Single invoice data
+// //         rowsToAdd.add(_prepareInvoiceRow(invoiceData, userId, headers));
+// //       } else if (invoiceData is List<Invoice>) {
+// //         // Multiple invoices
+// //         for (Invoice invoice in invoiceData) {
+// //           rowsToAdd.add(_prepareInvoiceRow(invoice.toMap(), userId, headers));
+// //         }
+// //       } else if (invoiceData is Invoice) {
+// //         // Single Invoice object
+// //         rowsToAdd.add(_prepareInvoiceRow(invoiceData.toMap(), userId, headers));
+// //       } else {
+// //         throw Exception("Invalid invoice data format: ${invoiceData.runtimeType}");
+// //       }
+// //
+// //       print("Prepared ${rowsToAdd.length} rows to add");
+// //
+// //       // Add all rows to the sheet
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": rowsToAdd
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$targetSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED", // Better formatting
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ Invoice(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+// //       } else {
+// //         print("✅ Invoice(s) added successfully");
+// //       }
+// //
+// //     } catch (e) {
+// //       print("❌ Error adding invoice: $e");
+// //       throw Exception("Failed to add invoice: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   // Helper method to prepare invoice row data based on actual sheet headers
+// //   static List<dynamic> _prepareInvoiceRow(
+// //       Map<String, dynamic> invoiceData, String userId, List<dynamic> headers) {
+// //     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //     String _formatDate(dynamic value) {
+// //       if (value == null || value.toString().isEmpty) return "";
+// //       try {
+// //         if (value is DateTime) {
+// //           return _dateFormatter.format(value);
+// //         } else {
+// //           return _dateFormatter.format(DateTime.parse(value.toString()));
+// //         }
+// //       } catch (e) {
+// //         return value.toString(); // fallback if already string
+// //       }
+// //     }
+// //
+// //     // Handle items serialization if present
+// //     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+// //       invoiceData['items'] = jsonEncode(invoiceData['items']);
+// //     }
+// //
+// //     // Add userId
+// //     invoiceData['userId'] = userId;
+// //
+// //     // Force issueDate (instead of invoiceDate)
+// //     invoiceData['issueDate'] =
+// //         _formatDate(invoiceData['issueDate'] ?? DateTime.now());
+// //
+// //     // Force dueDate
+// //     if (invoiceData.containsKey('dueDate')) {
+// //       invoiceData['dueDate'] = _formatDate(invoiceData['dueDate']);
+// //     }
+// //
+// //     // Prepare row values in correct column order
+// //     List<dynamic> rowData = [];
+// //
+// //     for (var header in headers) {
+// //       String headerStr = header.toString().toLowerCase();
+// //
+// //       if (headerStr.contains('invoice') && headerStr.contains('id')) {
+// //         rowData.add(invoiceData['invoiceId'] ?? '');
+// //       } else if (headerStr.contains('customer') && headerStr.contains('name')) {
+// //         rowData.add(invoiceData['customerName'] ?? '');
+// //       } else if (headerStr.contains('customer') && headerStr.contains('email')) {
+// //         rowData.add(invoiceData['customerEmail'] ?? '');
+// //       } else if (headerStr.contains('customer') && headerStr.contains('phone')) {
+// //         rowData.add(invoiceData['customerPhone'] ?? '');
+// //       } else if (headerStr.contains('customer') && headerStr.contains('address')) {
+// //         rowData.add(invoiceData['customerAddress'] ?? '');
+// //       } else if (headerStr.contains('issue') && headerStr.contains('date')) {
+// //         rowData.add(invoiceData['issueDate']); // ✅ correct mapping
+// //       } else if (headerStr.contains('due') && headerStr.contains('date')) {
+// //         rowData.add(invoiceData['dueDate']); // ✅ correct mapping
+// //       } else if (headerStr.contains('total') && headerStr.contains('amount')) {
+// //         rowData.add(invoiceData['totalAmount']?.toString() ?? '0');
+// //       } else if (headerStr.contains('tax') && headerStr.contains('amount')) {
+// //         rowData.add(invoiceData['taxAmount']?.toString() ?? '0');
+// //       } else if (headerStr.contains('discount') && headerStr.contains('amount')) {
+// //         rowData.add(invoiceData['discountAmount']?.toString() ?? '0');
+// //       } else if (headerStr.contains('status')) {
+// //         rowData.add(invoiceData['status'] ?? 'draft');
+// //       } else if (headerStr.contains('items')) {
+// //         rowData.add(invoiceData['items'] ?? '[]');
+// //       } else if (headerStr.contains('notes')) {
+// //         rowData.add(invoiceData['notes'] ?? '');
+// //       } else if (headerStr.contains('payment') && headerStr.contains('method')) {
+// //         rowData.add(invoiceData['paymentMethod'] ?? '');
+// //       } else if (headerStr.contains('payment') && headerStr.contains('status')) {
+// //         rowData.add(invoiceData['paymentStatus'] ?? 'pending');
+// //       } else if (headerStr.contains('user') && headerStr.contains('id')) {
+// //         rowData.add(userId);
+// //       } else if (headerStr.contains('company') && headerStr.contains('id')) {
+// //         rowData.add(invoiceData['companyId'] ?? '');
+// //       } else {
+// //         rowData.add(invoiceData[header.toString()] ?? '');
+// //       }
+// //     }
+// //
+// //     print("Prepared row data: $rowData");
+// //     return rowData;
+// //   }
+// //
+// //   /// At aTime one Row
+// //   // static Future<void> addInvoiceItem(Map<String, dynamic> itemData, String userId) async {
+// //   //   print("🔄 Adding invoice item to Google Sheet...");
+// //   //
+// //   //   try {
+// //   //     final client = await _getAuthClient();
+// //   //     final sheetsApi = SheetsApi(client);
+// //   //
+// //   //     // Get header row
+// //   //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$invoiceItemSheetName!1:1",
+// //   //     );
+// //   //
+// //   //     if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //   //       throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+// //   //     }
+// //   //
+// //   //     final headers = headerResponse.values![0];
+// //   //     print("InvoiceItems headers: $headers");
+// //   //
+// //   //     // ✅ Prepare row data based on exact header names (same as challan method)
+// //   //     List<dynamic> rowData = [];
+// //   //
+// //   //     for (var header in headers) {
+// //   //       final headerName = header.toString();
+// //   //       final headerNameLower = headerName.toLowerCase();
+// //   //
+// //   //       if (headerNameLower.contains('userid')) {
+// //   //         // Add userId
+// //   //         rowData.add(userId);
+// //   //       }
+// //   //       else {
+// //   //         // ✅ Add other fields - look for exact match first, then case-insensitive
+// //   //         var value = '';
+// //   //
+// //   //         // First try exact match
+// //   //         if (itemData.containsKey(headerName)) {
+// //   //           value = itemData[headerName]?.toString() ?? '';
+// //   //         } else {
+// //   //           // Then try case-insensitive match
+// //   //           for (var key in itemData.keys) {
+// //   //             if (key.toString().toLowerCase() == headerNameLower) {
+// //   //               value = itemData[key]?.toString() ?? '';
+// //   //               break;
+// //   //             }
+// //   //           }
+// //   //         }
+// //   //         rowData.add(value);
+// //   //       }
+// //   //     }
+// //   //
+// //   //     print("Prepared invoice item row: $rowData");
+// //   //
+// //   //     // ✅ Debug: Print the mapping to verify GST data
+// //   //     print("=== INVOICE ITEM MAPPING DEBUG ===");
+// //   //     for (int i = 0; i < headers.length && i < rowData.length; i++) {
+// //   //       print("${headers[i]}: ${rowData[i]}");
+// //   //     }
+// //   //
+// //   //     // Append row
+// //   //     final valueRange = ValueRange.fromJson({
+// //   //       "values": [rowData],
+// //   //     });
+// //   //
+// //   //     final response = await sheetsApi.spreadsheets.values.append(
+// //   //       valueRange,
+// //   //       spreadsheetId,
+// //   //       "$invoiceItemSheetName!A:Z",
+// //   //       valueInputOption: "USER_ENTERED",
+// //   //     );
+// //   //
+// //   //     if (response.updates?.updatedRows != null) {
+// //   //       print("✅ Invoice item added successfully. Rows affected: ${response.updates!.updatedRows}");
+// //   //     } else {
+// //   //       print("✅ Invoice item added successfully.");
+// //   //     }
+// //   //   } catch (e) {
+// //   //     print("❌ Error adding invoice item: $e");
+// //   //     throw Exception("Failed to add invoice item: ${e.toString()}");
+// //   //   }
+// //   // }
+// //
+// //   /// At aTime all
+// //   static Future<void> addInvoiceItemsBatch(
+// //       List<Map<String, dynamic>> itemsData, String userId) async {
+// //     print("🔄 Adding ${itemsData.length} invoice items in batch...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$invoiceItemSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("InvoiceItems headers: $headers");
+// //
+// //       // ✅ Prepare multiple rows
+// //       List<List<dynamic>> rows = [];
+// //
+// //       for (var itemData in itemsData) {
+// //         List<dynamic> rowData = [];
+// //
+// //         for (var header in headers) {
+// //           final headerName = header.toString();
+// //           final headerNameLower = headerName.toLowerCase();
+// //
+// //           if (headerNameLower.contains('userid')) {
+// //             rowData.add(userId);
+// //           } else {
+// //             var value = '';
+// //
+// //             if (itemData.containsKey(headerName)) {
+// //               value = itemData[headerName]?.toString() ?? '';
+// //             } else {
+// //               for (var key in itemData.keys) {
+// //                 if (key.toString().toLowerCase() == headerNameLower) {
+// //                   value = itemData[key]?.toString() ?? '';
+// //                   break;
+// //                 }
+// //               }
+// //             }
+// //             rowData.add(value);
+// //           }
+// //         }
+// //
+// //         rows.add(rowData);
+// //       }
+// //
+// //       // Append all rows at once
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": rows,
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$invoiceItemSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ ${response.updates!.updatedRows} invoice items added successfully.");
+// //       } else {
+// //         print("✅ Invoice items batch added successfully.");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error adding invoice items batch: $e");
+// //       throw Exception("Failed to add invoice items batch: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //
+// //   ///it is Working 17-10 10:34 i just Change For inventory
+// //   // static Future<void> updateInvoice(
+// //   //     Map<String, dynamic> invoiceData, String userId) async {
+// //   //   print("🔄 Updating invoice in Google Sheet...");
+// //   //
+// //   //   try {
+// //   //     final client = await _getAuthClient();
+// //   //     final sheetsApi = SheetsApi(client);
+// //   //     const targetSheetName = "Invoice";
+// //   //
+// //   //     // 1. Get headers
+// //   //     final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$targetSheetName!1:1",
+// //   //     );
+// //   //     final headers = headerResponse.values![0];
+// //   //
+// //   //     // 2. Find row number
+// //   //     final allRows = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$targetSheetName!A:Z",
+// //   //     );
+// //   //
+// //   //     int rowIndex = -1;
+// //   //     List<dynamic>? oldRow;
+// //   //
+// //   //     for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+// //   //       final row = allRows.values![i];
+// //   //       if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
+// //   //         rowIndex = i + 1;
+// //   //         oldRow = row;
+// //   //         break;
+// //   //       }
+// //   //     }
+// //   //
+// //   //     if (rowIndex == -1) {
+// //   //       throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
+// //   //     }
+// //   //
+// //   //     // 3. Merge values
+// //   //     final mergedRow = _prepareInvoiceUpdateRow(
+// //   //       invoiceData,
+// //   //       userId,
+// //   //       headers,
+// //   //       oldRow ?? [],
+// //   //     );
+// //   //
+// //   //     // 4. Update row
+// //   //     final valueRange = ValueRange.fromJson({
+// //   //       "values": [mergedRow],
+// //   //     });
+// //   //
+// //   //     await sheetsApi.spreadsheets.values.update(
+// //   //       valueRange,
+// //   //       spreadsheetId,
+// //   //       "$targetSheetName!A$rowIndex:Z$rowIndex",
+// //   //       valueInputOption: "USER_ENTERED",
+// //   //     );
+// //   //
+// //   //     print("✅ Invoice updated at row $rowIndex");
+// //   //   } catch (e, st) {
+// //   //     print("❌ Error updating invoice: $e\n$st");
+// //   //     throw Exception("Failed to update invoice: ${e.toString()}");
+// //   //   }
+// //   // }
+// //
+// //
+// //
+// //
+// //
+// //   static Future<void> updateInvoice(
+// //       Map<String, dynamic> invoiceData, String userId) async {
+// //     print("🔄 Updating invoice in Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //       const targetSheetName = "Invoice";
+// //
+// //       // 1. Get headers
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$targetSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No headers found in sheet");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("📋 Sheet Headers: $headers");
+// //
+// //       // 2. Find row number
+// //       final allRows = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$targetSheetName!A:Z",
+// //       );
+// //
+// //       int rowIndex = -1;
+// //
+// //       for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+// //         final row = allRows.values![i];
+// //         if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
+// //           rowIndex = i + 1; // Google Sheets is 1-based
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (rowIndex == -1) {
+// //         throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
+// //       }
+// //
+// //       print("🎯 Found invoice at row $rowIndex");
+// //
+// //       // 3. Build complete row data
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       List<dynamic> rowData = [];
+// //
+// //       for (var header in headers) {
+// //         String headerLower = header.toString().toLowerCase().trim();
+// //
+// //         // Map each header to the correct field
+// //         String? value;
+// //
+// //         if (headerLower.contains('invoiceid')) {
+// //           value = invoiceData['invoiceId']?.toString();
+// //         } else if (headerLower.contains('customerid')) {
+// //           value = invoiceData['customerId']?.toString();
+// //         } else if (headerLower.contains('customername')) {
+// //           value = invoiceData['customerName']?.toString();
+// //         } else if (headerLower.contains('customeremail')) {
+// //           value = invoiceData['customerEmail']?.toString();
+// //         } else if (headerLower == 'mobile') {
+// //           value = invoiceData['mobile']?.toString();
+// //         } else if (headerLower.contains('customeraddress')) {
+// //           value = invoiceData['customerAddress']?.toString();
+// //         } else if (headerLower.contains('issuedate')) {
+// //           if (invoiceData['issueDate'] != null) {
+// //             try {
+// //               DateTime date = invoiceData['issueDate'] is String
+// //                   ? DateTime.parse(invoiceData['issueDate'])
+// //                   : invoiceData['issueDate'] as DateTime;
+// //               value = _dateFormatter.format(date);
+// //             } catch (e) {
+// //               value = invoiceData['issueDate']?.toString();
+// //             }
+// //           }
+// //         } else if (headerLower.contains('duedate')) {
+// //           if (invoiceData['dueDate'] != null) {
+// //             try {
+// //               DateTime date = invoiceData['dueDate'] is String
+// //                   ? DateTime.parse(invoiceData['dueDate'])
+// //                   : invoiceData['dueDate'] as DateTime;
+// //               value = _dateFormatter.format(date);
+// //             } catch (e) {
+// //               value = invoiceData['dueDate']?.toString();
+// //             }
+// //           }
+// //         } else if (headerLower == 'subtotal') {
+// //           value = invoiceData['subtotal']?.toString();
+// //         } else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
+// //           value = invoiceData['gstAmount']?.toString();
+// //         } else if (headerLower.contains('totalamount')) {
+// //           value = invoiceData['totalAmount']?.toString();
+// //         } else if (headerLower.contains('receivedamount')) {
+// //           value = invoiceData['receivedAmount']?.toString();
+// //         } else if (headerLower.contains('pendingamount')) {
+// //           value = invoiceData['pendingAmount']?.toString();
+// //         } else if (headerLower == 'status') {
+// //           value = invoiceData['status']?.toString();
+// //         } else if (headerLower == 'notes') {
+// //           value = invoiceData['notes']?.toString();
+// //         } else if (headerLower.contains('userid')) {
+// //           value = userId;
+// //         } else {
+// //           // Try direct match
+// //           value = invoiceData[header.toString()]?.toString();
+// //         }
+// //
+// //         rowData.add(value ?? '');
+// //       }
+// //
+// //       print("📝 Prepared row data: $rowData");
+// //
+// //       // 4. Update row
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": [rowData],
+// //       });
+// //
+// //       await sheetsApi.spreadsheets.values.update(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$targetSheetName!A$rowIndex:Z$rowIndex",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Invoice updated successfully at row $rowIndex");
+// //     } catch (e, st) {
+// //       print("❌ Error updating invoice: $e\n$st");
+// //       throw Exception("Failed to update invoice: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   static List<dynamic> _prepareInvoiceUpdateRow(
+// //       Map<String, dynamic> invoiceData,
+// //       String userId,
+// //       List<dynamic> headers,
+// //       List<dynamic> sheetRow) {
+// //     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //     String _formatDate(dynamic value) {
+// //       if (value == null || value.toString().isEmpty) return "";
+// //       try {
+// //         if (value is DateTime) return _dateFormatter.format(value);
+// //         return _dateFormatter.format(DateTime.parse(value.toString()));
+// //       } catch (e) {
+// //         return value.toString();
+// //       }
+// //     }
+// //
+// //     List<dynamic> rowData = [];
+// //
+// //     for (int j = 0; j < headers.length; j++) {
+// //       String headerStr = headers[j].toString().toLowerCase();
+// //       final newVal = invoiceData[headers[j].toString()]?.toString();
+// //
+// //       if (headerStr.contains('issuedate')) {
+// //         rowData.add(newVal?.isNotEmpty == true
+// //             ? _formatDate(newVal)
+// //             : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+// //       } else if (headerStr.contains('duedate')) {
+// //         rowData.add(newVal?.isNotEmpty == true
+// //             ? _formatDate(newVal)
+// //             : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+// //       } else if (headerStr.contains('totalamount') ||
+// //           headerStr.contains('subtotal') ||
+// //           headerStr.contains('taxamount') ||
+// //           headerStr.contains('discountamount')) {
+// //         // ✅ Always overwrite with recalculated values
+// //         rowData.add(newVal ?? "0");
+// //       } else if (newVal != null && newVal.isNotEmpty) {
+// //         rowData.add(newVal);
+// //       } else if (j < sheetRow.length) {
+// //         rowData.add(sheetRow[j]?.toString() ?? "");
+// //       } else {
+// //         rowData.add("");
+// //       }
+// //     }
+// //
+// //     return rowData;
+// //   }
+// //
+// //
+// //   /// Clear cache for a specific invoice
+// //   static void clearInvoiceItemCache(String invoiceId) {
+// //     if (_invoiceItemCache.containsKey(invoiceId)) {
+// //       _invoiceItemCache.remove(invoiceId);
+// //       print("🗑️ Cleared cache for invoice: $invoiceId");
+// //     }
+// //   }
+// //
+// //   /// Clear entire invoice items cache
+// //   static void clearAllInvoiceItemCache() {
+// //     _invoiceItemCache.clear();
+// //     print("🗑️ Cleared all invoice item cache");
+// //   }
+// //
+// // // Update your existing updateInvoiceItems method - add cache clear at the end:
+// //   static Future<void> updateInvoiceItems(
+// //       String invoiceId, List<Map<String, dynamic>> items, String userId) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //       const String itemSheet = "InvoiceItems";
+// //
+// //       final headerRes = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheet!1:1",
+// //       );
+// //       final headers = headerRes.values![0];
+// //
+// //       final allRows = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         itemSheet,
+// //       );
+// //
+// //       final values = allRows.values ?? [];
+// //       final rowsToUpdate = <int>[];
+// //
+// //       for (int i = 1; i < values.length; i++) {
+// //         if (values[i].isNotEmpty &&
+// //             values[i][0].toString().trim() == invoiceId) {
+// //           rowsToUpdate.add(i + 1);
+// //         }
+// //       }
+// //
+// //       for (int i = 0; i < rowsToUpdate.length; i++) {
+// //         final sheetRow = values[rowsToUpdate[i] - 1];
+// //
+// //         if (i < items.length) {
+// //           final item = items[i];
+// //           item['invoiceId'] = invoiceId;
+// //           item['userId'] = userId;
+// //
+// //           final rowValues = <String>[];
+// //           for (int j = 0; j < headers.length; j++) {
+// //             final key = headers[j].toString().trim();
+// //             final newVal = item[key]?.toString();
+// //
+// //             if (newVal != null && newVal.isNotEmpty) {
+// //               rowValues.add(newVal);
+// //             } else if (j < sheetRow.length) {
+// //               rowValues.add(sheetRow[j]?.toString() ?? "");
+// //             } else {
+// //               rowValues.add("");
+// //             }
+// //           }
+// //
+// //           final range =
+// //               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+// //
+// //           await sheetsApi.spreadsheets.values.update(
+// //             ValueRange(values: [rowValues]),
+// //             spreadsheetId,
+// //             range,
+// //             valueInputOption: "USER_ENTERED",
+// //           );
+// //         } else {
+// //           final range =
+// //               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+// //           await sheetsApi.spreadsheets.values.clear(
+// //             ClearValuesRequest(),
+// //             spreadsheetId,
+// //             range,
+// //           );
+// //         }
+// //       }
+// //
+// //       if (items.length > rowsToUpdate.length) {
+// //         for (int i = rowsToUpdate.length; i < items.length; i++) {
+// //           final item = items[i];
+// //           item['invoiceId'] = invoiceId;
+// //           item['userId'] = userId;
+// //
+// //           final rowValues = headers.map((h) {
+// //             final key = h.toString().trim();
+// //             return item[key]?.toString() ?? "";
+// //           }).toList();
+// //
+// //           await sheetsApi.spreadsheets.values.append(
+// //             ValueRange(values: [rowValues]),
+// //             spreadsheetId,
+// //             itemSheet,
+// //             valueInputOption: "USER_ENTERED",
+// //           );
+// //         }
+// //       }
+// //
+// //       print("✅ InvoiceItems updated for $invoiceId");
+// //
+// //       // ✅ CRITICAL: Clear cache after successful update
+// //       clearInvoiceItemCache(invoiceId);
+// //       print("✅ Cache cleared after update");
+// //
+// //     } catch (e, st) {
+// //       print("❌ Error in updateInvoiceItems: $e\n$st");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //
+// // // 🔹 Helper to convert column index → Excel letter
+// //   static String _columnLetter(int colIndex) {
+// //     var dividend = colIndex;
+// //     var columnName = '';
+// //     while (dividend > 0) {
+// //       var modulo = (dividend - 1) % 26;
+// //       columnName = String.fromCharCode(65 + modulo) + columnName;
+// //       dividend = ((dividend - modulo) ~/ 26);
+// //     }
+// //     return columnName;
+// //   }
+// //
+// //
+// //   static Future<void> updateStockAfterInvoice(List<InvoiceItem> invoiceItems) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all stock rows once
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("Stock sheet is empty");
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final itemIdIndex = headers.indexOf("itemId");
+// //       final stockIndex = headers.indexOf("currentStock");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("Missing required columns in Stock sheet");
+// //       }
+// //
+// //       for (var item in invoiceItems) {
+// //         int? rowToUpdate;
+// //         int currentStock = 0;
+// //
+// //         // Find row for this itemId + userId
+// //         for (int i = 1; i < response.values!.length; i++) {
+// //           final row = response.values![i];
+// //           if (row.length > itemIdIndex &&
+// //               row[itemIdIndex].toString() == item.itemId.toString() &&
+// //               row[userIdIndex].toString() == AppConstants.userId) {
+// //             rowToUpdate = i + 1; // rows are 1-based
+// //             if (row.length > stockIndex) {
+// //               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+// //             }
+// //             break;
+// //           }
+// //         }
+// //
+// //         if (rowToUpdate == null) {
+// //           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+// //           continue;
+// //         }
+// //
+// //         final newStock = currentStock - item.quantity;
+// //         if (newStock < 0) {
+// //           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+// //         }
+// //
+// //         final range =
+// //             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+// //         final valueRange = ValueRange.fromJson({
+// //           "values": [
+// //             [newStock < 0 ? 0 : newStock] // prevent negative stock
+// //           ]
+// //         });
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           valueRange,
+// //           spreadsheetId,
+// //           range,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Stock updated (Invoice): ${item.itemId} → $newStock (was $currentStock)");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error updating stock after invoice: $e");
+// //     }
+// //   }
+// //
+// //   static Future<List<InvoiceItem>> getInvoiceItems({String? invoiceId}) async {
+// //     print("🔄 Fetching invoice items from Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all rows from InvoiceItem sheet
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$invoiceItemSheetName!A:Z", // adjust range as needed
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("⚠️ No invoice items found in sheet");
+// //         return [];
+// //       }
+// //
+// //       // First row = headers
+// //       final headers = response.values!.first.map((h) => h.toString()).toList();
+// //       final rows = response.values!.skip(1); // skip header row
+// //
+// //       print("✅ Headers: $headers");
+// //       List<InvoiceItem> items = [];
+// //
+// //       for (var row in rows) {
+// //         Map<String, dynamic> rowMap = {};
+// //         for (int i = 0; i < headers.length; i++) {
+// //           if (i < row.length) {
+// //             rowMap[headers[i]] = row[i];
+// //           }
+// //         }
+// //
+// //         try {
+// //           final item = InvoiceItem.fromJson(rowMap);
+// //
+// //           // ✅ If filtering by invoiceId
+// //           if (invoiceId == null || item.invoiceId == invoiceId) {
+// //             items.add(item);
+// //           }
+// //         } catch (e) {
+// //           print("❌ Error parsing invoice item row: $rowMap");
+// //           print("Error: $e");
+// //         }
+// //       }
+// //
+// //       print("✅ Loaded ${items.length} invoice items");
+// //       return items;
+// //     } catch (e) {
+// //       print("❌ Error fetching invoice items: $e");
+// //       throw Exception("Failed to fetch invoice items: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   /// Returns true if status updated, false if invoiceId not found.
+// //   static Future<bool> updateInvoiceStatus(
+// //       String invoiceId, String newStatus, {
+// //         String? sheetName,
+// //       }) async {
+// //     final targetSheetName = sheetName ?? invoiceSheetName;
+// //     print("🔄 updateInvoiceStatus -> sheet: $targetSheetName, invoiceId: $invoiceId, newStatus: $newStatus");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // 1) Read header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$targetSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("❌ Couldn't read headers from sheet $targetSheetName");
+// //         throw Exception("No headers found in $targetSheetName");
+// //       }
+// //
+// //       final rawHeaders = headerResponse.values![0];
+// //       final headers = rawHeaders.map((h) => h.toString()).toList();
+// //       print("📋 Headers: $headers");
+// //
+// //       // 2) Normalize header strings for searching
+// //       List<String> normalized = headers
+// //           .map((h) => h.toString().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+// //           .toList();
+// //
+// //       // 3) Find invoiceId column index (heuristic)
+// //       int invoiceIdIndex = -1;
+// //       for (int i = 0; i < normalized.length; i++) {
+// //         final h = normalized[i];
+// //         if ((h.contains('invoice') && h.contains('id')) ||
+// //             h == 'invoiceid' ||
+// //             h == 'invoice') {
+// //           invoiceIdIndex = i;
+// //           break;
+// //         }
+// //       }
+// //       // fallback: try 'id' column
+// //       if (invoiceIdIndex == -1) {
+// //         for (int i = 0; i < normalized.length; i++) {
+// //           if (normalized[i] == 'id') {
+// //             invoiceIdIndex = i;
+// //             break;
+// //           }
+// //         }
+// //       }
+// //       // last fallback: assume first column
+// //       if (invoiceIdIndex == -1) {
+// //         print("⚠️ invoiceId column not detected - falling back to first column (index 0)");
+// //         invoiceIdIndex = 0;
+// //       }
+// //
+// //       // 4) Find status column index, if missing we'll append it
+// //       int statusIndex = -1;
+// //       for (int i = 0; i < normalized.length; i++) {
+// //         final h = normalized[i];
+// //         if (h.contains('status') || h.contains('state') || h.contains('paymentstatus')) {
+// //           statusIndex = i;
+// //           break;
+// //         }
+// //       }
+// //
+// //       bool appendedStatusHeader = false;
+// //       if (statusIndex == -1) {
+// //         // Append a 'status' header to header row so we can update that cell later
+// //         final newHeaders = List<dynamic>.from(headers)..add('status');
+// //         final lastColLetter = _columnLetter(newHeaders.length);
+// //         final updateRange = "$targetSheetName!A1:${lastColLetter}1";
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange.fromJson({"values": [newHeaders]}),
+// //           spreadsheetId,
+// //           updateRange,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //         print("ℹ️ Appended 'status' header at column ${newHeaders.length} (range: $updateRange)");
+// //         statusIndex = newHeaders.length - 1;
+// //         appendedStatusHeader = true;
+// //
+// //         // Update local variables so we can continue. Also update headers/normalized for logging.
+// //         headers.add('status');
+// //         normalized.add('status');
+// //       } else {
+// //         print("🔎 status column detected at index $statusIndex (header: ${headers[statusIndex]})");
+// //       }
+// //
+// //       // 5) Read full sheet to find row with invoiceId
+// //       final allRowsResp = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$targetSheetName!A:Z",
+// //       );
+// //       final allRows = allRowsResp.values ?? [];
+// //       if (allRows.isEmpty) {
+// //         print("❌ Sheet has no rows.");
+// //         return false;
+// //       }
+// //
+// //       // Normalize the search key
+// //       final normInvoiceId = invoiceId.toString().trim();
+// //
+// //       int foundRow = -1; // 1-based row number in spreadsheet
+// //       // First try to match using invoiceIdIndex column (fast and preferred)
+// //       for (int r = 1; r < allRows.length; r++) {
+// //         final row = allRows[r];
+// //         String cellValue = '';
+// //         if (row.length > invoiceIdIndex) {
+// //           cellValue = row[invoiceIdIndex]?.toString()?.trim() ?? '';
+// //         }
+// //         if (cellValue.isNotEmpty && (cellValue == normInvoiceId || cellValue.replaceAll('"', '') == normInvoiceId)) {
+// //           foundRow = r + 1; // spreadsheet rows are 1-based
+// //           break;
+// //         }
+// //       }
+// //
+// //       // If not found in column, scan full rows (tolerant search)
+// //       if (foundRow == -1) {
+// //         print("ℹ️ Not found in invoiceId column, scanning rows for a match...");
+// //         for (int r = 1; r < allRows.length; r++) {
+// //           final row = allRows[r];
+// //           bool match = false;
+// //           for (int c = 0; c < row.length; c++) {
+// //             final cell = row[c]?.toString()?.trim() ?? '';
+// //             if (cell.isEmpty) continue;
+// //             // exact or contained (trim quotes)
+// //             if (cell == normInvoiceId || cell.replaceAll('"', '') == normInvoiceId || cell.contains(normInvoiceId)) {
+// //               match = true;
+// //               break;
+// //             }
+// //           }
+// //           if (match) {
+// //             foundRow = r + 1;
+// //             break;
+// //           }
+// //         }
+// //       }
+// //
+// //       if (foundRow == -1) {
+// //         print("⚠️ Invoice '$invoiceId' not found in sheet '$targetSheetName'. No update performed.");
+// //         return false;
+// //       }
+// //
+// //       print("✅ Found invoice '$invoiceId' at sheet row $foundRow");
+// //
+// //       // 6) Update only the status cell
+// //       final statusColLetter = _columnLetter(statusIndex + 1); // 1-based column -> letter
+// //       final statusRange = "$targetSheetName!$statusColLetter$foundRow";
+// //
+// //       // If we appended the status header this run, ensure we update the header values were accepted before updating row.
+// //       // (small safety delay rarely needed; usually not required)
+// //
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": [
+// //           [newStatus]
+// //         ],
+// //       });
+// //
+// //       await sheetsApi.spreadsheets.values.update(
+// //         valueRange,
+// //         spreadsheetId,
+// //         statusRange,
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Updated status for invoice '$invoiceId' -> '$newStatus' at $statusRange");
+// //       return true;
+// //     } catch (e, st) {
+// //       print("❌ Error updating invoice status: $e\n$st");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //
+// //   ///Challan
+// //   static Future<void> addChallan(dynamic challanData, String userId) async {
+// //     print("🔄 Adding Challan to Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$challanSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("Challan headers: $headers");
+// //
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       String _formatDate(dynamic value) {
+// //         if (value == null || value.toString().isEmpty) return "";
+// //         try {
+// //           if (value is DateTime) {
+// //             return _dateFormatter.format(value);
+// //           } else {
+// //             return _dateFormatter.format(DateTime.parse(value.toString()));
+// //           }
+// //         } catch (e) {
+// //           return value.toString(); // fallback
+// //         }
+// //       }
+// //
+// //       // Normalize helper
+// //       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+// //         return {
+// //           for (var entry in data.entries)
+// //             entry.key.toString().trim().toLowerCase(): entry.value
+// //         };
+// //       }
+// //
+// //       // Build rows
+// //       List<Map<String, dynamic>> rowsToSend = [];
+// //
+// //       if (challanData is Map<String, dynamic>) {
+// //         if (challanData.containsKey('items') && challanData['items'] is List) {
+// //           challanData['items'] = jsonEncode(challanData['items']);
+// //         }
+// //
+// //         // format challanDate
+// //         if (challanData.containsKey('challanDate')) {
+// //           challanData['challanDate'] = _formatDate(challanData['challanDate']);
+// //         }
+// //
+// //         rowsToSend.add({...challanData, "userId": userId});
+// //       } else if (challanData is List<Challan>) {
+// //         rowsToSend = challanData.map((chal) {
+// //           final map = chal.toMap();
+// //           if (map.containsKey('items') && map['items'] is List) {
+// //             map['items'] = jsonEncode(map['items']);
+// //           }
+// //           if (map.containsKey('challanDate')) {
+// //             map['challanDate'] = _formatDate(map['challanDate']);
+// //           }
+// //           return {...map, "userId": userId};
+// //         }).toList();
+// //       }
+// //
+// //       print("Prepared rows: ${jsonEncode(rowsToSend)}");
+// //
+// //       // Convert rows to ordered values matching headers
+// //       List<List<dynamic>> values = [];
+// //       for (var row in rowsToSend) {
+// //         final normalized = _normalize(row);
+// //         List<dynamic> rowData = [];
+// //         for (var header in headers) {
+// //           final key = header.toString().trim().toLowerCase();
+// //           rowData.add(normalized[key] ?? '');
+// //         }
+// //         values.add(rowData);
+// //       }
+// //
+// //       print("Prepared ${values.length} row(s) to add");
+// //
+// //       // Append rows to Google Sheet
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": values,
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$challanSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ Challan(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+// //       } else {
+// //         print("✅ Challan(s) added successfully.");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error adding Challan: $e");
+// //       throw Exception("Failed to add Challan: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
+// //     print("🔄 Adding challan item to Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Date formatter
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$challanItemSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("ChallanItems headers: $headers");
+// //
+// //       // Prepare row data based on exact header names
+// //       List<dynamic> rowData = [];
+// //
+// //       for (var header in headers) {
+// //         final headerName = header.toString();
+// //         final headerNameLower = headerName.toLowerCase();
+// //
+// //         if (headerNameLower.contains('userid')) {
+// //           // Add userId
+// //           rowData.add(userId);
+// //         }
+// //         else if (headerNameLower.contains('date')) {
+// //           // Handle date field
+// //           dynamic dateValue = challanData['challanDate'] ??
+// //               challanData['challainDate'] ??
+// //               challanData['date'] ??
+// //               DateTime.now();
+// //
+// //           try {
+// //             if (dateValue is DateTime) {
+// //               rowData.add(_dateFormatter.format(dateValue));
+// //             } else if (dateValue is String) {
+// //               rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+// //             } else {
+// //               rowData.add(_dateFormatter.format(DateTime.now()));
+// //             }
+// //           } catch (e) {
+// //             rowData.add(_dateFormatter.format(DateTime.now()));
+// //           }
+// //         }
+// //         else {
+// //           // Add other fields
+// //           var value = '';
+// //           for (var key in challanData.keys) {
+// //             if (key.toLowerCase() == headerNameLower) {
+// //               value = challanData[key]?.toString() ?? '';
+// //               break;
+// //             }
+// //           }
+// //           rowData.add(value);
+// //         }
+// //       }
+// //
+// //       print("Prepared challan item row: $rowData");
+// //
+// //       // Append row
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": [rowData],
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ Challan item added successfully. Rows affected: ${response.updates!.updatedRows}");
+// //       } else {
+// //         print("✅ Challan item added successfully.");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error adding challan item: $e");
+// //       throw Exception("Failed to add challan item: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   ///at atimr all Data
+// //   static Future<void> addChallanItemsBatch(
+// //       List<Map<String, dynamic>> itemsData, String userId) async {
+// //     print("🔄 Adding ${itemsData.length} challan items in batch...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$challanItemSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //       print("ChallanItems headers: $headers");
+// //
+// //       // ✅ Prepare multiple rows
+// //       List<List<dynamic>> rows = [];
+// //
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       for (var itemData in itemsData) {
+// //         List<dynamic> rowData = [];
+// //
+// //         for (var header in headers) {
+// //           final headerName = header.toString();
+// //           final headerNameLower = headerName.toLowerCase();
+// //
+// //           if (headerNameLower.contains('userid')) {
+// //             rowData.add(userId);
+// //           } else if (headerNameLower.contains('date')) {
+// //             // Handle date formatting
+// //             dynamic dateValue = itemData['challanDate'] ??
+// //                 itemData['challainDate'] ??
+// //                 itemData['date'] ??
+// //                 DateTime.now();
+// //
+// //             try {
+// //               if (dateValue is DateTime) {
+// //                 rowData.add(_dateFormatter.format(dateValue));
+// //               } else if (dateValue is String) {
+// //                 rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+// //               } else {
+// //                 rowData.add(_dateFormatter.format(DateTime.now()));
+// //               }
+// //             } catch (e) {
+// //               rowData.add(_dateFormatter.format(DateTime.now()));
+// //             }
+// //           } else {
+// //             // Match headers with itemData keys
+// //             var value = '';
+// //             if (itemData.containsKey(headerName)) {
+// //               value = itemData[headerName]?.toString() ?? '';
+// //             } else {
+// //               for (var key in itemData.keys) {
+// //                 if (key.toString().toLowerCase() == headerNameLower) {
+// //                   value = itemData[key]?.toString() ?? '';
+// //                   break;
+// //                 }
+// //               }
+// //             }
+// //             rowData.add(value);
+// //           }
+// //         }
+// //
+// //         rows.add(rowData);
+// //       }
+// //
+// //       // Append all challan items at once
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": rows,
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ ${response.updates!.updatedRows} challan items added successfully.");
+// //       } else {
+// //         print("✅ Challan items batch added successfully.");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error adding challan items batch: $e");
+// //       throw Exception("Failed to add challan items batch: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //
+// //   static Future<void> updateStockAfterDispatch(List<ChallanItem> challanItems) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all stock rows once for efficiency
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:Z", // whole sheet
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("Stock sheet is empty");
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final itemIdIndex = headers.indexOf("itemId");
+// //       final stockIndex = headers.indexOf("currentStock"); // ✅ FIXED
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("Missing required columns in Stock sheet");
+// //       }
+// //
+// //       for (var item in challanItems) {
+// //         int? rowToUpdate;
+// //         int currentStock = 0;
+// //
+// //         // Find row for this itemId + userId
+// //         for (int i = 1; i < response.values!.length; i++) {
+// //           final row = response.values![i];
+// //           if (row.length > itemIdIndex &&
+// //               row[itemIdIndex].toString() == item.itemId.toString() &&
+// //               row[userIdIndex].toString() == AppConstants.userId) {
+// //             rowToUpdate = i + 1; // rows are 1-based
+// //             if (row.length > stockIndex) {
+// //               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+// //             }
+// //             break;
+// //           }
+// //         }
+// //
+// //         if (rowToUpdate == null) {
+// //           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+// //           continue;
+// //         }
+// //
+// //         final newStock = currentStock - item.quantity;
+// //         if (newStock < 0) {
+// //           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+// //         }
+// //
+// //         final range =
+// //             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+// //         final valueRange = ValueRange.fromJson({
+// //           "values": [
+// //             [newStock < 0 ? 0 : newStock] // prevent negative stock
+// //           ]
+// //         });
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           valueRange,
+// //           spreadsheetId,
+// //           range,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Stock updated: ${item.itemId} → $newStock (was $currentStock)");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error updating stock after challan: $e");
+// //     }
+// //   }
+// //
+// //
+// //   static Future<List<Challan>> getChallans() async {
+// //     print("🔄 Fetching challans from Google Sheets...");
+// //
+// //     try {
+// //       final client = await _getAuthClient(); // ✅ make sure you already implemented
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all challan rows
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanSheetName!A:Z", // whole sheet
+// //       );
+// //
+// //       if (response.values == null || response.values!.length <= 1) {
+// //         print("❌ No challans found in sheet.");
+// //         return <Challan>[];
+// //       }
+// //
+// //       // Extract headers
+// //       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+// //       print("✅ Headers: $headers");
+// //
+// //       List<Challan> challans = [];
+// //
+// //       // Iterate rows
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //
+// //         // Map each header → value
+// //         Map<String, dynamic> challanMap = {};
+// //         for (int j = 0; j < headers.length; j++) {
+// //
+// //         try {
+// //           Challan challan = Challan.fromMap(challanMap); // ✅ use your model parser
+// //           challans.add(challan);
+// //           print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+// //         } catch (e) {
+// //           print("⚠️ Error parsing challan row $i: $e");
+// //           print("Row data: $challanMap");
+// //         }
+// //       }}
+// //
+// //       print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+// //       return challans;
+// //     } catch (e) {
+// //       print("❌ Error in getChallans(): $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   static Future<List<Challan>> getChallansList() async {
+// //     print("🔄 Fetching challans from Google Sheets...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all challan rows
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanSheetName!A:Z", // adjust range if needed
+// //       );
+// //
+// //       if (response.values == null || response.values!.length <= 1) {
+// //         print("❌ No challans found in sheet.");
+// //         return <Challan>[];
+// //       }
+// //
+// //       // Extract headers from first row
+// //       final headers =
+// //       response.values![0].map((h) => h.toString().trim()).toList();
+// //       print("✅ Headers: $headers");
+// //
+// //       List<Challan> challans = [];
+// //
+// //       // Iterate rows (skip header)
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //
+// //         // ✅ Skip completely empty rows
+// //         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+// //           continue;
+// //         }
+// //
+// //         // ✅ Build map header → value
+// //         Map<String, dynamic> challanMap = {};
+// //         for (int j = 0; j < headers.length && j < row.length; j++) {
+// //           challanMap[headers[j]] = row[j].toString();
+// //         }
+// //
+// //         try {
+// //           Challan challan = Challan.fromMap(challanMap);
+// //           challans.add(challan);
+// //           print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+// //         } catch (e) {
+// //           print("⚠️ Error parsing challan row $i: $e");
+// //           print("Row data: $challanMap");
+// //         }
+// //       }
+// //
+// //       print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+// //       return challans;
+// //     } catch (e) {
+// //       print("❌ Error in getChallans(): $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Clear specific cache for challan items
+// //   static void clearChallanItemCache(String challanId) {
+// //     final cacheKey = 'challan_items_$challanId';
+// //     _itemCache.remove(cacheKey);
+// //     _cacheTimestamps.remove(cacheKey);
+// //     print("🗑️ Cleared cache for challan: $challanId");
+// //   }
+// //
+// //   /// Check if cache is valid
+// //   static bool _isCacheValid(String cacheKey) {
+// //     if (!_itemCache.containsKey(cacheKey) || !_cacheTimestamps.containsKey(cacheKey)) {
+// //       return false;
+// //     }
+// //
+// //     final cacheTime = _cacheTimestamps[cacheKey]!;
+// //     final now = DateTime.now();
+// //     final isValid = now.difference(cacheTime) < _cacheValidDuration;
+// //
+// //     if (!isValid) {
+// //       _itemCache.remove(cacheKey);
+// //       _cacheTimestamps.remove(cacheKey);
+// //     }
+// //
+// //     return isValid;
+// //   }
+// //
+// //   ///at one Time new
+// //   static Future<void> updateChallanStatusBatch(
+// //       List<String> challanIds, String status, String userId) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // 1. Get spreadsheet metadata (to find sheetId for "Challan" tab)
+// //       final spreadsheet =
+// //       await sheetsApi.spreadsheets.get(spreadsheetId);
+// //       final sheet = spreadsheet.sheets!
+// //           .firstWhere((s) => s.properties?.title == challanSheetName);
+// //       final sheetId = sheet.properties!.sheetId!; // <-- integer id
+// //
+// //       // 2. Get all challans
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("Challan sheet is empty");
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final challanIdIndex = headers.indexOf("challanId");
+// //       final statusIndex = headers.indexOf("status");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (challanIdIndex == -1 || statusIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("Required columns missing in Challan sheet");
+// //       }
+// //
+// //       List<Map<String, dynamic>> requests = [];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > challanIdIndex &&
+// //             challanIds.contains(row[challanIdIndex].toString()) &&
+// //             row.length > userIdIndex &&
+// //             row[userIdIndex].toString() == userId) {
+// //           int rowIndex = i; // 0-based index
+// //
+// //           requests.add({
+// //             "updateCells": {
+// //               "range": {
+// //                 "sheetId": sheetId, // ✅ correct integer sheetId
+// //                 "startRowIndex": rowIndex,
+// //                 "endRowIndex": rowIndex + 1,
+// //                 "startColumnIndex": statusIndex,
+// //                 "endColumnIndex": statusIndex + 1,
+// //               },
+// //               "rows": [
+// //                 {
+// //                   "values": [
+// //                     {"userEnteredValue": {"stringValue": status}}
+// //                   ]
+// //                 }
+// //               ],
+// //               "fields": "userEnteredValue",
+// //             }
+// //           });
+// //         }
+// //       }
+// //
+// //       if (requests.isEmpty) {
+// //         print("⚠️ No challans found to update");
+// //         return;
+// //       }
+// //
+// //       // 3. Build batch request
+// //       final batchRequest = BatchUpdateSpreadsheetRequest.fromJson({
+// //         "requests": requests,
+// //       });
+// //
+// //       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+// //
+// //       print("✅ ${requests.length} challans updated to $status in batch.");
+// //     } catch (e) {
+// //       print("❌ Error in batch challan update: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //
+// //   /// Fixed updateChallan function in GoogleSheetService
+// // // Modified updateChallan function in GoogleSheetService to preserve GST
+// //   static Future<void> updateChallan(Map<String, dynamic> challanData, String userId) async {
+// //     print("🔄 Updating Challan in Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all challans
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("❌ Challan sheet is empty");
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final challanIdIndex = headers.indexOf("challanId");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (challanIdIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("❌ Missing challanId or userId column in sheet");
+// //       }
+// //
+// //       int? rowToUpdate;
+// //       List<Object?> existingRow = [];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > challanIdIndex &&
+// //             row[challanIdIndex].toString() == challanData["challanId"].toString() &&
+// //             row[userIdIndex].toString() == userId) {
+// //           rowToUpdate = i + 1;
+// //           existingRow = row; // Store existing row data
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (rowToUpdate == null) {
+// //         throw Exception("❌ Challan not found for update (id: ${challanData["challanId"]})");
+// //       }
+// //
+// //       // Get existing GST values from the current row
+// //       final gstRateIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstrate');
+// //       final gstAmountIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstamount');
+// //
+// //       String existingGstRate = '';
+// //       String existingGstAmount = '';
+// //
+// //       if (gstRateIndex != -1 && existingRow.length > gstRateIndex) {
+// //         existingGstRate = existingRow[gstRateIndex]?.toString() ?? '';
+// //       }
+// //       if (gstAmountIndex != -1 && existingRow.length > gstAmountIndex) {
+// //         existingGstAmount = existingRow[gstAmountIndex]?.toString() ?? '';
+// //       }
+// //
+// //       // Build normalized data with all required fields
+// //       Map<String, dynamic> normalized = {};
+// //
+// //       for (var header in headers) {
+// //         String key = header.toString().trim().toLowerCase();
+// //
+// //         switch (key) {
+// //           case 'challanid':
+// //             normalized[key] = challanData["challanId"] ?? '';
+// //             break;
+// //           case 'customername':
+// //             normalized[key] = challanData["customerName"] ?? '';
+// //             break;
+// //           case 'customeremail':
+// //             normalized[key] = challanData["customerEmail"] ?? '';
+// //             break;
+// //           case 'customerphone':
+// //             normalized[key] = challanData["customerPhone"] ?? '';
+// //             break;
+// //           case 'customeraddress':
+// //             normalized[key] = challanData["customerAddress"] ?? '';
+// //             break;
+// //           case 'challandate':
+// //             normalized[key] = challanData["challanDate"] ?? '';
+// //             break;
+// //           case 'subtotal':
+// //             normalized[key] = challanData["subtotal"] ?? 0;
+// //             break;
+// //           case 'gstrate':
+// //           // Preserve existing GST rate if not explicitly changed
+// //             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+// //               normalized[key] = existingGstRate;
+// //             } else {
+// //               double subtotal = double.tryParse(challanData["subtotal"]?.toString() ?? "0") ?? 0;
+// //               double gstAmount = double.tryParse(challanData["gstAmount"]?.toString() ?? "0") ?? 0;
+// //               double gstRate = subtotal > 0 ? (gstAmount / subtotal * 100) : 0;
+// //               normalized[key] = gstRate.toStringAsFixed(2);
+// //             }
+// //             break;
+// //           case 'gstamount':
+// //           // Preserve existing GST amount if not explicitly changed
+// //             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+// //               normalized[key] = existingGstAmount;
+// //             } else {
+// //               normalized[key] = challanData["gstAmount"] ?? 0;
+// //             }
+// //             break;
+// //           case 'totalamount':
+// //             normalized[key] = challanData["totalAmount"] ?? 0;
+// //             break;
+// //           case 'status':
+// //             normalized[key] = challanData["status"] ?? 'Pending';
+// //             break;
+// //           case 'statusprogress':
+// //             normalized[key] = challanData["statusProgress"] ?? 'InProgress';
+// //             break;
+// //           case 'userid':
+// //             normalized[key] = userId;
+// //             break;
+// //           default:
+// //           // Keep existing value for unknown columns
+// //             int existingIndex = headers.indexWhere((h) => h.toString().toLowerCase() == key);
+// //             if (existingIndex != -1 && existingRow.length > existingIndex) {
+// //               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+// //             } else {
+// //               normalized[key] = '';
+// //             }
+// //             break;
+// //         }
+// //       }
+// //
+// //       // Build row data in the same order as headers
+// //       List<dynamic> rowData = [];
+// //       for (var header in headers) {
+// //         final key = header.toString().trim().toLowerCase();
+// //         rowData.add(normalized[key]?.toString() ?? '');
+// //       }
+// //
+// //       final range = "$challanSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+// //
+// //       final valueRange = ValueRange(
+// //         values: [rowData],
+// //       );
+// //
+// //       await sheetsApi.spreadsheets.values.update(
+// //         valueRange,
+// //         spreadsheetId,
+// //         range,
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Challan updated successfully at row $rowToUpdate");
+// //       print("📊 GST Rate: ${normalized['gstrate']}, GST Amount: ${normalized['gstamount']}");
+// //
+// //     } catch (e) {
+// //       print("❌ Error updating Challan: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //   static Future<void> updateChallanItems(
+// //       String challanId, List<Map<String, dynamic>> items, String userId) async {
+// //     print("🔄 Updating Challan Items in Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get current sheet data
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z", // Make sure to get all columns A to Z
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         // Sheet is empty, just add new items
+// //         for (var item in items) {
+// //           await addChallanItem({...item, "challanId": challanId}, userId);
+// //         }
+// //         return;
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       print("Sheet headers: $headers"); // Debug print
+// //
+// //       final challanIdIndex = headers.indexOf("challanId");
+// //
+// //       if (challanIdIndex == -1) {
+// //         throw Exception("❌ Missing challanId column");
+// //       }
+// //
+// //       // Build new sheet data (keep all items except for this challanId)
+// //       List<List<Object?>> newSheetData = [];
+// //       newSheetData.add(headers); // Add headers first
+// //
+// //       // Add all rows that DON'T belong to our challanId
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > challanIdIndex &&
+// //             row[challanIdIndex].toString() != challanId) {
+// //           newSheetData.add(row);
+// //         }
+// //       }
+// //
+// //       // Add our new items to the data
+// //       for (var item in items) {
+// //         List<Object?> newRow = [];
+// //         for (var header in headers) {
+// //           String key = header.toString().trim().toLowerCase();
+// //
+// //           switch (key) {
+// //             case 'challanid':
+// //               newRow.add(item['challanId'] ?? challanId);
+// //               break;
+// //             case 'customerid':
+// //               newRow.add(item['customerId'] ?? '');
+// //               break;
+// //             case 'itemid':
+// //               newRow.add(item['itemId'] ?? '');
+// //               break;
+// //             case 'itemname':
+// //               newRow.add(item['itemName'] ?? '');
+// //               break;
+// //             case 'description':
+// //               newRow.add(item['description'] ?? '');
+// //               break;
+// //             case 'quantity':
+// //               newRow.add(item['quantity'] ?? '0');
+// //               break;
+// //             case 'price':
+// //               newRow.add(item['price'] ?? '0');
+// //               break;
+// //             case 'challandate':
+// //               newRow.add(item['challanDate'] ?? '');
+// //               break;
+// //             case 'gstrate':
+// //               newRow.add(item['gstRate'] ?? '0');
+// //               break;
+// //             case 'gstamount':
+// //               newRow.add(item['gstAmount'] ?? '0');
+// //               break;
+// //             case 'amountwithgst':
+// //               newRow.add(item['amountWithGst'] ?? '0');
+// //               break;
+// //             case 'totalprice':
+// //               newRow.add(item['totalPrice'] ?? '0');
+// //               break;
+// //             case 'unit':
+// //               newRow.add(item['unit'] ?? '');
+// //               break;
+// //             case 'userid':
+// //               newRow.add(item['userId'] ?? userId);
+// //               break;
+// //             default:
+// //               newRow.add('');
+// //               break;
+// //           }
+// //         }
+// //         newSheetData.add(newRow);
+// //         print("Added row: $newRow"); // Debug print
+// //       }
+// //
+// //       // Clear the entire sheet
+// //       await sheetsApi.spreadsheets.values.clear(
+// //         ClearValuesRequest(),
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //       );
+// //
+// //       // Write all data back to sheet
+// //       if (newSheetData.length > 1) {
+// //         final range = "$challanItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange(values: newSheetData),
+// //           spreadsheetId,
+// //           range,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //       }
+// //
+// //       print("✅ Successfully updated ${items.length} challan items");
+// //
+// //     } catch (e, stackTrace) {
+// //       print("❌ Error updating Challan items: $e");
+// //       print("Stack trace: $stackTrace");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// // // Alternative method using append after clearing specific rows
+// //   static Future<void> updateChallanItemsV2(
+// //       String challanId, List<Map<String, dynamic>> items, String userId) async {
+// //     print("🔄 Updating Challan Items (Method V2)...");
+// //
+// //     try {
+// //       // First, delete existing items for this challanId
+// //       await deleteChallanItemsByChallanId(challanId);
+// //
+// //       // Then add new items
+// //       for (var item in items) {
+// //         await addChallanItem({...item, "challanId": challanId}, userId);
+// //       }
+// //
+// //       print("✅ Successfully updated challan items using V2 method");
+// //
+// //     } catch (e) {
+// //       print("❌ Error in updateChallanItemsV2: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //   // Add these batch update methods for better performance
+// //
+// //   /// Batch update challan items (more efficient than individual updates)
+// //   static Future<void> updateChallanItemsBatch(String challanId, List<Map<String, dynamic>> itemsData, String userId) async {
+// //     try {
+// //       print("🔄 Batch updating ${itemsData.length} items for challan: $challanId");
+// //
+// //       // First, delete existing items for this challan
+// //       await deleteChallanItems(challanId, userId);
+// //
+// //       // Then insert all new items
+// //       for (var itemData in itemsData) {
+// //         await addChallanItem(itemData, userId);
+// //       }
+// //
+// //       // Clear cache to force refresh on next read
+// //       clearChallanItemCache(challanId);
+// //
+// //       print("✅ Batch update completed for challan: $challanId");
+// //
+// //     } catch (e) {
+// //       print("❌ Error in batch update: $e");
+// //       throw e;
+// //     }
+// //   }
+// //
+// //   // ✅ FIXED: Delete all items for a specific challan
+// //   static Future<void> deleteChallanItems(String challanId, String userId) async {
+// //     print("🗑️ Deleting all items for challan: $challanId");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all challan items
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("⚠️ Sheet is empty, nothing to delete");
+// //         return;
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final challanIdIndex = headers.indexOf("challanId");
+// //
+// //       if (challanIdIndex == -1) {
+// //         throw Exception("❌ challanId column not found in sheet");
+// //       }
+// //
+// //       // Find all rows that match this challanId
+// //       List<int> rowsToDelete = [];
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > challanIdIndex &&
+// //             row[challanIdIndex].toString() == challanId) {
+// //           rowsToDelete.add(i);
+// //         }
+// //       }
+// //
+// //       if (rowsToDelete.isEmpty) {
+// //         print("ℹ️ No items found for challan: $challanId");
+// //         return;
+// //       }
+// //
+// //       print("Found ${rowsToDelete.length} rows to delete");
+// //
+// //       // Get sheet ID for batch delete
+// //       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+// //       int? sheetId;
+// //       for (var sheet in spreadsheet.sheets ?? []) {
+// //         if (sheet.properties?.title == challanItemSheetName) {
+// //           sheetId = sheet.properties?.sheetId;
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (sheetId == null) {
+// //         throw Exception("❌ Could not find sheet ID for $challanItemSheetName");
+// //       }
+// //
+// //       // Delete rows in reverse order to maintain indices
+// //       List<Request> deleteRequests = [];
+// //       for (int rowIndex in rowsToDelete.reversed) {
+// //         deleteRequests.add(
+// //             Request()
+// //               ..deleteDimension = (DeleteDimensionRequest()
+// //                 ..range = (DimensionRange()
+// //                   ..sheetId = sheetId
+// //                   ..dimension = 'ROWS'
+// //                   ..startIndex = rowIndex  // 0-based for API
+// //                   ..endIndex = rowIndex + 1))
+// //         );
+// //       }
+// //
+// //       // Execute batch delete
+// //       final batchRequest = BatchUpdateSpreadsheetRequest()
+// //         ..requests = deleteRequests;
+// //
+// //       await sheetsApi.spreadsheets.batchUpdate(
+// //         batchRequest,
+// //         spreadsheetId,
+// //       );
+// //
+// //       print("✅ Successfully deleted ${rowsToDelete.length} items for challan: $challanId");
+// //
+// //       // Clear cache
+// //       clearChallanItemCache(challanId);
+// //
+// //     } catch (e, stackTrace) {
+// //       print("❌ Error deleting challan items: $e");
+// //       print("Stack trace: $stackTrace");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// // // Helper method to delete challan items by challanId
+// //   static Future<void> deleteChallanItemsByChallanId(String challanId) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         return; // Nothing to delete
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final challanIdIndex = headers.indexOf("challanId");
+// //
+// //       if (challanIdIndex == -1) {
+// //         return; // No challanId column
+// //       }
+// //
+// //       // Build filtered data (exclude rows matching challanId)
+// //       List<List<Object?>> filteredData = [headers];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length <= challanIdIndex ||
+// //             row[challanIdIndex].toString() != challanId) {
+// //           filteredData.add(row);
+// //         }
+// //       }
+// //
+// //       // Clear and rewrite sheet
+// //       await sheetsApi.spreadsheets.values.clear(
+// //         ClearValuesRequest(),
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //       );
+// //
+// //       if (filteredData.length > 1) {
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange(values: filteredData),
+// //           spreadsheetId,
+// //           "$challanItemSheetName!A${filteredData.length}",
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //       }
+// //
+// //       print("🗑️ Deleted existing items for challanId: $challanId");
+// //
+// //     } catch (e) {
+// //       print("❌ Error deleting challan items: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   // Add to your GoogleSheetService class:
+// //   static Future<void> updateChallanWithCacheClear(
+// //       Map<String, dynamic> challanData, String userId) async {
+// //     print("🔄 Updating challan with cache clear...");
+// //
+// //     final challanId = challanData['challanId']?.toString();
+// //
+// //     try {
+// //       // Update the challan
+// //       await updateChallan(challanData, userId);
+// //
+// //       // Clear cache immediately after update
+// //       if (challanId != null) {
+// //         clearChallanItemCache(challanId);
+// //         _challanCache.remove(challanId);
+// //         print("✅ Cleared cache for challan: $challanId");
+// //       }
+// //
+// //       // Also clear any general cache timestamps
+// //       _cacheTimestamps.clear();
+// //
+// //     } catch (e) {
+// //       print("❌ Error updating challan: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   static Future<void> updateChallanItemsWithCacheClear(
+// //       String challanId,
+// //       List<Map<String, dynamic>> items,
+// //       String userId) async {
+// //     print("🔄 Updating challan items with cache clear...");
+// //
+// //     try {
+// //       // Update items
+// //       await updateChallanItems(challanId, items, userId);
+// //
+// //       // Force clear ALL caches
+// //       clearChallanItemCache(challanId);
+// //       _challanCache.remove(challanId);
+// //       _itemCache.remove('challan_items_$challanId');
+// //       _cacheTimestamps.remove('challan_items_$challanId');
+// //
+// //       print("✅ Cleared all caches for challan: $challanId");
+// //
+// //     } catch (e) {
+// //       print("❌ Error updating items: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //
+// //   static Future<int> _getChallanItemSheetId() async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+// //
+// //       for (var sheet in spreadsheet.sheets ?? []) {
+// //         if (sheet.properties?.title == challanItemSheetName) {
+// //           return sheet.properties?.sheetId ?? 0;
+// //         }
+// //       }
+// //
+// //       throw Exception("Sheet '$challanItemSheetName' not found");
+// //     } catch (e) {
+// //       print("❌ Error getting sheet ID: $e");
+// //       // Fallback to a default ID or throw
+// //       return 0; // You might need to adjust this based on your sheet structure
+// //     }
+// //   }
+// //
+// //
+// //   static Future<void> deleteItems(String userId, Item item) async {
+// //     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Step 1: Fetch all rows to locate the row for this item
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("❌ Stock sheet is empty, cannot delete item.");
+// //       }
+// //
+// //       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+// //       print("✅ Headers: $headers");
+// //
+// //       final itemIdIndex = headers.indexOf("itemId");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (itemIdIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("❌ Required columns (itemId, userId) not found in sheet.");
+// //       }
+// //
+// //       int? rowToDelete;
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > itemIdIndex &&
+// //             row[itemIdIndex].toString() == item.itemId &&
+// //             row[userIdIndex].toString() == userId) {
+// //           rowToDelete = i + 1; // Google Sheets rows are 1-based
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (rowToDelete == null) {
+// //         throw Exception("❌ Item ${item.itemId} not found for user $userId.");
+// //       }
+// //
+// //       print("🗑 Deleting item at row $rowToDelete...");
+// //
+// //       // Step 2: Clear the row (deletes data but row stays empty)
+// //       await sheetsApi.spreadsheets.values.clear(
+// //         ClearValuesRequest(),
+// //         spreadsheetId,
+// //         "$itemSheetName!A$rowToDelete:Z$rowToDelete",
+// //       );
+// //
+// //       print("✅ Item ${item.itemId} deleted from row $rowToDelete.");
+// //
+// //       // Step 3: Add new row (append updated item)
+// //       await Future.delayed(Duration(seconds: 1));
+// //
+// //       final newRow = [
+// //         item.itemId,
+// //         item.itemName,
+// //         item.price.toString(),
+// //         item.unitOfMeasurement,
+// //         item.currentStock.toString(),
+// //         item.detailRequirement ?? "",
+// //         item.isActive.toString(),
+// //         userId,
+// //       ];
+// //
+// //       final appendBody = ValueRange.fromJson({
+// //         "values": [newRow],
+// //       });
+// //
+// //       await sheetsApi.spreadsheets.values.append(
+// //         appendBody,
+// //         spreadsheetId,
+// //         itemSheetName,
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Item ${item.itemId} re-added successfully.");
+// //     } catch (e) {
+// //       print("❌ Error in deleteItems: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   // static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+// //   //   try {
+// //   //     final client = await _getAuthClient();
+// //   //     final sheetsApi = SheetsApi(client);
+// //   //
+// //   //     // Fetch all invoice item rows
+// //   //     final response = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$invoiceItemSheetName!A:Z",
+// //   //     );
+// //   //
+// //   //     if (response.values == null || response.values!.length <= 1) {
+// //   //       print("❌ No invoice items found in sheet.");
+// //   //       return [];
+// //   //     }
+// //   //
+// //   //     // Extract headers
+// //   //     final headers = response.values![0]
+// //   //         .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+// //   //         .toList();
+// //   //
+// //   //     // Find the index of the invoiceId column (match your column name)
+// //   //     final invoiceIdIndex = headers.indexOf('invoiceid'); // adjust if your column name is different
+// //   //     if (invoiceIdIndex == -1) {
+// //   //       throw Exception("InvoiceId column not found in sheet headers");
+// //   //     }
+// //   //
+// //   //     List<InvoiceItem> invoiceItems = [];
+// //   //
+// //   //     // Iterate rows
+// //   //     for (int i = 1; i < response.values!.length; i++) {
+// //   //       final row = response.values![i];
+// //   //
+// //   //       // Check if this row matches the invoiceId
+// //   //       if (row.length > invoiceIdIndex && row[invoiceIdIndex].toString().trim() == invoiceId) {
+// //   //         Map<String, dynamic> rowMap = {};
+// //   //         for (int j = 0; j < headers.length; j++) {
+// //   //           rowMap[headers[j]] = j < row.length ? row[j].toString().trim() : "";
+// //   //         }
+// //   //
+// //   //         try {
+// //   //           final item = InvoiceItem.fromJson(rowMap);
+// //   //           invoiceItems.add(item);
+// //   //         } catch (e) {
+// //   //           print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+// //   //         }
+// //   //       }
+// //   //     }
+// //   //
+// //   //     print("✅ Found ${invoiceItems.length} items for invoice $invoiceId");
+// //   //     return invoiceItems;
+// //   //   } catch (e) {
+// //   //     print("❌ Error fetching invoice items by invoiceId: $e");
+// //   //     return [];
+// //   //   }
+// //   // }
+// //
+// //   static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+// //     print("🔄 Fetching items for invoice: $invoiceId");
+// //
+// //     // If already cached, return directly
+// //     if (_invoiceItemCache.containsKey(invoiceId)) {
+// //       print("⚡ Returning cached items for invoice $invoiceId");
+// //       return _invoiceItemCache[invoiceId]!;
+// //     }
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       final headers = await _getHeaders(sheetsApi, sheetName: invoiceItemSheetName);
+// //
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$invoiceItemSheetName!A2:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("❌ No items found for invoice $invoiceId");
+// //         return <InvoiceItem>[];
+// //       }
+// //
+// //       List<InvoiceItem> items = [];
+// //       int foundCount = 0;
+// //
+// //       for (int i = 0; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isEmpty) continue;
+// //
+// //         // Create map using original headers
+// //         Map<String, dynamic> itemMap = {};
+// //         for (int j = 0; j < headers.length; j++) {
+// //           itemMap[headers[j]] = j < row.length ? row[j] : "";
+// //         }
+// //
+// //         // Filter by invoiceId
+// //         final rowInvoiceId = itemMap['invoiceId'] ??
+// //             itemMap['InvoiceId'] ??
+// //             itemMap['INVOICEID'];
+// //
+// //         if (rowInvoiceId?.toString() == invoiceId) {
+// //           try {
+// //             print("=== Raw item map for invoice $invoiceId ===");
+// //             itemMap.forEach((key, value) {
+// //               print("  '$key': '$value'");
+// //             });
+// //
+// //             // ✅ FIX: Normalize the map to use 'rate' field
+// //             // If 'price' exists but 'rate' doesn't, copy price to rate
+// //             if (itemMap.containsKey('price') && !itemMap.containsKey('rate')) {
+// //               itemMap['rate'] = itemMap['price'];
+// //               print("✅ Mapped 'price' -> 'rate': ${itemMap['price']}");
+// //             }
+// //
+// //             // Also handle totalPrice column name variations
+// //             if (!itemMap.containsKey('totalPrice')) {
+// //               if (itemMap.containsKey('totalAmount')) {
+// //                 itemMap['totalPrice'] = itemMap['totalAmount'];
+// //               } else if (itemMap.containsKey('total')) {
+// //                 itemMap['totalPrice'] = itemMap['total'];
+// //               }
+// //             }
+// //
+// //             InvoiceItem item = InvoiceItem.fromJson(itemMap);
+// //             items.add(item);
+// //             foundCount++;
+// //
+// //             print("✅ Added item: ${item.itemName}");
+// //             print("   - Rate: ${item.rate}");
+// //             print("   - Quantity: ${item.quantity}");
+// //             print("   - GST Rate: ${item.gstRate}%");
+// //             print("   - GST Amount: ${item.gstAmount}");
+// //             print("   - Total Price: ${item.totalPrice}");
+// //
+// //           } catch (e, stackTrace) {
+// //             print("❌ Error parsing invoice item: $e");
+// //             print("❌ Stack trace: $stackTrace");
+// //             print("❌ Item data: $itemMap");
+// //           }
+// //         }
+// //       }
+// //
+// //       print("✅ Found $foundCount items for invoice $invoiceId");
+// //
+// //       // Cache result for next call
+// //       _invoiceItemCache[invoiceId] = items;
+// //
+// //       return items;
+// //     } catch (e) {
+// //       print("❌ Error getting invoice items: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   /// ✅ Get headers (only once per app session, cached in memory)
+// //   static Future<List<String>> _getHeaders(SheetsApi sheetsApi, {String? sheetName}) async {
+// //     try {
+// //       final headerSheetName = sheetName ?? challanItemSheetName;
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$headerSheetName!1:1",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("No headers found in $headerSheetName");
+// //       }
+// //
+// //       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+// //       print("📋 Headers for $headerSheetName: $headers");
+// //       return headers;
+// //     } catch (e) {
+// //       print("❌ Error getting headers for ${sheetName ?? challanItemSheetName}: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   /// ✅ Optimized function: get items by challanId with caching
+// //   static Future<List<ChallanItem>> getChallanItemsByChallanId(
+// //       String challanId) async {
+// //     print("🔄 Fetching items for challan: $challanId");
+// //
+// //     // If already cached, return directly
+// //     if (_challanCache.containsKey(challanId)) {
+// //       print("⚡ Returning cached items for challan $challanId");
+// //       return _challanCache[challanId]!;
+// //     }
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       final headers = await _getHeaders(sheetsApi);
+// //
+// //       // ✅ Fetch only data rows (skip headers)
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A2:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("❌ No items found for challan $challanId");
+// //         return <ChallanItem>[];
+// //       }
+// //
+// //       List<ChallanItem> items = [];
+// //       int foundCount = 0;
+// //
+// //       for (int i = 0; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isEmpty) continue;
+// //
+// //         Map<String, dynamic> itemMap = {};
+// //         for (int j = 0; j < headers.length; j++) {
+// //           itemMap[headers[j]] = j < row.length ? row[j] : "";
+// //         }
+// //
+// //         // Filter by challanId
+// //         final rowChallanId = itemMap['challanId'] ??
+// //             itemMap['ChallanId'] ??
+// //             itemMap['CHALLANID'];
+// //
+// //         if (rowChallanId?.toString() == challanId) {
+// //           try {
+// //             ChallanItem item = ChallanItem.fromJson(itemMap);
+// //             items.add(item);
+// //             foundCount++;
+// //             print("✅ Added item: ${item.itemName}");
+// //           } catch (e) {
+// //             print("❌ Error parsing challan item: $e");
+// //             print("❌ Item data: $itemMap");
+// //           }
+// //         }
+// //       }
+// //
+// //       print("✅ Found $foundCount items for challan $challanId");
+// //
+// //       // Cache result for next call
+// //       _challanCache[challanId] = items;
+// //
+// //       return items;
+// //     } catch (e) {
+// //       print("❌ Error getting challan items: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   // static Future<List<Challan>> getChallansByDateRange({
+// //   //   required DateTime fromDate,
+// //   //   required DateTime toDate,
+// //   //   required String userId,
+// //   // }) async {
+// //   //   print("🔄 Fetching challans by date range: ${DateFormat('dd/MM/yyyy').format(fromDate)} to ${DateFormat('dd/MM/yyyy').format(toDate)} for user: $userId");
+// //   //
+// //   //   try {
+// //   //     final client = await _getAuthClient();
+// //   //     final sheetsApi = SheetsApi(client);
+// //   //
+// //   //     // Fetch all challan rows
+// //   //     final response = await sheetsApi.spreadsheets.values.get(
+// //   //       spreadsheetId,
+// //   //       "$challanSheetName!A:Z",
+// //   //     );
+// //   //
+// //   //     if (response.values == null || response.values!.length <= 1) {
+// //   //       print("❌ No challans found in sheet.");
+// //   //       return <Challan>[];
+// //   //     }
+// //   //
+// //   //     // Extract headers
+// //   //     final headers = response.values![0].map((h) => h.toString().trim()).toList();
+// //   //     print("✅ Headers: $headers");
+// //   //
+// //   //     // DEBUG: Show first 5 rows
+// //   //     print("=== DEBUG: FIRST 5 ROWS ===");
+// //   //     for (int i = 1; i < min(6, response.values!.length); i++) {
+// //   //       Map<String, dynamic> rowMap = {};
+// //   //       for (int j = 0; j < headers.length; j++) {
+// //   //         rowMap[headers[j]] = j < response.values![i].length ? response.values![i][j] : "";
+// //   //       }
+// //   //       print("Row $i: $rowMap");
+// //   //     }
+// //   //
+// //   //     List<Challan> filteredChallans = [];
+// //   //
+// //   //     // Iterate rows (skip header row)
+// //   //     for (int i = 1; i < response.values!.length; i++) {
+// //   //       final row = response.values![i];
+// //   //       if (row.isEmpty) continue; // Skip empty rows
+// //   //
+// //   //       Map<String, dynamic> challanMap = {};
+// //   //       for (int j = 0; j < headers.length; j++) {
+// //   //         challanMap[headers[j]] = j < row.length ? row[j] : "";
+// //   //       }
+// //   //
+// //   //       try {
+// //   //         Challan challan = Challan.fromMap(challanMap);
+// //   //
+// //   //         // Parse challan date safely
+// //   //         DateTime? parsedChallanDate;
+// //   //         String rawDate = challanMap['challanDate']?.toString().trim() ?? "";
+// //   //
+// //   //         if (rawDate.isNotEmpty) {
+// //   //           parsedChallanDate = _parseChallanDate(rawDate);
+// //   //         }
+// //   //
+// //   //         // Filter by user ID and date range
+// //   //         if (parsedChallanDate != null &&
+// //   //             challan.userId == userId &&
+// //   //             !parsedChallanDate.isBefore(fromDate) &&
+// //   //             !parsedChallanDate.isAfter(toDate)) {
+// //   //           // Load items for this challan
+// //   //           challan.items = await getChallanItemsByChallanId(challan.challanId);
+// //   //           challan.challanDate = parsedChallanDate;
+// //   //
+// //   //           filteredChallans.add(challan);
+// //   //           print("✅ Added challan: ${challan.challanId} - Date: $parsedChallanDate - Items: ${challan.items?.length ?? 0}");
+// //   //         } else {
+// //   //           if (parsedChallanDate == null) {
+// //   //             print("⚠️ Skipping challan ${challan.challanId}: Invalid date format ($rawDate)");
+// //   //           } else if (challan.userId != userId) {
+// //   //             print("⚠️ Skipping challan ${challan.challanId}: User ID mismatch (${challan.userId} vs $userId)");
+// //   //           } else {
+// //   //             print("⚠️ Skipping challan ${challan.challanId}: Date $parsedChallanDate outside range");
+// //   //           }
+// //   //         }
+// //   //       } catch (e) {
+// //   //         print("⚠️ Error parsing challan row $i: $e");
+// //   //         print("Row data: $challanMap");
+// //   //       }
+// //   //     }
+// //   //
+// //   //     print("✅ Successfully found ${filteredChallans.length} challans in date range");
+// //   //
+// //   //     // Sort challans by date (newest first)
+// //   //     filteredChallans.sort((a, b) {
+// //   //       if (a.challanDate == null) return 1;
+// //   //       if (b.challanDate == null) return -1;
+// //   //       return b.challanDate!.compareTo(a.challanDate!);
+// //   //     });
+// //   //
+// //   //     return filteredChallans;
+// //   //   } catch (e) {
+// //   //     print("❌ Error in getChallansByDateRange(): $e");
+// //   //     rethrow;
+// //   //   }
+// //   // }
+// //
+// //   static Future<List<Challan>> getChallansByDateRange({
+// //     required DateTime fromDate,
+// //     required DateTime toDate,
+// //     required String userId,
+// //   }) async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     final response = await sheetsApi.spreadsheets.values.get(
+// //       spreadsheetId,
+// //       "$challanSheetName!A:Z",
+// //     );
+// //
+// //     if (response.values == null || response.values!.length <= 1) return [];
+// //
+// //     final headers = response.values![0].map((h) => h.toString().trim()).toList();
+// //
+// //     // ✅ Load ALL challan items once
+// //     final challanItemsGrouped = await getAllChallanItemsGrouped();
+// //
+// //     List<Challan> filtered = [];
+// //
+// //     for (int i = 1; i < response.values!.length; i++) {
+// //       final row = response.values![i];
+// //       if (row.isEmpty) continue;
+// //
+// //       Map<String, dynamic> challanMap = {};
+// //       for (int j = 0; j < headers.length; j++) {
+// //         challanMap[headers[j]] = j < row.length ? row[j] : "";
+// //       }
+// //
+// //       try {
+// //         Challan challan = Challan.fromMap(challanMap);
+// //
+// //         DateTime? parsedDate = _parseChallanDate(challanMap['challanDate']?.toString() ?? "");
+// //         if (parsedDate != null &&
+// //             challan.userId == userId &&
+// //             !parsedDate.isBefore(fromDate) &&
+// //             !parsedDate.isAfter(toDate)) {
+// //
+// //           // ✅ Attach preloaded items
+// //           challan.items = challanItemsGrouped[challan.challanId] ?? [];
+// //           challan.challanDate = parsedDate;
+// //
+// //           filtered.add(challan);
+// //         }
+// //       } catch (e) {
+// //         print("⚠️ Error parsing challan: $e");
+// //       }
+// //     }
+// //
+// //     return filtered;
+// //   }
+// //
+// //   static Future<Map<String, List<ChallanItem>>> getAllChallanItemsGrouped() async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     final headers = await _getHeaders(sheetsApi);
+// //
+// //     final response = await sheetsApi.spreadsheets.values.get(
+// //       spreadsheetId,
+// //       "$challanItemSheetName!A2:Z",
+// //     );
+// //
+// //     Map<String, List<ChallanItem>> grouped = {};
+// //
+// //     if (response.values == null || response.values!.isEmpty) {
+// //       return grouped;
+// //     }
+// //
+// //     for (var row in response.values!) {
+// //       if (row.isEmpty) continue;
+// //
+// //       Map<String, dynamic> itemMap = {};
+// //       for (int j = 0; j < headers.length; j++) {
+// //         itemMap[headers[j]] = j < row.length ? row[j] : "";
+// //       }
+// //
+// //       final challanId = itemMap['challanId'] ?? itemMap['ChallanId'] ?? "";
+// //       if (challanId.toString().isEmpty) continue;
+// //
+// //       try {
+// //         final item = ChallanItem.fromJson(itemMap);
+// //         grouped.putIfAbsent(challanId.toString(), () => []);
+// //         grouped[challanId.toString()]!.add(item);
+// //       } catch (e) {
+// //         print("❌ Failed parsing ChallanItem: $e");
+// //       }
+// //     }
+// //
+// //     return grouped;
+// //   }
+// //
+// //
+// //
+// //   /// 🔑 Helper function to parse multiple date formats
+// //   static DateTime? _parseChallanDate(String rawDate) {
+// //     try {
+// //       // Try ISO 8601 (yyyy-MM-dd or with time)
+// //       DateTime? parsed = DateTime.tryParse(rawDate);
+// //       if (parsed != null) return parsed;
+// //
+// //       // Try dd/MM/yyyy
+// //       parsed = DateFormat('dd/MM/yyyy').parseStrict(rawDate);
+// //       if (parsed != null) return parsed;
+// //     } catch (_) {}
+// //
+// //     try {
+// //       // Try dd/MM/yyyy HH:mm:ss
+// //       return DateFormat('dd/MM/yyyy HH:mm:ss').parseStrict(rawDate);
+// //     } catch (_) {
+// //       return null;
+// //     }
+// //   }
+// //
+// //   static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
+// //     print("🔄 Fetching challans for customer: $customerName");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // ✅ Batch fetch challans & items in one call
+// //       final batchResponse = await sheetsApi.spreadsheets.values.batchGet(
+// //         spreadsheetId,
+// //         ranges: [
+// //           "$challanSheetName!A:Z",
+// //           "$challanItemSheetName!A:Z", // make sure you have this constant
+// //         ],
+// //       );
+// //
+// //       if (batchResponse.valueRanges == null || batchResponse.valueRanges!.isEmpty) {
+// //         print("❌ No data returned from batchGet");
+// //         return [];
+// //       }
+// //
+// //       // --- Challans ---
+// //       final challansValues = batchResponse.valueRanges![0].values;
+// //       if (challansValues == null || challansValues.length <= 1) {
+// //         print("❌ No challans found in sheet");
+// //         return [];
+// //       }
+// //       final challanHeaders = challansValues[0].map((h) => h.toString().trim()).toList();
+// //       print("✅ Challan headers: $challanHeaders");
+// //
+// //       // --- Items ---
+// //       final itemsValues = batchResponse.valueRanges!.length > 1
+// //           ? batchResponse.valueRanges![1].values
+// //           : null;
+// //       List<Map<String, dynamic>> allItems = [];
+// //       if (itemsValues != null && itemsValues.length > 1) {
+// //         final itemHeaders = itemsValues[0].map((h) => h.toString().trim()).toList();
+// //         for (int i = 1; i < itemsValues.length; i++) {
+// //           Map<String, dynamic> itemMap = {};
+// //           for (int j = 0; j < itemHeaders.length; j++) {
+// //             itemMap[itemHeaders[j]] =
+// //             j < itemsValues[i].length ? itemsValues[i][j] : "";
+// //           }
+// //           allItems.add(itemMap);
+// //         }
+// //         print("📦 Total challan items loaded: ${allItems.length}");
+// //       }
+// //
+// //       List<Challan> customerChallans = [];
+// //
+// //       // --- Iterate challans ---
+// //       for (int i = 1; i < challansValues.length; i++) {
+// //         final row = challansValues[i];
+// //         if (row.isEmpty) continue;
+// //
+// //         Map<String, dynamic> challanMap = {};
+// //         for (int j = 0; j < challanHeaders.length; j++) {
+// //           challanMap[challanHeaders[j]] = j < row.length ? row[j] : "";
+// //         }
+// //
+// //         try {
+// //           Challan challan = Challan.fromMap(challanMap);
+// //
+// //           // Debug: Print challan details
+// //           print("📋 Challan ${challan.challanId}: Customer=${challan.customerName}, Looking for=$customerName");
+// //
+// //           // Filter by customer name (case insensitive)
+// //           if (challan.customerName.toLowerCase() == customerName.toLowerCase()) {
+// //             print("✅ Found matching challan: ${challan.challanId}");
+// //
+// //             // ✅ Filter items locally instead of extra API calls
+// //             final challanItems = allItems
+// //                 .where((item) => item["challanId"].toString() == challan.challanId)
+// //                 .map((map) => ChallanItem.fromJson(map))
+// //                 .toList();
+// //
+// //             print("📦 Items loaded for ${challan.challanId}: ${challanItems.length}");
+// //
+// //             // ✅ Attach items using copyWith
+// //             Challan challanWithItems = challan.copyWith(items: challanItems);
+// //             customerChallans.add(challanWithItems);
+// //
+// //             print("✅ Challan ${challan.challanId} now has ${challanWithItems.items?.length ?? 0} items");
+// //           }
+// //         } catch (e) {
+// //           print("❌ Error parsing challan: $e");
+// //           print("❌ Challan data: $challanMap");
+// //         }
+// //       }
+// //
+// //       print("✅ Total challans found for $customerName: ${customerChallans.length}");
+// //       return customerChallans;
+// //     } catch (e) {
+// //       print("❌ Error getting challans by customer: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   static Future<List<ChallanItem>> getChallanItemsByChallanIdFromSheet(String challanId) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all rows from the challan items sheet
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$challanItemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.length <= 1) {
+// //         print("❌ No challan items found.");
+// //         return [];
+// //       }
+// //
+// //       // Extract headers
+// //       final headers = response.values![0]
+// //           .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+// //           .toList();
+// //
+// //       List<ChallanItem> items = [];
+// //
+// //       // Iterate rows
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         Map<String, String> rowByHeader = {};
+// //
+// //         for (int j = 0; j < headers.length; j++) {
+// //           final key = headers[j];
+// //           final value = (j < row.length) ? row[j].toString() : "";
+// //           rowByHeader[key] = value;
+// //         }
+// //
+// //         // Filter by challanId
+// //         if (rowByHeader['challanid'] == challanId) {
+// //           try {
+// //             final item = ChallanItem.fromJson(rowByHeader);
+// //             items.add(item);
+// //           } catch (e) {
+// //             print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+// //           }
+// //         }
+// //       }
+// //
+// //       print("✅ Found ${items.length} items for challan $challanId");
+// //       return items;
+// //     } catch (e) {
+// //       print("❌ Error fetching items for challan $challanId: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //
+// //   ///Inventeroty 16/10
+// //
+// //
+// //
+// //   /// Add a new purchase to Google Sheet
+// //   // Add these methods to your GoogleSheetService class
+// //
+// //   /// Add purchase with dynamic header creation
+// //   // Add to or replace in GoogleSheetService class
+// //
+// //   /// Enhanced addPurchase with all fields (matching Invoice structure)
+// //   static Future<void> addPurchase(dynamic purchaseData, String userId) async {
+// //     print("🔄 Adding Purchase to Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Define complete headers matching Invoice structure
+// //       final expectedHeaders = [
+// //         'purchaseId',
+// //         'vendorId',
+// //         'vendorName',
+// //         'vendorEmail',
+// //         'vendorMobile',
+// //         'vendorAddress',
+// //         'purchaseDate',
+// //         'dueDate',  // ✅ NEW
+// //         'subtotal',
+// //         'gstRate',
+// //         'gstAmount',
+// //         'totalAmount',
+// //         'paidAmount',  // ✅ NEW
+// //         'pendingAmount',  // ✅ NEW
+// //         'paymentStatus',
+// //         'notes',
+// //         'userId',
+// //       ];
+// //
+// //       // Get or create headers
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseSheetName!1:1",
+// //       );
+// //
+// //       List<dynamic> headers = [];
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("⚠️ Creating headers for Purchase sheet...");
+// //         headers = expectedHeaders;
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange.fromJson({"values": [headers]}),
+// //           spreadsheetId,
+// //           "$purchaseSheetName!A1",
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Headers created");
+// //       } else {
+// //         headers = headerResponse.values![0];
+// //       }
+// //
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       String _formatDate(dynamic value) {
+// //         if (value == null || value.toString().isEmpty) return "";
+// //         try {
+// //           if (value is DateTime) {
+// //             return _dateFormatter.format(value);
+// //           } else {
+// //             return _dateFormatter.format(DateTime.parse(value.toString()));
+// //           }
+// //         } catch (e) {
+// //           return value.toString();
+// //         }
+// //       }
+// //
+// //       // Normalize keys
+// //       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+// //         return {
+// //           for (var entry in data.entries)
+// //             entry.key.toString().trim().toLowerCase(): entry.value
+// //         };
+// //       }
+// //
+// //       List<Map<String, dynamic>> rowsToSend = [];
+// //
+// //       if (purchaseData is Map<String, dynamic>) {
+// //         if (purchaseData.containsKey('purchaseDate')) {
+// //           purchaseData['purchaseDate'] = _formatDate(purchaseData['purchaseDate']);
+// //         }
+// //         if (purchaseData.containsKey('dueDate')) {
+// //           purchaseData['dueDate'] = _formatDate(purchaseData['dueDate']);
+// //         }
+// //         rowsToSend.add({...purchaseData, "userId": userId});
+// //       } else if (purchaseData is PurchaseEntry) {
+// //         final map = {
+// //           'purchaseId': purchaseData.purchaseId,
+// //           'vendorId': purchaseData.vendorId,
+// //           'vendorName': purchaseData.vendorName,
+// //           'vendorEmail': purchaseData.vendorEmail,
+// //           'vendorMobile': purchaseData.vendorMobile,
+// //           'vendorAddress': purchaseData.vendorAddress,
+// //           'purchaseDate': _formatDate(purchaseData.purchaseDate),
+// //           'dueDate': _formatDate(purchaseData.dueDate),  // ✅ NEW
+// //           'subtotal': purchaseData.subtotal,
+// //           'gstRate': purchaseData.gstRate,
+// //           'gstAmount': purchaseData.gstAmount,
+// //           'totalAmount': purchaseData.totalAmount,
+// //           'paidAmount': purchaseData.paidAmount ?? 0.0,  // ✅ NEW
+// //           'pendingAmount': purchaseData.pendingAmount ?? purchaseData.totalAmount,  // ✅ NEW
+// //           'paymentStatus': purchaseData.paymentStatus,
+// //           'notes': purchaseData.notes,
+// //           'userId': userId,
+// //         };
+// //         rowsToSend.add(map);
+// //       }
+// //
+// //       // Convert rows to ordered values matching headers
+// //       List<List<dynamic>> values = [];
+// //       for (var row in rowsToSend) {
+// //         final normalized = _normalize(row);
+// //         List<dynamic> rowData = [];
+// //         for (var header in headers) {
+// //           final key = header.toString().trim().toLowerCase();
+// //           rowData.add(normalized[key]?.toString() ?? '');
+// //         }
+// //         values.add(rowData);
+// //       }
+// //
+// //       final valueRange = ValueRange.fromJson({"values": values});
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$purchaseSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Purchase added successfully");
+// //     } catch (e) {
+// //       print("❌ Error adding Purchase: $e");
+// //       throw Exception("Failed to add Purchase: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   /// Add purchase items in batch with dynamic header creation
+// //   static Future<void> addPurchaseItemsBatch(
+// //       List<Map<String, dynamic>> itemsData, String userId) async {
+// //     print("🔄 Adding ${itemsData.length} purchase items in batch...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!1:1",
+// //       );
+// //
+// //       List<dynamic> headers = [];
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("⚠️ No header row found in sheet '$purchaseItemSheetName'. Creating dynamically...");
+// //
+// //         // Create headers from first item's keys or default structure
+// //         final sampleData = itemsData.isNotEmpty
+// //             ? itemsData.first
+// //             : {
+// //           'purchaseId': '',
+// //           'vendorId': '',
+// //           'itemId': '',
+// //           'itemName': '',
+// //           'description': '',
+// //           'quantity': '',
+// //           'purchasePrice': '',
+// //           'purchaseDate': '',
+// //           'gstRate': '',
+// //           'totalPrice': '',
+// //           'unit': '',
+// //           'userId': '',
+// //         };
+// //
+// //         headers = sampleData.keys.toList();
+// //
+// //         // Add header row to sheet
+// //         final headerRange = ValueRange.fromJson({
+// //           "values": [headers],
+// //         });
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           headerRange,
+// //           spreadsheetId,
+// //           "$purchaseItemSheetName!A1",
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Header row created for '$purchaseItemSheetName' with columns: $headers");
+// //       } else {
+// //         headers = headerResponse.values![0];
+// //       }
+// //
+// //       print("PurchaseItems headers: $headers");
+// //
+// //       // Normalize key function
+// //       String _normalizeKey(String key) {
+// //         return key.toString().trim().toLowerCase();
+// //       }
+// //
+// //       // Prepare multiple rows
+// //       List<List<dynamic>> rows = [];
+// //
+// //       for (var itemData in itemsData) {
+// //         List<dynamic> rowData = [];
+// //
+// //         // Normalize itemData keys
+// //         Map<String, dynamic> normalizedItem = {};
+// //         for (var entry in itemData.entries) {
+// //           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+// //         }
+// //
+// //         for (var header in headers) {
+// //           final headerNameLower = _normalizeKey(header.toString());
+// //
+// //           if (headerNameLower.contains('userid')) {
+// //             rowData.add(userId);
+// //           } else {
+// //             var value = normalizedItem[headerNameLower]?.toString() ?? '';
+// //             rowData.add(value);
+// //           }
+// //         }
+// //
+// //         rows.add(rowData);
+// //         print("📦 Prepared row: $rowData");
+// //       }
+// //
+// //       // Append all purchase items at once
+// //       final valueRange = ValueRange.fromJson({
+// //         "values": rows,
+// //       });
+// //
+// //       final response = await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       if (response.updates?.updatedRows != null) {
+// //         print("✅ ${response.updates!.updatedRows} purchase items added successfully.");
+// //       } else {
+// //         print("✅ Purchase items batch added successfully.");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error adding purchase items batch: $e");
+// //       throw Exception("Failed to add purchase items batch: ${e.toString()}");
+// //     }
+// //   }
+// //
+// //   /// Get all purchases
+// //   static Future<List<PurchaseEntry>> getPurchasesList() async {
+// //     print("🔄 Fetching purchases from Google Sheets...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all purchase rows
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.length <= 1) {
+// //         print("❌ No purchases found in sheet.");
+// //         return <PurchaseEntry>[];
+// //       }
+// //
+// //       // Extract headers from first row
+// //       final headers =
+// //       response.values![0].map((h) => h.toString().trim()).toList();
+// //       print("✅ Headers: $headers");
+// //
+// //       List<PurchaseEntry> purchases = [];
+// //
+// //       // Iterate rows (skip header)
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //
+// //         // Skip completely empty rows
+// //         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+// //           continue;
+// //         }
+// //
+// //         // Build map header → value
+// //         Map<String, dynamic> purchaseMap = {};
+// //         for (int j = 0; j < headers.length && j < row.length; j++) {
+// //           purchaseMap[headers[j]] = row[j].toString();
+// //         }
+// //
+// //         try {
+// //           PurchaseEntry purchase = PurchaseEntry.fromJson(purchaseMap);
+// //           purchases.add(purchase);
+// //           print("Processed purchase: ${purchase.purchaseId} - ${purchase.vendorName}");
+// //         } catch (e) {
+// //           print("⚠️ Error parsing purchase row $i: $e");
+// //           print("Row data: $purchaseMap");
+// //         }
+// //       }
+// //
+// //       print("✅ Successfully parsed ${purchases.length} purchases from Google Sheets");
+// //       return purchases;
+// //     } catch (e) {
+// //       print("❌ Error in getPurchasesList(): $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Update purchase
+// //   // ✅ In your GoogleSheetService.updatePurchase method, ensure this mapping exists:
+// //
+// // // Around line 2800-2900 in your GoogleSheetService
+// //   static Future<void> updatePurchase(Map<String, dynamic> purchaseData, String userId) async {
+// //     print("🔄 Updating Purchase in Google Sheet...");
+// //     print("📋 Data to update: ${purchaseData.keys.toList()}");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all purchases
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         throw Exception("❌ Purchase sheet is empty");
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       print("📋 Sheet headers: $headers");
+// //
+// //       final purchaseIdIndex = headers.indexOf("purchaseId");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (purchaseIdIndex == -1 || userIdIndex == -1) {
+// //         throw Exception("❌ Missing purchaseId or userId column in sheet");
+// //       }
+// //
+// //       int? rowToUpdate;
+// //       List<Object?> existingRow = [];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > purchaseIdIndex &&
+// //             row[purchaseIdIndex].toString() == purchaseData["purchaseId"].toString() &&
+// //             row[userIdIndex].toString() == userId) {
+// //           rowToUpdate = i + 1;
+// //           existingRow = row;
+// //           print("✅ Found purchase at row $rowToUpdate");
+// //           break;
+// //         }
+// //       }
+// //
+// //       if (rowToUpdate == null) {
+// //         throw Exception("❌ Purchase not found for update (id: ${purchaseData["purchaseId"]})");
+// //       }
+// //
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //       // Build normalized data with all required fields
+// //       Map<String, dynamic> normalized = {};
+// //
+// //       for (var header in headers) {
+// //         String key = header.toString().trim().toLowerCase();
+// //
+// //         switch (key) {
+// //           case 'purchaseid':
+// //             normalized[key] = purchaseData["purchaseId"] ?? '';
+// //             break;
+// //           case 'vendorid':
+// //             normalized[key] = purchaseData["vendorId"] ?? '';
+// //             break;
+// //           case 'vendorname':
+// //             normalized[key] = purchaseData["vendorName"] ?? '';
+// //             break;
+// //           case 'vendoremail':
+// //             normalized[key] = purchaseData["vendorEmail"] ?? '';
+// //             break;
+// //           case 'vendormobile':
+// //             normalized[key] = purchaseData["vendorMobile"] ?? '';
+// //             break;
+// //           case 'vendoraddress':
+// //             normalized[key] = purchaseData["vendorAddress"] ?? '';
+// //             break;
+// //           case 'purchasedate':
+// //             try {
+// //               if (purchaseData["purchaseDate"] != null) {
+// //                 if (purchaseData["purchaseDate"] is DateTime) {
+// //                   normalized[key] = _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+// //                 } else if (purchaseData["purchaseDate"] is String) {
+// //                   // Try to parse ISO string
+// //                   try {
+// //                     final date = DateTime.parse(purchaseData["purchaseDate"]);
+// //                     normalized[key] = _dateFormatter.format(date);
+// //                   } catch (e) {
+// //                     normalized[key] = purchaseData["purchaseDate"];
+// //                   }
+// //                 } else {
+// //                   normalized[key] = purchaseData["purchaseDate"].toString();
+// //                 }
+// //               } else {
+// //                 normalized[key] = '';
+// //               }
+// //             } catch (e) {
+// //               print("⚠️ Error formatting purchaseDate: $e");
+// //               normalized[key] = purchaseData["purchaseDate"]?.toString() ?? '';
+// //             }
+// //             break;
+// //           case 'duedate':
+// //             try {
+// //               if (purchaseData["dueDate"] != null) {
+// //                 if (purchaseData["dueDate"] is DateTime) {
+// //                   normalized[key] = _dateFormatter.format(purchaseData["dueDate"] as DateTime);
+// //                 } else if (purchaseData["dueDate"] is String) {
+// //                   try {
+// //                     final date = DateTime.parse(purchaseData["dueDate"]);
+// //                     normalized[key] = _dateFormatter.format(date);
+// //                   } catch (e) {
+// //                     normalized[key] = purchaseData["dueDate"];
+// //                   }
+// //                 } else {
+// //                   normalized[key] = purchaseData["dueDate"].toString();
+// //                 }
+// //               } else {
+// //                 normalized[key] = '';
+// //               }
+// //             } catch (e) {
+// //               print("⚠️ Error formatting dueDate: $e");
+// //               normalized[key] = purchaseData["dueDate"]?.toString() ?? '';
+// //             }
+// //             break;
+// //           case 'subtotal':
+// //             normalized[key] = purchaseData["subtotal"]?.toString() ?? '0';
+// //             print("   Subtotal: ${normalized[key]}");
+// //             break;
+// //           case 'gstrate':
+// //             normalized[key] = purchaseData["gstRate"]?.toString() ?? '0';
+// //             print("   GST Rate: ${normalized[key]}");
+// //             break;
+// //           case 'gstamount':
+// //             normalized[key] = purchaseData["gstAmount"]?.toString() ?? '0';
+// //             print("   GST Amount: ${normalized[key]}");
+// //             break;
+// //           case 'totalamount':
+// //             normalized[key] = purchaseData["totalAmount"]?.toString() ?? '0';
+// //             print("   Total Amount: ${normalized[key]}");
+// //             break;
+// //           case 'paidamount':
+// //           // ✅ CRITICAL: This must be updated
+// //             normalized[key] = purchaseData["paidAmount"]?.toString() ?? '0';
+// //             print("   ✅ NEW Paid Amount: ${normalized[key]}");
+// //             break;
+// //           case 'pendingamount':
+// //           // ✅ CRITICAL: This must be updated
+// //             normalized[key] = purchaseData["pendingAmount"]?.toString() ?? '0';
+// //             print("   ✅ NEW Pending Amount: ${normalized[key]}");
+// //             break;
+// //           case 'paymentstatus':
+// //           // ✅ CRITICAL: This must be updated
+// //             normalized[key] = purchaseData["paymentStatus"] ?? 'Pending';
+// //             print("   ✅ NEW Status: ${normalized[key]}");
+// //             break;
+// //           case 'notes':
+// //             normalized[key] = purchaseData["notes"] ?? '';
+// //             break;
+// //           case 'userid':
+// //             normalized[key] = userId;
+// //             break;
+// //           default:
+// //             int existingIndex =
+// //             headers.indexWhere((h) => h.toString().toLowerCase() == key);
+// //             if (existingIndex != -1 && existingRow.length > existingIndex) {
+// //               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+// //             } else {
+// //               normalized[key] = '';
+// //             }
+// //             break;
+// //         }
+// //       }
+// //
+// //       // Build row data in the same order as headers
+// //       List<dynamic> rowData = [];
+// //       for (var header in headers) {
+// //         final key = header.toString().trim().toLowerCase();
+// //         rowData.add(normalized[key]?.toString() ?? '');
+// //       }
+// //
+// //       print("📤 Updating row with data: $rowData");
+// //
+// //       final range =
+// //           "$purchaseSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+// //
+// //       final valueRange = ValueRange(
+// //         values: [rowData],
+// //       );
+// //
+// //       await sheetsApi.spreadsheets.values.update(
+// //         valueRange,
+// //         spreadsheetId,
+// //         range,
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Purchase updated successfully at row $rowToUpdate");
+// //     } catch (e, stackTrace) {
+// //       print("❌ Error updating Purchase: $e");
+// //       print("Stack trace: $stackTrace");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Update purchase items with dynamic header handling
+// //   static Future<void> updatePurchaseItems(
+// //       String purchaseId, List<Map<String, dynamic>> items, String userId) async {
+// //     print("🔄 Updating Purchase Items in Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get current sheet data
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!A:Z",
+// //       );
+// //
+// //       List<dynamic> headers = [];
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("⚠️ Sheet is empty. Creating headers and adding new items...");
+// //
+// //         // Create headers from first item's keys or default structure
+// //         final sampleData = items.isNotEmpty
+// //             ? items.first
+// //             : {
+// //           'purchaseId': '',
+// //           'vendorId': '',
+// //           'itemId': '',
+// //           'itemName': '',
+// //           'description': '',
+// //           'quantity': '',
+// //           'purchasePrice': '',
+// //           'purchaseDate': '',
+// //           'gstRate': '',
+// //           'totalPrice': '',
+// //           'unit': '',
+// //           'userId': '',
+// //         };
+// //
+// //         headers = sampleData.keys.toList();
+// //
+// //         // Add header row
+// //         final headerRange = ValueRange.fromJson({
+// //           "values": [headers],
+// //         });
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           headerRange,
+// //           spreadsheetId,
+// //           "$purchaseItemSheetName!A1",
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Header row created for '$purchaseItemSheetName'");
+// //
+// //         // Now add the items
+// //         for (var item in items) {
+// //           item['purchaseId'] = purchaseId;
+// //         }
+// //         await addPurchaseItemsBatch(items, userId);
+// //         return;
+// //       }
+// //
+// //       headers = response.values![0];
+// //       print("Sheet headers: $headers");
+// //
+// //       final purchaseIdIndex = headers.indexOf("purchaseId");
+// //
+// //       if (purchaseIdIndex == -1) {
+// //         throw Exception("❌ Missing purchaseId column");
+// //       }
+// //
+// //       // Build new sheet data (keep all items except for this purchaseId)
+// //       List<List<Object?>> newSheetData = [];
+// //       newSheetData.add(headers); // Add headers first
+// //
+// //       // Add all rows that DON'T belong to our purchaseId
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length > purchaseIdIndex &&
+// //             row[purchaseIdIndex].toString() != purchaseId) {
+// //           newSheetData.add(row);
+// //         }
+// //       }
+// //
+// //       // Normalize key function
+// //       String _normalizeKey(String key) {
+// //         return key.toString().trim().toLowerCase();
+// //       }
+// //
+// //       // Add our new items to the data
+// //       for (var item in items) {
+// //         List<Object?> newRow = [];
+// //
+// //         // Normalize item keys
+// //         Map<String, dynamic> normalizedItem = {};
+// //         for (var entry in item.entries) {
+// //           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+// //         }
+// //
+// //         for (var header in headers) {
+// //           String key = _normalizeKey(header.toString());
+// //
+// //           if (key.contains('purchaseid')) {
+// //             newRow.add(item['purchaseId'] ?? purchaseId);
+// //           } else if (key.contains('userid')) {
+// //             newRow.add(item['userId'] ?? userId);
+// //           } else {
+// //             newRow.add(normalizedItem[key]?.toString() ?? '');
+// //           }
+// //         }
+// //         newSheetData.add(newRow);
+// //         print("Added row: $newRow");
+// //       }
+// //
+// //       // Clear the entire sheet
+// //       await sheetsApi.spreadsheets.values.clear(
+// //         ClearValuesRequest(),
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!A:Z",
+// //       );
+// //
+// //       // Write all data back to sheet
+// //       if (newSheetData.length > 1) {
+// //         final range =
+// //             "$purchaseItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange(values: newSheetData),
+// //           spreadsheetId,
+// //           range,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //       }
+// //
+// //       print("✅ Successfully updated ${items.length} purchase items");
+// //     } catch (e, stackTrace) {
+// //       print("❌ Error updating Purchase items: $e");
+// //       print("Stack trace: $stackTrace");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Get purchase items by purchase ID
+// //   static Future<List<PurchaseItem>> getPurchaseItemsByPurchaseId(
+// //       String purchaseId) async {
+// //     print("🔄 Fetching items for purchase: $purchaseId");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get headers
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("❌ No header row in purchase items sheet");
+// //         return [];
+// //       }
+// //
+// //       final headers =
+// //       headerResponse.values![0].map((h) => h.toString().trim()).toList();
+// //
+// //       // Fetch data rows
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$purchaseItemSheetName!A2:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("❌ No items found for purchase $purchaseId");
+// //         return [];
+// //       }
+// //
+// //       List<PurchaseItem> items = [];
+// //
+// //       for (int i = 0; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isEmpty) continue;
+// //
+// //         Map<String, dynamic> itemMap = {};
+// //         for (int j = 0; j < headers.length; j++) {
+// //           itemMap[headers[j]] = j < row.length ? row[j] : "";
+// //         }
+// //
+// //         // Filter by purchaseId
+// //         final rowPurchaseId =
+// //             itemMap['purchaseId'] ?? itemMap['PurchaseId'] ?? itemMap['PURCHASEID'];
+// //
+// //         if (rowPurchaseId?.toString() == purchaseId) {
+// //           try {
+// //             PurchaseItem item = PurchaseItem.fromJson(itemMap);
+// //             items.add(item);
+// //             print("✅ Added item: ${item.itemName}");
+// //           } catch (e) {
+// //             print("❌ Error parsing purchase item: $e");
+// //             print("❌ Item data: $itemMap");
+// //           }
+// //         }
+// //       }
+// //
+// //       print("✅ Found ${items.length} items for purchase $purchaseId");
+// //       return items;
+// //     } catch (e) {
+// //       print("❌ Error getting purchase items: $e");
+// //       return [];
+// //     }
+// //   }
+// //
+// //   /// Update stock after purchase
+// //   static Future<void> updateStockAfterPurchase(List<PurchaseItem> purchaseItems) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Fetch all stock rows once
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$itemSheetName!A:Z",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("⚠️ Stock sheet is empty - skipping stock update");
+// //         return;
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final itemIdIndex = headers.indexOf("itemId");
+// //       final stockIndex = headers.indexOf("currentStock");
+// //       final userIdIndex = headers.indexOf("userId");
+// //
+// //       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+// //         print("⚠️ Missing required columns in Stock sheet - skipping update");
+// //         return;
+// //       }
+// //
+// //       for (var item in purchaseItems) {
+// //         // Skip items without itemId (manually entered items)
+// //         if (item.itemId == null || item.itemId!.isEmpty) {
+// //           print("⚠️ Skipping stock update for manually entered item: ${item.itemName}");
+// //           continue;
+// //         }
+// //
+// //         int? rowToUpdate;
+// //         int currentStock = 0;
+// //
+// //         // Find row for this itemId + userId
+// //         for (int i = 1; i < response.values!.length; i++) {
+// //           final row = response.values![i];
+// //           if (row.length > itemIdIndex &&
+// //               row[itemIdIndex].toString() == item.itemId.toString() &&
+// //               row[userIdIndex].toString() == AppConstants.userId) {
+// //             rowToUpdate = i + 1; // rows are 1-based
+// //             if (row.length > stockIndex) {
+// //               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+// //             }
+// //             break;
+// //           }
+// //         }
+// //
+// //         if (rowToUpdate == null) {
+// //           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+// //           continue;
+// //         }
+// //
+// //         // Increase stock for purchase
+// //         final newStock = currentStock + item.quantity;
+// //
+// //         final range =
+// //             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+// //         final valueRange = ValueRange.fromJson({
+// //           "values": [
+// //             [newStock]
+// //           ]
+// //         });
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           valueRange,
+// //           spreadsheetId,
+// //           range,
+// //           valueInputOption: "USER_ENTERED",
+// //         );
+// //
+// //         print("✅ Stock updated (Purchase): ${item.itemId} → $newStock (was $currentStock)");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error updating stock after purchase: $e");
+// //     }
+// //   }
+// //
+// //   /// Cache clear methods
+// //   static Future<void> updatePurchaseWithCacheClear(
+// //       Map<String, dynamic> purchaseData, String userId) async {
+// //     print("🔄 Updating purchase with cache clear...");
+// //
+// //     final purchaseId = purchaseData['purchaseId']?.toString();
+// //
+// //     try {
+// //       await updatePurchase(purchaseData, userId);
+// //
+// //       if (purchaseId != null) {
+// //         print("✅ Cleared cache for purchase: $purchaseId");
+// //       }
+// //     } catch (e) {
+// //       print("❌ Error updating purchase: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   static Future<void> updatePurchaseItemsWithCacheClear(
+// //       String purchaseId,
+// //       List<Map<String, dynamic>> items,
+// //       String userId) async {
+// //     print("🔄 Updating purchase items with cache clear...");
+// //
+// //     try {
+// //       await updatePurchaseItems(purchaseId, items, userId);
+// //       print("✅ Cleared all caches for purchase: $purchaseId");
+// //     } catch (e) {
+// //       print("❌ Error updating items: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Add a single inventory transaction to Google Sheet
+// //   static Future<void> addInventoryTransaction(
+// //       String userId, InventoryTransaction transaction) async {
+// //     print("🔄 Adding inventory transaction to Google Sheet...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         print("⚠️ Sheet empty, creating headers...");
+// //         // Create headers if sheet is empty
+// //         final headers = [
+// //           'transactionId',
+// //           'itemId',
+// //           'itemName',
+// //           'quantity',
+// //           'type',
+// //           'reason',
+// //           'timestamp',
+// //           'notes',
+// //           'userId',
+// //         ];
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange.fromJson({"values": [headers]}),
+// //           spreadsheetId,
+// //           "$inventoryTransactionSheetName!A1:I1",
+// //           valueInputOption: "RAW",
+// //         );
+// //
+// //         print("✅ Headers created");
+// //       }
+// //
+// //       final headers = headerResponse.values?[0] ?? [];
+// //
+// //       // Prepare row values based on header order
+// //       List<dynamic> rowData = [];
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+// //
+// //       for (var header in headers) {
+// //         final headerName = header.toString().toLowerCase();
+// //
+// //         switch (headerName) {
+// //           case 'transactionid':
+// //             rowData.add(transaction.transactionId);
+// //             break;
+// //           case 'itemid':
+// //             rowData.add(transaction.itemId);
+// //             break;
+// //           case 'itemname':
+// //             rowData.add(transaction.itemName);
+// //             break;
+// //           case 'quantity':
+// //             rowData.add(transaction.quantity.toString());
+// //             break;
+// //           case 'type':
+// //             rowData.add(transaction.type);
+// //             break;
+// //           case 'reason':
+// //             rowData.add(transaction.reason);
+// //             break;
+// //           case 'timestamp':
+// //             rowData.add(_dateFormatter.format(transaction.timestamp));
+// //             break;
+// //           case 'notes':
+// //             rowData.add(transaction.notes);
+// //             break;
+// //           case 'userid':
+// //             rowData.add(userId);
+// //             break;
+// //           default:
+// //             rowData.add('');
+// //         }
+// //       }
+// //
+// //       print("Prepared row: $rowData");
+// //
+// //       // Append row to sheet
+// //       await sheetsApi.spreadsheets.values.append(
+// //         ValueRange.fromJson({"values": [rowData]}),
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!A:I",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Inventory transaction added successfully");
+// //     } catch (e) {
+// //       print("❌ Error adding inventory transaction: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Batch add multiple inventory transactions
+// //   static Future<void> addInventoryTransactionsBatch(
+// //       String userId, List<InventoryTransaction> transactions) async {
+// //     print("🔄 Adding ${transactions.length} inventory transactions...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get header row
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         final headers = [
+// //           'transactionId',
+// //           'itemId',
+// //           'itemName',
+// //           'quantity',
+// //           'type',
+// //           'reason',
+// //           'timestamp',
+// //           'notes',
+// //           'userId',
+// //         ];
+// //
+// //         await sheetsApi.spreadsheets.values.update(
+// //           ValueRange.fromJson({"values": [headers]}),
+// //           spreadsheetId,
+// //           "$inventoryTransactionSheetName!A1:I1",
+// //           valueInputOption: "RAW",
+// //         );
+// //       }
+// //
+// //       final headers = headerResponse.values?[0] ?? [];
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+// //
+// //       // Prepare all rows
+// //       List<List<dynamic>> rows = [];
+// //       for (var transaction in transactions) {
+// //         List<dynamic> rowData = [];
+// //
+// //         for (var header in headers) {
+// //           final headerName = header.toString().toLowerCase();
+// //
+// //           switch (headerName) {
+// //             case 'transactionid':
+// //               rowData.add(transaction.transactionId);
+// //               break;
+// //             case 'itemid':
+// //               rowData.add(transaction.itemId);
+// //               break;
+// //             case 'itemname':
+// //               rowData.add(transaction.itemName);
+// //               break;
+// //             case 'quantity':
+// //               rowData.add(transaction.quantity.toString());
+// //               break;
+// //             case 'type':
+// //               rowData.add(transaction.type);
+// //               break;
+// //             case 'reason':
+// //               rowData.add(transaction.reason);
+// //               break;
+// //             case 'timestamp':
+// //               rowData.add(_dateFormatter.format(transaction.timestamp));
+// //               break;
+// //             case 'notes':
+// //               rowData.add(transaction.notes);
+// //               break;
+// //             case 'userid':
+// //               rowData.add(userId);
+// //               break;
+// //             default:
+// //               rowData.add('');
+// //           }
+// //         }
+// //
+// //         rows.add(rowData);
+// //       }
+// //
+// //       print("Prepared ${rows.length} rows");
+// //
+// //       // Append all rows
+// //       await sheetsApi.spreadsheets.values.append(
+// //         ValueRange.fromJson({"values": rows}),
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!A:I",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ ${transactions.length} inventory transactions added successfully");
+// //     } catch (e) {
+// //       print("❌ Error adding inventory transactions batch: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Fetch inventory transactions for a user
+// //   static Future<List<InventoryTransaction>> getInventoryTransactions({
+// //     String? userId,
+// //     String? itemId,
+// //     String? type,
+// //     DateTime? fromDate,
+// //     DateTime? toDate,
+// //   }) async {
+// //     print("🔄 Fetching inventory transactions...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all transaction data
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!A:I",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         print("⚠️ No transactions found");
+// //         return [];
+// //       }
+// //
+// //       // Extract headers
+// //       final headers = response.values![0]
+// //           .map((h) => h.toString().trim().toLowerCase())
+// //           .toList();
+// //
+// //       print("✅ Headers: $headers");
+// //
+// //       List<InventoryTransaction> transactions = [];
+// //       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+// //
+// //       // Iterate through rows
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.isEmpty) continue;
+// //
+// //         try {
+// //           Map<String, dynamic> txnMap = {};
+// //
+// //           // Map row values to headers
+// //           for (int j = 0; j < headers.length && j < row.length; j++) {
+// //             txnMap[headers[j]] = row[j];
+// //           }
+// //
+// //           // Parse transaction
+// //           final txn = InventoryTransaction(
+// //             transactionId: txnMap['transactionid']?.toString() ?? '',
+// //             itemId: txnMap['itemid']?.toString() ?? '',
+// //             itemName: txnMap['itemname']?.toString() ?? '',
+// //             quantity: int.tryParse(txnMap['quantity']?.toString() ?? '0') ?? 0,
+// //             type: txnMap['type']?.toString() ?? '',
+// //             reason: txnMap['reason']?.toString() ?? '',
+// //             timestamp: _parseTransactionDate(txnMap['timestamp']?.toString() ?? ''),
+// //             notes: txnMap['notes']?.toString() ?? '',
+// //           );
+// //
+// //           // Apply filters
+// //           if (userId != null && txnMap['userid'].toString() != userId) continue;
+// //           if (itemId != null && txn.itemId != itemId) continue;
+// //           if (type != null && txn.type != type) continue;
+// //           if (fromDate != null && txn.timestamp.isBefore(fromDate)) continue;
+// //           if (toDate != null && txn.timestamp.isAfter(toDate)) continue;
+// //
+// //           transactions.add(txn);
+// //         } catch (e) {
+// //           print("⚠️ Error parsing transaction at row ${i + 1}: $e");
+// //           continue;
+// //         }
+// //       }
+// //
+// //       print("✅ Found ${transactions.length} transactions");
+// //       return transactions;
+// //     } catch (e) {
+// //       print("❌ Error fetching transactions: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Get transactions for a specific item
+// //   static Future<List<InventoryTransaction>> getItemTransactions(
+// //       String userId, String itemId) async {
+// //     return getInventoryTransactions(userId: userId, itemId: itemId);
+// //   }
+// //
+// //   /// Get transactions of specific type
+// //   static Future<List<InventoryTransaction>> getTransactionsByType(
+// //       String userId, String type) async {
+// //     return getInventoryTransactions(userId: userId, type: type);
+// //   }
+// //
+// //   /// Get transactions within date range
+// //   static Future<List<InventoryTransaction>> getTransactionsByDateRange(
+// //       String userId, DateTime fromDate, DateTime toDate) async {
+// //     return getInventoryTransactions(
+// //       userId: userId,
+// //       fromDate: fromDate,
+// //       toDate: toDate,
+// //     );
+// //   }
+// //
+// //   /// Get transaction statistics for inventory analysis
+// //   static Future<Map<String, dynamic>> getInventoryStats(String userId) async {
+// //     print("🔄 Calculating inventory statistics...");
+// //
+// //     try {
+// //       final transactions = await getInventoryTransactions(userId: userId);
+// //
+// //       if (transactions.isEmpty) {
+// //         return {
+// //           'totalTransactions': 0,
+// //           'totalAdded': 0,
+// //           'totalRemoved': 0,
+// //           'totalSales': 0,
+// //           'totalReturns': 0,
+// //           'totalAdjustments': 0,
+// //           'itemsAffected': 0,
+// //         };
+// //       }
+// //
+// //       int totalAdded = 0;
+// //       int totalRemoved = 0;
+// //       int totalSales = 0;
+// //       int totalReturns = 0;
+// //       int totalAdjustments = 0;
+// //       Set<String> itemIds = {};
+// //
+// //       for (var txn in transactions) {
+// //         itemIds.add(txn.itemId);
+// //
+// //         switch (txn.type) {
+// //           case 'add':
+// //             totalAdded += txn.quantity;
+// //             break;
+// //           case 'remove':
+// //             totalRemoved += txn.quantity;
+// //             break;
+// //           case 'sale':
+// //             totalSales += txn.quantity;
+// //             break;
+// //           case 'return':
+// //             totalReturns += txn.quantity;
+// //             break;
+// //           case 'adjustment':
+// //             totalAdjustments += txn.quantity;
+// //             break;
+// //         }
+// //       }
+// //
+// //       final stats = {
+// //         'totalTransactions': transactions.length,
+// //         'totalAdded': totalAdded,
+// //         'totalRemoved': totalRemoved,
+// //         'totalSales': totalSales,
+// //         'totalReturns': totalReturns,
+// //         'totalAdjustments': totalAdjustments,
+// //         'itemsAffected': itemIds.length,
+// //         'netChange': totalAdded - totalRemoved,
+// //       };
+// //
+// //       print("✅ Statistics: $stats");
+// //       return stats;
+// //     } catch (e) {
+// //       print("❌ Error calculating stats: $e");
+// //       return {};
+// //     }
+// //   }
+// //
+// //   /// Delete old transactions (for maintenance)
+// //   static Future<void> deleteOldTransactions(
+// //       String userId, DateTime beforeDate) async {
+// //     print("🗑️ Deleting transactions before $beforeDate for user $userId");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // Get all transactions
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId,
+// //         "$inventoryTransactionSheetName!A:I",
+// //       );
+// //
+// //       if (response.values == null || response.values!.length <= 1) {
+// //         print("⚠️ No data to delete");
+// //         return;
+// //       }
+// //
+// //       final headers = response.values![0];
+// //       final userIdIndex = headers.indexOf('userId');
+// //       final timestampIndex = headers.indexOf('timestamp');
+// //
+// //       if (userIdIndex == -1 || timestampIndex == -1) {
+// //         throw Exception("Required columns not found");
+// //       }
+// //
+// //       // Get sheet ID for batch delete
+// //       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+// //       final sheet = spreadsheet.sheets!
+// //           .firstWhere((s) => s.properties?.title == inventoryTransactionSheetName);
+// //       final sheetId = sheet.properties!.sheetId!;
+// //
+// //       List<int> rowsToDelete = [];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //
+// //         if (row.length > userIdIndex && row[userIdIndex].toString() == userId) {
+// //           if (row.length > timestampIndex) {
+// //             final timestamp = _parseTransactionDate(row[timestampIndex].toString());
+// //             if (timestamp.isBefore(beforeDate)) {
+// //               rowsToDelete.add(i);
+// //             }
+// //           }
+// //         }
+// //       }
+// //
+// //       if (rowsToDelete.isEmpty) {
+// //         print("ℹ️ No transactions to delete");
+// //         return;
+// //       }
+// //
+// //       // Delete rows in reverse order
+// //       List<Request> deleteRequests = [];
+// //       for (int rowIndex in rowsToDelete.reversed) {
+// //         deleteRequests.add(
+// //           Request()
+// //             ..deleteDimension = (DeleteDimensionRequest()
+// //               ..range = (DimensionRange()
+// //                 ..sheetId = sheetId
+// //                 ..dimension = 'ROWS'
+// //                 ..startIndex = rowIndex
+// //                 ..endIndex = rowIndex + 1)),
+// //         );
+// //       }
+// //
+// //       final batchRequest = BatchUpdateSpreadsheetRequest()..requests = deleteRequests;
+// //
+// //       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+// //
+// //       print("✅ Deleted ${rowsToDelete.length} old transactions");
+// //     } catch (e) {
+// //       print("❌ Error deleting transactions: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   /// Helper function to parse transaction timestamps
+// //   static DateTime _parseTransactionDate(String dateString) {
+// //     if (dateString.isEmpty) return DateTime.now();
+// //
+// //     try {
+// //       // Try format: dd/MM/yyyy HH:mm:ss
+// //       final formats = [
+// //         'dd/MM/yyyy HH:mm:ss',
+// //         'dd/MM/yyyy',
+// //         'yyyy-MM-dd HH:mm:ss',
+// //         'yyyy-MM-dd',
+// //       ];
+// //
+// //       for (var format in formats) {
+// //         try {
+// //           return DateFormat(format).parseStrict(dateString);
+// //         } catch (_) {
+// //           continue;
+// //         }
+// //       }
+// //
+// //       // Fallback to parse ISO format
+// //       return DateTime.parse(dateString);
+// //     } catch (e) {
+// //       print("⚠️ Could not parse date '$dateString', using current time");
+// //       return DateTime.now();
+// //     }
+// //   }
+// // }
+//
+//
+// /// Updated GoogleSheetService with per-user spreadsheet support
+// ///
+// /// CHANGES REQUIRED IN YOUR EXISTING CODE:
+// /// 1. Replace static spreadsheetId with getUserSpreadsheetId()
+// /// 2. Update all method signatures to accept userId as first parameter
+// /// 3. Initialize UserSpreadsheetManager on app startup
+//
+//
+//
+// /// Manages separate spreadsheets for each user
+// class UserSpreadsheetManager {
+//   static const String _storageKey = 'user_spreadsheets_map';
+//   static const String _templateSpreadsheetId = 'YOUR_TEMPLATE_SPREADSHEET_ID'; // Master template
+//
+//   // In-memory cache
+//   static Map<String, String> _userSpreadsheets = {};
+//   static bool _isInitialized = false;
+//
+//   /// Initialize the manager (call on app startup)
+//   static Future<void> initialize() async {
+//     if (_isInitialized) return;
+//
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final jsonString = prefs.getString(_storageKey);
+//
+//       if (jsonString != null) {
+//         final Map<String, dynamic> decoded = jsonDecode(jsonString);
+//         _userSpreadsheets = decoded.map((key, value) => MapEntry(key, value.toString()));
+//         print("✅ Loaded ${_userSpreadsheets.length} user spreadsheets from storage");
+//       }
+//
+//       _isInitialized = true;
+//     } catch (e) {
+//       print("❌ Error initializing UserSpreadsheetManager: $e");
+//       _userSpreadsheets = {};
+//     }
+//   }
+//
+//   /// Get spreadsheet ID for a user (returns existing or creates new)
+//   static Future<String> getSpreadsheetId(String userId) async {
+//     await initialize();
+//
+//     if (_userSpreadsheets.containsKey(userId)) {
+//       print("✅ Found existing spreadsheet for user: $userId");
+//       return _userSpreadsheets[userId]!;
+//     }
+//
+//     // Create new spreadsheet for user
+//     print("🔄 Creating new spreadsheet for user: $userId");
+//     final newSpreadsheetId = await _createUserSpreadsheet(userId);
+//
+//     // Save to cache and storage
+//     _userSpreadsheets[userId] = newSpreadsheetId;
+//     await _saveToStorage();
+//
+//     return newSpreadsheetId;
+//   }
+//
+//   /// Create a new spreadsheet for user by copying template
+//   static Future<String> _createUserSpreadsheet(String userId) async {
+//     try {
+//       final client = await GoogleSheetService._getAuthClient();
+//       final driveApi = drive.DriveApi(client);
+//
+//       // Copy the template spreadsheet
+//       final copiedFile = await driveApi.files.copy(
+//         drive.File()
+//           ..name = 'InvoiceSathi_$userId'
+//           ..description = 'Spreadsheet for user $userId',
+//         _templateSpreadsheetId,
+//       );
+//
+//       final newSpreadsheetId = copiedFile.id!;
+//       print("✅ Created spreadsheet for $userId: $newSpreadsheetId");
+//
+//       // Optional: Share with user if you have their email
+//       // await _shareSpreadsheetWithUser(newSpreadsheetId, userEmail);
+//
+//       return newSpreadsheetId;
+//
+//     } catch (e) {
+//       print("❌ Error creating user spreadsheet: $e");
+//
+//       // Fallback: Create blank spreadsheet
+//       return await _createBlankSpreadsheet(userId);
+//     }
+//   }
+//
+//   /// Create a blank spreadsheet with all required sheets
+//   static Future<String> _createBlankSpreadsheet(String userId) async {
+//     try {
+//       final client = await GoogleSheetService._getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Create new spreadsheet
+//       final spreadsheet = Spreadsheet()
+//         ..properties = (SpreadsheetProperties()
+//           ..title = 'InvoiceSathi_$userId')
+//         ..sheets = [
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'Item'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 10)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'Invoice'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 20)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'InvoiceItems'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 15)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'Challan'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 20)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'ChallanItems'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 15)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'Purchase'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 20)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'PurchaseItems'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 15)),
+//           Sheet()
+//             ..properties = (SheetProperties()
+//               ..title = 'InventoryTransactions'
+//               ..gridProperties = (GridProperties()
+//                 ..rowCount = 1000
+//                 ..columnCount = 10)),
+//         ];
+//
+//       final created = await sheetsApi.spreadsheets.create(spreadsheet);
+//       final newSpreadsheetId = created.spreadsheetId!;
+//
+//       print("✅ Created blank spreadsheet: $newSpreadsheetId");
+//
+//       // Add headers to all sheets
+//       await _initializeSheetHeaders(newSpreadsheetId, sheetsApi);
+//
+//       return newSpreadsheetId;
+//
+//     } catch (e) {
+//       print("❌ Error creating blank spreadsheet: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Initialize headers for all sheets
+//   static Future<void> _initializeSheetHeaders(String spreadsheetId, SheetsApi sheetsApi) async {
+//     try {
+//       // Item sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['itemId', 'itemName', 'price', 'gstPercent', 'unitOfMeasurement',
+//               'currentStock', 'detailRequirement', 'isActive', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "Item!A1:I1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // Invoice sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['invoiceId', 'customerId', 'customerName', 'customerEmail', 'mobile',
+//               'customerAddress', 'issueDate', 'dueDate', 'subtotal', 'gstAmount',
+//               'totalAmount', 'receivedAmount', 'pendingAmount', 'status', 'notes', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "Invoice!A1:P1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // InvoiceItems sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['invoiceId', 'customerId', 'itemId', 'itemName', 'description',
+//               'quantity', 'rate', 'gstRate', 'gstAmount', 'totalPrice', 'unit', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "InvoiceItems!A1:L1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // Challan sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['challanId', 'customerName', 'customerEmail', 'customerPhone',
+//               'customerAddress', 'challanDate', 'subtotal', 'gstRate', 'gstAmount',
+//               'totalAmount', 'status', 'statusProgress', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "Challan!A1:M1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // ChallanItems sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['challanId', 'customerId', 'itemId', 'itemName', 'description',
+//               'quantity', 'price', 'challanDate', 'gstRate', 'gstAmount',
+//               'amountWithGst', 'totalPrice', 'unit', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "ChallanItems!A1:N1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // Purchase sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['purchaseId', 'vendorId', 'vendorName', 'vendorEmail', 'vendorMobile',
+//               'vendorAddress', 'purchaseDate', 'dueDate', 'subtotal', 'gstRate',
+//               'gstAmount', 'totalAmount', 'paidAmount', 'pendingAmount',
+//               'paymentStatus', 'notes', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "Purchase!A1:Q1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // PurchaseItems sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['purchaseId', 'vendorId', 'itemId', 'itemName', 'description',
+//               'quantity', 'purchasePrice', 'purchaseDate', 'gstRate', 'totalPrice',
+//               'unit', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "PurchaseItems!A1:L1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       // InventoryTransactions sheet headers
+//       await sheetsApi.spreadsheets.values.update(
+//         ValueRange.fromJson({
+//           "values": [
+//             ['transactionId', 'itemId', 'itemName', 'quantity', 'type',
+//               'reason', 'timestamp', 'notes', 'userId']
+//           ]
+//         }),
+//         spreadsheetId,
+//         "InventoryTransactions!A1:I1",
+//         valueInputOption: "RAW",
+//       );
+//
+//       print("✅ Initialized all sheet headers");
+//
+//     } catch (e) {
+//       print("❌ Error initializing headers: $e");
+//     }
+//   }
+//
+//   /// Save to persistent storage
+//   static Future<void> _saveToStorage() async {
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final jsonString = jsonEncode(_userSpreadsheets);
+//       await prefs.setString(_storageKey, jsonString);
+//       print("✅ Saved ${_userSpreadsheets.length} user spreadsheets to storage");
+//     } catch (e) {
+//       print("❌ Error saving to storage: $e");
+//     }
+//   }
+//
+//   /// Check if user has a spreadsheet
+//   static Future<bool> hasSpreadsheet(String userId) async {
+//     await initialize();
+//     return _userSpreadsheets.containsKey(userId);
+//   }
+//
+//   /// Get all user spreadsheets (admin function)
+//   static Future<Map<String, String>> getAllUserSpreadsheets() async {
+//     await initialize();
+//     return Map.from(_userSpreadsheets);
+//   }
+//
+//   /// Delete user spreadsheet (cleanup function)
+//   static Future<void> deleteUserSpreadsheet(String userId) async {
+//     await initialize();
+//
+//     if (!_userSpreadsheets.containsKey(userId)) {
+//       print("⚠️ No spreadsheet found for user: $userId");
+//       return;
+//     }
+//
+//     try {
+//       final spreadsheetId = _userSpreadsheets[userId]!;
+//
+//       // Optional: Delete from Google Drive
+//       // final client = await GoogleSheetService._getAuthClient();
+//       // final driveApi = drive.DriveApi(client);
+//       // await driveApi.files.delete(spreadsheetId);
+//
+//       _userSpreadsheets.remove(userId);
+//       await _saveToStorage();
+//
+//       print("✅ Deleted spreadsheet for user: $userId");
+//     } catch (e) {
+//       print("❌ Error deleting spreadsheet: $e");
+//     }
+//   }
+//
+//   /// Clear all cached data (logout function)
+//   static Future<void> clearCache() async {
+//     _userSpreadsheets.clear();
+//     _isInitialized = false;
+//
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.remove(_storageKey);
+//
+//     print("✅ Cleared spreadsheet cache");
+//   }
+//
+//   /// Manual registration (if spreadsheet already exists)
+//   static Future<void> registerUserSpreadsheet(String userId, String spreadsheetId) async {
+//     await initialize();
+//
+//     _userSpreadsheets[userId] = spreadsheetId;
+//     await _saveToStorage();
+//
+//     print("✅ Registered spreadsheet for user $userId: $spreadsheetId");
+//   }
+//
+//   /// Get spreadsheet URL for sharing
+//   static String getSpreadsheetUrl(String spreadsheetId) {
+//     return 'https://docs.google.com/spreadsheets/d/$spreadsheetId/edit';
+//   }
+//
+//   /// Share spreadsheet with user email (optional)
+//   static Future<void> shareSpreadsheetWithUser(
+//       String spreadsheetId, String userEmail) async {
+//     try {
+//       final client = await GoogleSheetService._getAuthClient();
+//       final driveApi = drive.DriveApi(client);
+//
+//       final permission = drive.Permission()
+//         ..type = 'user'
+//         ..role = 'writer'
+//         ..emailAddress = userEmail;
+//
+//       await driveApi.permissions.create(permission, spreadsheetId);
+//
+//       print("✅ Shared spreadsheet with $userEmail");
+//     } catch (e) {
+//       print("❌ Error sharing spreadsheet: $e");
+//     }
+//   }
+// }
+// class GoogleSheetService {
+//   static String get spreadsheetId => AppConstants.spreadsheetId.isNotEmpty
+//       ? AppConstants.spreadsheetId
+//       : "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ";
+//   //static const spreadsheetId = "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ"; // from Sheet URL
+//   ///static String spreadsheetId = "${AppConstants.spreadsheetId}"; // from Sheet URL
+//   static const itemSheetName = "Item"; // your sheet/tab name
+//   static const invoiceSheetName = "Invoice"; // your sheet/tab name
+//   static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
+//   static const challanSheetName = "Challan"; // your sheet/tab name
+//   static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
+//   static const inventoryTransactionSheetName = "InventoryTransactions"; // Create this sheet in Google Sheets
+//
+//   static const purchaseSheetName = "Purchase";
+//   static const purchaseItemSheetName = "PurchaseItems";
+//
+//   static List<String>? _cachedHeaders;
+//   static final Map<String, List<ChallanItem>> _challanCache = {};
+//   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
+//
+//   static final Map<String, List<dynamic>> _itemCache = {};
+//   static final Map<String, DateTime> _cacheTimestamps = {};
+//   static const Duration _cacheValidDuration = Duration(minutes: 5);
+//
+//   ///part-1 ----------------------
+//
+//   /// ✅ Helper to get user-specific spreadsheet ID
+//   static Future<String> getUserSpreadsheetId(String userId) async {
+//     return await UserSpreadsheetManager.getSpreadsheetId(userId);
+//   }
+//
+//   /// Load credentials from assets
+//   static Future<AuthClient> _getAuthClient() async {
+//     final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+//     final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+//     final scopes = [SheetsApi.spreadsheetsScope];
+//     return await clientViaServiceAccount(accountCredentials, scopes);
+//   }
+//
+//   // ===================================================================
+// // PART 1: ITEM METHODS (Updated for Multi-User Support)
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Add a new item row to Google Sheet
+//   static Future<void> addItem(String userId, Item item) async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     // ✅ NEW: Get user-specific spreadsheet ID
+//     final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//     print("---------========Sheet API...........-----${sheetsApi}");
+//
+//     // Prepare row values in correct column order
+//     final values = [
+//       item.itemId,
+//       item.itemName,
+//       item.price.toString(),
+//       item.gstPercent.toString(),
+//       item.unitOfMeasurement,
+//       item.currentStock.toString(),
+//       item.detailRequirement,
+//       item.isActive ? "TRUE" : "FALSE",
+//       userId,
+//     ];
+//
+//     // Append row
+//     await sheetsApi.spreadsheets.values.append(
+//       ValueRange.fromJson({
+//         "values": [values]
+//       }),
+//       spreadsheetId,  // ✅ Now uses user-specific ID
+//       "$itemSheetName!A:I",
+//       valueInputOption: "RAW",
+//     );
+//
+//     print("✅ Item added successfully to Google Sheet");
+//   }
+//
+//   /// ✅ UPDATED: Get items from Google Sheet with user filtering
+//   static Future<List<Item>> getItems({required String userId}) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       print("---------========Sheets API Get Items...........-----${sheetsApi}");
+//
+//       // Get all data from the sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:I",
+//       );
+//
+//       print("Response: ${response.values}");
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("No data found in sheet");
+//         return <Item>[];
+//       }
+//
+//       List<Item> items = [];
+//
+//       // Skip header row (index 0) if it exists
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // Ensure row has enough columns
+//         if (row.length < 9) {
+//           print("Skipping incomplete row ${i}: $row");
+//           continue;
+//         }
+//
+//         try {
+//           // Parse row data according to your schema
+//           final item = Item(
+//             itemId: row[0]?.toString() ?? '',
+//             itemName: row[1]?.toString() ?? '',
+//             price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
+//             gstPercent: double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
+//             unitOfMeasurement: row[4]?.toString() ?? '',
+//             currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
+//             detailRequirement: row[6]?.toString() ?? '',
+//             isActive: (row[7]?.toString().toLowerCase() == 'true'),
+//           );
+//
+//           // ✅ Filter by userId (column I, index 8)
+//           String rowUserId = row[8]?.toString() ?? '';
+//           if (rowUserId == userId) {
+//             items.add(item);
+//           }
+//
+//         } catch (e) {
+//           print("Error parsing row ${i}: $e");
+//           print("Row data: $row");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Retrieved ${items.length} items from Google Sheet");
+//       return items;
+//
+//     } catch (e) {
+//       print("Error in getItems: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Edit item using Google Sheets API (delete and re-add approach)
+//   static Future<void> editItemAlternative3(String userId, Item item) async {
+//     print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get sheet metadata to find the correct sheetId
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == itemSheetName);
+//       final sheetId = sheet.properties!.sheetId!;
+//
+//       // Step 1: Find and delete the existing item
+//       print("Step 1: Finding item to delete...");
+//
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("No data found in sheet");
+//       }
+//
+//       int? targetRowIndex;
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         // ✅ Check both itemId AND userId
+//         if (row.isNotEmpty &&
+//             row[0]?.toString() == item.itemId &&
+//             row.length > 8 &&
+//             row[8]?.toString() == userId) {
+//           targetRowIndex = i; // 0-based index for delete operation
+//           break;
+//         }
+//       }
+//
+//       if (targetRowIndex == null) {
+//         throw Exception("Item with ID ${item.itemId} not found for user $userId");
+//       }
+//
+//       print("Found item at row index: $targetRowIndex");
+//
+//       // Delete the row using batch update
+//       final deleteRequests = [
+//         Request()
+//           ..deleteDimension = (DeleteDimensionRequest()
+//             ..range = (DimensionRange()
+//               ..sheetId = sheetId
+//               ..dimension = 'ROWS'
+//               ..startIndex = targetRowIndex
+//               ..endIndex = targetRowIndex + 1))
+//       ];
+//
+//       final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
+//         ..requests = deleteRequests;
+//
+//       print("Deleting row...");
+//       await sheetsApi.spreadsheets.batchUpdate(
+//         deleteBatchRequest,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//       );
+//
+//       print("Delete successful");
+//
+//       // Step 2: Add the updated item (small delay for consistency)
+//       await Future.delayed(Duration(seconds: 1));
+//
+//       print("Step 2: Adding updated item...");
+//
+//       // Prepare updated row values
+//       final values = [
+//         item.itemId,
+//         item.itemName,
+//         item.price.toString(),
+//         item.gstPercent.toString(),
+//         item.unitOfMeasurement,
+//         item.currentStock.toString(),
+//         item.detailRequirement,
+//         item.isActive ? "TRUE" : "FALSE",
+//         userId,
+//       ];
+//
+//       print("Adding values: $values");
+//
+//       // Append the updated row
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({
+//           "values": [values]
+//         }),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:I",
+//         valueInputOption: "RAW",
+//       );
+//
+//       print("Add successful - Item edited using delete and add approach");
+//
+//     } catch (e) {
+//       print("Error in editItemAlternative3: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Delete items
+//   static Future<void> deleteItems(String userId, Item item) async {
+//     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Step 1: Fetch all rows to locate the row for this item
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Stock sheet is empty, cannot delete item.");
+//       }
+//
+//       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Required columns (itemId, userId) not found in sheet.");
+//       }
+//
+//       int? rowToDelete;
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > itemIdIndex &&
+//             row[itemIdIndex].toString() == item.itemId &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToDelete = i + 1; // Google Sheets rows are 1-based
+//           break;
+//         }
+//       }
+//
+//       if (rowToDelete == null) {
+//         throw Exception("❌ Item ${item.itemId} not found for user $userId.");
+//       }
+//
+//       print("🗑 Deleting item at row $rowToDelete...");
+//
+//       // Step 2: Clear the row
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A$rowToDelete:Z$rowToDelete",
+//       );
+//
+//       print("✅ Item ${item.itemId} deleted from row $rowToDelete.");
+//
+//     } catch (e) {
+//       print("❌ Error in deleteItems: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   // ===================================================================
+// // PART 2: INVOICE METHODS (Updated for Multi-User Support)
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Get invoices from Google Sheet
+//   static Future<List<Invoice>> getInvoices({String? type, required String userId}) async {
+//     print("🔄 Fetching invoices from Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("No header row found in sheet");
+//         return <Invoice>[];
+//       }
+//
+//       final headers = headerResponse.values![0];
+//
+//       // Get all data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
+//         print("No invoice data found in sheet");
+//         return <Invoice>[];
+//       }
+//
+//       List<Invoice> invoices = [];
+//
+//       // Skip header row
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+//
+//         try {
+//           Map<String, dynamic> rowData = {};
+//           for (int j = 0; j < min(row.length, headers.length); j++) {
+//             final headerKey = headers[j].toString();
+//             final cellValue = row[j];
+//
+//             // Parse date fields
+//             if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+//               if (cellValue != null && cellValue.toString().isNotEmpty) {
+//                 final parsedDate = _parseDate(cellValue.toString());
+//                 rowData[headerKey] = parsedDate;
+//               } else {
+//                 rowData[headerKey] = null;
+//               }
+//             } else {
+//               rowData[headerKey] = cellValue;
+//             }
+//           }
+//
+//           final invoice = Invoice.fromMap(rowData);
+//
+//           // ✅ Filter by userId
+//           if (invoice.userId != userId) continue;
+//
+//           // Apply type filter
+//           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+//           if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+//
+//           invoices.add(invoice);
+//
+//         } catch (e, stackTrace) {
+//           print("❌ Error parsing invoice row ${i}: $e");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
+//       return invoices;
+//
+//     } catch (e) {
+//       print("❌ Error in getInvoices: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Add invoice to Google Sheet
+//   static Future<void> addInvoice(String userId, dynamic invoiceData) async {
+//     print("🔄 Adding invoice to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       print("Sheets API initialized for adding invoice");
+//
+//       String targetSheetName = "Invoice";
+//       print("Using sheet: $targetSheetName");
+//
+//       // First, get the header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$targetSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("Sheet headers: $headers");
+//
+//       List<List<dynamic>> rowsToAdd = [];
+//
+//       if (invoiceData is Map<String, dynamic>) {
+//         rowsToAdd.add(_prepareInvoiceRow(invoiceData, userId, headers));
+//       } else if (invoiceData is List<Invoice>) {
+//         for (Invoice invoice in invoiceData) {
+//           rowsToAdd.add(_prepareInvoiceRow(invoice.toMap(), userId, headers));
+//         }
+//       } else if (invoiceData is Invoice) {
+//         rowsToAdd.add(_prepareInvoiceRow(invoiceData.toMap(), userId, headers));
+//       } else {
+//         throw Exception("Invalid invoice data format: ${invoiceData.runtimeType}");
+//       }
+//
+//       print("Prepared ${rowsToAdd.length} rows to add");
+//
+//       // Add all rows to the sheet
+//       final valueRange = ValueRange.fromJson({
+//         "values": rowsToAdd
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Invoice(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Invoice(s) added successfully");
+//       }
+//
+//     } catch (e) {
+//       print("❌ Error adding invoice: $e");
+//       throw Exception("Failed to add invoice: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update invoice
+//   static Future<void> updateInvoice(String userId, Map<String, dynamic> invoiceData) async {
+//     print("🔄 Updating invoice in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       const targetSheetName = "Invoice";
+//
+//       // 1. Get headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No headers found in sheet");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("📋 Sheet Headers: $headers");
+//
+//       // 2. Find row number
+//       final allRows = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!A:Z",
+//       );
+//
+//       int rowIndex = -1;
+//
+//       for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+//         final row = allRows.values![i];
+//         // ✅ Check both invoiceId AND userId
+//         if (row.isNotEmpty &&
+//             row[0].toString() == invoiceData['invoiceId'] &&
+//             row.length > headers.indexOf('userId') &&
+//             row[headers.indexOf('userId')].toString() == userId) {
+//           rowIndex = i + 1; // Google Sheets is 1-based
+//           break;
+//         }
+//       }
+//
+//       if (rowIndex == -1) {
+//         throw Exception("Invoice ID not found: ${invoiceData['invoiceId']} for user $userId");
+//       }
+//
+//       print("🎯 Found invoice at row $rowIndex");
+//
+//       // 3. Build complete row data
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       List<dynamic> rowData = [];
+//
+//       for (var header in headers) {
+//         String headerLower = header.toString().toLowerCase().trim();
+//
+//         String? value;
+//
+//         if (headerLower.contains('invoiceid')) {
+//           value = invoiceData['invoiceId']?.toString();
+//         } else if (headerLower.contains('customerid')) {
+//           value = invoiceData['customerId']?.toString();
+//         } else if (headerLower.contains('customername')) {
+//           value = invoiceData['customerName']?.toString();
+//         } else if (headerLower.contains('customeremail')) {
+//           value = invoiceData['customerEmail']?.toString();
+//         } else if (headerLower == 'mobile') {
+//           value = invoiceData['mobile']?.toString();
+//         } else if (headerLower.contains('customeraddress')) {
+//           value = invoiceData['customerAddress']?.toString();
+//         } else if (headerLower.contains('issuedate')) {
+//           if (invoiceData['issueDate'] != null) {
+//             try {
+//               DateTime date = invoiceData['issueDate'] is String
+//                   ? DateTime.parse(invoiceData['issueDate'])
+//                   : invoiceData['issueDate'] as DateTime;
+//               value = _dateFormatter.format(date);
+//             } catch (e) {
+//               value = invoiceData['issueDate']?.toString();
+//             }
+//           }
+//         } else if (headerLower.contains('duedate')) {
+//           if (invoiceData['dueDate'] != null) {
+//             try {
+//               DateTime date = invoiceData['dueDate'] is String
+//                   ? DateTime.parse(invoiceData['dueDate'])
+//                   : invoiceData['dueDate'] as DateTime;
+//               value = _dateFormatter.format(date);
+//             } catch (e) {
+//               value = invoiceData['dueDate']?.toString();
+//             }
+//           }
+//         } else if (headerLower == 'subtotal') {
+//           value = invoiceData['subtotal']?.toString();
+//         } else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
+//           value = invoiceData['gstAmount']?.toString();
+//         } else if (headerLower.contains('totalamount')) {
+//           value = invoiceData['totalAmount']?.toString();
+//         } else if (headerLower.contains('receivedamount')) {
+//           value = invoiceData['receivedAmount']?.toString();
+//         } else if (headerLower.contains('pendingamount')) {
+//           value = invoiceData['pendingAmount']?.toString();
+//         } else if (headerLower == 'status') {
+//           value = invoiceData['status']?.toString();
+//         } else if (headerLower == 'notes') {
+//           value = invoiceData['notes']?.toString();
+//         } else if (headerLower.contains('userid')) {
+//           value = userId;
+//         } else {
+//           value = invoiceData[header.toString()]?.toString();
+//         }
+//
+//         rowData.add(value ?? '');
+//       }
+//
+//       print("📝 Prepared row data: $rowData");
+//
+//       // 4. Update row
+//       final valueRange = ValueRange.fromJson({
+//         "values": [rowData],
+//       });
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!A$rowIndex:Z$rowIndex",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Invoice updated successfully at row $rowIndex");
+//     } catch (e, st) {
+//       print("❌ Error updating invoice: $e\n$st");
+//       throw Exception("Failed to update invoice: ${e.toString()}");
+//     }
+//   }
+//
+//   // ===================================================================
+// // PART 2 (Continued): INVOICE ITEMS & STOCK METHODS
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Add invoice items in batch
+//   static Future<void> addInvoiceItemsBatch(
+//       String userId, List<Map<String, dynamic>> itemsData) async {
+//     print("🔄 Adding ${itemsData.length} invoice items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("InvoiceItems headers: $headers");
+//
+//       // ✅ Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString();
+//           final headerNameLower = headerName.toLowerCase();
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else {
+//             var value = '';
+//
+//             if (itemData.containsKey(headerName)) {
+//               value = itemData[headerName]?.toString() ?? '';
+//             } else {
+//               for (var key in itemData.keys) {
+//                 if (key.toString().toLowerCase() == headerNameLower) {
+//                   value = itemData[key]?.toString() ?? '';
+//                   break;
+//                 }
+//               }
+//             }
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       // Append all rows at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} invoice items added successfully.");
+//       } else {
+//         print("✅ Invoice items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding invoice items batch: $e");
+//       throw Exception("Failed to add invoice items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update invoice items
+//   static Future<void> updateInvoiceItems(
+//       String userId, String invoiceId, List<Map<String, dynamic>> items) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       const String itemSheet = "InvoiceItems";
+//
+//       final headerRes = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheet!1:1",
+//       );
+//       final headers = headerRes.values![0];
+//
+//       final allRows = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         itemSheet,
+//       );
+//
+//       final values = allRows.values ?? [];
+//       final rowsToUpdate = <int>[];
+//
+//       // ✅ Find rows matching invoiceId AND userId
+//       for (int i = 1; i < values.length; i++) {
+//         if (values[i].isNotEmpty &&
+//             values[i][0].toString().trim() == invoiceId) {
+//           // ✅ Additional check: verify userId matches
+//           final userIdIndex = headers.indexOf('userId');
+//           if (userIdIndex != -1 &&
+//               values[i].length > userIdIndex &&
+//               values[i][userIdIndex].toString() == userId) {
+//             rowsToUpdate.add(i + 1);
+//           }
+//         }
+//       }
+//
+//       for (int i = 0; i < rowsToUpdate.length; i++) {
+//         final sheetRow = values[rowsToUpdate[i] - 1];
+//
+//         if (i < items.length) {
+//           final item = items[i];
+//           item['invoiceId'] = invoiceId;
+//           item['userId'] = userId;
+//
+//           final rowValues = <String>[];
+//           for (int j = 0; j < headers.length; j++) {
+//             final key = headers[j].toString().trim();
+//             final newVal = item[key]?.toString();
+//
+//             if (newVal != null && newVal.isNotEmpty) {
+//               rowValues.add(newVal);
+//             } else if (j < sheetRow.length) {
+//               rowValues.add(sheetRow[j]?.toString() ?? "");
+//             } else {
+//               rowValues.add("");
+//             }
+//           }
+//
+//           final range =
+//               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+//
+//           await sheetsApi.spreadsheets.values.update(
+//             ValueRange(values: [rowValues]),
+//             spreadsheetId,  // ✅ Now uses user-specific ID
+//             range,
+//             valueInputOption: "USER_ENTERED",
+//           );
+//         } else {
+//           final range =
+//               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+//           await sheetsApi.spreadsheets.values.clear(
+//             ClearValuesRequest(),
+//             spreadsheetId,  // ✅ Now uses user-specific ID
+//             range,
+//           );
+//         }
+//       }
+//
+//       if (items.length > rowsToUpdate.length) {
+//         for (int i = rowsToUpdate.length; i < items.length; i++) {
+//           final item = items[i];
+//           item['invoiceId'] = invoiceId;
+//           item['userId'] = userId;
+//
+//           final rowValues = headers.map((h) {
+//             final key = h.toString().trim();
+//             return item[key]?.toString() ?? "";
+//           }).toList();
+//
+//           await sheetsApi.spreadsheets.values.append(
+//             ValueRange(values: [rowValues]),
+//             spreadsheetId,  // ✅ Now uses user-specific ID
+//             itemSheet,
+//             valueInputOption: "USER_ENTERED",
+//           );
+//         }
+//       }
+//
+//       print("✅ InvoiceItems updated for $invoiceId");
+//
+//       // ✅ CRITICAL: Clear cache after successful update
+//       clearInvoiceItemCache(invoiceId);
+//       print("✅ Cache cleared after update");
+//
+//     } catch (e, st) {
+//       print("❌ Error in updateInvoiceItems: $e\n$st");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get invoice items by invoice ID
+//   static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(
+//       String userId, String invoiceId) async {
+//     print("🔄 Fetching items for invoice: $invoiceId");
+//
+//     // If already cached, return directly
+//     if (_invoiceItemCache.containsKey(invoiceId)) {
+//       print("⚡ Returning cached items for invoice $invoiceId");
+//       return _invoiceItemCache[invoiceId]!;
+//     }
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       final headers = await _getHeaders(sheetsApi, sheetName: invoiceItemSheetName, spreadsheetId: spreadsheetId);
+//
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for invoice $invoiceId");
+//         return <InvoiceItem>[];
+//       }
+//
+//       List<InvoiceItem> items = [];
+//       int foundCount = 0;
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         // Create map using original headers
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by invoiceId
+//         final rowInvoiceId = itemMap['invoiceId'] ??
+//             itemMap['InvoiceId'] ??
+//             itemMap['INVOICEID'];
+//
+//         // ✅ Also verify userId matches
+//         final rowUserId = itemMap['userId'] ?? itemMap['UserId'] ?? itemMap['USERID'];
+//
+//         if (rowInvoiceId?.toString() == invoiceId &&
+//             rowUserId?.toString() == userId) {
+//           try {
+//             print("=== Raw item map for invoice $invoiceId ===");
+//             itemMap.forEach((key, value) {
+//               print("  '$key': '$value'");
+//             });
+//
+//             // ✅ FIX: Normalize the map to use 'rate' field
+//             if (itemMap.containsKey('price') && !itemMap.containsKey('rate')) {
+//               itemMap['rate'] = itemMap['price'];
+//               print("✅ Mapped 'price' -> 'rate': ${itemMap['price']}");
+//             }
+//
+//             // Handle totalPrice column name variations
+//             if (!itemMap.containsKey('totalPrice')) {
+//               if (itemMap.containsKey('totalAmount')) {
+//                 itemMap['totalPrice'] = itemMap['totalAmount'];
+//               } else if (itemMap.containsKey('total')) {
+//                 itemMap['totalPrice'] = itemMap['total'];
+//               }
+//             }
+//
+//             InvoiceItem item = InvoiceItem.fromJson(itemMap);
+//             items.add(item);
+//             foundCount++;
+//
+//             print("✅ Added item: ${item.itemName}");
+//             print("   - Rate: ${item.rate}");
+//             print("   - Quantity: ${item.quantity}");
+//             print("   - GST Rate: ${item.gstRate}%");
+//             print("   - GST Amount: ${item.gstAmount}");
+//             print("   - Total Price: ${item.totalPrice}");
+//
+//           } catch (e, stackTrace) {
+//             print("❌ Error parsing invoice item: $e");
+//             print("❌ Stack trace: $stackTrace");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found $foundCount items for invoice $invoiceId");
+//
+//       // Cache result for next call
+//       _invoiceItemCache[invoiceId] = items;
+//
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting invoice items: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get all invoice items (without filtering)
+//   static Future<List<InvoiceItem>> getInvoiceItems({String? userId, String? invoiceId}) async {
+//     print("🔄 Fetching invoice items from Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId!);
+//
+//       // Get all rows from InvoiceItem sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$invoiceItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ No invoice items found in sheet");
+//         return [];
+//       }
+//
+//       // First row = headers
+//       final headers = response.values!.first.map((h) => h.toString()).toList();
+//       final rows = response.values!.skip(1); // skip header row
+//
+//       print("✅ Headers: $headers");
+//       List<InvoiceItem> items = [];
+//
+//       for (var row in rows) {
+//         Map<String, dynamic> rowMap = {};
+//         for (int i = 0; i < headers.length; i++) {
+//           if (i < row.length) {
+//             rowMap[headers[i]] = row[i];
+//           }
+//         }
+//
+//         try {
+//           final item = InvoiceItem.fromJson(rowMap);
+//
+//           // ✅ Filter by userId if provided
+//           final rowUserId = rowMap['userId'] ?? rowMap['UserId'] ?? rowMap['USERID'];
+//           if (userId != null && rowUserId?.toString() != userId) continue;
+//
+//           // ✅ Filter by invoiceId if provided
+//           if (invoiceId == null || item.invoiceId == invoiceId) {
+//             items.add(item);
+//           }
+//         } catch (e) {
+//           print("❌ Error parsing invoice item row: $rowMap");
+//           print("Error: $e");
+//         }
+//       }
+//
+//       print("✅ Loaded ${items.length} invoice items");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error fetching invoice items: $e");
+//       throw Exception("Failed to fetch invoice items: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update stock after invoice
+//   static Future<void> updateStockAfterInvoice(String userId, List<InvoiceItem> invoiceItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all stock rows once
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Stock sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Missing required columns in Stock sheet");
+//       }
+//
+//       for (var item in invoiceItems) {
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // ✅ Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         final newStock = currentStock - item.quantity;
+//         if (newStock < 0) {
+//           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+//         }
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock < 0 ? 0 : newStock] // prevent negative stock
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated (Invoice): ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after invoice: $e");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update invoice status
+//   static Future<bool> updateInvoiceStatus(
+//       String userId,
+//       String invoiceId,
+//       String newStatus, {
+//         String? sheetName,
+//       }) async {
+//     final targetSheetName = sheetName ?? invoiceSheetName;
+//     print("🔄 updateInvoiceStatus -> sheet: $targetSheetName, invoiceId: $invoiceId, newStatus: $newStatus");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // 1) Read header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("❌ Couldn't read headers from sheet $targetSheetName");
+//         throw Exception("No headers found in $targetSheetName");
+//       }
+//
+//       final rawHeaders = headerResponse.values![0];
+//       final headers = rawHeaders.map((h) => h.toString()).toList();
+//       print("📋 Headers: $headers");
+//
+//       // 2) Normalize header strings for searching
+//       List<String> normalized = headers
+//           .map((h) => h.toString().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+//           .toList();
+//
+//       // 3) Find invoiceId column index
+//       int invoiceIdIndex = -1;
+//       for (int i = 0; i < normalized.length; i++) {
+//         final h = normalized[i];
+//         if ((h.contains('invoice') && h.contains('id')) ||
+//             h == 'invoiceid' ||
+//             h == 'invoice') {
+//           invoiceIdIndex = i;
+//           break;
+//         }
+//       }
+//
+//       if (invoiceIdIndex == -1) {
+//         for (int i = 0; i < normalized.length; i++) {
+//           if (normalized[i] == 'id') {
+//             invoiceIdIndex = i;
+//             break;
+//           }
+//         }
+//       }
+//
+//       if (invoiceIdIndex == -1) {
+//         print("⚠️ invoiceId column not detected - falling back to first column (index 0)");
+//         invoiceIdIndex = 0;
+//       }
+//
+//       // 4) Find status column index
+//       int statusIndex = -1;
+//       for (int i = 0; i < normalized.length; i++) {
+//         final h = normalized[i];
+//         if (h.contains('status') || h.contains('state') || h.contains('paymentstatus')) {
+//           statusIndex = i;
+//           break;
+//         }
+//       }
+//
+//       // ✅ Find userId column index
+//       int userIdIndex = -1;
+//       for (int i = 0; i < normalized.length; i++) {
+//         if (normalized[i].contains('userid')) {
+//           userIdIndex = i;
+//           break;
+//         }
+//       }
+//
+//       bool appendedStatusHeader = false;
+//       if (statusIndex == -1) {
+//         final newHeaders = List<dynamic>.from(headers)..add('status');
+//         final lastColLetter = _columnLetter(newHeaders.length);
+//         final updateRange = "$targetSheetName!A1:${lastColLetter}1";
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [newHeaders]}),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           updateRange,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//         print("ℹ️ Appended 'status' header at column ${newHeaders.length}");
+//         statusIndex = newHeaders.length - 1;
+//         appendedStatusHeader = true;
+//
+//         headers.add('status');
+//         normalized.add('status');
+//       } else {
+//         print("🔎 status column detected at index $statusIndex");
+//       }
+//
+//       // 5) Read full sheet to find row with invoiceId
+//       final allRowsResp = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$targetSheetName!A:Z",
+//       );
+//       final allRows = allRowsResp.values ?? [];
+//       if (allRows.isEmpty) {
+//         print("❌ Sheet has no rows.");
+//         return false;
+//       }
+//
+//       final normInvoiceId = invoiceId.toString().trim();
+//
+//       int foundRow = -1;
+//       // ✅ Match invoiceId AND userId
+//       for (int r = 1; r < allRows.length; r++) {
+//         final row = allRows[r];
+//         String cellValue = '';
+//         if (row.length > invoiceIdIndex) {
+//           cellValue = row[invoiceIdIndex]?.toString()?.trim() ?? '';
+//         }
+//
+//         // ✅ Also check userId
+//         String rowUserId = '';
+//         if (userIdIndex != -1 && row.length > userIdIndex) {
+//           rowUserId = row[userIdIndex]?.toString()?.trim() ?? '';
+//         }
+//
+//         if (cellValue.isNotEmpty &&
+//             (cellValue == normInvoiceId || cellValue.replaceAll('"', '') == normInvoiceId) &&
+//             (userIdIndex == -1 || rowUserId == userId)) {
+//           foundRow = r + 1; // spreadsheet rows are 1-based
+//           break;
+//         }
+//       }
+//
+//       if (foundRow == -1) {
+//         print("⚠️ Invoice '$invoiceId' not found in sheet '$targetSheetName' for user $userId");
+//         return false;
+//       }
+//
+//       print("✅ Found invoice '$invoiceId' at sheet row $foundRow");
+//
+//       // 6) Update only the status cell
+//       final statusColLetter = _columnLetter(statusIndex + 1);
+//       final statusRange = "$targetSheetName!$statusColLetter$foundRow";
+//
+//       final valueRange = ValueRange.fromJson({
+//         "values": [
+//           [newStatus]
+//         ],
+//       });
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         statusRange,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Updated status for invoice '$invoiceId' -> '$newStatus' at $statusRange");
+//       return true;
+//     } catch (e, st) {
+//       print("❌ Error updating invoice status: $e\n$st");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Helper method - Update _getHeaders to accept spreadsheetId
+//   static Future<List<String>> _getHeaders(SheetsApi sheetsApi, {String? sheetName, required String spreadsheetId}) async {
+//     try {
+//       final headerSheetName = sheetName ?? challanItemSheetName;
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses passed spreadsheetId
+//         "$headerSheetName!1:1",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("No headers found in $headerSheetName");
+//       }
+//
+//       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//       print("📋 Headers for $headerSheetName: $headers");
+//       return headers;
+//     } catch (e) {
+//       print("❌ Error getting headers for ${sheetName ?? challanItemSheetName}: $e");
+//       return [];
+//     }
+//   }
+//
+//   // Helper method - No changes needed, already has userId parameter
+//   static List<dynamic> _prepareInvoiceRow(
+//       Map<String, dynamic> invoiceData, String userId, List<dynamic> headers) {
+//     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//     String _formatDate(dynamic value) {
+//       if (value == null || value.toString().isEmpty) return "";
+//       try {
+//         if (value is DateTime) {
+//           return _dateFormatter.format(value);
+//         } else {
+//           return _dateFormatter.format(DateTime.parse(value.toString()));
+//         }
+//       } catch (e) {
+//         return value.toString(); // fallback if already string
+//       }
+//     }
+//
+//     // Handle items serialization if present
+//     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+//       invoiceData['items'] = jsonEncode(invoiceData['items']);
+//     }
+//
+//     // Add userId
+//     invoiceData['userId'] = userId;
+//
+//     // Force issueDate (instead of invoiceDate)
+//     invoiceData['issueDate'] =
+//         _formatDate(invoiceData['issueDate'] ?? DateTime.now());
+//
+//     // Force dueDate
+//     if (invoiceData.containsKey('dueDate')) {
+//       invoiceData['dueDate'] = _formatDate(invoiceData['dueDate']);
+//     }
+//
+//     // Prepare row values in correct column order
+//     List<dynamic> rowData = [];
+//
+//     for (var header in headers) {
+//       String headerStr = header.toString().toLowerCase();
+//
+//       if (headerStr.contains('invoice') && headerStr.contains('id')) {
+//         rowData.add(invoiceData['invoiceId'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('name')) {
+//         rowData.add(invoiceData['customerName'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('email')) {
+//         rowData.add(invoiceData['customerEmail'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('phone')) {
+//         rowData.add(invoiceData['customerPhone'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('address')) {
+//         rowData.add(invoiceData['customerAddress'] ?? '');
+//       } else if (headerStr.contains('issue') && headerStr.contains('date')) {
+//         rowData.add(invoiceData['issueDate']); // ✅ correct mapping
+//       } else if (headerStr.contains('due') && headerStr.contains('date')) {
+//         rowData.add(invoiceData['dueDate']); // ✅ correct mapping
+//       } else if (headerStr.contains('total') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['totalAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('tax') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['taxAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('discount') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['discountAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('status')) {
+//         rowData.add(invoiceData['status'] ?? 'draft');
+//       } else if (headerStr.contains('items')) {
+//         rowData.add(invoiceData['items'] ?? '[]');
+//       } else if (headerStr.contains('notes')) {
+//         rowData.add(invoiceData['notes'] ?? '');
+//       } else if (headerStr.contains('payment') && headerStr.contains('method')) {
+//         rowData.add(invoiceData['paymentMethod'] ?? '');
+//       } else if (headerStr.contains('payment') && headerStr.contains('status')) {
+//         rowData.add(invoiceData['paymentStatus'] ?? 'pending');
+//       } else if (headerStr.contains('user') && headerStr.contains('id')) {
+//         rowData.add(userId);
+//       } else if (headerStr.contains('company') && headerStr.contains('id')) {
+//         rowData.add(invoiceData['companyId'] ?? '');
+//       } else {
+//         rowData.add(invoiceData[header.toString()] ?? '');
+//       }
+//     }
+//
+//     print("Prepared row data: $rowData");
+//     return rowData;
+//   }
+//
+// // ===================================================================
+// // PART 3: CHALLAN METHODS (Updated for Multi-User Support)
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Add challan to Google Sheet
+//   static Future<void> addChallan(String userId, dynamic challanData) async {
+//     print("🔄 Adding Challan to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("Challan headers: $headers");
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       String _formatDate(dynamic value) {
+//         if (value == null || value.toString().isEmpty) return "";
+//         try {
+//           if (value is DateTime) {
+//             return _dateFormatter.format(value);
+//           } else {
+//             return _dateFormatter.format(DateTime.parse(value.toString()));
+//           }
+//         } catch (e) {
+//           return value.toString();
+//         }
+//       }
+//
+//       // Normalize helper
+//       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+//         return {
+//           for (var entry in data.entries)
+//             entry.key.toString().trim().toLowerCase(): entry.value
+//         };
+//       }
+//
+//       // Build rows
+//       List<Map<String, dynamic>> rowsToSend = [];
+//
+//       if (challanData is Map<String, dynamic>) {
+//         if (challanData.containsKey('items') && challanData['items'] is List) {
+//           challanData['items'] = jsonEncode(challanData['items']);
+//         }
+//
+//         if (challanData.containsKey('challanDate')) {
+//           challanData['challanDate'] = _formatDate(challanData['challanDate']);
+//         }
+//
+//         rowsToSend.add({...challanData, "userId": userId});
+//       } else if (challanData is List<Challan>) {
+//         rowsToSend = challanData.map((chal) {
+//           final map = chal.toMap();
+//           if (map.containsKey('items') && map['items'] is List) {
+//             map['items'] = jsonEncode(map['items']);
+//           }
+//           if (map.containsKey('challanDate')) {
+//             map['challanDate'] = _formatDate(map['challanDate']);
+//           }
+//           return {...map, "userId": userId};
+//         }).toList();
+//       } else if (challanData is Challan) {
+//         final map = challanData.toMap();
+//         if (map.containsKey('items') && map['items'] is List) {
+//           map['items'] = jsonEncode(map['items']);
+//         }
+//         if (map.containsKey('challanDate')) {
+//           map['challanDate'] = _formatDate(map['challanDate']);
+//         }
+//         rowsToSend.add({...map, "userId": userId});
+//       }
+//
+//       print("Prepared rows: ${jsonEncode(rowsToSend)}");
+//
+//       // Convert rows to ordered values matching headers
+//       List<List<dynamic>> values = [];
+//       for (var row in rowsToSend) {
+//         final normalized = _normalize(row);
+//         List<dynamic> rowData = [];
+//         for (var header in headers) {
+//           final key = header.toString().trim().toLowerCase();
+//           rowData.add(normalized[key] ?? '');
+//         }
+//         values.add(rowData);
+//       }
+//
+//       print("Prepared ${values.length} row(s) to add");
+//
+//       // Append rows to Google Sheet
+//       final valueRange = ValueRange.fromJson({
+//         "values": values,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Challan(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Challan(s) added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding Challan: $e");
+//       throw Exception("Failed to add Challan: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Add challan item (single)
+//   static Future<void> addChallanItem(String userId, Map<String, dynamic> challanData) async {
+//     print("🔄 Adding challan item to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Date formatter
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("ChallanItems headers: $headers");
+//
+//       // Prepare row data based on exact header names
+//       List<dynamic> rowData = [];
+//
+//       for (var header in headers) {
+//         final headerName = header.toString();
+//         final headerNameLower = headerName.toLowerCase();
+//
+//         if (headerNameLower.contains('userid')) {
+//           rowData.add(userId);
+//         }
+//         else if (headerNameLower.contains('date')) {
+//           dynamic dateValue = challanData['challanDate'] ??
+//               challanData['challainDate'] ??
+//               challanData['date'] ??
+//               DateTime.now();
+//
+//           try {
+//             if (dateValue is DateTime) {
+//               rowData.add(_dateFormatter.format(dateValue));
+//             } else if (dateValue is String) {
+//               rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+//             } else {
+//               rowData.add(_dateFormatter.format(DateTime.now()));
+//             }
+//           } catch (e) {
+//             rowData.add(_dateFormatter.format(DateTime.now()));
+//           }
+//         }
+//         else {
+//           var value = '';
+//           for (var key in challanData.keys) {
+//             if (key.toLowerCase() == headerNameLower) {
+//               value = challanData[key]?.toString() ?? '';
+//               break;
+//             }
+//           }
+//           rowData.add(value);
+//         }
+//       }
+//
+//       print("Prepared challan item row: $rowData");
+//
+//       // Append row
+//       final valueRange = ValueRange.fromJson({
+//         "values": [rowData],
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Challan item added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Challan item added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding challan item: $e");
+//       throw Exception("Failed to add challan item: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Add challan items in batch
+//   static Future<void> addChallanItemsBatch(
+//       String userId, List<Map<String, dynamic>> itemsData) async {
+//     print("🔄 Adding ${itemsData.length} challan items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("ChallanItems headers: $headers");
+//
+//       // ✅ Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString();
+//           final headerNameLower = headerName.toLowerCase();
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else if (headerNameLower.contains('date')) {
+//             // Handle date formatting
+//             dynamic dateValue = itemData['challanDate'] ??
+//                 itemData['challainDate'] ??
+//                 itemData['date'] ??
+//                 DateTime.now();
+//
+//             try {
+//               if (dateValue is DateTime) {
+//                 rowData.add(_dateFormatter.format(dateValue));
+//               } else if (dateValue is String) {
+//                 rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+//               } else {
+//                 rowData.add(_dateFormatter.format(DateTime.now()));
+//               }
+//             } catch (e) {
+//               rowData.add(_dateFormatter.format(DateTime.now()));
+//             }
+//           } else {
+//             // Match headers with itemData keys
+//             var value = '';
+//             if (itemData.containsKey(headerName)) {
+//               value = itemData[headerName]?.toString() ?? '';
+//             } else {
+//               for (var key in itemData.keys) {
+//                 if (key.toString().toLowerCase() == headerNameLower) {
+//                   value = itemData[key]?.toString() ?? '';
+//                   break;
+//                 }
+//               }
+//             }
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       // Append all challan items at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} challan items added successfully.");
+//       } else {
+//         print("✅ Challan items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding challan items batch: $e");
+//       throw Exception("Failed to add challan items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get challans list
+//   static Future<List<Challan>> getChallansList(String userId) async {
+//     print("🔄 Fetching challans from Google Sheets...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all challan rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No challans found in sheet.");
+//         return <Challan>[];
+//       }
+//
+//       // Extract headers from first row
+//       final headers =
+//       response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       List<Challan> challans = [];
+//
+//       // Iterate rows (skip header)
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // ✅ Skip completely empty rows
+//         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+//           continue;
+//         }
+//
+//         // ✅ Build map header → value
+//         Map<String, dynamic> challanMap = {};
+//         for (int j = 0; j < headers.length && j < row.length; j++) {
+//           challanMap[headers[j]] = row[j].toString();
+//         }
+//
+//         try {
+//           Challan challan = Challan.fromMap(challanMap);
+//
+//           // ✅ Filter by userId
+//           if (challan.userId != userId) continue;
+//
+//           challans.add(challan);
+//           print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+//         } catch (e) {
+//           print("⚠️ Error parsing challan row $i: $e");
+//           print("Row data: $challanMap");
+//         }
+//       }
+//
+//       print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+//       return challans;
+//     } catch (e) {
+//       print("❌ Error in getChallansList(): $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update challan
+//   static Future<void> updateChallan(String userId, Map<String, dynamic> challanData) async {
+//     print("🔄 Updating Challan in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get all challans
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Challan sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (challanIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Missing challanId or userId column in sheet");
+//       }
+//
+//       int? rowToUpdate;
+//       List<Object?> existingRow = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         // ✅ Check both challanId AND userId
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() == challanData["challanId"].toString() &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToUpdate = i + 1;
+//           existingRow = row;
+//           break;
+//         }
+//       }
+//
+//       if (rowToUpdate == null) {
+//         throw Exception("❌ Challan not found for update (id: ${challanData["challanId"]}) for user $userId");
+//       }
+//
+//       // Get existing GST values from the current row
+//       final gstRateIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstrate');
+//       final gstAmountIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstamount');
+//
+//       String existingGstRate = '';
+//       String existingGstAmount = '';
+//
+//       if (gstRateIndex != -1 && existingRow.length > gstRateIndex) {
+//         existingGstRate = existingRow[gstRateIndex]?.toString() ?? '';
+//       }
+//       if (gstAmountIndex != -1 && existingRow.length > gstAmountIndex) {
+//         existingGstAmount = existingRow[gstAmountIndex]?.toString() ?? '';
+//       }
+//
+//       // Build normalized data with all required fields
+//       Map<String, dynamic> normalized = {};
+//
+//       for (var header in headers) {
+//         String key = header.toString().trim().toLowerCase();
+//
+//         switch (key) {
+//           case 'challanid':
+//             normalized[key] = challanData["challanId"] ?? '';
+//             break;
+//           case 'customername':
+//             normalized[key] = challanData["customerName"] ?? '';
+//             break;
+//           case 'customeremail':
+//             normalized[key] = challanData["customerEmail"] ?? '';
+//             break;
+//           case 'customerphone':
+//             normalized[key] = challanData["customerPhone"] ?? '';
+//             break;
+//           case 'customeraddress':
+//             normalized[key] = challanData["customerAddress"] ?? '';
+//             break;
+//           case 'challandate':
+//             normalized[key] = challanData["challanDate"] ?? '';
+//             break;
+//           case 'subtotal':
+//             normalized[key] = challanData["subtotal"] ?? 0;
+//             break;
+//           case 'gstrate':
+//             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+//               normalized[key] = existingGstRate;
+//             } else {
+//               double subtotal = double.tryParse(challanData["subtotal"]?.toString() ?? "0") ?? 0;
+//               double gstAmount = double.tryParse(challanData["gstAmount"]?.toString() ?? "0") ?? 0;
+//               double gstRate = subtotal > 0 ? (gstAmount / subtotal * 100) : 0;
+//               normalized[key] = gstRate.toStringAsFixed(2);
+//             }
+//             break;
+//           case 'gstamount':
+//             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+//               normalized[key] = existingGstAmount;
+//             } else {
+//               normalized[key] = challanData["gstAmount"] ?? 0;
+//             }
+//             break;
+//           case 'totalamount':
+//             normalized[key] = challanData["totalAmount"] ?? 0;
+//             break;
+//           case 'status':
+//             normalized[key] = challanData["status"] ?? 'Pending';
+//             break;
+//           case 'statusprogress':
+//             normalized[key] = challanData["statusProgress"] ?? 'InProgress';
+//             break;
+//           case 'userid':
+//             normalized[key] = userId;
+//             break;
+//           default:
+//             int existingIndex = headers.indexWhere((h) => h.toString().toLowerCase() == key);
+//             if (existingIndex != -1 && existingRow.length > existingIndex) {
+//               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+//             } else {
+//               normalized[key] = '';
+//             }
+//             break;
+//         }
+//       }
+//
+//       // Build row data in the same order as headers
+//       List<dynamic> rowData = [];
+//       for (var header in headers) {
+//         final key = header.toString().trim().toLowerCase();
+//         rowData.add(normalized[key]?.toString() ?? '');
+//       }
+//
+//       final range = "$challanSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+//
+//       final valueRange = ValueRange(
+//         values: [rowData],
+//       );
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         range,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Challan updated successfully at row $rowToUpdate");
+//       print("📊 GST Rate: ${normalized['gstrate']}, GST Amount: ${normalized['gstamount']}");
+//
+//     } catch (e) {
+//       print("❌ Error updating Challan: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update challan items
+//   static Future<void> updateChallanItems(
+//       String userId, String challanId, List<Map<String, dynamic>> items) async {
+//     print("🔄 Updating Challan Items in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get current sheet data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         // Sheet is empty, just add new items
+//         for (var item in items) {
+//           await addChallanItem(userId, {...item, "challanId": challanId});
+//         }
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       print("Sheet headers: $headers");
+//
+//       final challanIdIndex = headers.indexOf("challanId");
+//
+//       if (challanIdIndex == -1) {
+//         throw Exception("❌ Missing challanId column");
+//       }
+//
+//       // Build new sheet data (keep all items except for this challanId)
+//       List<List<Object?>> newSheetData = [];
+//       newSheetData.add(headers); // Add headers first
+//
+//       // ✅ Add all rows that DON'T belong to our challanId (also verify userId)
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() != challanId) {
+//           newSheetData.add(row);
+//         } else if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() == challanId &&
+//             userIdIndex != -1 &&
+//             row.length > userIdIndex &&
+//             row[userIdIndex].toString() != userId) {
+//           // Keep items from other users with same challanId
+//           newSheetData.add(row);
+//         }
+//       }
+//
+//       // Add our new items to the data
+//       for (var item in items) {
+//         List<Object?> newRow = [];
+//         for (var header in headers) {
+//           String key = header.toString().trim().toLowerCase();
+//
+//           switch (key) {
+//             case 'challanid':
+//               newRow.add(item['challanId'] ?? challanId);
+//               break;
+//             case 'customerid':
+//               newRow.add(item['customerId'] ?? '');
+//               break;
+//             case 'itemid':
+//               newRow.add(item['itemId'] ?? '');
+//               break;
+//             case 'itemname':
+//               newRow.add(item['itemName'] ?? '');
+//               break;
+//             case 'description':
+//               newRow.add(item['description'] ?? '');
+//               break;
+//             case 'quantity':
+//               newRow.add(item['quantity'] ?? '0');
+//               break;
+//             case 'price':
+//               newRow.add(item['price'] ?? '0');
+//               break;
+//             case 'challandate':
+//               newRow.add(item['challanDate'] ?? '');
+//               break;
+//             case 'gstrate':
+//               newRow.add(item['gstRate'] ?? '0');
+//               break;
+//             case 'gstamount':
+//               newRow.add(item['gstAmount'] ?? '0');
+//               break;
+//             case 'amountwithgst':
+//               newRow.add(item['amountWithGst'] ?? '0');
+//               break;
+//             case 'totalprice':
+//               newRow.add(item['totalPrice'] ?? '0');
+//               break;
+//             case 'unit':
+//               newRow.add(item['unit'] ?? '');
+//               break;
+//             case 'userid':
+//               newRow.add(item['userId'] ?? userId);
+//               break;
+//             default:
+//               newRow.add('');
+//               break;
+//           }
+//         }
+//         newSheetData.add(newRow);
+//         print("Added row: $newRow");
+//       }
+//
+//       // Clear the entire sheet
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       // Write all data back to sheet
+//       if (newSheetData.length > 1) {
+//         final range = "$challanItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange(values: newSheetData),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//       }
+//
+//       print("✅ Successfully updated ${items.length} challan items");
+//
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Challan items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   // ===================================================================
+// // PART 3 (Continued): MORE CHALLAN METHODS
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Update stock after dispatch
+//   static Future<void> updateStockAfterDispatch(String userId, List<ChallanItem> challanItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all stock rows once for efficiency
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Stock sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Missing required columns in Stock sheet");
+//       }
+//
+//       for (var item in challanItems) {
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // ✅ Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         final newStock = currentStock - item.quantity;
+//         if (newStock < 0) {
+//           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+//         }
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock < 0 ? 0 : newStock] // prevent negative stock
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated: ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after challan: $e");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update challan status batch
+//   static Future<void> updateChallanStatusBatch(
+//       String userId, List<String> challanIds, String status) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // 1. Get spreadsheet metadata (to find sheetId for "Challan" tab)
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == challanSheetName);
+//       final sheetId = sheet.properties!.sheetId!;
+//
+//       // 2. Get all challans
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Challan sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//       final statusIndex = headers.indexOf("status");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (challanIdIndex == -1 || statusIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Required columns missing in Challan sheet");
+//       }
+//
+//       List<Map<String, dynamic>> requests = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         // ✅ Check challanId AND userId
+//         if (row.length > challanIdIndex &&
+//             challanIds.contains(row[challanIdIndex].toString()) &&
+//             row.length > userIdIndex &&
+//             row[userIdIndex].toString() == userId) {
+//           int rowIndex = i; // 0-based index
+//
+//           requests.add({
+//             "updateCells": {
+//               "range": {
+//                 "sheetId": sheetId,
+//                 "startRowIndex": rowIndex,
+//                 "endRowIndex": rowIndex + 1,
+//                 "startColumnIndex": statusIndex,
+//                 "endColumnIndex": statusIndex + 1,
+//               },
+//               "rows": [
+//                 {
+//                   "values": [
+//                     {"userEnteredValue": {"stringValue": status}}
+//                   ]
+//                 }
+//               ],
+//               "fields": "userEnteredValue",
+//             }
+//           });
+//         }
+//       }
+//
+//       if (requests.isEmpty) {
+//         print("⚠️ No challans found to update");
+//         return;
+//       }
+//
+//       // 3. Build batch request
+//       final batchRequest = BatchUpdateSpreadsheetRequest.fromJson({
+//         "requests": requests,
+//       });
+//
+//       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+//
+//       print("✅ ${requests.length} challans updated to $status in batch.");
+//     } catch (e) {
+//       print("❌ Error in batch challan update: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Delete challan items
+//   static Future<void> deleteChallanItems(String userId, String challanId) async {
+//     print("🗑️ Deleting all items for challan: $challanId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get all challan items
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Sheet is empty, nothing to delete");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//
+//       if (challanIdIndex == -1) {
+//         throw Exception("❌ challanId column not found in sheet");
+//       }
+//
+//       // Find all rows that match this challanId
+//       List<int> rowsToDelete = [];
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() == challanId) {
+//           rowsToDelete.add(i);
+//         }
+//       }
+//
+//       if (rowsToDelete.isEmpty) {
+//         print("ℹ️ No items found for challan: $challanId");
+//         return;
+//       }
+//
+//       print("Found ${rowsToDelete.length} rows to delete");
+//
+//       // Get sheet ID for batch delete
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       int? sheetId;
+//       for (var sheet in spreadsheet.sheets ?? []) {
+//         if (sheet.properties?.title == challanItemSheetName) {
+//           sheetId = sheet.properties?.sheetId;
+//           break;
+//         }
+//       }
+//
+//       if (sheetId == null) {
+//         throw Exception("❌ Could not find sheet ID for $challanItemSheetName");
+//       }
+//
+//       // Delete rows in reverse order to maintain indices
+//       List<Request> deleteRequests = [];
+//       for (int rowIndex in rowsToDelete.reversed) {
+//         deleteRequests.add(
+//             Request()
+//               ..deleteDimension = (DeleteDimensionRequest()
+//                 ..range = (DimensionRange()
+//                   ..sheetId = sheetId
+//                   ..dimension = 'ROWS'
+//                   ..startIndex = rowIndex  // 0-based for API
+//                   ..endIndex = rowIndex + 1))
+//         );
+//       }
+//
+//       // Execute batch delete
+//       final batchRequest = BatchUpdateSpreadsheetRequest()
+//         ..requests = deleteRequests;
+//
+//       await sheetsApi.spreadsheets.batchUpdate(
+//         batchRequest,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//       );
+//
+//       print("✅ Successfully deleted ${rowsToDelete.length} items for challan: $challanId");
+//
+//       // Clear cache
+//       clearChallanItemCache(challanId);
+//
+//     } catch (e, stackTrace) {
+//       print("❌ Error deleting challan items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get challan items by challan ID
+//   static Future<List<ChallanItem>> getChallanItemsByChallanId(
+//       String userId, String challanId) async {
+//     print("🔄 Fetching items for challan: $challanId");
+//
+//     // If already cached, return directly
+//     if (_challanCache.containsKey(challanId)) {
+//       print("⚡ Returning cached items for challan $challanId");
+//       return _challanCache[challanId]!;
+//     }
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       final headers = await _getHeaders(sheetsApi, spreadsheetId: spreadsheetId);
+//
+//       // ✅ Fetch only data rows (skip headers)
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for challan $challanId");
+//         return <ChallanItem>[];
+//       }
+//
+//       List<ChallanItem> items = [];
+//       int foundCount = 0;
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by challanId
+//         final rowChallanId = itemMap['challanId'] ??
+//             itemMap['ChallanId'] ??
+//             itemMap['CHALLANID'];
+//
+//         // ✅ Also verify userId matches
+//         final rowUserId = itemMap['userId'] ?? itemMap['UserId'] ?? itemMap['USERID'];
+//
+//         if (rowChallanId?.toString() == challanId &&
+//             rowUserId?.toString() == userId) {
+//           try {
+//             ChallanItem item = ChallanItem.fromJson(itemMap);
+//             items.add(item);
+//             foundCount++;
+//             print("✅ Added item: ${item.itemName}");
+//           } catch (e) {
+//             print("❌ Error parsing challan item: $e");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found $foundCount items for challan $challanId");
+//
+//       // Cache result for next call
+//       _challanCache[challanId] = items;
+//
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting challan items: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get challans by date range
+//   static Future<List<Challan>> getChallansByDateRange({
+//     required String userId,
+//     required DateTime fromDate,
+//     required DateTime toDate,
+//   }) async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     // ✅ NEW: Get user-specific spreadsheet ID
+//     final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//     final response = await sheetsApi.spreadsheets.values.get(
+//       spreadsheetId,  // ✅ Now uses user-specific ID
+//       "$challanSheetName!A:Z",
+//     );
+//
+//     if (response.values == null || response.values!.length <= 1) return [];
+//
+//     final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//
+//     // ✅ Load ALL challan items once
+//     final challanItemsGrouped = await getAllChallanItemsGrouped(userId);
+//
+//     List<Challan> filtered = [];
+//
+//     for (int i = 1; i < response.values!.length; i++) {
+//       final row = response.values![i];
+//       if (row.isEmpty) continue;
+//
+//       Map<String, dynamic> challanMap = {};
+//       for (int j = 0; j < headers.length; j++) {
+//         challanMap[headers[j]] = j < row.length ? row[j] : "";
+//       }
+//
+//       try {
+//         Challan challan = Challan.fromMap(challanMap);
+//
+//         DateTime? parsedDate = _parseChallanDate(challanMap['challanDate']?.toString() ?? "");
+//
+//         // ✅ Filter by userId AND date range
+//         if (parsedDate != null &&
+//             challan.userId == userId &&
+//             !parsedDate.isBefore(fromDate) &&
+//             !parsedDate.isAfter(toDate)) {
+//
+//           // ✅ Attach preloaded items
+//           challan.items = challanItemsGrouped[challan.challanId] ?? [];
+//           challan.challanDate = parsedDate;
+//
+//           filtered.add(challan);
+//         }
+//       } catch (e) {
+//         print("⚠️ Error parsing challan: $e");
+//       }
+//     }
+//
+//     return filtered;
+//   }
+//
+//   /// ✅ UPDATED: Get all challan items grouped by challanId
+//   static Future<Map<String, List<ChallanItem>>> getAllChallanItemsGrouped(String userId) async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     // ✅ NEW: Get user-specific spreadsheet ID
+//     final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//     final headers = await _getHeaders(sheetsApi, spreadsheetId: spreadsheetId);
+//
+//     final response = await sheetsApi.spreadsheets.values.get(
+//       spreadsheetId,  // ✅ Now uses user-specific ID
+//       "$challanItemSheetName!A2:Z",
+//     );
+//
+//     Map<String, List<ChallanItem>> grouped = {};
+//
+//     if (response.values == null || response.values!.isEmpty) {
+//       return grouped;
+//     }
+//
+//     for (var row in response.values!) {
+//       if (row.isEmpty) continue;
+//
+//       Map<String, dynamic> itemMap = {};
+//       for (int j = 0; j < headers.length; j++) {
+//         itemMap[headers[j]] = j < row.length ? row[j] : "";
+//       }
+//
+//       final challanId = itemMap['challanId'] ?? itemMap['ChallanId'] ?? "";
+//       if (challanId.toString().isEmpty) continue;
+//
+//       // ✅ Filter by userId
+//       final rowUserId = itemMap['userId'] ?? itemMap['UserId'] ?? itemMap['USERID'];
+//       if (rowUserId?.toString() != userId) continue;
+//
+//       try {
+//         final item = ChallanItem.fromJson(itemMap);
+//         grouped.putIfAbsent(challanId.toString(), () => []);
+//         grouped[challanId.toString()]!.add(item);
+//       } catch (e) {
+//         print("❌ Failed parsing ChallanItem: $e");
+//       }
+//     }
+//
+//     return grouped;
+//   }
+//
+//   /// ✅ UPDATED: Get challans with items by customer
+//   static Future<List<Challan>> getChallansWithItemsByCustomer(
+//       String userId, String customerName) async {
+//     print("🔄 Fetching challans for customer: $customerName");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // ✅ Batch fetch challans & items in one call
+//       final batchResponse = await sheetsApi.spreadsheets.values.batchGet(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         ranges: [
+//           "$challanSheetName!A:Z",
+//           "$challanItemSheetName!A:Z",
+//         ],
+//       );
+//
+//       if (batchResponse.valueRanges == null || batchResponse.valueRanges!.isEmpty) {
+//         print("❌ No data returned from batchGet");
+//         return [];
+//       }
+//
+//       // --- Challans ---
+//       final challansValues = batchResponse.valueRanges![0].values;
+//       if (challansValues == null || challansValues.length <= 1) {
+//         print("❌ No challans found in sheet");
+//         return [];
+//       }
+//       final challanHeaders = challansValues[0].map((h) => h.toString().trim()).toList();
+//       print("✅ Challan headers: $challanHeaders");
+//
+//       // --- Items ---
+//       final itemsValues = batchResponse.valueRanges!.length > 1
+//           ? batchResponse.valueRanges![1].values
+//           : null;
+//       List<Map<String, dynamic>> allItems = [];
+//       if (itemsValues != null && itemsValues.length > 1) {
+//         final itemHeaders = itemsValues[0].map((h) => h.toString().trim()).toList();
+//         for (int i = 1; i < itemsValues.length; i++) {
+//           Map<String, dynamic> itemMap = {};
+//           for (int j = 0; j < itemHeaders.length; j++) {
+//             itemMap[itemHeaders[j]] =
+//             j < itemsValues[i].length ? itemsValues[i][j] : "";
+//           }
+//
+//           // ✅ Filter items by userId
+//           final itemUserId = itemMap['userId'] ?? itemMap['UserId'] ?? '';
+//           if (itemUserId.toString() == userId) {
+//             allItems.add(itemMap);
+//           }
+//         }
+//         print("📦 Total challan items loaded: ${allItems.length}");
+//       }
+//
+//       List<Challan> customerChallans = [];
+//
+//       // --- Iterate challans ---
+//       for (int i = 1; i < challansValues.length; i++) {
+//         final row = challansValues[i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> challanMap = {};
+//         for (int j = 0; j < challanHeaders.length; j++) {
+//           challanMap[challanHeaders[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         try {
+//           Challan challan = Challan.fromMap(challanMap);
+//
+//           // ✅ Filter by userId AND customer name
+//           if (challan.userId != userId) continue;
+//
+//           print("📋 Challan ${challan.challanId}: Customer=${challan.customerName}, Looking for=$customerName");
+//
+//           // Filter by customer name (case insensitive)
+//           if (challan.customerName.toLowerCase() == customerName.toLowerCase()) {
+//             print("✅ Found matching challan: ${challan.challanId}");
+//
+//             // ✅ Filter items locally
+//             final challanItems = allItems
+//                 .where((item) => item["challanId"].toString() == challan.challanId)
+//                 .map((map) => ChallanItem.fromJson(map))
+//                 .toList();
+//
+//             print("📦 Items loaded for ${challan.challanId}: ${challanItems.length}");
+//
+//             // ✅ Attach items using copyWith
+//             Challan challanWithItems = challan.copyWith(items: challanItems);
+//             customerChallans.add(challanWithItems);
+//
+//             print("✅ Challan ${challan.challanId} now has ${challanWithItems.items?.length ?? 0} items");
+//           }
+//         } catch (e) {
+//           print("❌ Error parsing challan: $e");
+//           print("❌ Challan data: $challanMap");
+//         }
+//       }
+//
+//       print("✅ Total challans found for $customerName: ${customerChallans.length}");
+//       return customerChallans;
+//     } catch (e) {
+//       print("❌ Error getting challans by customer: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get challan items from sheet (alternative method)
+//   static Future<List<ChallanItem>> getChallanItemsByChallanIdFromSheet(
+//       String userId, String challanId) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all rows from the challan items sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No challan items found.");
+//         return [];
+//       }
+//
+//       // Extract headers
+//       final headers = response.values![0]
+//           .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+//           .toList();
+//
+//       List<ChallanItem> items = [];
+//
+//       // Iterate rows
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         Map<String, String> rowByHeader = {};
+//
+//         for (int j = 0; j < headers.length; j++) {
+//           final key = headers[j];
+//           final value = (j < row.length) ? row[j].toString() : "";
+//           rowByHeader[key] = value;
+//         }
+//
+//         // ✅ Filter by challanId AND userId
+//         if (rowByHeader['challanid'] == challanId &&
+//             rowByHeader['userid'] == userId) {
+//           try {
+//             final item = ChallanItem.fromJson(rowByHeader);
+//             items.add(item);
+//           } catch (e) {
+//             print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found ${items.length} items for challan $challanId");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error fetching items for challan $challanId: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update challan with cache clear
+//   static Future<void> updateChallanWithCacheClear(
+//       String userId, Map<String, dynamic> challanData) async {
+//     print("🔄 Updating challan with cache clear...");
+//
+//     final challanId = challanData['challanId']?.toString();
+//
+//     try {
+//       // Update the challan
+//       await updateChallan(userId, challanData);
+//
+//       // Clear cache immediately after update
+//       if (challanId != null) {
+//         clearChallanItemCache(challanId);
+//         _challanCache.remove(challanId);
+//         print("✅ Cleared cache for challan: $challanId");
+//       }
+//
+//       // Also clear any general cache timestamps
+//       _cacheTimestamps.clear();
+//
+//     } catch (e) {
+//       print("❌ Error updating challan: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update challan items with cache clear
+//   static Future<void> updateChallanItemsWithCacheClear(
+//       String userId,
+//       String challanId,
+//       List<Map<String, dynamic>> items) async {
+//     print("🔄 Updating challan items with cache clear...");
+//
+//     try {
+//       // Update items
+//       await updateChallanItems(userId, challanId, items);
+//
+//       // Force clear ALL caches
+//       clearChallanItemCache(challanId);
+//       _challanCache.remove(challanId);
+//       _itemCache.remove('challan_items_$challanId');
+//       _cacheTimestamps.remove('challan_items_$challanId');
+//
+//       print("✅ Cleared all caches for challan: $challanId");
+//
+//     } catch (e) {
+//       print("❌ Error updating items: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   // ===================================================================
+// // PART 4: PURCHASE METHODS (Updated for Multi-User Support)
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Add purchase to Google Sheet
+//   static Future<void> addPurchase(String userId, dynamic purchaseData) async {
+//     print("🔄 Adding Purchase to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Define complete headers matching Invoice structure
+//       final expectedHeaders = [
+//         'purchaseId',
+//         'vendorId',
+//         'vendorName',
+//         'vendorEmail',
+//         'vendorMobile',
+//         'vendorAddress',
+//         'purchaseDate',
+//         'dueDate',
+//         'subtotal',
+//         'gstRate',
+//         'gstAmount',
+//         'totalAmount',
+//         'paidAmount',
+//         'pendingAmount',
+//         'paymentStatus',
+//         'notes',
+//         'userId',
+//       ];
+//
+//       // Get or create headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseSheetName!1:1",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ Creating headers for Purchase sheet...");
+//         headers = expectedHeaders;
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           "$purchaseSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Headers created");
+//       } else {
+//         headers = headerResponse.values![0];
+//       }
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       String _formatDate(dynamic value) {
+//         if (value == null || value.toString().isEmpty) return "";
+//         try {
+//           if (value is DateTime) {
+//             return _dateFormatter.format(value);
+//           } else {
+//             return _dateFormatter.format(DateTime.parse(value.toString()));
+//           }
+//         } catch (e) {
+//           return value.toString();
+//         }
+//       }
+//
+//       // Normalize keys
+//       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+//         return {
+//           for (var entry in data.entries)
+//             entry.key.toString().trim().toLowerCase(): entry.value
+//         };
+//       }
+//
+//       List<Map<String, dynamic>> rowsToSend = [];
+//
+//       if (purchaseData is Map<String, dynamic>) {
+//         if (purchaseData.containsKey('purchaseDate')) {
+//           purchaseData['purchaseDate'] = _formatDate(purchaseData['purchaseDate']);
+//         }
+//         if (purchaseData.containsKey('dueDate')) {
+//           purchaseData['dueDate'] = _formatDate(purchaseData['dueDate']);
+//         }
+//         rowsToSend.add({...purchaseData, "userId": userId});
+//       } else if (purchaseData is PurchaseEntry) {
+//         final map = {
+//           'purchaseId': purchaseData.purchaseId,
+//           'vendorId': purchaseData.vendorId,
+//           'vendorName': purchaseData.vendorName,
+//           'vendorEmail': purchaseData.vendorEmail,
+//           'vendorMobile': purchaseData.vendorMobile,
+//           'vendorAddress': purchaseData.vendorAddress,
+//           'purchaseDate': _formatDate(purchaseData.purchaseDate),
+//           'dueDate': _formatDate(purchaseData.dueDate),
+//           'subtotal': purchaseData.subtotal,
+//           'gstRate': purchaseData.gstRate,
+//           'gstAmount': purchaseData.gstAmount,
+//           'totalAmount': purchaseData.totalAmount,
+//           'paidAmount': purchaseData.paidAmount ?? 0.0,
+//           'pendingAmount': purchaseData.pendingAmount ?? purchaseData.totalAmount,
+//           'paymentStatus': purchaseData.paymentStatus,
+//           'notes': purchaseData.notes,
+//           'userId': userId,
+//         };
+//         rowsToSend.add(map);
+//       }
+//
+//       // Convert rows to ordered values matching headers
+//       List<List<dynamic>> values = [];
+//       for (var row in rowsToSend) {
+//         final normalized = _normalize(row);
+//         List<dynamic> rowData = [];
+//         for (var header in headers) {
+//           final key = header.toString().trim().toLowerCase();
+//           rowData.add(normalized[key]?.toString() ?? '');
+//         }
+//         values.add(rowData);
+//       }
+//
+//       final valueRange = ValueRange.fromJson({"values": values});
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Purchase added successfully");
+//     } catch (e) {
+//       print("❌ Error adding Purchase: $e");
+//       throw Exception("Failed to add Purchase: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Add purchase items in batch
+//   static Future<void> addPurchaseItemsBatch(
+//       String userId, List<Map<String, dynamic>> itemsData) async {
+//     print("🔄 Adding ${itemsData.length} purchase items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!1:1",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ No header row found. Creating dynamically...");
+//
+//         final sampleData = itemsData.isNotEmpty
+//             ? itemsData.first
+//             : {
+//           'purchaseId': '',
+//           'vendorId': '',
+//           'itemId': '',
+//           'itemName': '',
+//           'description': '',
+//           'quantity': '',
+//           'purchasePrice': '',
+//           'purchaseDate': '',
+//           'gstRate': '',
+//           'totalPrice': '',
+//           'unit': '',
+//           'userId': '',
+//         };
+//
+//         headers = sampleData.keys.toList();
+//
+//         final headerRange = ValueRange.fromJson({
+//           "values": [headers],
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           headerRange,
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           "$purchaseItemSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Header row created");
+//       } else {
+//         headers = headerResponse.values![0];
+//       }
+//
+//       print("PurchaseItems headers: $headers");
+//
+//       // Normalize key function
+//       String _normalizeKey(String key) {
+//         return key.toString().trim().toLowerCase();
+//       }
+//
+//       // Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         // Normalize itemData keys
+//         Map<String, dynamic> normalizedItem = {};
+//         for (var entry in itemData.entries) {
+//           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+//         }
+//
+//         for (var header in headers) {
+//           final headerNameLower = _normalizeKey(header.toString());
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else {
+//             var value = normalizedItem[headerNameLower]?.toString() ?? '';
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       // Append all purchase items at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} purchase items added successfully.");
+//       } else {
+//         print("✅ Purchase items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding purchase items batch: $e");
+//       throw Exception("Failed to add purchase items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get purchases list
+//   static Future<List<PurchaseEntry>> getPurchasesList(String userId) async {
+//     print("🔄 Fetching purchases from Google Sheets...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all purchase rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No purchases found in sheet.");
+//         return <PurchaseEntry>[];
+//       }
+//
+//       // Extract headers from first row
+//       final headers =
+//       response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       List<PurchaseEntry> purchases = [];
+//
+//       // Iterate rows (skip header)
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // Skip empty rows
+//         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+//           continue;
+//         }
+//
+//         // Build map header → value
+//         Map<String, dynamic> purchaseMap = {};
+//         for (int j = 0; j < headers.length && j < row.length; j++) {
+//           purchaseMap[headers[j]] = row[j].toString();
+//         }
+//
+//         try {
+//           PurchaseEntry purchase = PurchaseEntry.fromJson(purchaseMap);
+//
+//           // ✅ Filter by userId
+//           if (purchase.userId != userId) continue;
+//
+//           purchases.add(purchase);
+//           print("Processed purchase: ${purchase.purchaseId} - ${purchase.vendorName}");
+//         } catch (e) {
+//           print("⚠️ Error parsing purchase row $i: $e");
+//           print("Row data: $purchaseMap");
+//         }
+//       }
+//
+//       print("✅ Successfully parsed ${purchases.length} purchases from Google Sheets");
+//       return purchases;
+//     } catch (e) {
+//       print("❌ Error in getPurchasesList(): $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update purchase
+//   static Future<void> updatePurchase(String userId, Map<String, dynamic> purchaseData) async {
+//     print("🔄 Updating Purchase in Google Sheet...");
+//     print("📋 Data to update: ${purchaseData.keys.toList()}");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get all purchases
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Purchase sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       print("📋 Sheet headers: $headers");
+//
+//       final purchaseIdIndex = headers.indexOf("purchaseId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (purchaseIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Missing purchaseId or userId column in sheet");
+//       }
+//
+//       int? rowToUpdate;
+//       List<Object?> existingRow = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         // ✅ Check both purchaseId AND userId
+//         if (row.length > purchaseIdIndex &&
+//             row[purchaseIdIndex].toString() == purchaseData["purchaseId"].toString() &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToUpdate = i + 1;
+//           existingRow = row;
+//           print("✅ Found purchase at row $rowToUpdate");
+//           break;
+//         }
+//       }
+//
+//       if (rowToUpdate == null) {
+//         throw Exception("❌ Purchase not found for update (id: ${purchaseData["purchaseId"]}) for user $userId");
+//       }
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       // Build normalized data with all required fields
+//       Map<String, dynamic> normalized = {};
+//
+//       for (var header in headers) {
+//         String key = header.toString().trim().toLowerCase();
+//
+//         switch (key) {
+//           case 'purchaseid':
+//             normalized[key] = purchaseData["purchaseId"] ?? '';
+//             break;
+//           case 'vendorid':
+//             normalized[key] = purchaseData["vendorId"] ?? '';
+//             break;
+//           case 'vendorname':
+//             normalized[key] = purchaseData["vendorName"] ?? '';
+//             break;
+//           case 'vendoremail':
+//             normalized[key] = purchaseData["vendorEmail"] ?? '';
+//             break;
+//           case 'vendormobile':
+//             normalized[key] = purchaseData["vendorMobile"] ?? '';
+//             break;
+//           case 'vendoraddress':
+//             normalized[key] = purchaseData["vendorAddress"] ?? '';
+//             break;
+//           case 'purchasedate':
+//             try {
+//               if (purchaseData["purchaseDate"] != null) {
+//                 if (purchaseData["purchaseDate"] is DateTime) {
+//                   normalized[key] = _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+//                 } else if (purchaseData["purchaseDate"] is String) {
+//                   try {
+//                     final date = DateTime.parse(purchaseData["purchaseDate"]);
+//                     normalized[key] = _dateFormatter.format(date);
+//                   } catch (e) {
+//                     normalized[key] = purchaseData["purchaseDate"];
+//                   }
+//                 } else {
+//                   normalized[key] = purchaseData["purchaseDate"].toString();
+//                 }
+//               } else {
+//                 normalized[key] = '';
+//               }
+//             } catch (e) {
+//               print("⚠️ Error formatting purchaseDate: $e");
+//               normalized[key] = purchaseData["purchaseDate"]?.toString() ?? '';
+//             }
+//             break;
+//           case 'duedate':
+//             try {
+//               if (purchaseData["dueDate"] != null) {
+//                 if (purchaseData["dueDate"] is DateTime) {
+//                   normalized[key] = _dateFormatter.format(purchaseData["dueDate"] as DateTime);
+//                 } else if (purchaseData["dueDate"] is String) {
+//                   try {
+//                     final date = DateTime.parse(purchaseData["dueDate"]);
+//                     normalized[key] = _dateFormatter.format(date);
+//                   } catch (e) {
+//                     normalized[key] = purchaseData["dueDate"];
+//                   }
+//                 } else {
+//                   normalized[key] = purchaseData["dueDate"].toString();
+//                 }
+//               } else {
+//                 normalized[key] = '';
+//               }
+//             } catch (e) {
+//               print("⚠️ Error formatting dueDate: $e");
+//               normalized[key] = purchaseData["dueDate"]?.toString() ?? '';
+//             }
+//             break;
+//           case 'subtotal':
+//             normalized[key] = purchaseData["subtotal"]?.toString() ?? '0';
+//             break;
+//           case 'gstrate':
+//             normalized[key] = purchaseData["gstRate"]?.toString() ?? '0';
+//             break;
+//           case 'gstamount':
+//             normalized[key] = purchaseData["gstAmount"]?.toString() ?? '0';
+//             break;
+//           case 'totalamount':
+//             normalized[key] = purchaseData["totalAmount"]?.toString() ?? '0';
+//             break;
+//           case 'paidamount':
+//             normalized[key] = purchaseData["paidAmount"]?.toString() ?? '0';
+//             break;
+//           case 'pendingamount':
+//             normalized[key] = purchaseData["pendingAmount"]?.toString() ?? '0';
+//             break;
+//           case 'paymentstatus':
+//             normalized[key] = purchaseData["paymentStatus"] ?? 'Pending';
+//             break;
+//           case 'notes':
+//             normalized[key] = purchaseData["notes"] ?? '';
+//             break;
+//           case 'userid':
+//             normalized[key] = userId;
+//             break;
+//           default:
+//             int existingIndex =
+//             headers.indexWhere((h) => h.toString().toLowerCase() == key);
+//             if (existingIndex != -1 && existingRow.length > existingIndex) {
+//               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+//             } else {
+//               normalized[key] = '';
+//             }
+//             break;
+//         }
+//       }
+//
+//       // Build row data in the same order as headers
+//       List<dynamic> rowData = [];
+//       for (var header in headers) {
+//         final key = header.toString().trim().toLowerCase();
+//         rowData.add(normalized[key]?.toString() ?? '');
+//       }
+//
+//       print("📤 Updating row with data: $rowData");
+//
+//       final range =
+//           "$purchaseSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+//
+//       final valueRange = ValueRange(
+//         values: [rowData],
+//       );
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         range,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Purchase updated successfully at row $rowToUpdate");
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Purchase: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update purchase items
+//   static Future<void> updatePurchaseItems(
+//       String userId, String purchaseId, List<Map<String, dynamic>> items) async {
+//     print("🔄 Updating Purchase Items in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get current sheet data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!A:Z",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Sheet is empty. Creating headers and adding new items...");
+//
+//         final sampleData = items.isNotEmpty
+//             ? items.first
+//             : {
+//           'purchaseId': '',
+//           'vendorId': '',
+//           'itemId': '',
+//           'itemName': '',
+//           'description': '',
+//           'quantity': '',
+//           'purchasePrice': '',
+//           'purchaseDate': '',
+//           'gstRate': '',
+//           'totalPrice': '',
+//           'unit': '',
+//           'userId': '',
+//         };
+//
+//         headers = sampleData.keys.toList();
+//
+//         final headerRange = ValueRange.fromJson({
+//           "values": [headers],
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           headerRange,
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           "$purchaseItemSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Header row created");
+//
+//         for (var item in items) {
+//           item['purchaseId'] = purchaseId;
+//         }
+//         await addPurchaseItemsBatch(userId, items);
+//         return;
+//       }
+//
+//       headers = response.values![0];
+//       print("Sheet headers: $headers");
+//
+//       final purchaseIdIndex = headers.indexOf("purchaseId");
+//
+//       if (purchaseIdIndex == -1) {
+//         throw Exception("❌ Missing purchaseId column");
+//       }
+//
+//       // Build new sheet data (keep all items except for this purchaseId)
+//       List<List<Object?>> newSheetData = [];
+//       newSheetData.add(headers);
+//
+//       // ✅ Add all rows that DON'T belong to our purchaseId (also verify userId)
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > purchaseIdIndex &&
+//             row[purchaseIdIndex].toString() != purchaseId) {
+//           newSheetData.add(row);
+//         } else if (row.length > purchaseIdIndex &&
+//             row[purchaseIdIndex].toString() == purchaseId &&
+//             userIdIndex != -1 &&
+//             row.length > userIdIndex &&
+//             row[userIdIndex].toString() != userId) {
+//           // Keep items from other users
+//           newSheetData.add(row);
+//         }
+//       }
+//
+//       // Normalize key function
+//       String _normalizeKey(String key) {
+//         return key.toString().trim().toLowerCase();
+//       }
+//
+//       // Add our new items to the data
+//       for (var item in items) {
+//         List<Object?> newRow = [];
+//
+//         // Normalize item keys
+//         Map<String, dynamic> normalizedItem = {};
+//         for (var entry in item.entries) {
+//           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+//         }
+//
+//         for (var header in headers) {
+//           String key = _normalizeKey(header.toString());
+//
+//           if (key.contains('purchaseid')) {
+//             newRow.add(item['purchaseId'] ?? purchaseId);
+//           } else if (key.contains('userid')) {
+//             newRow.add(item['userId'] ?? userId);
+//           } else {
+//             newRow.add(normalizedItem[key]?.toString() ?? '');
+//           }
+//         }
+//         newSheetData.add(newRow);
+//         print("Added row: $newRow");
+//       }
+//
+//       // Clear the entire sheet
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!A:Z",
+//       );
+//
+//       // Write all data back to sheet
+//       if (newSheetData.length > 1) {
+//         final range =
+//             "$purchaseItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange(values: newSheetData),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//       }
+//
+//       print("✅ Successfully updated ${items.length} purchase items");
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Purchase items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get purchase items by purchase ID
+//   static Future<List<PurchaseItem>> getPurchaseItemsByPurchaseId(
+//       String userId, String purchaseId) async {
+//     print("🔄 Fetching items for purchase: $purchaseId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("❌ No header row in purchase items sheet");
+//         return [];
+//       }
+//
+//       final headers =
+//       headerResponse.values![0].map((h) => h.toString().trim()).toList();
+//
+//       // Fetch data rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$purchaseItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for purchase $purchaseId");
+//         return [];
+//       }
+//
+//       List<PurchaseItem> items = [];
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by purchaseId
+//         final rowPurchaseId =
+//             itemMap['purchaseId'] ?? itemMap['PurchaseId'] ?? itemMap['PURCHASEID'];
+//
+//         // ✅ Also verify userId matches
+//         final rowUserId = itemMap['userId'] ?? itemMap['UserId'] ?? itemMap['USERID'];
+//
+//         if (rowPurchaseId?.toString() == purchaseId &&
+//             rowUserId?.toString() == userId) {
+//           try {
+//             PurchaseItem item = PurchaseItem.fromJson(itemMap);
+//             items.add(item);
+//             print("✅ Added item: ${item.itemName}");
+//           } catch (e) {
+//             print("❌ Error parsing purchase item: $e");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found ${items.length} items for purchase $purchaseId");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting purchase items: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Update stock after purchase
+//   static Future<void> updateStockAfterPurchase(String userId, List<PurchaseItem> purchaseItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Fetch all stock rows once
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Stock sheet is empty - skipping stock update");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         print("⚠️ Missing required columns in Stock sheet - skipping update");
+//         return;
+//       }
+//
+//       for (var item in purchaseItems) {
+//         // Skip items without itemId (manually entered items)
+//         if (item.itemId == null || item.itemId!.isEmpty) {
+//           print("⚠️ Skipping stock update for manually entered item: ${item.itemName}");
+//           continue;
+//         }
+//
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // ✅ Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         // Increase stock for purchase
+//         final newStock = currentStock + item.quantity;
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock]
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated (Purchase): ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after purchase: $e");
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Cache clear methods
+//   static Future<void> updatePurchaseWithCacheClear(
+//       String userId, Map<String, dynamic> purchaseData) async {
+//     print("🔄 Updating purchase with cache clear...");
+//
+//     final purchaseId = purchaseData['purchaseId']?.toString();
+//
+//     try {
+//       await updatePurchase(userId, purchaseData);
+//
+//       if (purchaseId != null) {
+//         print("✅ Cleared cache for purchase: $purchaseId");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating purchase: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   static Future<void> updatePurchaseItemsWithCacheClear(
+//       String userId,
+//       String purchaseId,
+//       List<Map<String, dynamic>> items) async {
+//     print("🔄 Updating purchase items with cache clear...");
+//
+//     try {
+//       await updatePurchaseItems(userId, purchaseId, items);
+//       print("✅ Cleared all caches for purchase: $purchaseId");
+//     } catch (e) {
+//       print("❌ Error updating items: $e");
+//       rethrow;
+//     }
+//   }
+//
+// // ===================================================================
+// // PART 5: INVENTORY TRANSACTION METHODS (Updated for Multi-User Support)
+// // ===================================================================
+//
+//   /// ✅ UPDATED: Add a single inventory transaction to Google Sheet
+//   static Future<void> addInventoryTransaction(
+//       String userId, InventoryTransaction transaction) async {
+//     print("🔄 Adding inventory transaction to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ Sheet empty, creating headers...");
+//         // Create headers if sheet is empty
+//         final headers = [
+//           'transactionId',
+//           'itemId',
+//           'itemName',
+//           'quantity',
+//           'type',
+//           'reason',
+//           'timestamp',
+//           'notes',
+//           'userId',
+//         ];
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           "$inventoryTransactionSheetName!A1:I1",
+//           valueInputOption: "RAW",
+//         );
+//
+//         print("✅ Headers created");
+//       }
+//
+//       final headers = headerResponse.values?[0] ?? [];
+//
+//       // Prepare row values based on header order
+//       List<dynamic> rowData = [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       for (var header in headers) {
+//         final headerName = header.toString().toLowerCase();
+//
+//         switch (headerName) {
+//           case 'transactionid':
+//             rowData.add(transaction.transactionId);
+//             break;
+//           case 'itemid':
+//             rowData.add(transaction.itemId);
+//             break;
+//           case 'itemname':
+//             rowData.add(transaction.itemName);
+//             break;
+//           case 'quantity':
+//             rowData.add(transaction.quantity.toString());
+//             break;
+//           case 'type':
+//             rowData.add(transaction.type);
+//             break;
+//           case 'reason':
+//             rowData.add(transaction.reason);
+//             break;
+//           case 'timestamp':
+//             rowData.add(_dateFormatter.format(transaction.timestamp));
+//             break;
+//           case 'notes':
+//             rowData.add(transaction.notes);
+//             break;
+//           case 'userid':
+//             rowData.add(userId);
+//             break;
+//           default:
+//             rowData.add('');
+//         }
+//       }
+//
+//       print("Prepared row: $rowData");
+//
+//       // Append row to sheet
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({"values": [rowData]}),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!A:I",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Inventory transaction added successfully");
+//     } catch (e) {
+//       print("❌ Error adding inventory transaction: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Batch add multiple inventory transactions
+//   static Future<void> addInventoryTransactionsBatch(
+//       String userId, List<InventoryTransaction> transactions) async {
+//     print("🔄 Adding ${transactions.length} inventory transactions...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         final headers = [
+//           'transactionId',
+//           'itemId',
+//           'itemName',
+//           'quantity',
+//           'type',
+//           'reason',
+//           'timestamp',
+//           'notes',
+//           'userId',
+//         ];
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,  // ✅ Now uses user-specific ID
+//           "$inventoryTransactionSheetName!A1:I1",
+//           valueInputOption: "RAW",
+//         );
+//       }
+//
+//       final headers = headerResponse.values?[0] ?? [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       // Prepare all rows
+//       List<List<dynamic>> rows = [];
+//       for (var transaction in transactions) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString().toLowerCase();
+//
+//           switch (headerName) {
+//             case 'transactionid':
+//               rowData.add(transaction.transactionId);
+//               break;
+//             case 'itemid':
+//               rowData.add(transaction.itemId);
+//               break;
+//             case 'itemname':
+//               rowData.add(transaction.itemName);
+//               break;
+//             case 'quantity':
+//               rowData.add(transaction.quantity.toString());
+//               break;
+//             case 'type':
+//               rowData.add(transaction.type);
+//               break;
+//             case 'reason':
+//               rowData.add(transaction.reason);
+//               break;
+//             case 'timestamp':
+//               rowData.add(_dateFormatter.format(transaction.timestamp));
+//               break;
+//             case 'notes':
+//               rowData.add(transaction.notes);
+//               break;
+//             case 'userid':
+//               rowData.add(userId);
+//               break;
+//             default:
+//               rowData.add('');
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       print("Prepared ${rows.length} rows");
+//
+//       // Append all rows
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({"values": rows}),
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!A:I",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ ${transactions.length} inventory transactions added successfully");
+//     } catch (e) {
+//       print("❌ Error adding inventory transactions batch: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Fetch inventory transactions for a user
+//   static Future<List<InventoryTransaction>> getInventoryTransactions({
+//     required String userId,
+//     String? itemId,
+//     String? type,
+//     DateTime? fromDate,
+//     DateTime? toDate,
+//   }) async {
+//     print("🔄 Fetching inventory transactions...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get all transaction data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ No transactions found");
+//         return [];
+//       }
+//
+//       // Extract headers
+//       final headers = response.values![0]
+//           .map((h) => h.toString().trim().toLowerCase())
+//           .toList();
+//
+//       print("✅ Headers: $headers");
+//
+//       List<InventoryTransaction> transactions = [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       // Iterate through rows
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         try {
+//           Map<String, dynamic> txnMap = {};
+//
+//           // Map row values to headers
+//           for (int j = 0; j < headers.length && j < row.length; j++) {
+//             txnMap[headers[j]] = row[j];
+//           }
+//
+//           // ✅ Filter by userId first
+//           if (txnMap['userid'].toString() != userId) continue;
+//
+//           // Parse transaction
+//           final txn = InventoryTransaction(
+//             transactionId: txnMap['transactionid']?.toString() ?? '',
+//             itemId: txnMap['itemid']?.toString() ?? '',
+//             itemName: txnMap['itemname']?.toString() ?? '',
+//             quantity: int.tryParse(txnMap['quantity']?.toString() ?? '0') ?? 0,
+//             type: txnMap['type']?.toString() ?? '',
+//             reason: txnMap['reason']?.toString() ?? '',
+//             timestamp: _parseTransactionDate(txnMap['timestamp']?.toString() ?? ''),
+//             notes: txnMap['notes']?.toString() ?? '',
+//           );
+//
+//           // Apply additional filters
+//           if (itemId != null && txn.itemId != itemId) continue;
+//           if (type != null && txn.type != type) continue;
+//           if (fromDate != null && txn.timestamp.isBefore(fromDate)) continue;
+//           if (toDate != null && txn.timestamp.isAfter(toDate)) continue;
+//
+//           transactions.add(txn);
+//         } catch (e) {
+//           print("⚠️ Error parsing transaction at row ${i + 1}: $e");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Found ${transactions.length} transactions");
+//       return transactions;
+//     } catch (e) {
+//       print("❌ Error fetching transactions: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Get transactions for a specific item
+//   static Future<List<InventoryTransaction>> getItemTransactions(
+//       String userId, String itemId) async {
+//     return getInventoryTransactions(userId: userId, itemId: itemId);
+//   }
+//
+//   /// ✅ UPDATED: Get transactions of specific type
+//   static Future<List<InventoryTransaction>> getTransactionsByType(
+//       String userId, String type) async {
+//     return getInventoryTransactions(userId: userId, type: type);
+//   }
+//
+//   /// ✅ UPDATED: Get transactions within date range
+//   static Future<List<InventoryTransaction>> getTransactionsByDateRange(
+//       String userId, DateTime fromDate, DateTime toDate) async {
+//     return getInventoryTransactions(
+//       userId: userId,
+//       fromDate: fromDate,
+//       toDate: toDate,
+//     );
+//   }
+//
+//   /// ✅ UPDATED: Get transaction statistics for inventory analysis
+//   static Future<Map<String, dynamic>> getInventoryStats(String userId) async {
+//     print("🔄 Calculating inventory statistics...");
+//
+//     try {
+//       final transactions = await getInventoryTransactions(userId: userId);
+//
+//       if (transactions.isEmpty) {
+//         return {
+//           'totalTransactions': 0,
+//           'totalAdded': 0,
+//           'totalRemoved': 0,
+//           'totalSales': 0,
+//           'totalReturns': 0,
+//           'totalAdjustments': 0,
+//           'itemsAffected': 0,
+//         };
+//       }
+//
+//       int totalAdded = 0;
+//       int totalRemoved = 0;
+//       int totalSales = 0;
+//       int totalReturns = 0;
+//       int totalAdjustments = 0;
+//       Set<String> itemIds = {};
+//
+//       for (var txn in transactions) {
+//         itemIds.add(txn.itemId);
+//
+//         switch (txn.type) {
+//           case 'add':
+//             totalAdded += txn.quantity;
+//             break;
+//           case 'remove':
+//             totalRemoved += txn.quantity;
+//             break;
+//           case 'sale':
+//             totalSales += txn.quantity;
+//             break;
+//           case 'return':
+//             totalReturns += txn.quantity;
+//             break;
+//           case 'adjustment':
+//             totalAdjustments += txn.quantity;
+//             break;
+//         }
+//       }
+//
+//       final stats = {
+//         'totalTransactions': transactions.length,
+//         'totalAdded': totalAdded,
+//         'totalRemoved': totalRemoved,
+//         'totalSales': totalSales,
+//         'totalReturns': totalReturns,
+//         'totalAdjustments': totalAdjustments,
+//         'itemsAffected': itemIds.length,
+//         'netChange': totalAdded - totalRemoved,
+//       };
+//
+//       print("✅ Statistics: $stats");
+//       return stats;
+//     } catch (e) {
+//       print("❌ Error calculating stats: $e");
+//       return {};
+//     }
+//   }
+//
+//   /// ✅ UPDATED: Delete old transactions (for maintenance)
+//   static Future<void> deleteOldTransactions(
+//       String userId, DateTime beforeDate) async {
+//     print("🗑️ Deleting transactions before $beforeDate for user $userId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ NEW: Get user-specific spreadsheet ID
+//       final spreadsheetId = await getUserSpreadsheetId(userId);
+//
+//       // Get all transactions
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,  // ✅ Now uses user-specific ID
+//         "$inventoryTransactionSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("⚠️ No data to delete");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final userIdIndex = headers.indexOf('userId');
+//       final timestampIndex = headers.indexOf('timestamp');
+//
+//       if (userIdIndex == -1 || timestampIndex == -1) {
+//         throw Exception("Required columns not found");
+//       }
+//
+//       // Get sheet ID for batch delete
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == inventoryTransactionSheetName);
+//       final sheetId = sheet.properties!.sheetId!;
+//
+//       List<int> rowsToDelete = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // ✅ Filter by userId first
+//         if (row.length > userIdIndex && row[userIdIndex].toString() == userId) {
+//           if (row.length > timestampIndex) {
+//             final timestamp = _parseTransactionDate(row[timestampIndex].toString());
+//             if (timestamp.isBefore(beforeDate)) {
+//               rowsToDelete.add(i);
+//             }
+//           }
+//         }
+//       }
+//
+//       if (rowsToDelete.isEmpty) {
+//         print("ℹ️ No transactions to delete");
+//         return;
+//       }
+//
+//       // Delete rows in reverse order
+//       List<Request> deleteRequests = [];
+//       for (int rowIndex in rowsToDelete.reversed) {
+//         deleteRequests.add(
+//           Request()
+//             ..deleteDimension = (DeleteDimensionRequest()
+//               ..range = (DimensionRange()
+//                 ..sheetId = sheetId
+//                 ..dimension = 'ROWS'
+//                 ..startIndex = rowIndex
+//                 ..endIndex = rowIndex + 1)),
+//         );
+//       }
+//
+//       final batchRequest = BatchUpdateSpreadsheetRequest()..requests = deleteRequests;
+//
+//       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+//
+//       print("✅ Deleted ${rowsToDelete.length} old transactions");
+//     } catch (e) {
+//       print("❌ Error deleting transactions: $e");
+//       rethrow;
+//     }
+//   }
+//
+// // ===================================================================
+// // HELPER METHODS (Shared utilities)
+// // ===================================================================
+//
+//   /// Helper function to parse transaction timestamps
+//   static DateTime _parseTransactionDate(String dateString) {
+//     if (dateString.isEmpty) return DateTime.now();
+//
+//     try {
+//       // Try format: dd/MM/yyyy HH:mm:ss
+//       final formats = [
+//         'dd/MM/yyyy HH:mm:ss',
+//         'dd/MM/yyyy',
+//         'yyyy-MM-dd HH:mm:ss',
+//         'yyyy-MM-dd',
+//       ];
+//
+//       for (var format in formats) {
+//         try {
+//           return DateFormat(format).parseStrict(dateString);
+//         } catch (_) {
+//           continue;
+//         }
+//       }
+//
+//       // Fallback to parse ISO format
+//       return DateTime.parse(dateString);
+//     } catch (e) {
+//       print("⚠️ Could not parse date '$dateString', using current time");
+//       return DateTime.now();
+//     }
+//   }
+//
+//   /// Helper to parse date from Google Sheets
+//   static DateTime? _parseDate(String dateString) {
+//     if (dateString.isEmpty) return null;
+//
+//     try {
+//       // Format: dd/MM/yyyy (most common in Google Sheets)
+//       if (dateString.contains("/")) {
+//         final parts = dateString.split("/");
+//         if (parts.length == 3) {
+//           return DateTime(
+//             int.parse(parts[2]), // yyyy
+//             int.parse(parts[1]), // MM
+//             int.parse(parts[0]), // dd
+//           );
+//         }
+//       }
+//
+//       // Format: yyyy-MM-dd (ISO format)
+//       if (dateString.contains("-")) {
+//         return DateTime.tryParse(dateString);
+//       }
+//
+//       print("⚠️ Could not parse date: $dateString");
+//       return null;
+//     } catch (e) {
+//       print("❌ Error parsing date '$dateString': $e");
+//       return null;
+//     }
+//   }
+//
+//   /// Helper function to parse challan dates
+//   static DateTime? _parseChallanDate(String rawDate) {
+//     try {
+//       // Try ISO 8601 (yyyy-MM-dd or with time)
+//       DateTime? parsed = DateTime.tryParse(rawDate);
+//       if (parsed != null) return parsed;
+//
+//       // Try dd/MM/yyyy
+//       parsed = DateFormat('dd/MM/yyyy').parseStrict(rawDate);
+//       if (parsed != null) return parsed;
+//     } catch (_) {}
+//
+//     try {
+//       // Try dd/MM/yyyy HH:mm:ss
+//       return DateFormat('dd/MM/yyyy HH:mm:ss').parseStrict(rawDate);
+//     } catch (_) {
+//       return null;
+//     }
+//   }
+//
+//   /// Helper to convert column index to Excel letter
+//   static String _columnLetter(int colIndex) {
+//     var dividend = colIndex;
+//     var columnName = '';
+//     while (dividend > 0) {
+//       var modulo = (dividend - 1) % 26;
+//       columnName = String.fromCharCode(65 + modulo) + columnName;
+//       dividend = ((dividend - modulo) ~/ 26);
+//     }
+//     return columnName;
+//   }
+//
+//   /// Clear specific cache for challan items
+//   static void clearChallanItemCache(String challanId) {
+//     final cacheKey = 'challan_items_$challanId';
+//     _itemCache.remove(cacheKey);
+//     _cacheTimestamps.remove(cacheKey);
+//     print("🗑️ Cleared cache for challan: $challanId");
+//   }
+//
+//   /// Clear cache for a specific invoice
+//   static void clearInvoiceItemCache(String invoiceId) {
+//     if (_invoiceItemCache.containsKey(invoiceId)) {
+//       _invoiceItemCache.remove(invoiceId);
+//       print("🗑️ Cleared cache for invoice: $invoiceId");
+//     }
+//   }
+//
+//   /// Clear entire invoice items cache
+//   static void clearAllInvoiceItemCache() {
+//     _invoiceItemCache.clear();
+//     print("🗑️ Cleared all invoice item cache");
+//   }
+//
+// }
+// // class GoogleSheetService {
+// //   // ❌ REMOVE THIS LINE
+// //   // static String spreadsheetId = "${AppConstants.spreadsheetId}";
+// //
+// //   // ✅ ADD THESE CONSTANTS
+// //   static const itemSheetName = "Item";
+// //   static const invoiceSheetName = "Invoice";
+// //   static const invoiceItemSheetName = "InvoiceItems";
+// //   static const challanSheetName = "Challan";
+// //   static const challanItemSheetName = "ChallanItems";
+// //   static const inventoryTransactionSheetName = "InventoryTransactions";
+// //   static const purchaseSheetName = "Purchase";
+// //   static const purchaseItemSheetName = "PurchaseItems";
+// //
+// //   // ✅ ADD THIS METHOD - Get user-specific spreadsheet ID
+// //   static Future<String> getUserSpreadsheetId(String userId) async {
+// //     return await UserSpreadsheetManager.getSpreadsheetId(userId);
+// //   }
+// //
+// //   /// Load credentials from assets
+// //   static Future<AuthClient> _getAuthClient() async {
+// //     final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+// //     final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+// //     final scopes = [
+// //       SheetsApi.spreadsheetsScope,
+// //       'https://www.googleapis.com/auth/drive.file', // ✅ Add Drive scope for creating spreadsheets
+// //     ];
+// //     return await clientViaServiceAccount(accountCredentials, scopes);
+// //   }
+// //
+// //   // ===================================================================
+// //   // EXAMPLE: Updated addItem method with userId-specific spreadsheet
+// //   // ===================================================================
+// //
+// //   static Future<void> addItem(String userId, Item item) async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     // ✅ Get user-specific spreadsheet ID
+// //     final spreadsheetId = await getUserSpreadsheetId(userId);
+// //
+// //     final values = [
+// //       item.itemId,
+// //       item.itemName,
+// //       item.price.toString(),
+// //       item.gstPercent.toString(),
+// //       item.unitOfMeasurement,
+// //       item.currentStock.toString(),
+// //       item.detailRequirement,
+// //       item.isActive ? "TRUE" : "FALSE",
+// //       userId,
+// //     ];
+// //
+// //     await sheetsApi.spreadsheets.values.append(
+// //       ValueRange.fromJson({"values": [values]}),
+// //       spreadsheetId, // ✅ User-specific ID
+// //       "$itemSheetName!A:I",
+// //       valueInputOption: "RAW",
+// //     );
+// //
+// //     print("✅ Item added successfully for user $userId");
+// //   }
+// //
+// //   // ===================================================================
+// //   // EXAMPLE: Updated getItems method
+// //   // ===================================================================
+// //
+// //   static Future<List<Item>> getItems({required String userId}) async {
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // ✅ Get user-specific spreadsheet ID
+// //       final spreadsheetId = await getUserSpreadsheetId(userId);
+// //
+// //       final response = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId, // ✅ User-specific ID
+// //         "$itemSheetName!A:I",
+// //       );
+// //
+// //       if (response.values == null || response.values!.isEmpty) {
+// //         return <Item>[];
+// //       }
+// //
+// //       List<Item> items = [];
+// //
+// //       for (int i = 1; i < response.values!.length; i++) {
+// //         final row = response.values![i];
+// //         if (row.length < 9) continue;
+// //
+// //         try {
+// //           final item = Item(
+// //             itemId: row[0]?.toString() ?? '',
+// //             itemName: row[1]?.toString() ?? '',
+// //             price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
+// //             gstPercent: double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
+// //             unitOfMeasurement: row[4]?.toString() ?? '',
+// //             currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
+// //             detailRequirement: row[6]?.toString() ?? '',
+// //             isActive: (row[7]?.toString().toLowerCase() == 'true'),
+// //           );
+// //           items.add(item);
+// //         } catch (e) {
+// //           print("Error parsing row $i: $e");
+// //         }
+// //       }
+// //
+// //       print("✅ Retrieved ${items.length} items for user $userId");
+// //       return items;
+// //
+// //     } catch (e) {
+// //       print("Error in getItems: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   // ===================================================================
+// //   // EXAMPLE: Updated addInvoice method
+// //   // ===================================================================
+// //
+// //   static Future<void> addInvoice(String userId, dynamic invoiceData) async {
+// //     print("🔄 Adding invoice for user $userId...");
+// //
+// //     try {
+// //       final client = await _getAuthClient();
+// //       final sheetsApi = SheetsApi(client);
+// //
+// //       // ✅ Get user-specific spreadsheet ID
+// //       final spreadsheetId = await getUserSpreadsheetId(userId);
+// //
+// //       // Get headers
+// //       final headerResponse = await sheetsApi.spreadsheets.values.get(
+// //         spreadsheetId, // ✅ User-specific ID
+// //         "$invoiceSheetName!1:1",
+// //       );
+// //
+// //       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+// //         throw Exception("No header row found in sheet '$invoiceSheetName'");
+// //       }
+// //
+// //       final headers = headerResponse.values![0];
+// //
+// //       List<List<dynamic>> rowsToAdd = [];
+// //
+// //       if (invoiceData is Map<String, dynamic>) {
+// //         rowsToAdd.add(_prepareInvoiceRow(invoiceData, userId, headers));
+// //       } else if (invoiceData is Invoice) {
+// //         rowsToAdd.add(_prepareInvoiceRow(invoiceData.toMap(), userId, headers));
+// //       }
+// //
+// //       final valueRange = ValueRange.fromJson({"values": rowsToAdd});
+// //
+// //       await sheetsApi.spreadsheets.values.append(
+// //         valueRange,
+// //         spreadsheetId, // ✅ User-specific ID
+// //         "$invoiceSheetName!A:Z",
+// //         valueInputOption: "USER_ENTERED",
+// //       );
+// //
+// //       print("✅ Invoice added successfully for user $userId");
+// //     } catch (e) {
+// //       print("❌ Error adding invoice: $e");
+// //       rethrow;
+// //     }
+// //   }
+// //
+// //   // ===================================================================
+// //   // TEMPLATE: How to update other methods
+// //   // ===================================================================
+// //
+// //   /*
+// //   For EVERY method in your GoogleSheetService, apply this pattern:
+// //
+// //   1. Add userId as the FIRST parameter
+// //   2. Get spreadsheetId using: final spreadsheetId = await getUserSpreadsheetId(userId);
+// //   3. Use that spreadsheetId in all API calls
+// //
+// //   BEFORE:
+// //   static Future<void> updateInvoice(Map<String, dynamic> invoiceData, String userId) async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     await sheetsApi.spreadsheets.values.get(
+// //       spreadsheetId,  // ❌ Uses static/global spreadsheetId
+// //       "$invoiceSheetName!A:Z",
+// //     );
+// //   }
+// //
+// //   AFTER:
+// //   static Future<void> updateInvoice(String userId, Map<String, dynamic> invoiceData) async {
+// //     final client = await _getAuthClient();
+// //     final sheetsApi = SheetsApi(client);
+// //
+// //     final spreadsheetId = await getUserSpreadsheetId(userId);  // ✅ User-specific
+// //
+// //     await sheetsApi.spreadsheets.values.get(
+// //       spreadsheetId,  // ✅ Uses user-specific spreadsheetId
+// //       "$invoiceSheetName!A:Z",
+// //     );
+// //   }
+// //   */
+// //
+// //   // Helper method remains same (just for reference)
+// //   static List<dynamic> _prepareInvoiceRow(
+// //       Map<String, dynamic> invoiceData, String userId, List<dynamic> headers) {
+// //     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+// //
+// //     String _formatDate(dynamic value) {
+// //       if (value == null || value.toString().isEmpty) return "";
+// //       try {
+// //         if (value is DateTime) {
+// //           return _dateFormatter.format(value);
+// //         } else {
+// //           return _dateFormatter.format(DateTime.parse(value.toString()));
+// //         }
+// //       } catch (e) {
+// //         return value.toString();
+// //       }
+// //     }
+// //
+// //     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+// //       invoiceData['items'] = jsonEncode(invoiceData['items']);
+// //     }
+// //
+// //     invoiceData['userId'] = userId;
+// //     invoiceData['issueDate'] = _formatDate(invoiceData['issueDate'] ?? DateTime.now());
+// //
+// //     if (invoiceData.containsKey('dueDate')) {
+// //       invoiceData['dueDate'] = _formatDate(invoiceData['dueDate']);
+// //     }
+// //
+// //     List<dynamic> rowData = [];
+// //
+// //     for (var header in headers) {
+// //       String headerStr = header.toString().toLowerCase();
+// //
+// //       if (headerStr.contains('invoice') && headerStr.contains('id')) {
+// //         rowData.add(invoiceData['invoiceId'] ?? '');
+// //       } else if (headerStr.contains('customer') && headerStr.contains('name')) {
+// //         rowData.add(invoiceData['customerName'] ?? '');
+// //       } else if (headerStr.contains('issue') && headerStr.contains('date')) {
+// //         rowData.add(invoiceData['issueDate']);
+// //       } else if (headerStr.contains('due') && headerStr.contains('date')) {
+// //         rowData.add(invoiceData['dueDate']);
+// //       } else if (headerStr.contains('total') && headerStr.contains('amount')) {
+// //         rowData.add(invoiceData['totalAmount']?.toString() ?? '0');
+// //       } else if (headerStr.contains('user') && headerStr.contains('id')) {
+// //         rowData.add(userId);
+// //       } else {
+// //         rowData.add(invoiceData[header.toString()] ?? '');
+// //       }
+// //     }
+// //
+// //     return rowData;
+// //   }
+// // }
+//
+// ///
+// ///
+//
+// class GoogleSheetService33 {
+//   ///old Code
+//   //static const spreadsheetId = "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ"; // from Sheet URL
+//   static String spreadsheetId = "${AppConstants.spreadsheetId}"; // from Sheet URL
+//   static const itemSheetName = "Item"; // your sheet/tab name
+//   static const invoiceSheetName = "Invoice"; // your sheet/tab name
+//   static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
+//   static const challanSheetName = "Challan"; // your sheet/tab name
+//   static const challanItemSheetName = "ChallanItems"; // your sheet/tab name
+//   static const inventoryTransactionSheetName = "InventoryTransactions"; // Create this sheet in Google Sheets
+//
+//   static const purchaseSheetName = "Purchase";
+//   static const purchaseItemSheetName = "PurchaseItems";
+//
+//   static List<String>? _cachedHeaders;
+//   static final Map<String, List<ChallanItem>> _challanCache = {};
+//   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
+//
+//   static final Map<String, List<dynamic>> _itemCache = {};
+//   static final Map<String, DateTime> _cacheTimestamps = {};
+//   static const Duration _cacheValidDuration = Duration(minutes: 5);
+//
+//   ///part-1 ----------------------
+//
+//   /// ✅ Helper to get user-specific spreadsheet ID
+//   static Future<String> getUserSpreadsheetId(String userId) async {
+//     return await UserSpreadsheetManager.getSpreadsheetId(userId);
+//   }
+//
+//   /// Load credentials from assets
+//   static Future<AuthClient> _getAuthClient() async {
+//     final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+//     final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+//     final scopes = [SheetsApi.spreadsheetsScope];
+//     return await clientViaServiceAccount(accountCredentials, scopes);
+//   }
+//
+//   /// Add a new item row to Google Sheet
+//   static Future<void> addItem(String userId, Item item) async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     print("---------========Sheet API...........-----${sheetsApi}");
+//     // Prepare row values in correct column order
+//     final values = [
+//       item.itemId,
+//       item.itemName,
+//       item.price.toString(),
+//       item.gstPercent.toString(),
+//       item.unitOfMeasurement,
+//       item.currentStock.toString(),
+//       item.detailRequirement,
+//       item.isActive ? "TRUE" : "FALSE",
+//       userId,
+//     ];
+//
+//     // Append row
+//     await sheetsApi.spreadsheets.values.append(
+//       ValueRange.fromJson({
+//         "values": [values]
+//       }),
+//       spreadsheetId,
+//       "$itemSheetName!A:I", // Adjust columns (A-H based on your schema)
+//       valueInputOption: "RAW",
+//     );
+//
+//     print("✅ Item added successfully to Google Sheet");
+//   }
+//
+//   // Get items from Google Sheet with optional user filtering
+//   static Future<List<Item>> getItems({String? userId}) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       print("---------========Sheets API Get Items...........-----${sheetsApi}");
+//
+//       // Get all data from the sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:I", // Adjust range based on your columns
+//       );
+//
+//       print("Response: ${response.values}");
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("No data found in sheet");
+//         return <Item>[];
+//       }
+//
+//       List<Item> items = [];
+//
+//       // Skip header row (index 0) if it exists
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // Ensure row has enough columns
+//         if (row.length < 9) {
+//           print("Skipping incomplete row ${i}: $row");
+//           continue;
+//         }
+//
+//         try {
+//           // Parse row data according to your schema
+//           final item = Item(
+//             itemId: row[0]?.toString() ?? '',
+//             itemName: row[1]?.toString() ?? '',
+//             price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
+//             gstPercent : double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
+//             unitOfMeasurement: row[4]?.toString() ?? '',
+//             currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
+//             detailRequirement: row[6]?.toString() ?? '',
+//             isActive: (row[7]?.toString().toLowerCase() == 'true'),
+//             // Assuming userId is in column I (index 8)
+//           );
+//
+//           // Filter by userId if provided
+//           if (userId != null && userId.isNotEmpty) {
+//             String rowUserId = row[8]?.toString() ?? '';
+//             if (rowUserId == userId) {
+//               items.add(item);
+//             }
+//           } else {
+//             // No filter, add all items
+//             items.add(item);
+//           }
+//
+//         } catch (e) {
+//           print("Error parsing row ${i}: $e");
+//           print("Row data: $row");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Retrieved ${items.length} items from Google Sheet");
+//       return items;
+//
+//     } catch (e) {
+//       print("Error in getItems: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   // Edit item using Google Sheets API (delete and re-add approach)
+//   static Future<void> editItemAlternative3(String userId, Item item) async {
+//     print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//
+//       // Get sheet metadata to find the correct sheetId (safer than hardcoding 0)
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == itemSheetName);
+//       final sheetId = sheet.properties!.sheetId!;
+//       // Step 1: Find and delete the existing item
+//       print("Step 1: Finding item to delete...");
+//
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("No data found in sheet");
+//       }
+//
+//       int? targetRowIndex;
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isNotEmpty && row[0]?.toString() == item.itemId) {
+//           targetRowIndex = i; // 0-based index for delete operation
+//           break;
+//         }
+//       }
+//
+//       if (targetRowIndex == null) {
+//         throw Exception("Item with ID ${item.itemId} not found");
+//       }
+//
+//       print("Found item at row index: $targetRowIndex");
+//
+//       // Delete the row using batch update
+//       final deleteRequests = [
+//         Request()
+//           ..deleteDimension = (DeleteDimensionRequest()
+//             ..range = (DimensionRange()
+//               ..sheetId = sheetId // Adjust if your sheet has different ID
+//               ..dimension = 'ROWS'
+//               ..startIndex = targetRowIndex
+//               ..endIndex = targetRowIndex + 1))
+//       ];
+//
+//       final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
+//         ..requests = deleteRequests;
+//
+//       print("Deleting row...");
+//       await sheetsApi.spreadsheets.batchUpdate(
+//         deleteBatchRequest,
+//         spreadsheetId,
+//       );
+//
+//       print("Delete successful");
+//
+//       // Step 2: Add the updated item (small delay for consistency)
+//       await Future.delayed(Duration(seconds: 1));
+//
+//       print("Step 2: Adding updated item...");
+//
+//       // Prepare updated row values
+//       final values = [
+//         item.itemId,
+//         item.itemName,
+//         item.price.toString(),
+//         item.gstPercent.toString(),
+//         item.unitOfMeasurement,
+//         item.currentStock.toString(),
+//         item.detailRequirement,
+//         item.isActive ? "TRUE" : "FALSE",
+//         userId,
+//       ];
+//
+//       print("Adding values: $values");
+//
+//       // Append the updated row
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({
+//           "values": [values]
+//         }),
+//         spreadsheetId,
+//         "$itemSheetName!A:H",
+//         valueInputOption: "RAW",
+//       );
+//
+//       print("Add successful - Item edited using delete and add approach");
+//
+//     } catch (e) {
+//       print("Error in editItemAlternative3: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   ///part-2 ---------------------- Invoice
+//
+//   static Future<List<Invoice>> getInvoices({String? type}) async {
+//     print("🔄 Fetching invoices from Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$invoiceSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("No header row found in sheet");
+//         return <Invoice>[];
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       final columnIndices = {
+//         for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
+//       };
+//
+//       // Get all data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$invoiceSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
+//         print("No invoice data found in sheet");
+//         return <Invoice>[];
+//       }
+//
+//       List<Invoice> invoices = [];
+//
+//       // Skip header row
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+//
+//         try {
+//           Map<String, dynamic> rowData = {};
+//           for (int j = 0; j < min(row.length, headers.length); j++) {
+//             final headerKey = headers[j].toString();
+//             final cellValue = row[j];
+//
+//             // 🔹 Parse date fields (issueDate, dueDate) - keep as STRING for now
+//             if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+//               if (cellValue != null && cellValue.toString().isNotEmpty) {
+//                 // Store the parsed DateTime
+//                 final parsedDate = _parseDate(cellValue.toString());
+//                 rowData[headerKey] = parsedDate; // Store as DateTime
+//
+//                 // Debug first few rows
+//                 if (i <= 3) {
+//                   print("📅 Row $i - $headerKey: ${cellValue.toString()} → $parsedDate");
+//                 }
+//               } else {
+//                 rowData[headerKey] = null;
+//               }
+//             } else {
+//               rowData[headerKey] = cellValue;
+//             }
+//           }
+//
+//           // Debug first invoice
+//           if (i == 1) {
+//             print("🔍 First invoice rowData: $rowData");
+//           }
+//
+//           final invoice = Invoice.fromMap(rowData);
+//
+//           // Debug first invoice
+//           if (i == 1) {
+//             print("🔍 First invoice object: invoiceId=${invoice.invoiceId}, issueDate=${invoice.issueDate}");
+//           }
+//
+//           // 🔑 Apply filter
+//           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+//           if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+//
+//           invoices.add(invoice);
+//
+//         } catch (e, stackTrace) {
+//           print("❌ Error parsing invoice row ${i}: $e");
+//           print("Stack trace: $stackTrace");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
+//       return invoices;
+//
+//     } catch (e) {
+//       print("❌ Error in getInvoices: $e");
+//       rethrow;
+//     }
+//   }
+//
+// // 🔹 Helper method to parse dates from Google Sheets
+//   static DateTime? _parseDate(String dateString) {
+//     if (dateString.isEmpty) return null;
+//
+//     try {
+//       // Format: dd/MM/yyyy (most common in Google Sheets)
+//       if (dateString.contains("/")) {
+//         final parts = dateString.split("/");
+//         if (parts.length == 3) {
+//           return DateTime(
+//             int.parse(parts[2]), // yyyy
+//             int.parse(parts[1]), // MM
+//             int.parse(parts[0]), // dd
+//           );
+//         }
+//       }
+//
+//       // Format: yyyy-MM-dd (ISO format)
+//       if (dateString.contains("-")) {
+//         return DateTime.tryParse(dateString);
+//       }
+//
+//       print("⚠️ Could not parse date: $dateString");
+//       return null;
+//     } catch (e) {
+//       print("❌ Error parsing date '$dateString': $e");
+//       return null;
+//     }
+//   }
+//
+// // Add invoice to Google Sheet
+//   static Future<void> addInvoice(dynamic invoiceData, String userId) async {
+//     print("🔄 Adding invoice to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       print("Sheets API initialized for adding invoice");
+//
+//       // Determine which sheet to use based on your structure
+//       String targetSheetName = "Invoice"; // Default sheet name
+//       print("Using sheet: $targetSheetName");
+//
+//       // First, get the header row to understand column order
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$targetSheetName!1:1", // Get only the header row
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$targetSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("Sheet headers: $headers");
+//
+//       List<List<dynamic>> rowsToAdd = [];
+//
+//       if (invoiceData is Map<String, dynamic>) {
+//         // Single invoice data
+//         rowsToAdd.add(_prepareInvoiceRow(invoiceData, userId, headers));
+//       } else if (invoiceData is List<Invoice>) {
+//         // Multiple invoices
+//         for (Invoice invoice in invoiceData) {
+//           rowsToAdd.add(_prepareInvoiceRow(invoice.toMap(), userId, headers));
+//         }
+//       } else if (invoiceData is Invoice) {
+//         // Single Invoice object
+//         rowsToAdd.add(_prepareInvoiceRow(invoiceData.toMap(), userId, headers));
+//       } else {
+//         throw Exception("Invalid invoice data format: ${invoiceData.runtimeType}");
+//       }
+//
+//       print("Prepared ${rowsToAdd.length} rows to add");
+//
+//       // Add all rows to the sheet
+//       final valueRange = ValueRange.fromJson({
+//         "values": rowsToAdd
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$targetSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED", // Better formatting
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Invoice(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Invoice(s) added successfully");
+//       }
+//
+//     } catch (e) {
+//       print("❌ Error adding invoice: $e");
+//       throw Exception("Failed to add invoice: ${e.toString()}");
+//     }
+//   }
+//
+//   // Helper method to prepare invoice row data based on actual sheet headers
+//   static List<dynamic> _prepareInvoiceRow(
+//       Map<String, dynamic> invoiceData, String userId, List<dynamic> headers) {
+//     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//     String _formatDate(dynamic value) {
+//       if (value == null || value.toString().isEmpty) return "";
+//       try {
+//         if (value is DateTime) {
+//           return _dateFormatter.format(value);
+//         } else {
+//           return _dateFormatter.format(DateTime.parse(value.toString()));
+//         }
+//       } catch (e) {
+//         return value.toString(); // fallback if already string
+//       }
+//     }
+//
+//     // Handle items serialization if present
+//     if (invoiceData.containsKey('items') && invoiceData['items'] is List) {
+//       invoiceData['items'] = jsonEncode(invoiceData['items']);
+//     }
+//
+//     // Add userId
+//     invoiceData['userId'] = userId;
+//
+//     // Force issueDate (instead of invoiceDate)
+//     invoiceData['issueDate'] =
+//         _formatDate(invoiceData['issueDate'] ?? DateTime.now());
+//
+//     // Force dueDate
+//     if (invoiceData.containsKey('dueDate')) {
+//       invoiceData['dueDate'] = _formatDate(invoiceData['dueDate']);
+//     }
+//
+//     // Prepare row values in correct column order
+//     List<dynamic> rowData = [];
+//
+//     for (var header in headers) {
+//       String headerStr = header.toString().toLowerCase();
+//
+//       if (headerStr.contains('invoice') && headerStr.contains('id')) {
+//         rowData.add(invoiceData['invoiceId'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('name')) {
+//         rowData.add(invoiceData['customerName'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('email')) {
+//         rowData.add(invoiceData['customerEmail'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('phone')) {
+//         rowData.add(invoiceData['customerPhone'] ?? '');
+//       } else if (headerStr.contains('customer') && headerStr.contains('address')) {
+//         rowData.add(invoiceData['customerAddress'] ?? '');
+//       } else if (headerStr.contains('issue') && headerStr.contains('date')) {
+//         rowData.add(invoiceData['issueDate']); // ✅ correct mapping
+//       } else if (headerStr.contains('due') && headerStr.contains('date')) {
+//         rowData.add(invoiceData['dueDate']); // ✅ correct mapping
+//       } else if (headerStr.contains('total') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['totalAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('tax') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['taxAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('discount') && headerStr.contains('amount')) {
+//         rowData.add(invoiceData['discountAmount']?.toString() ?? '0');
+//       } else if (headerStr.contains('status')) {
+//         rowData.add(invoiceData['status'] ?? 'draft');
+//       } else if (headerStr.contains('items')) {
+//         rowData.add(invoiceData['items'] ?? '[]');
+//       } else if (headerStr.contains('notes')) {
+//         rowData.add(invoiceData['notes'] ?? '');
+//       } else if (headerStr.contains('payment') && headerStr.contains('method')) {
+//         rowData.add(invoiceData['paymentMethod'] ?? '');
+//       } else if (headerStr.contains('payment') && headerStr.contains('status')) {
+//         rowData.add(invoiceData['paymentStatus'] ?? 'pending');
+//       } else if (headerStr.contains('user') && headerStr.contains('id')) {
+//         rowData.add(userId);
+//       } else if (headerStr.contains('company') && headerStr.contains('id')) {
+//         rowData.add(invoiceData['companyId'] ?? '');
+//       } else {
+//         rowData.add(invoiceData[header.toString()] ?? '');
+//       }
+//     }
+//
+//     print("Prepared row data: $rowData");
+//     return rowData;
+//   }
+//
+//   /// At aTime all
+//   static Future<void> addInvoiceItemsBatch(
+//       List<Map<String, dynamic>> itemsData, String userId) async {
+//     print("🔄 Adding ${itemsData.length} invoice items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$invoiceItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$invoiceItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("InvoiceItems headers: $headers");
+//
+//       // ✅ Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString();
+//           final headerNameLower = headerName.toLowerCase();
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else {
+//             var value = '';
+//
+//             if (itemData.containsKey(headerName)) {
+//               value = itemData[headerName]?.toString() ?? '';
+//             } else {
+//               for (var key in itemData.keys) {
+//                 if (key.toString().toLowerCase() == headerNameLower) {
+//                   value = itemData[key]?.toString() ?? '';
+//                   break;
+//                 }
+//               }
+//             }
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       // Append all rows at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$invoiceItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} invoice items added successfully.");
+//       } else {
+//         print("✅ Invoice items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding invoice items batch: $e");
+//       throw Exception("Failed to add invoice items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   static Future<void> updateInvoice(
+//       Map<String, dynamic> invoiceData, String userId) async {
+//     print("🔄 Updating invoice in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//       const targetSheetName = "Invoice";
+//
+//       // 1. Get headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$targetSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No headers found in sheet");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("📋 Sheet Headers: $headers");
+//
+//       // 2. Find row number
+//       final allRows = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$targetSheetName!A:Z",
+//       );
+//
+//       int rowIndex = -1;
+//
+//       for (int i = 1; i < (allRows.values?.length ?? 0); i++) {
+//         final row = allRows.values![i];
+//         if (row.isNotEmpty && row[0].toString() == invoiceData['invoiceId']) {
+//           rowIndex = i + 1; // Google Sheets is 1-based
+//           break;
+//         }
+//       }
+//
+//       if (rowIndex == -1) {
+//         throw Exception("Invoice ID not found: ${invoiceData['invoiceId']}");
+//       }
+//
+//       print("🎯 Found invoice at row $rowIndex");
+//
+//       // 3. Build complete row data
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       List<dynamic> rowData = [];
+//
+//       for (var header in headers) {
+//         String headerLower = header.toString().toLowerCase().trim();
+//
+//         // Map each header to the correct field
+//         String? value;
+//
+//         if (headerLower.contains('invoiceid')) {
+//           value = invoiceData['invoiceId']?.toString();
+//         } else if (headerLower.contains('customerid')) {
+//           value = invoiceData['customerId']?.toString();
+//         } else if (headerLower.contains('customername')) {
+//           value = invoiceData['customerName']?.toString();
+//         } else if (headerLower.contains('customeremail')) {
+//           value = invoiceData['customerEmail']?.toString();
+//         } else if (headerLower == 'mobile') {
+//           value = invoiceData['mobile']?.toString();
+//         } else if (headerLower.contains('customeraddress')) {
+//           value = invoiceData['customerAddress']?.toString();
+//         } else if (headerLower.contains('issuedate')) {
+//           if (invoiceData['issueDate'] != null) {
+//             try {
+//               DateTime date = invoiceData['issueDate'] is String
+//                   ? DateTime.parse(invoiceData['issueDate'])
+//                   : invoiceData['issueDate'] as DateTime;
+//               value = _dateFormatter.format(date);
+//             } catch (e) {
+//               value = invoiceData['issueDate']?.toString();
+//             }
+//           }
+//         } else if (headerLower.contains('duedate')) {
+//           if (invoiceData['dueDate'] != null) {
+//             try {
+//               DateTime date = invoiceData['dueDate'] is String
+//                   ? DateTime.parse(invoiceData['dueDate'])
+//                   : invoiceData['dueDate'] as DateTime;
+//               value = _dateFormatter.format(date);
+//             } catch (e) {
+//               value = invoiceData['dueDate']?.toString();
+//             }
+//           }
+//         } else if (headerLower == 'subtotal') {
+//           value = invoiceData['subtotal']?.toString();
+//         } else if (headerLower.contains('gstamount') || headerLower.contains('gst')) {
+//           value = invoiceData['gstAmount']?.toString();
+//         } else if (headerLower.contains('totalamount')) {
+//           value = invoiceData['totalAmount']?.toString();
+//         } else if (headerLower.contains('receivedamount')) {
+//           value = invoiceData['receivedAmount']?.toString();
+//         } else if (headerLower.contains('pendingamount')) {
+//           value = invoiceData['pendingAmount']?.toString();
+//         } else if (headerLower == 'status') {
+//           value = invoiceData['status']?.toString();
+//         } else if (headerLower == 'notes') {
+//           value = invoiceData['notes']?.toString();
+//         } else if (headerLower.contains('userid')) {
+//           value = userId;
+//         } else {
+//           // Try direct match
+//           value = invoiceData[header.toString()]?.toString();
+//         }
+//
+//         rowData.add(value ?? '');
+//       }
+//
+//       print("📝 Prepared row data: $rowData");
+//
+//       // 4. Update row
+//       final valueRange = ValueRange.fromJson({
+//         "values": [rowData],
+//       });
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,
+//         "$targetSheetName!A$rowIndex:Z$rowIndex",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Invoice updated successfully at row $rowIndex");
+//     } catch (e, st) {
+//       print("❌ Error updating invoice: $e\n$st");
+//       throw Exception("Failed to update invoice: ${e.toString()}");
+//     }
+//   }
+//
+//   static List<dynamic> _prepareInvoiceUpdateRow(
+//       Map<String, dynamic> invoiceData,
+//       String userId,
+//       List<dynamic> headers,
+//       List<dynamic> sheetRow) {
+//     final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//     String _formatDate(dynamic value) {
+//       if (value == null || value.toString().isEmpty) return "";
+//       try {
+//         if (value is DateTime) return _dateFormatter.format(value);
+//         return _dateFormatter.format(DateTime.parse(value.toString()));
+//       } catch (e) {
+//         return value.toString();
+//       }
+//     }
+//
+//     List<dynamic> rowData = [];
+//
+//     for (int j = 0; j < headers.length; j++) {
+//       String headerStr = headers[j].toString().toLowerCase();
+//       final newVal = invoiceData[headers[j].toString()]?.toString();
+//
+//       if (headerStr.contains('issuedate')) {
+//         rowData.add(newVal?.isNotEmpty == true
+//             ? _formatDate(newVal)
+//             : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+//       } else if (headerStr.contains('duedate')) {
+//         rowData.add(newVal?.isNotEmpty == true
+//             ? _formatDate(newVal)
+//             : (j < sheetRow.length ? sheetRow[j]?.toString() ?? "" : ""));
+//       } else if (headerStr.contains('totalamount') ||
+//           headerStr.contains('subtotal') ||
+//           headerStr.contains('taxamount') ||
+//           headerStr.contains('discountamount')) {
+//         // ✅ Always overwrite with recalculated values
+//         rowData.add(newVal ?? "0");
+//       } else if (newVal != null && newVal.isNotEmpty) {
+//         rowData.add(newVal);
+//       } else if (j < sheetRow.length) {
+//         rowData.add(sheetRow[j]?.toString() ?? "");
+//       } else {
+//         rowData.add("");
+//       }
+//     }
+//
+//     return rowData;
+//   }
+//
+//
+//   /// Clear cache for a specific invoice
+//   static void clearInvoiceItemCache(String invoiceId) {
+//     if (_invoiceItemCache.containsKey(invoiceId)) {
+//       _invoiceItemCache.remove(invoiceId);
+//       print("🗑️ Cleared cache for invoice: $invoiceId");
+//     }
+//   }
+//
+//   /// Clear entire invoice items cache
+//   static void clearAllInvoiceItemCache() {
+//     _invoiceItemCache.clear();
+//     print("🗑️ Cleared all invoice item cache");
+//   }
+//
+// // Update your existing updateInvoiceItems method - add cache clear at the end:
+//   static Future<void> updateInvoiceItems(
+//       String invoiceId, List<Map<String, dynamic>> items, String userId) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//       const String itemSheet = "InvoiceItems";
+//
+//       final headerRes = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheet!1:1",
+//       );
+//       final headers = headerRes.values![0];
+//
+//       final allRows = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         itemSheet,
+//       );
+//
+//       final values = allRows.values ?? [];
+//       final rowsToUpdate = <int>[];
+//
+//       for (int i = 1; i < values.length; i++) {
+//         if (values[i].isNotEmpty &&
+//             values[i][0].toString().trim() == invoiceId) {
+//           rowsToUpdate.add(i + 1);
+//         }
+//       }
+//
+//       for (int i = 0; i < rowsToUpdate.length; i++) {
+//         final sheetRow = values[rowsToUpdate[i] - 1];
+//
+//         if (i < items.length) {
+//           final item = items[i];
+//           item['invoiceId'] = invoiceId;
+//           item['userId'] = userId;
+//
+//           final rowValues = <String>[];
+//           for (int j = 0; j < headers.length; j++) {
+//             final key = headers[j].toString().trim();
+//             final newVal = item[key]?.toString();
+//
+//             if (newVal != null && newVal.isNotEmpty) {
+//               rowValues.add(newVal);
+//             } else if (j < sheetRow.length) {
+//               rowValues.add(sheetRow[j]?.toString() ?? "");
+//             } else {
+//               rowValues.add("");
+//             }
+//           }
+//
+//           final range =
+//               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+//
+//           await sheetsApi.spreadsheets.values.update(
+//             ValueRange(values: [rowValues]),
+//             spreadsheetId,
+//             range,
+//             valueInputOption: "USER_ENTERED",
+//           );
+//         } else {
+//           final range =
+//               "$itemSheet!A${rowsToUpdate[i]}:${_columnLetter(headers.length)}${rowsToUpdate[i]}";
+//           await sheetsApi.spreadsheets.values.clear(
+//             ClearValuesRequest(),
+//             spreadsheetId,
+//             range,
+//           );
+//         }
+//       }
+//
+//       if (items.length > rowsToUpdate.length) {
+//         for (int i = rowsToUpdate.length; i < items.length; i++) {
+//           final item = items[i];
+//           item['invoiceId'] = invoiceId;
+//           item['userId'] = userId;
+//
+//           final rowValues = headers.map((h) {
+//             final key = h.toString().trim();
+//             return item[key]?.toString() ?? "";
+//           }).toList();
+//
+//           await sheetsApi.spreadsheets.values.append(
+//             ValueRange(values: [rowValues]),
+//             spreadsheetId,
+//             itemSheet,
+//             valueInputOption: "USER_ENTERED",
+//           );
+//         }
+//       }
+//
+//       print("✅ InvoiceItems updated for $invoiceId");
+//
+//       // ✅ CRITICAL: Clear cache after successful update
+//       clearInvoiceItemCache(invoiceId);
+//       print("✅ Cache cleared after update");
+//
+//     } catch (e, st) {
+//       print("❌ Error in updateInvoiceItems: $e\n$st");
+//       rethrow;
+//     }
+//   }
+//
+//   // 🔹 Helper to convert column index → Excel letter
+//   static String _columnLetter(int colIndex) {
+//     var dividend = colIndex;
+//     var columnName = '';
+//     while (dividend > 0) {
+//       var modulo = (dividend - 1) % 26;
+//       columnName = String.fromCharCode(65 + modulo) + columnName;
+//       dividend = ((dividend - modulo) ~/ 26);
+//     }
+//     return columnName;
+//   }
+//
+//   static Future<void> updateStockAfterInvoice(List<InvoiceItem> invoiceItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all stock rows once
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Stock sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Missing required columns in Stock sheet");
+//       }
+//
+//       for (var item in invoiceItems) {
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == AppConstants.userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         final newStock = currentStock - item.quantity;
+//         if (newStock < 0) {
+//           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+//         }
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock < 0 ? 0 : newStock] // prevent negative stock
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated (Invoice): ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after invoice: $e");
+//     }
+//   }
+//
+//   static Future<List<InvoiceItem>> getInvoiceItems({String? invoiceId}) async {
+//     print("🔄 Fetching invoice items from Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all rows from InvoiceItem sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$invoiceItemSheetName!A:Z", // adjust range as needed
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ No invoice items found in sheet");
+//         return [];
+//       }
+//
+//       // First row = headers
+//       final headers = response.values!.first.map((h) => h.toString()).toList();
+//       final rows = response.values!.skip(1); // skip header row
+//
+//       print("✅ Headers: $headers");
+//       List<InvoiceItem> items = [];
+//
+//       for (var row in rows) {
+//         Map<String, dynamic> rowMap = {};
+//         for (int i = 0; i < headers.length; i++) {
+//           if (i < row.length) {
+//             rowMap[headers[i]] = row[i];
+//           }
+//         }
+//
+//         try {
+//           final item = InvoiceItem.fromJson(rowMap);
+//
+//           // ✅ If filtering by invoiceId
+//           if (invoiceId == null || item.invoiceId == invoiceId) {
+//             items.add(item);
+//           }
+//         } catch (e) {
+//           print("❌ Error parsing invoice item row: $rowMap");
+//           print("Error: $e");
+//         }
+//       }
+//
+//       print("✅ Loaded ${items.length} invoice items");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error fetching invoice items: $e");
+//       throw Exception("Failed to fetch invoice items: ${e.toString()}");
+//     }
+//   }
+//
+//   /// Returns true if status updated, false if invoiceId not found.
+//   static Future<bool> updateInvoiceStatus(
+//       String invoiceId, String newStatus, {
+//         String? sheetName,
+//       }) async {
+//     final targetSheetName = sheetName ?? invoiceSheetName;
+//     print("🔄 updateInvoiceStatus -> sheet: $targetSheetName, invoiceId: $invoiceId, newStatus: $newStatus");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // 1) Read header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$targetSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("❌ Couldn't read headers from sheet $targetSheetName");
+//         throw Exception("No headers found in $targetSheetName");
+//       }
+//
+//       final rawHeaders = headerResponse.values![0];
+//       final headers = rawHeaders.map((h) => h.toString()).toList();
+//       print("📋 Headers: $headers");
+//
+//       // 2) Normalize header strings for searching
+//       List<String> normalized = headers
+//           .map((h) => h.toString().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+//           .toList();
+//
+//       // 3) Find invoiceId column index (heuristic)
+//       int invoiceIdIndex = -1;
+//       for (int i = 0; i < normalized.length; i++) {
+//         final h = normalized[i];
+//         if ((h.contains('invoice') && h.contains('id')) ||
+//             h == 'invoiceid' ||
+//             h == 'invoice') {
+//           invoiceIdIndex = i;
+//           break;
+//         }
+//       }
+//       // fallback: try 'id' column
+//       if (invoiceIdIndex == -1) {
+//         for (int i = 0; i < normalized.length; i++) {
+//           if (normalized[i] == 'id') {
+//             invoiceIdIndex = i;
+//             break;
+//           }
+//         }
+//       }
+//       // last fallback: assume first column
+//       if (invoiceIdIndex == -1) {
+//         print("⚠️ invoiceId column not detected - falling back to first column (index 0)");
+//         invoiceIdIndex = 0;
+//       }
+//
+//       // 4) Find status column index, if missing we'll append it
+//       int statusIndex = -1;
+//       for (int i = 0; i < normalized.length; i++) {
+//         final h = normalized[i];
+//         if (h.contains('status') || h.contains('state') || h.contains('paymentstatus')) {
+//           statusIndex = i;
+//           break;
+//         }
+//       }
+//
+//       bool appendedStatusHeader = false;
+//       if (statusIndex == -1) {
+//         // Append a 'status' header to header row so we can update that cell later
+//         final newHeaders = List<dynamic>.from(headers)..add('status');
+//         final lastColLetter = _columnLetter(newHeaders.length);
+//         final updateRange = "$targetSheetName!A1:${lastColLetter}1";
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [newHeaders]}),
+//           spreadsheetId,
+//           updateRange,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//         print("ℹ️ Appended 'status' header at column ${newHeaders.length} (range: $updateRange)");
+//         statusIndex = newHeaders.length - 1;
+//         appendedStatusHeader = true;
+//
+//         // Update local variables so we can continue. Also update headers/normalized for logging.
+//         headers.add('status');
+//         normalized.add('status');
+//       } else {
+//         print("🔎 status column detected at index $statusIndex (header: ${headers[statusIndex]})");
+//       }
+//
+//       // 5) Read full sheet to find row with invoiceId
+//       final allRowsResp = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$targetSheetName!A:Z",
+//       );
+//       final allRows = allRowsResp.values ?? [];
+//       if (allRows.isEmpty) {
+//         print("❌ Sheet has no rows.");
+//         return false;
+//       }
+//
+//       // Normalize the search key
+//       final normInvoiceId = invoiceId.toString().trim();
+//
+//       int foundRow = -1; // 1-based row number in spreadsheet
+//       // First try to match using invoiceIdIndex column (fast and preferred)
+//       for (int r = 1; r < allRows.length; r++) {
+//         final row = allRows[r];
+//         String cellValue = '';
+//         if (row.length > invoiceIdIndex) {
+//           cellValue = row[invoiceIdIndex]?.toString()?.trim() ?? '';
+//         }
+//         if (cellValue.isNotEmpty && (cellValue == normInvoiceId || cellValue.replaceAll('"', '') == normInvoiceId)) {
+//           foundRow = r + 1; // spreadsheet rows are 1-based
+//           break;
+//         }
+//       }
+//
+//       // If not found in column, scan full rows (tolerant search)
+//       if (foundRow == -1) {
+//         print("ℹ️ Not found in invoiceId column, scanning rows for a match...");
+//         for (int r = 1; r < allRows.length; r++) {
+//           final row = allRows[r];
+//           bool match = false;
+//           for (int c = 0; c < row.length; c++) {
+//             final cell = row[c]?.toString()?.trim() ?? '';
+//             if (cell.isEmpty) continue;
+//             // exact or contained (trim quotes)
+//             if (cell == normInvoiceId || cell.replaceAll('"', '') == normInvoiceId || cell.contains(normInvoiceId)) {
+//               match = true;
+//               break;
+//             }
+//           }
+//           if (match) {
+//             foundRow = r + 1;
+//             break;
+//           }
+//         }
+//       }
+//
+//       if (foundRow == -1) {
+//         print("⚠️ Invoice '$invoiceId' not found in sheet '$targetSheetName'. No update performed.");
+//         return false;
+//       }
+//
+//       print("✅ Found invoice '$invoiceId' at sheet row $foundRow");
+//
+//       // 6) Update only the status cell
+//       final statusColLetter = _columnLetter(statusIndex + 1); // 1-based column -> letter
+//       final statusRange = "$targetSheetName!$statusColLetter$foundRow";
+//
+//       // If we appended the status header this run, ensure we update the header values were accepted before updating row.
+//       // (small safety delay rarely needed; usually not required)
+//
+//       final valueRange = ValueRange.fromJson({
+//         "values": [
+//           [newStatus]
+//         ],
+//       });
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,
+//         statusRange,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Updated status for invoice '$invoiceId' -> '$newStatus' at $statusRange");
+//       return true;
+//     } catch (e, st) {
+//       print("❌ Error updating invoice status: $e\n$st");
+//       rethrow;
+//     }
+//   }
+//
+//
+//   ///part-3 ----------------------
+//   ///Challan
+//   static Future<void> addChallan(dynamic challanData, String userId) async {
+//     print("🔄 Adding Challan to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("Challan headers: $headers");
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       String _formatDate(dynamic value) {
+//         if (value == null || value.toString().isEmpty) return "";
+//         try {
+//           if (value is DateTime) {
+//             return _dateFormatter.format(value);
+//           } else {
+//             return _dateFormatter.format(DateTime.parse(value.toString()));
+//           }
+//         } catch (e) {
+//           return value.toString(); // fallback
+//         }
+//       }
+//
+//       // Normalize helper
+//       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+//         return {
+//           for (var entry in data.entries)
+//             entry.key.toString().trim().toLowerCase(): entry.value
+//         };
+//       }
+//
+//       // Build rows
+//       List<Map<String, dynamic>> rowsToSend = [];
+//
+//       if (challanData is Map<String, dynamic>) {
+//         if (challanData.containsKey('items') && challanData['items'] is List) {
+//           challanData['items'] = jsonEncode(challanData['items']);
+//         }
+//
+//         // format challanDate
+//         if (challanData.containsKey('challanDate')) {
+//           challanData['challanDate'] = _formatDate(challanData['challanDate']);
+//         }
+//
+//         rowsToSend.add({...challanData, "userId": userId});
+//       } else if (challanData is List<Challan>) {
+//         rowsToSend = challanData.map((chal) {
+//           final map = chal.toMap();
+//           if (map.containsKey('items') && map['items'] is List) {
+//             map['items'] = jsonEncode(map['items']);
+//           }
+//           if (map.containsKey('challanDate')) {
+//             map['challanDate'] = _formatDate(map['challanDate']);
+//           }
+//           return {...map, "userId": userId};
+//         }).toList();
+//       }
+//
+//       print("Prepared rows: ${jsonEncode(rowsToSend)}");
+//
+//       // Convert rows to ordered values matching headers
+//       List<List<dynamic>> values = [];
+//       for (var row in rowsToSend) {
+//         final normalized = _normalize(row);
+//         List<dynamic> rowData = [];
+//         for (var header in headers) {
+//           final key = header.toString().trim().toLowerCase();
+//           rowData.add(normalized[key] ?? '');
+//         }
+//         values.add(rowData);
+//       }
+//
+//       print("Prepared ${values.length} row(s) to add");
+//
+//       // Append rows to Google Sheet
+//       final valueRange = ValueRange.fromJson({
+//         "values": values,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$challanSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Challan(s) added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Challan(s) added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding Challan: $e");
+//       throw Exception("Failed to add Challan: ${e.toString()}");
+//     }
+//   }
+//
+//   static Future<void> addChallanItem(Map<String, dynamic> challanData, String userId) async {
+//     print("🔄 Adding challan item to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Date formatter
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("ChallanItems headers: $headers");
+//
+//       // Prepare row data based on exact header names
+//       List<dynamic> rowData = [];
+//
+//       for (var header in headers) {
+//         final headerName = header.toString();
+//         final headerNameLower = headerName.toLowerCase();
+//
+//         if (headerNameLower.contains('userid')) {
+//           // Add userId
+//           rowData.add(userId);
+//         }
+//         else if (headerNameLower.contains('date')) {
+//           // Handle date field
+//           dynamic dateValue = challanData['challanDate'] ??
+//               challanData['challainDate'] ??
+//               challanData['date'] ??
+//               DateTime.now();
+//
+//           try {
+//             if (dateValue is DateTime) {
+//               rowData.add(_dateFormatter.format(dateValue));
+//             } else if (dateValue is String) {
+//               rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+//             } else {
+//               rowData.add(_dateFormatter.format(DateTime.now()));
+//             }
+//           } catch (e) {
+//             rowData.add(_dateFormatter.format(DateTime.now()));
+//           }
+//         }
+//         else {
+//           // Add other fields
+//           var value = '';
+//           for (var key in challanData.keys) {
+//             if (key.toLowerCase() == headerNameLower) {
+//               value = challanData[key]?.toString() ?? '';
+//               break;
+//             }
+//           }
+//           rowData.add(value);
+//         }
+//       }
+//
+//       print("Prepared challan item row: $rowData");
+//
+//       // Append row
+//       final valueRange = ValueRange.fromJson({
+//         "values": [rowData],
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ Challan item added successfully. Rows affected: ${response.updates!.updatedRows}");
+//       } else {
+//         print("✅ Challan item added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding challan item: $e");
+//       throw Exception("Failed to add challan item: ${e.toString()}");
+//     }
+//   }
+//
+//   ///at atimr all Data
+//   static Future<void> addChallanItemsBatch(
+//       List<Map<String, dynamic>> itemsData, String userId) async {
+//     print("🔄 Adding ${itemsData.length} challan items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         throw Exception("No header row found in sheet '$challanItemSheetName'");
+//       }
+//
+//       final headers = headerResponse.values![0];
+//       print("ChallanItems headers: $headers");
+//
+//       // ✅ Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString();
+//           final headerNameLower = headerName.toLowerCase();
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else if (headerNameLower.contains('date')) {
+//             // Handle date formatting
+//             dynamic dateValue = itemData['challanDate'] ??
+//                 itemData['challainDate'] ??
+//                 itemData['date'] ??
+//                 DateTime.now();
+//
+//             try {
+//               if (dateValue is DateTime) {
+//                 rowData.add(_dateFormatter.format(dateValue));
+//               } else if (dateValue is String) {
+//                 rowData.add(_dateFormatter.format(DateTime.parse(dateValue)));
+//               } else {
+//                 rowData.add(_dateFormatter.format(DateTime.now()));
+//               }
+//             } catch (e) {
+//               rowData.add(_dateFormatter.format(DateTime.now()));
+//             }
+//           } else {
+//             // Match headers with itemData keys
+//             var value = '';
+//             if (itemData.containsKey(headerName)) {
+//               value = itemData[headerName]?.toString() ?? '';
+//             } else {
+//               for (var key in itemData.keys) {
+//                 if (key.toString().toLowerCase() == headerNameLower) {
+//                   value = itemData[key]?.toString() ?? '';
+//                   break;
+//                 }
+//               }
+//             }
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       // Append all challan items at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} challan items added successfully.");
+//       } else {
+//         print("✅ Challan items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding challan items batch: $e");
+//       throw Exception("Failed to add challan items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   static Future<void> updateStockAfterDispatch(List<ChallanItem> challanItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all stock rows once for efficiency
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:Z", // whole sheet
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Stock sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock"); // ✅ FIXED
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Missing required columns in Stock sheet");
+//       }
+//
+//       for (var item in challanItems) {
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == AppConstants.userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         final newStock = currentStock - item.quantity;
+//         if (newStock < 0) {
+//           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
+//         }
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock < 0 ? 0 : newStock] // prevent negative stock
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated: ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after challan: $e");
+//     }
+//   }
+//
+//   static Future<List<Challan>> getChallans() async {
+//     print("🔄 Fetching challans from Google Sheets...");
+//
+//     try {
+//       final client = await _getAuthClient(); // ✅ make sure you already implemented
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all challan rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanSheetName!A:Z", // whole sheet
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No challans found in sheet.");
+//         return <Challan>[];
+//       }
+//
+//       // Extract headers
+//       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       List<Challan> challans = [];
+//
+//       // Iterate rows
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // Map each header → value
+//         Map<String, dynamic> challanMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//
+//           try {
+//             Challan challan = Challan.fromMap(challanMap); // ✅ use your model parser
+//             challans.add(challan);
+//             print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+//           } catch (e) {
+//             print("⚠️ Error parsing challan row $i: $e");
+//             print("Row data: $challanMap");
+//           }
+//         }}
+//
+//       print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+//       return challans;
+//     } catch (e) {
+//       print("❌ Error in getChallans(): $e");
+//       rethrow;
+//     }
+//   }
+//
+//   static Future<List<Challan>> getChallansList() async {
+//     print("🔄 Fetching challans from Google Sheets...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all challan rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanSheetName!A:Z", // adjust range if needed
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No challans found in sheet.");
+//         return <Challan>[];
+//       }
+//
+//       // Extract headers from first row
+//       final headers =
+//       response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       List<Challan> challans = [];
+//
+//       // Iterate rows (skip header)
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // ✅ Skip completely empty rows
+//         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+//           continue;
+//         }
+//
+//         // ✅ Build map header → value
+//         Map<String, dynamic> challanMap = {};
+//         for (int j = 0; j < headers.length && j < row.length; j++) {
+//           challanMap[headers[j]] = row[j].toString();
+//         }
+//
+//         try {
+//           Challan challan = Challan.fromMap(challanMap);
+//           challans.add(challan);
+//           print("Processed challan: ${challan.challanId} - ${challan.customerName}");
+//         } catch (e) {
+//           print("⚠️ Error parsing challan row $i: $e");
+//           print("Row data: $challanMap");
+//         }
+//       }
+//
+//       print("✅ Successfully parsed ${challans.length} challans from Google Sheets");
+//       return challans;
+//     } catch (e) {
+//       print("❌ Error in getChallans(): $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Clear specific cache for challan items
+//   static void clearChallanItemCache(String challanId) {
+//     final cacheKey = 'challan_items_$challanId';
+//     _itemCache.remove(cacheKey);
+//     _cacheTimestamps.remove(cacheKey);
+//     print("🗑️ Cleared cache for challan: $challanId");
+//   }
+//
+//   ///at one Time new
+//   static Future<void> updateChallanStatusBatch(
+//       List<String> challanIds, String status, String userId) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // 1. Get spreadsheet metadata (to find sheetId for "Challan" tab)
+//       final spreadsheet =
+//       await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == challanSheetName);
+//       final sheetId = sheet.properties!.sheetId!; // <-- integer id
+//
+//       // 2. Get all challans
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("Challan sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//       final statusIndex = headers.indexOf("status");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (challanIdIndex == -1 || statusIndex == -1 || userIdIndex == -1) {
+//         throw Exception("Required columns missing in Challan sheet");
+//       }
+//
+//       List<Map<String, dynamic>> requests = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             challanIds.contains(row[challanIdIndex].toString()) &&
+//             row.length > userIdIndex &&
+//             row[userIdIndex].toString() == userId) {
+//           int rowIndex = i; // 0-based index
+//
+//           requests.add({
+//             "updateCells": {
+//               "range": {
+//                 "sheetId": sheetId, // ✅ correct integer sheetId
+//                 "startRowIndex": rowIndex,
+//                 "endRowIndex": rowIndex + 1,
+//                 "startColumnIndex": statusIndex,
+//                 "endColumnIndex": statusIndex + 1,
+//               },
+//               "rows": [
+//                 {
+//                   "values": [
+//                     {"userEnteredValue": {"stringValue": status}}
+//                   ]
+//                 }
+//               ],
+//               "fields": "userEnteredValue",
+//             }
+//           });
+//         }
+//       }
+//
+//       if (requests.isEmpty) {
+//         print("⚠️ No challans found to update");
+//         return;
+//       }
+//
+//       // 3. Build batch request
+//       final batchRequest = BatchUpdateSpreadsheetRequest.fromJson({
+//         "requests": requests,
+//       });
+//
+//       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+//
+//       print("✅ ${requests.length} challans updated to $status in batch.");
+//     } catch (e) {
+//       print("❌ Error in batch challan update: $e");
+//       rethrow;
+//     }
+//   }
+//
+// // Modified updateChallan function in GoogleSheetService to preserve GST
+//   static Future<void> updateChallan(Map<String, dynamic> challanData, String userId) async {
+//     print("🔄 Updating Challan in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all challans
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Challan sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (challanIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Missing challanId or userId column in sheet");
+//       }
+//
+//       int? rowToUpdate;
+//       List<Object?> existingRow = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() == challanData["challanId"].toString() &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToUpdate = i + 1;
+//           existingRow = row; // Store existing row data
+//           break;
+//         }
+//       }
+//
+//       if (rowToUpdate == null) {
+//         throw Exception("❌ Challan not found for update (id: ${challanData["challanId"]})");
+//       }
+//
+//       // Get existing GST values from the current row
+//       final gstRateIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstrate');
+//       final gstAmountIndex = headers.indexWhere((h) => h.toString().toLowerCase() == 'gstamount');
+//
+//       String existingGstRate = '';
+//       String existingGstAmount = '';
+//
+//       if (gstRateIndex != -1 && existingRow.length > gstRateIndex) {
+//         existingGstRate = existingRow[gstRateIndex]?.toString() ?? '';
+//       }
+//       if (gstAmountIndex != -1 && existingRow.length > gstAmountIndex) {
+//         existingGstAmount = existingRow[gstAmountIndex]?.toString() ?? '';
+//       }
+//
+//       // Build normalized data with all required fields
+//       Map<String, dynamic> normalized = {};
+//
+//       for (var header in headers) {
+//         String key = header.toString().trim().toLowerCase();
+//
+//         switch (key) {
+//           case 'challanid':
+//             normalized[key] = challanData["challanId"] ?? '';
+//             break;
+//           case 'customername':
+//             normalized[key] = challanData["customerName"] ?? '';
+//             break;
+//           case 'customeremail':
+//             normalized[key] = challanData["customerEmail"] ?? '';
+//             break;
+//           case 'customerphone':
+//             normalized[key] = challanData["customerPhone"] ?? '';
+//             break;
+//           case 'customeraddress':
+//             normalized[key] = challanData["customerAddress"] ?? '';
+//             break;
+//           case 'challandate':
+//             normalized[key] = challanData["challanDate"] ?? '';
+//             break;
+//           case 'subtotal':
+//             normalized[key] = challanData["subtotal"] ?? 0;
+//             break;
+//           case 'gstrate':
+//           // Preserve existing GST rate if not explicitly changed
+//             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+//               normalized[key] = existingGstRate;
+//             } else {
+//               double subtotal = double.tryParse(challanData["subtotal"]?.toString() ?? "0") ?? 0;
+//               double gstAmount = double.tryParse(challanData["gstAmount"]?.toString() ?? "0") ?? 0;
+//               double gstRate = subtotal > 0 ? (gstAmount / subtotal * 100) : 0;
+//               normalized[key] = gstRate.toStringAsFixed(2);
+//             }
+//             break;
+//           case 'gstamount':
+//           // Preserve existing GST amount if not explicitly changed
+//             if (challanData.containsKey("preserveGST") && challanData["preserveGST"] == true) {
+//               normalized[key] = existingGstAmount;
+//             } else {
+//               normalized[key] = challanData["gstAmount"] ?? 0;
+//             }
+//             break;
+//           case 'totalamount':
+//             normalized[key] = challanData["totalAmount"] ?? 0;
+//             break;
+//           case 'status':
+//             normalized[key] = challanData["status"] ?? 'Pending';
+//             break;
+//           case 'statusprogress':
+//             normalized[key] = challanData["statusProgress"] ?? 'InProgress';
+//             break;
+//           case 'userid':
+//             normalized[key] = userId;
+//             break;
+//           default:
+//           // Keep existing value for unknown columns
+//             int existingIndex = headers.indexWhere((h) => h.toString().toLowerCase() == key);
+//             if (existingIndex != -1 && existingRow.length > existingIndex) {
+//               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+//             } else {
+//               normalized[key] = '';
+//             }
+//             break;
+//         }
+//       }
+//
+//       // Build row data in the same order as headers
+//       List<dynamic> rowData = [];
+//       for (var header in headers) {
+//         final key = header.toString().trim().toLowerCase();
+//         rowData.add(normalized[key]?.toString() ?? '');
+//       }
+//
+//       final range = "$challanSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+//
+//       final valueRange = ValueRange(
+//         values: [rowData],
+//       );
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,
+//         range,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Challan updated successfully at row $rowToUpdate");
+//       print("📊 GST Rate: ${normalized['gstrate']}, GST Amount: ${normalized['gstamount']}");
+//
+//     } catch (e) {
+//       print("❌ Error updating Challan: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   static Future<void> updateChallanItems(
+//       String challanId, List<Map<String, dynamic>> items, String userId) async {
+//     print("🔄 Updating Challan Items in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get current sheet data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z", // Make sure to get all columns A to Z
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         // Sheet is empty, just add new items
+//         for (var item in items) {
+//           await addChallanItem({...item, "challanId": challanId}, userId);
+//         }
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       print("Sheet headers: $headers"); // Debug print
+//
+//       final challanIdIndex = headers.indexOf("challanId");
+//
+//       if (challanIdIndex == -1) {
+//         throw Exception("❌ Missing challanId column");
+//       }
+//
+//       // Build new sheet data (keep all items except for this challanId)
+//       List<List<Object?>> newSheetData = [];
+//       newSheetData.add(headers); // Add headers first
+//
+//       // Add all rows that DON'T belong to our challanId
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() != challanId) {
+//           newSheetData.add(row);
+//         }
+//       }
+//
+//       // Add our new items to the data
+//       for (var item in items) {
+//         List<Object?> newRow = [];
+//         for (var header in headers) {
+//           String key = header.toString().trim().toLowerCase();
+//
+//           switch (key) {
+//             case 'challanid':
+//               newRow.add(item['challanId'] ?? challanId);
+//               break;
+//             case 'customerid':
+//               newRow.add(item['customerId'] ?? '');
+//               break;
+//             case 'itemid':
+//               newRow.add(item['itemId'] ?? '');
+//               break;
+//             case 'itemname':
+//               newRow.add(item['itemName'] ?? '');
+//               break;
+//             case 'description':
+//               newRow.add(item['description'] ?? '');
+//               break;
+//             case 'quantity':
+//               newRow.add(item['quantity'] ?? '0');
+//               break;
+//             case 'price':
+//               newRow.add(item['price'] ?? '0');
+//               break;
+//             case 'challandate':
+//               newRow.add(item['challanDate'] ?? '');
+//               break;
+//             case 'gstrate':
+//               newRow.add(item['gstRate'] ?? '0');
+//               break;
+//             case 'gstamount':
+//               newRow.add(item['gstAmount'] ?? '0');
+//               break;
+//             case 'amountwithgst':
+//               newRow.add(item['amountWithGst'] ?? '0');
+//               break;
+//             case 'totalprice':
+//               newRow.add(item['totalPrice'] ?? '0');
+//               break;
+//             case 'unit':
+//               newRow.add(item['unit'] ?? '');
+//               break;
+//             case 'userid':
+//               newRow.add(item['userId'] ?? userId);
+//               break;
+//             default:
+//               newRow.add('');
+//               break;
+//           }
+//         }
+//         newSheetData.add(newRow);
+//         print("Added row: $newRow"); // Debug print
+//       }
+//
+//       // Clear the entire sheet
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       // Write all data back to sheet
+//       if (newSheetData.length > 1) {
+//         final range = "$challanItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange(values: newSheetData),
+//           spreadsheetId,
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//       }
+//
+//       print("✅ Successfully updated ${items.length} challan items");
+//
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Challan items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+// // Alternative method using append after clearing specific rows
+//   static Future<void> updateChallanItemsV2(
+//       String challanId, List<Map<String, dynamic>> items, String userId) async {
+//     print("🔄 Updating Challan Items (Method V2)...");
+//
+//     try {
+//       // First, delete existing items for this challanId
+//       await deleteChallanItemsByChallanId(challanId);
+//
+//       // Then add new items
+//       for (var item in items) {
+//         await addChallanItem({...item, "challanId": challanId}, userId);
+//       }
+//
+//       print("✅ Successfully updated challan items using V2 method");
+//
+//     } catch (e) {
+//       print("❌ Error in updateChallanItemsV2: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Batch update challan items (more efficient than individual updates)
+//   static Future<void> updateChallanItemsBatch(String challanId, List<Map<String, dynamic>> itemsData, String userId) async {
+//     try {
+//       print("🔄 Batch updating ${itemsData.length} items for challan: $challanId");
+//
+//       // First, delete existing items for this challan
+//       await deleteChallanItems(challanId, userId);
+//
+//       // Then insert all new items
+//       for (var itemData in itemsData) {
+//         await addChallanItem(itemData, userId);
+//       }
+//
+//       // Clear cache to force refresh on next read
+//       clearChallanItemCache(challanId);
+//
+//       print("✅ Batch update completed for challan: $challanId");
+//
+//     } catch (e) {
+//       print("❌ Error in batch update: $e");
+//       throw e;
+//     }
+//   }
+//
+//   // ✅ FIXED: Delete all items for a specific challan
+//   static Future<void> deleteChallanItems(String challanId, String userId) async {
+//     print("🗑️ Deleting all items for challan: $challanId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all challan items
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Sheet is empty, nothing to delete");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//
+//       if (challanIdIndex == -1) {
+//         throw Exception("❌ challanId column not found in sheet");
+//       }
+//
+//       // Find all rows that match this challanId
+//       List<int> rowsToDelete = [];
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > challanIdIndex &&
+//             row[challanIdIndex].toString() == challanId) {
+//           rowsToDelete.add(i);
+//         }
+//       }
+//
+//       if (rowsToDelete.isEmpty) {
+//         print("ℹ️ No items found for challan: $challanId");
+//         return;
+//       }
+//
+//       print("Found ${rowsToDelete.length} rows to delete");
+//
+//       // Get sheet ID for batch delete
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       int? sheetId;
+//       for (var sheet in spreadsheet.sheets ?? []) {
+//         if (sheet.properties?.title == challanItemSheetName) {
+//           sheetId = sheet.properties?.sheetId;
+//           break;
+//         }
+//       }
+//
+//       if (sheetId == null) {
+//         throw Exception("❌ Could not find sheet ID for $challanItemSheetName");
+//       }
+//
+//       // Delete rows in reverse order to maintain indices
+//       List<Request> deleteRequests = [];
+//       for (int rowIndex in rowsToDelete.reversed) {
+//         deleteRequests.add(
+//             Request()
+//               ..deleteDimension = (DeleteDimensionRequest()
+//                 ..range = (DimensionRange()
+//                   ..sheetId = sheetId
+//                   ..dimension = 'ROWS'
+//                   ..startIndex = rowIndex  // 0-based for API
+//                   ..endIndex = rowIndex + 1))
+//         );
+//       }
+//
+//       // Execute batch delete
+//       final batchRequest = BatchUpdateSpreadsheetRequest()
+//         ..requests = deleteRequests;
+//
+//       await sheetsApi.spreadsheets.batchUpdate(
+//         batchRequest,
+//         spreadsheetId,
+//       );
+//
+//       print("✅ Successfully deleted ${rowsToDelete.length} items for challan: $challanId");
+//
+//       // Clear cache
+//       clearChallanItemCache(challanId);
+//
+//     } catch (e, stackTrace) {
+//       print("❌ Error deleting challan items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+// // Helper method to delete challan items by challanId
+//   static Future<void> deleteChallanItemsByChallanId(String challanId) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         return; // Nothing to delete
+//       }
+//
+//       final headers = response.values![0];
+//       final challanIdIndex = headers.indexOf("challanId");
+//
+//       if (challanIdIndex == -1) {
+//         return; // No challanId column
+//       }
+//
+//       // Build filtered data (exclude rows matching challanId)
+//       List<List<Object?>> filteredData = [headers];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length <= challanIdIndex ||
+//             row[challanIdIndex].toString() != challanId) {
+//           filteredData.add(row);
+//         }
+//       }
+//
+//       // Clear and rewrite sheet
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (filteredData.length > 1) {
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange(values: filteredData),
+//           spreadsheetId,
+//           "$challanItemSheetName!A${filteredData.length}",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//       }
+//
+//       print("🗑️ Deleted existing items for challanId: $challanId");
+//
+//     } catch (e) {
+//       print("❌ Error deleting challan items: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   // Add to your GoogleSheetService class:
+//   static Future<void> updateChallanWithCacheClear(
+//       Map<String, dynamic> challanData, String userId) async {
+//     print("🔄 Updating challan with cache clear...");
+//
+//     final challanId = challanData['challanId']?.toString();
+//
+//     try {
+//       // Update the challan
+//       await updateChallan(challanData, userId);
+//
+//       // Clear cache immediately after update
+//       if (challanId != null) {
+//         clearChallanItemCache(challanId);
+//         _challanCache.remove(challanId);
+//         print("✅ Cleared cache for challan: $challanId");
+//       }
+//
+//       // Also clear any general cache timestamps
+//       _cacheTimestamps.clear();
+//
+//     } catch (e) {
+//       print("❌ Error updating challan: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   static Future<void> updateChallanItemsWithCacheClear(
+//       String challanId,
+//       List<Map<String, dynamic>> items,
+//       String userId) async {
+//     print("🔄 Updating challan items with cache clear...");
+//
+//     try {
+//       // Update items
+//       await updateChallanItems(challanId, items, userId);
+//
+//       // Force clear ALL caches
+//       clearChallanItemCache(challanId);
+//       _challanCache.remove(challanId);
+//       _itemCache.remove('challan_items_$challanId');
+//       _cacheTimestamps.remove('challan_items_$challanId');
+//
+//       print("✅ Cleared all caches for challan: $challanId");
+//
+//     } catch (e) {
+//       print("❌ Error updating items: $e");
+//       rethrow;
+//     }
+//   }
+//
+//
+//   static Future<void> deleteItems(String userId, Item item) async {
+//     print("=== GoogleSheetApi.deleteItems → DELETE and ADD ===");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Step 1: Fetch all rows to locate the row for this item
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Stock sheet is empty, cannot delete item.");
+//       }
+//
+//       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Required columns (itemId, userId) not found in sheet.");
+//       }
+//
+//       int? rowToDelete;
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > itemIdIndex &&
+//             row[itemIdIndex].toString() == item.itemId &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToDelete = i + 1; // Google Sheets rows are 1-based
+//           break;
+//         }
+//       }
+//
+//       if (rowToDelete == null) {
+//         throw Exception("❌ Item ${item.itemId} not found for user $userId.");
+//       }
+//
+//       print("🗑 Deleting item at row $rowToDelete...");
+//
+//       // Step 2: Clear the row (deletes data but row stays empty)
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,
+//         "$itemSheetName!A$rowToDelete:Z$rowToDelete",
+//       );
+//
+//       print("✅ Item ${item.itemId} deleted from row $rowToDelete.");
+//
+//       // Step 3: Add new row (append updated item)
+//       await Future.delayed(Duration(seconds: 1));
+//
+//       final newRow = [
+//         item.itemId,
+//         item.itemName,
+//         item.price.toString(),
+//         item.unitOfMeasurement,
+//         item.currentStock.toString(),
+//         item.detailRequirement ?? "",
+//         item.isActive.toString(),
+//         userId,
+//       ];
+//
+//       final appendBody = ValueRange.fromJson({
+//         "values": [newRow],
+//       });
+//
+//       await sheetsApi.spreadsheets.values.append(
+//         appendBody,
+//         spreadsheetId,
+//         itemSheetName,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Item ${item.itemId} re-added successfully.");
+//     } catch (e) {
+//       print("❌ Error in deleteItems: $e");
+//       rethrow;
+//     }
+//   }
+//
+//
+//
+//   static Future<List<InvoiceItem>> getInvoiceItemsByInvoiceId(String invoiceId) async {
+//     print("🔄 Fetching items for invoice: $invoiceId");
+//
+//     // If already cached, return directly
+//     if (_invoiceItemCache.containsKey(invoiceId)) {
+//       print("⚡ Returning cached items for invoice $invoiceId");
+//       return _invoiceItemCache[invoiceId]!;
+//     }
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       final headers = await _getHeaders(sheetsApi, sheetName: invoiceItemSheetName);
+//
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$invoiceItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for invoice $invoiceId");
+//         return <InvoiceItem>[];
+//       }
+//
+//       List<InvoiceItem> items = [];
+//       int foundCount = 0;
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         // Create map using original headers
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by invoiceId
+//         final rowInvoiceId = itemMap['invoiceId'] ??
+//             itemMap['InvoiceId'] ??
+//             itemMap['INVOICEID'];
+//
+//         if (rowInvoiceId?.toString() == invoiceId) {
+//           try {
+//             print("=== Raw item map for invoice $invoiceId ===");
+//             itemMap.forEach((key, value) {
+//               print("  '$key': '$value'");
+//             });
+//
+//             // ✅ FIX: Normalize the map to use 'rate' field
+//             // If 'price' exists but 'rate' doesn't, copy price to rate
+//             if (itemMap.containsKey('price') && !itemMap.containsKey('rate')) {
+//               itemMap['rate'] = itemMap['price'];
+//               print("✅ Mapped 'price' -> 'rate': ${itemMap['price']}");
+//             }
+//
+//             // Also handle totalPrice column name variations
+//             if (!itemMap.containsKey('totalPrice')) {
+//               if (itemMap.containsKey('totalAmount')) {
+//                 itemMap['totalPrice'] = itemMap['totalAmount'];
+//               } else if (itemMap.containsKey('total')) {
+//                 itemMap['totalPrice'] = itemMap['total'];
+//               }
+//             }
+//
+//             InvoiceItem item = InvoiceItem.fromJson(itemMap);
+//             items.add(item);
+//             foundCount++;
+//
+//             print("✅ Added item: ${item.itemName}");
+//             print("   - Rate: ${item.rate}");
+//             print("   - Quantity: ${item.quantity}");
+//             print("   - GST Rate: ${item.gstRate}%");
+//             print("   - GST Amount: ${item.gstAmount}");
+//             print("   - Total Price: ${item.totalPrice}");
+//
+//           } catch (e, stackTrace) {
+//             print("❌ Error parsing invoice item: $e");
+//             print("❌ Stack trace: $stackTrace");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found $foundCount items for invoice $invoiceId");
+//
+//       // Cache result for next call
+//       _invoiceItemCache[invoiceId] = items;
+//
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting invoice items: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ Get headers (only once per app session, cached in memory)
+//   static Future<List<String>> _getHeaders(SheetsApi sheetsApi, {String? sheetName}) async {
+//     try {
+//       final headerSheetName = sheetName ?? challanItemSheetName;
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$headerSheetName!1:1",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("No headers found in $headerSheetName");
+//       }
+//
+//       final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//       print("📋 Headers for $headerSheetName: $headers");
+//       return headers;
+//     } catch (e) {
+//       print("❌ Error getting headers for ${sheetName ?? challanItemSheetName}: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// ✅ Optimized function: get items by challanId with caching
+//   static Future<List<ChallanItem>> getChallanItemsByChallanId(
+//       String challanId) async {
+//     print("🔄 Fetching items for challan: $challanId");
+//
+//     // If already cached, return directly
+//     if (_challanCache.containsKey(challanId)) {
+//       print("⚡ Returning cached items for challan $challanId");
+//       return _challanCache[challanId]!;
+//     }
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       final headers = await _getHeaders(sheetsApi);
+//
+//       // ✅ Fetch only data rows (skip headers)
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for challan $challanId");
+//         return <ChallanItem>[];
+//       }
+//
+//       List<ChallanItem> items = [];
+//       int foundCount = 0;
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by challanId
+//         final rowChallanId = itemMap['challanId'] ??
+//             itemMap['ChallanId'] ??
+//             itemMap['CHALLANID'];
+//
+//         if (rowChallanId?.toString() == challanId) {
+//           try {
+//             ChallanItem item = ChallanItem.fromJson(itemMap);
+//             items.add(item);
+//             foundCount++;
+//             print("✅ Added item: ${item.itemName}");
+//           } catch (e) {
+//             print("❌ Error parsing challan item: $e");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found $foundCount items for challan $challanId");
+//
+//       // Cache result for next call
+//       _challanCache[challanId] = items;
+//
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting challan items: $e");
+//       return [];
+//     }
+//   }
+//
+//
+//   static Future<List<Challan>> getChallansByDateRange({
+//     required DateTime fromDate,
+//     required DateTime toDate,
+//     required String userId,
+//   }) async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     final response = await sheetsApi.spreadsheets.values.get(
+//       spreadsheetId,
+//       "$challanSheetName!A:Z",
+//     );
+//
+//     if (response.values == null || response.values!.length <= 1) return [];
+//
+//     final headers = response.values![0].map((h) => h.toString().trim()).toList();
+//
+//     // ✅ Load ALL challan items once
+//     final challanItemsGrouped = await getAllChallanItemsGrouped();
+//
+//     List<Challan> filtered = [];
+//
+//     for (int i = 1; i < response.values!.length; i++) {
+//       final row = response.values![i];
+//       if (row.isEmpty) continue;
+//
+//       Map<String, dynamic> challanMap = {};
+//       for (int j = 0; j < headers.length; j++) {
+//         challanMap[headers[j]] = j < row.length ? row[j] : "";
+//       }
+//
+//       try {
+//         Challan challan = Challan.fromMap(challanMap);
+//
+//         DateTime? parsedDate = _parseChallanDate(challanMap['challanDate']?.toString() ?? "");
+//         if (parsedDate != null &&
+//             challan.userId == userId &&
+//             !parsedDate.isBefore(fromDate) &&
+//             !parsedDate.isAfter(toDate)) {
+//
+//           // ✅ Attach preloaded items
+//           challan.items = challanItemsGrouped[challan.challanId] ?? [];
+//           challan.challanDate = parsedDate;
+//
+//           filtered.add(challan);
+//         }
+//       } catch (e) {
+//         print("⚠️ Error parsing challan: $e");
+//       }
+//     }
+//
+//     return filtered;
+//   }
+//
+//   static Future<Map<String, List<ChallanItem>>> getAllChallanItemsGrouped() async {
+//     final client = await _getAuthClient();
+//     final sheetsApi = SheetsApi(client);
+//
+//     final headers = await _getHeaders(sheetsApi);
+//
+//     final response = await sheetsApi.spreadsheets.values.get(
+//       spreadsheetId,
+//       "$challanItemSheetName!A2:Z",
+//     );
+//
+//     Map<String, List<ChallanItem>> grouped = {};
+//
+//     if (response.values == null || response.values!.isEmpty) {
+//       return grouped;
+//     }
+//
+//     for (var row in response.values!) {
+//       if (row.isEmpty) continue;
+//
+//       Map<String, dynamic> itemMap = {};
+//       for (int j = 0; j < headers.length; j++) {
+//         itemMap[headers[j]] = j < row.length ? row[j] : "";
+//       }
+//
+//       final challanId = itemMap['challanId'] ?? itemMap['ChallanId'] ?? "";
+//       if (challanId.toString().isEmpty) continue;
+//
+//       try {
+//         final item = ChallanItem.fromJson(itemMap);
+//         grouped.putIfAbsent(challanId.toString(), () => []);
+//         grouped[challanId.toString()]!.add(item);
+//       } catch (e) {
+//         print("❌ Failed parsing ChallanItem: $e");
+//       }
+//     }
+//
+//     return grouped;
+//   }
+//
+//
+//
+//   /// 🔑 Helper function to parse multiple date formats
+//   static DateTime? _parseChallanDate(String rawDate) {
+//     try {
+//       // Try ISO 8601 (yyyy-MM-dd or with time)
+//       DateTime? parsed = DateTime.tryParse(rawDate);
+//       if (parsed != null) return parsed;
+//
+//       // Try dd/MM/yyyy
+//       parsed = DateFormat('dd/MM/yyyy').parseStrict(rawDate);
+//       if (parsed != null) return parsed;
+//     } catch (_) {}
+//
+//     try {
+//       // Try dd/MM/yyyy HH:mm:ss
+//       return DateFormat('dd/MM/yyyy HH:mm:ss').parseStrict(rawDate);
+//     } catch (_) {
+//       return null;
+//     }
+//   }
+//
+//   static Future<List<Challan>> getChallansWithItemsByCustomer(String customerName) async {
+//     print("🔄 Fetching challans for customer: $customerName");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // ✅ Batch fetch challans & items in one call
+//       final batchResponse = await sheetsApi.spreadsheets.values.batchGet(
+//         spreadsheetId,
+//         ranges: [
+//           "$challanSheetName!A:Z",
+//           "$challanItemSheetName!A:Z", // make sure you have this constant
+//         ],
+//       );
+//
+//       if (batchResponse.valueRanges == null || batchResponse.valueRanges!.isEmpty) {
+//         print("❌ No data returned from batchGet");
+//         return [];
+//       }
+//
+//       // --- Challans ---
+//       final challansValues = batchResponse.valueRanges![0].values;
+//       if (challansValues == null || challansValues.length <= 1) {
+//         print("❌ No challans found in sheet");
+//         return [];
+//       }
+//       final challanHeaders = challansValues[0].map((h) => h.toString().trim()).toList();
+//       print("✅ Challan headers: $challanHeaders");
+//
+//       // --- Items ---
+//       final itemsValues = batchResponse.valueRanges!.length > 1
+//           ? batchResponse.valueRanges![1].values
+//           : null;
+//       List<Map<String, dynamic>> allItems = [];
+//       if (itemsValues != null && itemsValues.length > 1) {
+//         final itemHeaders = itemsValues[0].map((h) => h.toString().trim()).toList();
+//         for (int i = 1; i < itemsValues.length; i++) {
+//           Map<String, dynamic> itemMap = {};
+//           for (int j = 0; j < itemHeaders.length; j++) {
+//             itemMap[itemHeaders[j]] =
+//             j < itemsValues[i].length ? itemsValues[i][j] : "";
+//           }
+//           allItems.add(itemMap);
+//         }
+//         print("📦 Total challan items loaded: ${allItems.length}");
+//       }
+//
+//       List<Challan> customerChallans = [];
+//
+//       // --- Iterate challans ---
+//       for (int i = 1; i < challansValues.length; i++) {
+//         final row = challansValues[i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> challanMap = {};
+//         for (int j = 0; j < challanHeaders.length; j++) {
+//           challanMap[challanHeaders[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         try {
+//           Challan challan = Challan.fromMap(challanMap);
+//
+//           // Debug: Print challan details
+//           print("📋 Challan ${challan.challanId}: Customer=${challan.customerName}, Looking for=$customerName");
+//
+//           // Filter by customer name (case insensitive)
+//           if (challan.customerName.toLowerCase() == customerName.toLowerCase()) {
+//             print("✅ Found matching challan: ${challan.challanId}");
+//
+//             // ✅ Filter items locally instead of extra API calls
+//             final challanItems = allItems
+//                 .where((item) => item["challanId"].toString() == challan.challanId)
+//                 .map((map) => ChallanItem.fromJson(map))
+//                 .toList();
+//
+//             print("📦 Items loaded for ${challan.challanId}: ${challanItems.length}");
+//
+//             // ✅ Attach items using copyWith
+//             Challan challanWithItems = challan.copyWith(items: challanItems);
+//             customerChallans.add(challanWithItems);
+//
+//             print("✅ Challan ${challan.challanId} now has ${challanWithItems.items?.length ?? 0} items");
+//           }
+//         } catch (e) {
+//           print("❌ Error parsing challan: $e");
+//           print("❌ Challan data: $challanMap");
+//         }
+//       }
+//
+//       print("✅ Total challans found for $customerName: ${customerChallans.length}");
+//       return customerChallans;
+//     } catch (e) {
+//       print("❌ Error getting challans by customer: $e");
+//       return [];
+//     }
+//   }
+//
+//   static Future<List<ChallanItem>> getChallanItemsByChallanIdFromSheet(String challanId) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all rows from the challan items sheet
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$challanItemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No challan items found.");
+//         return [];
+//       }
+//
+//       // Extract headers
+//       final headers = response.values![0]
+//           .map((h) => h.toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ''))
+//           .toList();
+//
+//       List<ChallanItem> items = [];
+//
+//       // Iterate rows
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         Map<String, String> rowByHeader = {};
+//
+//         for (int j = 0; j < headers.length; j++) {
+//           final key = headers[j];
+//           final value = (j < row.length) ? row[j].toString() : "";
+//           rowByHeader[key] = value;
+//         }
+//
+//         // Filter by challanId
+//         if (rowByHeader['challanid'] == challanId) {
+//           try {
+//             final item = ChallanItem.fromJson(rowByHeader);
+//             items.add(item);
+//           } catch (e) {
+//             print("⚠️ Skipping row ${i + 1} due to parse error: $e");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found ${items.length} items for challan $challanId");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error fetching items for challan $challanId: $e");
+//       return [];
+//     }
+//   }
+//
+//   ///part-4 ---------------------- Purchase
+//   /// Enhanced addPurchase with all fields (matching Invoice structure)
+//   static Future<void> addPurchase(dynamic purchaseData, String userId) async {
+//     print("🔄 Adding Purchase to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Define complete headers matching Invoice structure
+//       final expectedHeaders = [
+//         'purchaseId',
+//         'vendorId',
+//         'vendorName',
+//         'vendorEmail',
+//         'vendorMobile',
+//         'vendorAddress',
+//         'purchaseDate',
+//         'dueDate',  // ✅ NEW
+//         'subtotal',
+//         'gstRate',
+//         'gstAmount',
+//         'totalAmount',
+//         'paidAmount',  // ✅ NEW
+//         'pendingAmount',  // ✅ NEW
+//         'paymentStatus',
+//         'notes',
+//         'userId',
+//       ];
+//
+//       // Get or create headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseSheetName!1:1",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ Creating headers for Purchase sheet...");
+//         headers = expectedHeaders;
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,
+//           "$purchaseSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Headers created");
+//       } else {
+//         headers = headerResponse.values![0];
+//       }
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       String _formatDate(dynamic value) {
+//         if (value == null || value.toString().isEmpty) return "";
+//         try {
+//           if (value is DateTime) {
+//             return _dateFormatter.format(value);
+//           } else {
+//             return _dateFormatter.format(DateTime.parse(value.toString()));
+//           }
+//         } catch (e) {
+//           return value.toString();
+//         }
+//       }
+//
+//       // Normalize keys
+//       Map<String, dynamic> _normalize(Map<String, dynamic> data) {
+//         return {
+//           for (var entry in data.entries)
+//             entry.key.toString().trim().toLowerCase(): entry.value
+//         };
+//       }
+//
+//       List<Map<String, dynamic>> rowsToSend = [];
+//
+//       if (purchaseData is Map<String, dynamic>) {
+//         if (purchaseData.containsKey('purchaseDate')) {
+//           purchaseData['purchaseDate'] = _formatDate(purchaseData['purchaseDate']);
+//         }
+//         if (purchaseData.containsKey('dueDate')) {
+//           purchaseData['dueDate'] = _formatDate(purchaseData['dueDate']);
+//         }
+//         rowsToSend.add({...purchaseData, "userId": userId});
+//       } else if (purchaseData is PurchaseEntry) {
+//         final map = {
+//           'purchaseId': purchaseData.purchaseId,
+//           'vendorId': purchaseData.vendorId,
+//           'vendorName': purchaseData.vendorName,
+//           'vendorEmail': purchaseData.vendorEmail,
+//           'vendorMobile': purchaseData.vendorMobile,
+//           'vendorAddress': purchaseData.vendorAddress,
+//           'purchaseDate': _formatDate(purchaseData.purchaseDate),
+//           'dueDate': _formatDate(purchaseData.dueDate),  // ✅ NEW
+//           'subtotal': purchaseData.subtotal,
+//           'gstRate': purchaseData.gstRate,
+//           'gstAmount': purchaseData.gstAmount,
+//           'totalAmount': purchaseData.totalAmount,
+//           'paidAmount': purchaseData.paidAmount ?? 0.0,  // ✅ NEW
+//           'pendingAmount': purchaseData.pendingAmount ?? purchaseData.totalAmount,  // ✅ NEW
+//           'paymentStatus': purchaseData.paymentStatus,
+//           'notes': purchaseData.notes,
+//           'userId': userId,
+//         };
+//         rowsToSend.add(map);
+//       }
+//
+//       // Convert rows to ordered values matching headers
+//       List<List<dynamic>> values = [];
+//       for (var row in rowsToSend) {
+//         final normalized = _normalize(row);
+//         List<dynamic> rowData = [];
+//         for (var header in headers) {
+//           final key = header.toString().trim().toLowerCase();
+//           rowData.add(normalized[key]?.toString() ?? '');
+//         }
+//         values.add(rowData);
+//       }
+//
+//       final valueRange = ValueRange.fromJson({"values": values});
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$purchaseSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Purchase added successfully");
+//     } catch (e) {
+//       print("❌ Error adding Purchase: $e");
+//       throw Exception("Failed to add Purchase: ${e.toString()}");
+//     }
+//   }
+//
+//   /// Add purchase items in batch with dynamic header creation
+//   static Future<void> addPurchaseItemsBatch(
+//       List<Map<String, dynamic>> itemsData, String userId) async {
+//     print("🔄 Adding ${itemsData.length} purchase items in batch...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseItemSheetName!1:1",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ No header row found in sheet '$purchaseItemSheetName'. Creating dynamically...");
+//
+//         // Create headers from first item's keys or default structure
+//         final sampleData = itemsData.isNotEmpty
+//             ? itemsData.first
+//             : {
+//           'purchaseId': '',
+//           'vendorId': '',
+//           'itemId': '',
+//           'itemName': '',
+//           'description': '',
+//           'quantity': '',
+//           'purchasePrice': '',
+//           'purchaseDate': '',
+//           'gstRate': '',
+//           'totalPrice': '',
+//           'unit': '',
+//           'userId': '',
+//         };
+//
+//         headers = sampleData.keys.toList();
+//
+//         // Add header row to sheet
+//         final headerRange = ValueRange.fromJson({
+//           "values": [headers],
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           headerRange,
+//           spreadsheetId,
+//           "$purchaseItemSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Header row created for '$purchaseItemSheetName' with columns: $headers");
+//       } else {
+//         headers = headerResponse.values![0];
+//       }
+//
+//       print("PurchaseItems headers: $headers");
+//
+//       // Normalize key function
+//       String _normalizeKey(String key) {
+//         return key.toString().trim().toLowerCase();
+//       }
+//
+//       // Prepare multiple rows
+//       List<List<dynamic>> rows = [];
+//
+//       for (var itemData in itemsData) {
+//         List<dynamic> rowData = [];
+//
+//         // Normalize itemData keys
+//         Map<String, dynamic> normalizedItem = {};
+//         for (var entry in itemData.entries) {
+//           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+//         }
+//
+//         for (var header in headers) {
+//           final headerNameLower = _normalizeKey(header.toString());
+//
+//           if (headerNameLower.contains('userid')) {
+//             rowData.add(userId);
+//           } else {
+//             var value = normalizedItem[headerNameLower]?.toString() ?? '';
+//             rowData.add(value);
+//           }
+//         }
+//
+//         rows.add(rowData);
+//         print("📦 Prepared row: $rowData");
+//       }
+//
+//       // Append all purchase items at once
+//       final valueRange = ValueRange.fromJson({
+//         "values": rows,
+//       });
+//
+//       final response = await sheetsApi.spreadsheets.values.append(
+//         valueRange,
+//         spreadsheetId,
+//         "$purchaseItemSheetName!A:Z",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       if (response.updates?.updatedRows != null) {
+//         print("✅ ${response.updates!.updatedRows} purchase items added successfully.");
+//       } else {
+//         print("✅ Purchase items batch added successfully.");
+//       }
+//     } catch (e) {
+//       print("❌ Error adding purchase items batch: $e");
+//       throw Exception("Failed to add purchase items batch: ${e.toString()}");
+//     }
+//   }
+//
+//   /// Get all purchases
+//   static Future<List<PurchaseEntry>> getPurchasesList() async {
+//     print("🔄 Fetching purchases from Google Sheets...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all purchase rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("❌ No purchases found in sheet.");
+//         return <PurchaseEntry>[];
+//       }
+//
+//       // Extract headers from first row
+//       final headers =
+//       response.values![0].map((h) => h.toString().trim()).toList();
+//       print("✅ Headers: $headers");
+//
+//       List<PurchaseEntry> purchases = [];
+//
+//       // Iterate rows (skip header)
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         // Skip completely empty rows
+//         if (row.isEmpty || row[0].toString().trim().isEmpty) {
+//           continue;
+//         }
+//
+//         // Build map header → value
+//         Map<String, dynamic> purchaseMap = {};
+//         for (int j = 0; j < headers.length && j < row.length; j++) {
+//           purchaseMap[headers[j]] = row[j].toString();
+//         }
+//
+//         try {
+//           PurchaseEntry purchase = PurchaseEntry.fromJson(purchaseMap);
+//           purchases.add(purchase);
+//           print("Processed purchase: ${purchase.purchaseId} - ${purchase.vendorName}");
+//         } catch (e) {
+//           print("⚠️ Error parsing purchase row $i: $e");
+//           print("Row data: $purchaseMap");
+//         }
+//       }
+//
+//       print("✅ Successfully parsed ${purchases.length} purchases from Google Sheets");
+//       return purchases;
+//     } catch (e) {
+//       print("❌ Error in getPurchasesList(): $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Update purchase
+//   static Future<void> updatePurchase(Map<String, dynamic> purchaseData, String userId) async {
+//     print("🔄 Updating Purchase in Google Sheet...");
+//     print("📋 Data to update: ${purchaseData.keys.toList()}");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all purchases
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         throw Exception("❌ Purchase sheet is empty");
+//       }
+//
+//       final headers = response.values![0];
+//       print("📋 Sheet headers: $headers");
+//
+//       final purchaseIdIndex = headers.indexOf("purchaseId");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (purchaseIdIndex == -1 || userIdIndex == -1) {
+//         throw Exception("❌ Missing purchaseId or userId column in sheet");
+//       }
+//
+//       int? rowToUpdate;
+//       List<Object?> existingRow = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > purchaseIdIndex &&
+//             row[purchaseIdIndex].toString() == purchaseData["purchaseId"].toString() &&
+//             row[userIdIndex].toString() == userId) {
+//           rowToUpdate = i + 1;
+//           existingRow = row;
+//           print("✅ Found purchase at row $rowToUpdate");
+//           break;
+//         }
+//       }
+//
+//       if (rowToUpdate == null) {
+//         throw Exception("❌ Purchase not found for update (id: ${purchaseData["purchaseId"]})");
+//       }
+//
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy');
+//
+//       // Build normalized data with all required fields
+//       Map<String, dynamic> normalized = {};
+//
+//       for (var header in headers) {
+//         String key = header.toString().trim().toLowerCase();
+//
+//         switch (key) {
+//           case 'purchaseid':
+//             normalized[key] = purchaseData["purchaseId"] ?? '';
+//             break;
+//           case 'vendorid':
+//             normalized[key] = purchaseData["vendorId"] ?? '';
+//             break;
+//           case 'vendorname':
+//             normalized[key] = purchaseData["vendorName"] ?? '';
+//             break;
+//           case 'vendoremail':
+//             normalized[key] = purchaseData["vendorEmail"] ?? '';
+//             break;
+//           case 'vendormobile':
+//             normalized[key] = purchaseData["vendorMobile"] ?? '';
+//             break;
+//           case 'vendoraddress':
+//             normalized[key] = purchaseData["vendorAddress"] ?? '';
+//             break;
+//           case 'purchasedate':
+//             try {
+//               if (purchaseData["purchaseDate"] != null) {
+//                 if (purchaseData["purchaseDate"] is DateTime) {
+//                   normalized[key] = _dateFormatter.format(purchaseData["purchaseDate"] as DateTime);
+//                 } else if (purchaseData["purchaseDate"] is String) {
+//                   // Try to parse ISO string
+//                   try {
+//                     final date = DateTime.parse(purchaseData["purchaseDate"]);
+//                     normalized[key] = _dateFormatter.format(date);
+//                   } catch (e) {
+//                     normalized[key] = purchaseData["purchaseDate"];
+//                   }
+//                 } else {
+//                   normalized[key] = purchaseData["purchaseDate"].toString();
+//                 }
+//               } else {
+//                 normalized[key] = '';
+//               }
+//             } catch (e) {
+//               print("⚠️ Error formatting purchaseDate: $e");
+//               normalized[key] = purchaseData["purchaseDate"]?.toString() ?? '';
+//             }
+//             break;
+//           case 'duedate':
+//             try {
+//               if (purchaseData["dueDate"] != null) {
+//                 if (purchaseData["dueDate"] is DateTime) {
+//                   normalized[key] = _dateFormatter.format(purchaseData["dueDate"] as DateTime);
+//                 } else if (purchaseData["dueDate"] is String) {
+//                   try {
+//                     final date = DateTime.parse(purchaseData["dueDate"]);
+//                     normalized[key] = _dateFormatter.format(date);
+//                   } catch (e) {
+//                     normalized[key] = purchaseData["dueDate"];
+//                   }
+//                 } else {
+//                   normalized[key] = purchaseData["dueDate"].toString();
+//                 }
+//               } else {
+//                 normalized[key] = '';
+//               }
+//             } catch (e) {
+//               print("⚠️ Error formatting dueDate: $e");
+//               normalized[key] = purchaseData["dueDate"]?.toString() ?? '';
+//             }
+//             break;
+//           case 'subtotal':
+//             normalized[key] = purchaseData["subtotal"]?.toString() ?? '0';
+//             print("   Subtotal: ${normalized[key]}");
+//             break;
+//           case 'gstrate':
+//             normalized[key] = purchaseData["gstRate"]?.toString() ?? '0';
+//             print("   GST Rate: ${normalized[key]}");
+//             break;
+//           case 'gstamount':
+//             normalized[key] = purchaseData["gstAmount"]?.toString() ?? '0';
+//             print("   GST Amount: ${normalized[key]}");
+//             break;
+//           case 'totalamount':
+//             normalized[key] = purchaseData["totalAmount"]?.toString() ?? '0';
+//             print("   Total Amount: ${normalized[key]}");
+//             break;
+//           case 'paidamount':
+//           // ✅ CRITICAL: This must be updated
+//             normalized[key] = purchaseData["paidAmount"]?.toString() ?? '0';
+//             print("   ✅ NEW Paid Amount: ${normalized[key]}");
+//             break;
+//           case 'pendingamount':
+//           // ✅ CRITICAL: This must be updated
+//             normalized[key] = purchaseData["pendingAmount"]?.toString() ?? '0';
+//             print("   ✅ NEW Pending Amount: ${normalized[key]}");
+//             break;
+//           case 'paymentstatus':
+//           // ✅ CRITICAL: This must be updated
+//             normalized[key] = purchaseData["paymentStatus"] ?? 'Pending';
+//             print("   ✅ NEW Status: ${normalized[key]}");
+//             break;
+//           case 'notes':
+//             normalized[key] = purchaseData["notes"] ?? '';
+//             break;
+//           case 'userid':
+//             normalized[key] = userId;
+//             break;
+//           default:
+//             int existingIndex =
+//             headers.indexWhere((h) => h.toString().toLowerCase() == key);
+//             if (existingIndex != -1 && existingRow.length > existingIndex) {
+//               normalized[key] = existingRow[existingIndex]?.toString() ?? '';
+//             } else {
+//               normalized[key] = '';
+//             }
+//             break;
+//         }
+//       }
+//
+//       // Build row data in the same order as headers
+//       List<dynamic> rowData = [];
+//       for (var header in headers) {
+//         final key = header.toString().trim().toLowerCase();
+//         rowData.add(normalized[key]?.toString() ?? '');
+//       }
+//
+//       print("📤 Updating row with data: $rowData");
+//
+//       final range =
+//           "$purchaseSheetName!A$rowToUpdate:${String.fromCharCode(65 + headers.length - 1)}$rowToUpdate";
+//
+//       final valueRange = ValueRange(
+//         values: [rowData],
+//       );
+//
+//       await sheetsApi.spreadsheets.values.update(
+//         valueRange,
+//         spreadsheetId,
+//         range,
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Purchase updated successfully at row $rowToUpdate");
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Purchase: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Update purchase items with dynamic header handling
+//   static Future<void> updatePurchaseItems(
+//       String purchaseId, List<Map<String, dynamic>> items, String userId) async {
+//     print("🔄 Updating Purchase Items in Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get current sheet data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseItemSheetName!A:Z",
+//       );
+//
+//       List<dynamic> headers = [];
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Sheet is empty. Creating headers and adding new items...");
+//
+//         // Create headers from first item's keys or default structure
+//         final sampleData = items.isNotEmpty
+//             ? items.first
+//             : {
+//           'purchaseId': '',
+//           'vendorId': '',
+//           'itemId': '',
+//           'itemName': '',
+//           'description': '',
+//           'quantity': '',
+//           'purchasePrice': '',
+//           'purchaseDate': '',
+//           'gstRate': '',
+//           'totalPrice': '',
+//           'unit': '',
+//           'userId': '',
+//         };
+//
+//         headers = sampleData.keys.toList();
+//
+//         // Add header row
+//         final headerRange = ValueRange.fromJson({
+//           "values": [headers],
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           headerRange,
+//           spreadsheetId,
+//           "$purchaseItemSheetName!A1",
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Header row created for '$purchaseItemSheetName'");
+//
+//         // Now add the items
+//         for (var item in items) {
+//           item['purchaseId'] = purchaseId;
+//         }
+//         await addPurchaseItemsBatch(items, userId);
+//         return;
+//       }
+//
+//       headers = response.values![0];
+//       print("Sheet headers: $headers");
+//
+//       final purchaseIdIndex = headers.indexOf("purchaseId");
+//
+//       if (purchaseIdIndex == -1) {
+//         throw Exception("❌ Missing purchaseId column");
+//       }
+//
+//       // Build new sheet data (keep all items except for this purchaseId)
+//       List<List<Object?>> newSheetData = [];
+//       newSheetData.add(headers); // Add headers first
+//
+//       // Add all rows that DON'T belong to our purchaseId
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.length > purchaseIdIndex &&
+//             row[purchaseIdIndex].toString() != purchaseId) {
+//           newSheetData.add(row);
+//         }
+//       }
+//
+//       // Normalize key function
+//       String _normalizeKey(String key) {
+//         return key.toString().trim().toLowerCase();
+//       }
+//
+//       // Add our new items to the data
+//       for (var item in items) {
+//         List<Object?> newRow = [];
+//
+//         // Normalize item keys
+//         Map<String, dynamic> normalizedItem = {};
+//         for (var entry in item.entries) {
+//           normalizedItem[_normalizeKey(entry.key)] = entry.value;
+//         }
+//
+//         for (var header in headers) {
+//           String key = _normalizeKey(header.toString());
+//
+//           if (key.contains('purchaseid')) {
+//             newRow.add(item['purchaseId'] ?? purchaseId);
+//           } else if (key.contains('userid')) {
+//             newRow.add(item['userId'] ?? userId);
+//           } else {
+//             newRow.add(normalizedItem[key]?.toString() ?? '');
+//           }
+//         }
+//         newSheetData.add(newRow);
+//         print("Added row: $newRow");
+//       }
+//
+//       // Clear the entire sheet
+//       await sheetsApi.spreadsheets.values.clear(
+//         ClearValuesRequest(),
+//         spreadsheetId,
+//         "$purchaseItemSheetName!A:Z",
+//       );
+//
+//       // Write all data back to sheet
+//       if (newSheetData.length > 1) {
+//         final range =
+//             "$purchaseItemSheetName!A1:${String.fromCharCode(65 + headers.length - 1)}${newSheetData.length}";
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange(values: newSheetData),
+//           spreadsheetId,
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//       }
+//
+//       print("✅ Successfully updated ${items.length} purchase items");
+//     } catch (e, stackTrace) {
+//       print("❌ Error updating Purchase items: $e");
+//       print("Stack trace: $stackTrace");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Get purchase items by purchase ID
+//   static Future<List<PurchaseItem>> getPurchaseItemsByPurchaseId(
+//       String purchaseId) async {
+//     print("🔄 Fetching items for purchase: $purchaseId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get headers
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseItemSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("❌ No header row in purchase items sheet");
+//         return [];
+//       }
+//
+//       final headers =
+//       headerResponse.values![0].map((h) => h.toString().trim()).toList();
+//
+//       // Fetch data rows
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$purchaseItemSheetName!A2:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("❌ No items found for purchase $purchaseId");
+//         return [];
+//       }
+//
+//       List<PurchaseItem> items = [];
+//
+//       for (int i = 0; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         Map<String, dynamic> itemMap = {};
+//         for (int j = 0; j < headers.length; j++) {
+//           itemMap[headers[j]] = j < row.length ? row[j] : "";
+//         }
+//
+//         // Filter by purchaseId
+//         final rowPurchaseId =
+//             itemMap['purchaseId'] ?? itemMap['PurchaseId'] ?? itemMap['PURCHASEID'];
+//
+//         if (rowPurchaseId?.toString() == purchaseId) {
+//           try {
+//             PurchaseItem item = PurchaseItem.fromJson(itemMap);
+//             items.add(item);
+//             print("✅ Added item: ${item.itemName}");
+//           } catch (e) {
+//             print("❌ Error parsing purchase item: $e");
+//             print("❌ Item data: $itemMap");
+//           }
+//         }
+//       }
+//
+//       print("✅ Found ${items.length} items for purchase $purchaseId");
+//       return items;
+//     } catch (e) {
+//       print("❌ Error getting purchase items: $e");
+//       return [];
+//     }
+//   }
+//
+//   /// Update stock after purchase
+//   static Future<void> updateStockAfterPurchase(List<PurchaseItem> purchaseItems) async {
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Fetch all stock rows once
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$itemSheetName!A:Z",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ Stock sheet is empty - skipping stock update");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final itemIdIndex = headers.indexOf("itemId");
+//       final stockIndex = headers.indexOf("currentStock");
+//       final userIdIndex = headers.indexOf("userId");
+//
+//       if (itemIdIndex == -1 || stockIndex == -1 || userIdIndex == -1) {
+//         print("⚠️ Missing required columns in Stock sheet - skipping update");
+//         return;
+//       }
+//
+//       for (var item in purchaseItems) {
+//         // Skip items without itemId (manually entered items)
+//         if (item.itemId == null || item.itemId!.isEmpty) {
+//           print("⚠️ Skipping stock update for manually entered item: ${item.itemName}");
+//           continue;
+//         }
+//
+//         int? rowToUpdate;
+//         int currentStock = 0;
+//
+//         // Find row for this itemId + userId
+//         for (int i = 1; i < response.values!.length; i++) {
+//           final row = response.values![i];
+//           if (row.length > itemIdIndex &&
+//               row[itemIdIndex].toString() == item.itemId.toString() &&
+//               row[userIdIndex].toString() == AppConstants.userId) {
+//             rowToUpdate = i + 1; // rows are 1-based
+//             if (row.length > stockIndex) {
+//               currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+//             }
+//             break;
+//           }
+//         }
+//
+//         if (rowToUpdate == null) {
+//           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+//           continue;
+//         }
+//
+//         // Increase stock for purchase
+//         final newStock = currentStock + item.quantity;
+//
+//         final range =
+//             "$itemSheetName!${String.fromCharCode(65 + stockIndex)}$rowToUpdate";
+//         final valueRange = ValueRange.fromJson({
+//           "values": [
+//             [newStock]
+//           ]
+//         });
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           valueRange,
+//           spreadsheetId,
+//           range,
+//           valueInputOption: "USER_ENTERED",
+//         );
+//
+//         print("✅ Stock updated (Purchase): ${item.itemId} → $newStock (was $currentStock)");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating stock after purchase: $e");
+//     }
+//   }
+//
+//   /// Cache clear methods
+//   static Future<void> updatePurchaseWithCacheClear(
+//       Map<String, dynamic> purchaseData, String userId) async {
+//     print("🔄 Updating purchase with cache clear...");
+//
+//     final purchaseId = purchaseData['purchaseId']?.toString();
+//
+//     try {
+//       await updatePurchase(purchaseData, userId);
+//
+//       if (purchaseId != null) {
+//         print("✅ Cleared cache for purchase: $purchaseId");
+//       }
+//     } catch (e) {
+//       print("❌ Error updating purchase: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   static Future<void> updatePurchaseItemsWithCacheClear(
+//       String purchaseId,
+//       List<Map<String, dynamic>> items,
+//       String userId) async {
+//     print("🔄 Updating purchase items with cache clear...");
+//
+//     try {
+//       await updatePurchaseItems(purchaseId, items, userId);
+//       print("✅ Cleared all caches for purchase: $purchaseId");
+//     } catch (e) {
+//       print("❌ Error updating items: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Add a single inventory transaction to Google Sheet
+//   static Future<void> addInventoryTransaction(
+//       String userId, InventoryTransaction transaction) async {
+//     print("🔄 Adding inventory transaction to Google Sheet...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         print("⚠️ Sheet empty, creating headers...");
+//         // Create headers if sheet is empty
+//         final headers = [
+//           'transactionId',
+//           'itemId',
+//           'itemName',
+//           'quantity',
+//           'type',
+//           'reason',
+//           'timestamp',
+//           'notes',
+//           'userId',
+//         ];
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,
+//           "$inventoryTransactionSheetName!A1:I1",
+//           valueInputOption: "RAW",
+//         );
+//
+//         print("✅ Headers created");
+//       }
+//
+//       final headers = headerResponse.values?[0] ?? [];
+//
+//       // Prepare row values based on header order
+//       List<dynamic> rowData = [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       for (var header in headers) {
+//         final headerName = header.toString().toLowerCase();
+//
+//         switch (headerName) {
+//           case 'transactionid':
+//             rowData.add(transaction.transactionId);
+//             break;
+//           case 'itemid':
+//             rowData.add(transaction.itemId);
+//             break;
+//           case 'itemname':
+//             rowData.add(transaction.itemName);
+//             break;
+//           case 'quantity':
+//             rowData.add(transaction.quantity.toString());
+//             break;
+//           case 'type':
+//             rowData.add(transaction.type);
+//             break;
+//           case 'reason':
+//             rowData.add(transaction.reason);
+//             break;
+//           case 'timestamp':
+//             rowData.add(_dateFormatter.format(transaction.timestamp));
+//             break;
+//           case 'notes':
+//             rowData.add(transaction.notes);
+//             break;
+//           case 'userid':
+//             rowData.add(userId);
+//             break;
+//           default:
+//             rowData.add('');
+//         }
+//       }
+//
+//       print("Prepared row: $rowData");
+//
+//       // Append row to sheet
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({"values": [rowData]}),
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!A:I",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ Inventory transaction added successfully");
+//     } catch (e) {
+//       print("❌ Error adding inventory transaction: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Batch add multiple inventory transactions
+//   static Future<void> addInventoryTransactionsBatch(
+//       String userId, List<InventoryTransaction> transactions) async {
+//     print("🔄 Adding ${transactions.length} inventory transactions...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get header row
+//       final headerResponse = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!1:1",
+//       );
+//
+//       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+//         final headers = [
+//           'transactionId',
+//           'itemId',
+//           'itemName',
+//           'quantity',
+//           'type',
+//           'reason',
+//           'timestamp',
+//           'notes',
+//           'userId',
+//         ];
+//
+//         await sheetsApi.spreadsheets.values.update(
+//           ValueRange.fromJson({"values": [headers]}),
+//           spreadsheetId,
+//           "$inventoryTransactionSheetName!A1:I1",
+//           valueInputOption: "RAW",
+//         );
+//       }
+//
+//       final headers = headerResponse.values?[0] ?? [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       // Prepare all rows
+//       List<List<dynamic>> rows = [];
+//       for (var transaction in transactions) {
+//         List<dynamic> rowData = [];
+//
+//         for (var header in headers) {
+//           final headerName = header.toString().toLowerCase();
+//
+//           switch (headerName) {
+//             case 'transactionid':
+//               rowData.add(transaction.transactionId);
+//               break;
+//             case 'itemid':
+//               rowData.add(transaction.itemId);
+//               break;
+//             case 'itemname':
+//               rowData.add(transaction.itemName);
+//               break;
+//             case 'quantity':
+//               rowData.add(transaction.quantity.toString());
+//               break;
+//             case 'type':
+//               rowData.add(transaction.type);
+//               break;
+//             case 'reason':
+//               rowData.add(transaction.reason);
+//               break;
+//             case 'timestamp':
+//               rowData.add(_dateFormatter.format(transaction.timestamp));
+//               break;
+//             case 'notes':
+//               rowData.add(transaction.notes);
+//               break;
+//             case 'userid':
+//               rowData.add(userId);
+//               break;
+//             default:
+//               rowData.add('');
+//           }
+//         }
+//
+//         rows.add(rowData);
+//       }
+//
+//       print("Prepared ${rows.length} rows");
+//
+//       // Append all rows
+//       await sheetsApi.spreadsheets.values.append(
+//         ValueRange.fromJson({"values": rows}),
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!A:I",
+//         valueInputOption: "USER_ENTERED",
+//       );
+//
+//       print("✅ ${transactions.length} inventory transactions added successfully");
+//     } catch (e) {
+//       print("❌ Error adding inventory transactions batch: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Fetch inventory transactions for a user
+//   static Future<List<InventoryTransaction>> getInventoryTransactions({
+//     String? userId,
+//     String? itemId,
+//     String? type,
+//     DateTime? fromDate,
+//     DateTime? toDate,
+//   }) async {
+//     print("🔄 Fetching inventory transactions...");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all transaction data
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.isEmpty) {
+//         print("⚠️ No transactions found");
+//         return [];
+//       }
+//
+//       // Extract headers
+//       final headers = response.values![0]
+//           .map((h) => h.toString().trim().toLowerCase())
+//           .toList();
+//
+//       print("✅ Headers: $headers");
+//
+//       List<InventoryTransaction> transactions = [];
+//       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+//
+//       // Iterate through rows
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//         if (row.isEmpty) continue;
+//
+//         try {
+//           Map<String, dynamic> txnMap = {};
+//
+//           // Map row values to headers
+//           for (int j = 0; j < headers.length && j < row.length; j++) {
+//             txnMap[headers[j]] = row[j];
+//           }
+//
+//           // Parse transaction
+//           final txn = InventoryTransaction(
+//             transactionId: txnMap['transactionid']?.toString() ?? '',
+//             itemId: txnMap['itemid']?.toString() ?? '',
+//             itemName: txnMap['itemname']?.toString() ?? '',
+//             quantity: int.tryParse(txnMap['quantity']?.toString() ?? '0') ?? 0,
+//             type: txnMap['type']?.toString() ?? '',
+//             reason: txnMap['reason']?.toString() ?? '',
+//             timestamp: _parseTransactionDate(txnMap['timestamp']?.toString() ?? ''),
+//             notes: txnMap['notes']?.toString() ?? '',
+//           );
+//
+//           // Apply filters
+//           if (userId != null && txnMap['userid'].toString() != userId) continue;
+//           if (itemId != null && txn.itemId != itemId) continue;
+//           if (type != null && txn.type != type) continue;
+//           if (fromDate != null && txn.timestamp.isBefore(fromDate)) continue;
+//           if (toDate != null && txn.timestamp.isAfter(toDate)) continue;
+//
+//           transactions.add(txn);
+//         } catch (e) {
+//           print("⚠️ Error parsing transaction at row ${i + 1}: $e");
+//           continue;
+//         }
+//       }
+//
+//       print("✅ Found ${transactions.length} transactions");
+//       return transactions;
+//     } catch (e) {
+//       print("❌ Error fetching transactions: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Get transactions for a specific item
+//   static Future<List<InventoryTransaction>> getItemTransactions(
+//       String userId, String itemId) async {
+//     return getInventoryTransactions(userId: userId, itemId: itemId);
+//   }
+//
+//   /// Get transactions of specific type
+//   static Future<List<InventoryTransaction>> getTransactionsByType(
+//       String userId, String type) async {
+//     return getInventoryTransactions(userId: userId, type: type);
+//   }
+//
+//   /// Get transactions within date range
+//   static Future<List<InventoryTransaction>> getTransactionsByDateRange(
+//       String userId, DateTime fromDate, DateTime toDate) async {
+//     return getInventoryTransactions(
+//       userId: userId,
+//       fromDate: fromDate,
+//       toDate: toDate,
+//     );
+//   }
+//
+//   /// Get transaction statistics for inventory analysis
+//   static Future<Map<String, dynamic>> getInventoryStats(String userId) async {
+//     print("🔄 Calculating inventory statistics...");
+//
+//     try {
+//       final transactions = await getInventoryTransactions(userId: userId);
+//
+//       if (transactions.isEmpty) {
+//         return {
+//           'totalTransactions': 0,
+//           'totalAdded': 0,
+//           'totalRemoved': 0,
+//           'totalSales': 0,
+//           'totalReturns': 0,
+//           'totalAdjustments': 0,
+//           'itemsAffected': 0,
+//         };
+//       }
+//
+//       int totalAdded = 0;
+//       int totalRemoved = 0;
+//       int totalSales = 0;
+//       int totalReturns = 0;
+//       int totalAdjustments = 0;
+//       Set<String> itemIds = {};
+//
+//       for (var txn in transactions) {
+//         itemIds.add(txn.itemId);
+//
+//         switch (txn.type) {
+//           case 'add':
+//             totalAdded += txn.quantity;
+//             break;
+//           case 'remove':
+//             totalRemoved += txn.quantity;
+//             break;
+//           case 'sale':
+//             totalSales += txn.quantity;
+//             break;
+//           case 'return':
+//             totalReturns += txn.quantity;
+//             break;
+//           case 'adjustment':
+//             totalAdjustments += txn.quantity;
+//             break;
+//         }
+//       }
+//
+//       final stats = {
+//         'totalTransactions': transactions.length,
+//         'totalAdded': totalAdded,
+//         'totalRemoved': totalRemoved,
+//         'totalSales': totalSales,
+//         'totalReturns': totalReturns,
+//         'totalAdjustments': totalAdjustments,
+//         'itemsAffected': itemIds.length,
+//         'netChange': totalAdded - totalRemoved,
+//       };
+//
+//       print("✅ Statistics: $stats");
+//       return stats;
+//     } catch (e) {
+//       print("❌ Error calculating stats: $e");
+//       return {};
+//     }
+//   }
+//
+//   /// Delete old transactions (for maintenance)
+//   static Future<void> deleteOldTransactions(
+//       String userId, DateTime beforeDate) async {
+//     print("🗑️ Deleting transactions before $beforeDate for user $userId");
+//
+//     try {
+//       final client = await _getAuthClient();
+//       final sheetsApi = SheetsApi(client);
+//
+//       // Get all transactions
+//       final response = await sheetsApi.spreadsheets.values.get(
+//         spreadsheetId,
+//         "$inventoryTransactionSheetName!A:I",
+//       );
+//
+//       if (response.values == null || response.values!.length <= 1) {
+//         print("⚠️ No data to delete");
+//         return;
+//       }
+//
+//       final headers = response.values![0];
+//       final userIdIndex = headers.indexOf('userId');
+//       final timestampIndex = headers.indexOf('timestamp');
+//
+//       if (userIdIndex == -1 || timestampIndex == -1) {
+//         throw Exception("Required columns not found");
+//       }
+//
+//       // Get sheet ID for batch delete
+//       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+//       final sheet = spreadsheet.sheets!
+//           .firstWhere((s) => s.properties?.title == inventoryTransactionSheetName);
+//       final sheetId = sheet.properties!.sheetId!;
+//
+//       List<int> rowsToDelete = [];
+//
+//       for (int i = 1; i < response.values!.length; i++) {
+//         final row = response.values![i];
+//
+//         if (row.length > userIdIndex && row[userIdIndex].toString() == userId) {
+//           if (row.length > timestampIndex) {
+//             final timestamp = _parseTransactionDate(row[timestampIndex].toString());
+//             if (timestamp.isBefore(beforeDate)) {
+//               rowsToDelete.add(i);
+//             }
+//           }
+//         }
+//       }
+//
+//       if (rowsToDelete.isEmpty) {
+//         print("ℹ️ No transactions to delete");
+//         return;
+//       }
+//
+//       // Delete rows in reverse order
+//       List<Request> deleteRequests = [];
+//       for (int rowIndex in rowsToDelete.reversed) {
+//         deleteRequests.add(
+//           Request()
+//             ..deleteDimension = (DeleteDimensionRequest()
+//               ..range = (DimensionRange()
+//                 ..sheetId = sheetId
+//                 ..dimension = 'ROWS'
+//                 ..startIndex = rowIndex
+//                 ..endIndex = rowIndex + 1)),
+//         );
+//       }
+//
+//       final batchRequest = BatchUpdateSpreadsheetRequest()..requests = deleteRequests;
+//
+//       await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+//
+//       print("✅ Deleted ${rowsToDelete.length} old transactions");
+//     } catch (e) {
+//       print("❌ Error deleting transactions: $e");
+//       rethrow;
+//     }
+//   }
+//
+//   /// Helper function to parse transaction timestamps
+//   static DateTime _parseTransactionDate(String dateString) {
+//     if (dateString.isEmpty) return DateTime.now();
+//
+//     try {
+//       // Try format: dd/MM/yyyy HH:mm:ss
+//       final formats = [
+//         'dd/MM/yyyy HH:mm:ss',
+//         'dd/MM/yyyy',
+//         'yyyy-MM-dd HH:mm:ss',
+//         'yyyy-MM-dd',
+//       ];
+//
+//       for (var format in formats) {
+//         try {
+//           return DateFormat(format).parseStrict(dateString);
+//         } catch (_) {
+//           continue;
+//         }
+//       }
+//
+//       // Fallback to parse ISO format
+//       return DateTime.parse(dateString);
+//     } catch (e) {
+//       print("⚠️ Could not parse date '$dateString', using current time");
+//       return DateTime.now();
+//     }
+//   }
+// }
+//
+// /// ===================================================================
+// // MIGRATION CHECKLIST
+// // ===================================================================
+//
+// /*
+// ✅ STEP 1: Add UserSpreadsheetManager class to your project
+//
+// ✅ STEP 2: Add dependencies to pubspec.yaml:
+//    dependencies:
+//      shared_preferences: ^2.2.2
+//      googleapis: ^11.4.0
+//      googleapis_auth: ^1.4.1
+//
+// ✅ STEP 3: Update service account credentials to include Drive API scope
+//
+// ✅ STEP 4: Initialize on app startup (in main.dart):
+//    void main() async {
+//      WidgetsFlutterBinding.ensureInitialized();
+//      await UserSpreadsheetManager.initialize();
+//      runApp(MyApp());
+//    }
+//
+// ✅ STEP 5: On user login/signup:
+//    Future<void> onUserLogin(String userId) async {
+//      // This will auto-create spreadsheet if doesn't exist
+//      final spreadsheetId = await UserSpreadsheetManager.getSpreadsheetId(userId);
+//      print("User spreadsheet ready: $spreadsheetId");
+//    }
+//
+// ✅ STEP 6: Update ALL GoogleSheetService methods:
+//    - Add userId as first parameter
+//    - Get spreadsheetId using getUserSpreadsheetId(userId)
+//    - Replace all static spreadsheetId references
+//
+// ✅ STEP 7: Update all calling code:
+//    BEFORE: await GoogleSheetService.getItems(userId: currentUser);
+//    AFTER:  await GoogleSheetService.getItems(userId: currentUser);
+//
+//    BEFORE: await GoogleSheetService.addInvoice(invoiceData, userId);
+//    AFTER:  await GoogleSheetService.addInvoice(userId, invoiceData);
+//
+// ✅ STEP 8: Test with 2-3 different user IDs to verify isolation
+//
+// ✅ STEP 9: Optional - Add admin panel to view all user spreadsheets:
+//    final allSpreadsheets = await UserSpreadsheetManager.getAllUserSpreadsheets();
+//    allSpreadsheets.forEach((userId, spreadsheetId) {
+//      print("User: $userId → Spreadsheet: $spreadsheetId");
+//    });
+// */
+

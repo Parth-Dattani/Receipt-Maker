@@ -40,7 +40,9 @@ class DashboardController extends BaseController {
   var unpaidInvoices = 0.obs;
   var overdueInvoices = 0.obs;
   var draftInvoices = 0.obs;
-    var totalRevenue = 0.0.obs;
+  var totalRevenue = 0.0.obs;
+  var totalProfit = 0.0.obs;
+  var todayProfit = 0.0.obs;
   var pendingAmount = 0.0.obs;
   var overdueAmount = 0.0.obs;
   var customerCount = 0.obs;
@@ -202,6 +204,27 @@ class DashboardController extends BaseController {
       final user = FirebaseAuth.instance.currentUser;
       userName.value = user?.displayName ?? user?.email?.split('@').first ?? 'User';
       userEmail.value = user?.email ?? '';
+    }
+  }
+
+  // ✅ SILENT REFRESH (No Loading Spinner)
+  Future<void> refreshDataSilently() async {
+    print("🔄 Refreshing dashboard data silently...");
+
+    // નોંધ: અહીં isLoading.value = true નથી કરતા, જેથી Shimmer ના આવે.
+
+    try {
+      // બધો ડેટા બેકગ્રાઉન્ડમાં અપડેટ કરો
+      await Future.wait([
+        loadInvoices(),       // Invoices અને તેના Stats અપડેટ થશે
+        loadPurchases(),      // Purchases અને તેના Stats અપડેટ થશે
+        loadCustomerCount(),  // Customer Count અપડેટ થશે
+        getMonthlyRevenueData() // Chart Data અપડેટ થશે
+      ]);
+
+      print("✅ Silent refresh completed successfully");
+    } catch (e) {
+      print("❌ Error in silent refresh: $e");
     }
   }
 
@@ -718,6 +741,8 @@ class DashboardController extends BaseController {
     double cardTotal = 0.0;
     int cardCount = 0;
 
+    double todayProf = 0.0;
+
     print("🔍 Calculating Today's Payment Methods:");
     print("   Today: ${_formatDate(today)}");
 
@@ -735,6 +760,8 @@ class DashboardController extends BaseController {
         // Safe string handling: convert to lowercase and trim whitespace
         final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
         final amount = invoice.totalAmount ?? 0.0;
+
+        todayProf += (invoice.profit ?? 0.0);
 
         // 1. CASH
         if (paymentMode == "cash") {
@@ -768,10 +795,13 @@ class DashboardController extends BaseController {
     todayCardAmount.value = cardTotal;
     todayCardInvoices.value = cardCount;
 
+    todayProfit.value = todayProf;
+
     print("✅ Today's Payment Summary:");
     print("   Cash: ₹${cashTotal.toStringAsFixed(2)} ($cashCount invoices)");
     print("   UPI: ₹${upiTotal.toStringAsFixed(2)} ($upiCount invoices)");
     print("   Card: ₹${cardTotal.toStringAsFixed(2)} ($cardCount invoices)");
+    print("✅ Today's Profit: ₹${todayProf.toStringAsFixed(2)}");
   }
 
   void _clearStats() {
@@ -789,6 +819,8 @@ class DashboardController extends BaseController {
     totalPurchaseAmount.value = 0.0;
     pendingPurchaseAmount.value = 0.0;
     overduePurchaseAmount.value = 0.0;
+    totalProfit.value = 0.0;
+    todayProfit.value = 0.0;
     // 🔹 FIXED: Initialize with zero values instead of clearing
     invoiceStatusData.assignAll([
       ChartData("Paid", 0.0, Colors.green),
@@ -806,6 +838,7 @@ class DashboardController extends BaseController {
     double totalRev = 0.0;
     double pendingAmt = 0.0;
     double overdueAmt = 0.0;
+    double totalProf = 0.0;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -816,6 +849,8 @@ class DashboardController extends BaseController {
       final amount = invoice.totalAmount ?? 0.0;
       final pending = invoice.pendingAmount ?? amount;
       final received = invoice.receivedAmount ?? 0.0;
+
+      totalProf += (invoice.profit ?? 0.0);
 
       // 🔹 FIX: જો Sheet માં Status ખાલી હોય, તો રકમ પરથી નક્કી કરો
       if (status.isEmpty) {
@@ -867,6 +902,9 @@ class DashboardController extends BaseController {
     paidInvoices.value = paidCnt;
     unpaidInvoices.value = pendingCnt;
     overdueInvoices.value = overdueCnt;
+    totalProfit.value = totalProf;
+
+    print("--------------Tot ProFit:----- ${totalProfit.value}");
     // Chart Data Update
     invoiceStatusData.assignAll([
       ChartData("Paid", paidCnt.toDouble(), Colors.green),
@@ -926,6 +964,7 @@ class DashboardController extends BaseController {
     overdueAmount.value = total;
     return total;
   }
+
 
 
 // You can also add a reactive getter

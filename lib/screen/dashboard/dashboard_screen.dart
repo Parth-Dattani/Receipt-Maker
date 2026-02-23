@@ -74,14 +74,14 @@ class DashboardScreen extends GetView<DashboardController> {
           return RefreshIndicator(
             onRefresh: () async => await controller.refreshDashboard(),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 16),
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Welcome Section
                   _buildWelcomeBanner(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   _buildCashBoxCard(),
                   const SizedBox(height: 20),
@@ -1369,157 +1369,121 @@ class DashboardScreen extends GetView<DashboardController> {
   }
 
 
-// 💵 CASH BOX CARD (Responsive for Web & Mobile)
-// ===========================================================================
-  // 💵 CASH BOX CARD (Updated for Full Amount Visibility)
   Widget _buildCashBoxCard({bool isWeb = false}) {
     final now = DateTime.now();
     final dateStr = "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      // ✅ Web માં હાઈટ પેરેન્ટ કોલમ જેટલી જ રહેશે
-      height: isWeb ? double.infinity : null,
+    return Obx(() {
+      final total = controller.todayCashAmount.value +
+          controller.todayUpiAmount.value +
+          controller.todayCardAmount.value;
 
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: isWeb ? Border.all(color: Colors.grey.shade200) : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        // ✅ Web માં કન્ટેન્ટને સરખી રીતે વહેંચવા માટે
-        mainAxisAlignment: isWeb ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
-        children: [
-
-          // --- HEADER SECTION ---
-          if (isWeb)
-          // ✅ WEB માટે નવું લેઆઉટ: રકમ નીચે આવશે (જેથી મોટી રકમ સમાઈ જાય)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Total Collection",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    // Date Right Side
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                        Text(
-                          dateStr,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12), // થોડી જગ્યા
-
-                // Amount Badge (Full Width Center)
-                Obx(() {
-                  final total = controller.todayCashAmount.value +
-                      controller.todayUpiAmount.value +
-                      controller.todayCardAmount.value;
-                  return Container(
-                    width: double.infinity, // ✅ પૂરી પહોળાઈ
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.tealColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center( // ✅ રકમ વચ્ચે દેખાશે
-                      child: Text(
-                        "₹${AppUtil.formatCurrency(total)}",
-                        style: TextStyle(
-                          fontSize: 18, // થોડા મોટા અક્ષર
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.tealColor,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            )
-          else
-          // ✅ MOBILE માટે જૂનું લેઆઉટ: રકમ બાજુમાં (Side-by-Side)
+      return Container(
+        width: double.infinity,
+        // ✅ Top Padding (TP) ને 16 કર્યું અને બાકીનું 10 રાખ્યું જેથી લુક પ્રોફેશનલ લાગે
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        decoration: BoxDecoration(
+          color: AppColors.tealColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start, // Top aligned
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Total Collection",
+                      "Today's Collection",
                       style: TextStyle(
                         fontSize: 15,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                        Text(
-                          dateStr,
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                    const SizedBox(height: 2),
+                    Text(
+                      dateStr,
+                      style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.7)),
                     ),
                   ],
                 ),
-                Obx(() {
-                  final total = controller.todayCashAmount.value +
-                      controller.todayUpiAmount.value +
-                      controller.todayCardAmount.value;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.tealColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                // Profit Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC8E6C9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    "Profit: ₹${AppUtil.formatCurrency(controller.todayProfit.value)}",
+                    style: const TextStyle(
+                      color: Color(0xFF1B5E20),
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
-                    child: Text(
-                      "₹${AppUtil.formatCurrency(total)}",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.tealColor),
-                    ),
-                  );
-                }),
+                  ),
+                ),
               ],
             ),
 
-          if (!isWeb) const SizedBox(height: 16),
+            const SizedBox(height: 12), // Title અને અમાઉન્ટ વચ્ચે થોડો ગેપ
 
-          // --- COLLECTION BREAKDOWN ---
-          // Use Expanded on Web to push content properly
-          isWeb
-              ? Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly, // સરખું અંતર
-              children: _buildBreakdownRows(),
+            // Main Amount Text
+            Text(
+              "₹${AppUtil.formatCurrency(total)}",
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                height: 1.0,
+              ),
             ),
-          )
-              : Column(
-            children: _buildBreakdownRows_MobileSpaced(), // Mobile spacing
+
+            const SizedBox(height: 14),
+
+            // Payment Breakdown Row
+            Row(
+              children: [
+                Expanded(child: _buildBalancedBox("Card", controller.todayCardAmount.value, Colors.orange)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildBalancedBox("UPI", controller.todayUpiAmount.value, Colors.blue)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildBalancedBox("Cash", controller.todayCashAmount.value, Colors.green)),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+// Final Compact Box
+  Widget _buildBalancedBox(String label, double amount, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(width: 6, height: 6, decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle)),
+              const SizedBox(width: 3),
+              Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w500, color: Colors.black54)),
+            ],
+          ),
+          Text(
+            "₹${AppUtil.formatCurrency(amount)}",
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
         ],
       ),

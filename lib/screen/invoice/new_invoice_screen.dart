@@ -1197,7 +1197,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                         children: [
                                                           Icon(Icons.currency_rupee, size: 12, color: isOutOfStock ? Colors.grey : Colors.green.shade600),
                                                           Text(
-                                                            '${item.price.toStringAsFixed(2)}',
+                                                            '${item.sellPrice.toStringAsFixed(2)}',
                                                             style: TextStyle(
                                                               color: isOutOfStock ? Colors.grey : Colors.green.shade600,
                                                               fontSize: 12,

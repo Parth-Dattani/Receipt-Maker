@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "134369591951",
+    "project_id": "getyourinvoice-8f128",
+    "storage_bucket": "getyourinvoice-8f128.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:134369591951:android:156b53ff86bb97dcd8a6fa",
+        "android_client_info": {
+          "package_name": "com.example.GetYourInvoice"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

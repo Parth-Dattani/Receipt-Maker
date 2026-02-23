@@ -2414,6 +2414,7 @@ class GoogleSheetService {
         'itemId',
         'itemName',
         'price',
+        'sellPrice',
         'gstPercent',
         'unitOfMeasurement',
         'currentStock',
@@ -2439,6 +2440,7 @@ class GoogleSheetService {
         'itemId': item.itemId,
         'itemName': item.itemName,
         'price': item.price.toString(),
+        'sellPrice': item.sellPrice.toString(),
         'gstPercent': item.gstPercent.toString(),
         'unitOfMeasurement': item.unitOfMeasurement,
         'currentStock': item.currentStock.toString(),
@@ -2491,15 +2493,30 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      print("---------========Sheets API Get Items...........-----${sheetsApi}");
+      print("---------========Sheets API Get Items...........-----");
 
-      // Get all data from the sheet
-      final response = await sheetsApi.spreadsheets.values.get(
+      // 1. Get Headers first to map columns dynamically
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$itemSheetName!A:I", // Adjust range based on your columns
+        "$itemSheetName!1:1",
       );
 
-      print("Response: ${response.values}");
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        print("No headers found in Item sheet");
+        return <Item>[];
+      }
+
+      final headers = headerResponse.values![0]
+          .map((h) => h.toString().toLowerCase().trim())
+          .toList();
+
+      // 2. Get Data (Start from Row 2)
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!A2:Z",
+      );
+
+      print("Response values length: ${response.values?.length ?? 0}");
 
       if (response.values == null || response.values!.isEmpty) {
         print("No data found in sheet");
@@ -2508,33 +2525,35 @@ class GoogleSheetService {
 
       List<Item> items = [];
 
-      // Skip header row (index 0) if it exists
-      for (int i = 1; i < response.values!.length; i++) {
+      for (int i = 0; i < response.values!.length; i++) {
         final row = response.values![i];
+        if (row.isEmpty) continue;
 
-        // Ensure row has enough columns
-        if (row.length < 9) {
-          print("Skipping incomplete row ${i}: $row");
-          continue;
+        // Map row data to headers
+        Map<String, String> rowMap = {};
+        for (int j = 0; j < headers.length; j++) {
+          if (j < row.length) {
+            rowMap[headers[j]] = row[j].toString();
+          }
         }
 
         try {
-          // Parse row data according to your schema
+          // Parse row data
           final item = Item(
-            itemId: row[0]?.toString() ?? '',
-            itemName: row[1]?.toString() ?? '',
-            price: double.tryParse(row[2]?.toString() ?? '0') ?? 0.0,
-            gstPercent : double.tryParse(row[3]?.toString() ?? '0') ?? 0.0,
-            unitOfMeasurement: row[4]?.toString() ?? '',
-            currentStock: int.tryParse(row[5]?.toString() ?? '0') ?? 0,
-            detailRequirement: row[6]?.toString() ?? '',
-            isActive: (row[7]?.toString().toLowerCase() == 'true'),
-            // Assuming userId is in column I (index 8)
+            itemId: rowMap['itemid'] ?? '',
+            itemName: rowMap['itemname'] ?? '',
+            price: double.tryParse(rowMap['price'] ?? '0') ?? 0.0,
+            sellPrice: double.tryParse(rowMap['sellprice'] ?? '0') ?? 0.0, // ✅ Read Sell Price
+            gstPercent: double.tryParse(rowMap['gstpercent'] ?? '0') ?? 0.0,
+            unitOfMeasurement: rowMap['unitofmeasurement'] ?? '',
+            currentStock: int.tryParse(rowMap['currentstock'] ?? '0') ?? 0,
+            detailRequirement: rowMap['detailrequirement'] ?? '',
+            isActive: (rowMap['isactive']?.toLowerCase() == 'true'),
           );
 
           // Filter by userId if provided
           if (userId != null && userId.isNotEmpty) {
-            String rowUserId = row[8]?.toString() ?? '';
+            String rowUserId = rowMap['userid'] ?? '';
             if (rowUserId == userId) {
               items.add(item);
             }
@@ -2544,8 +2563,8 @@ class GoogleSheetService {
           }
 
         } catch (e) {
-          print("Error parsing row ${i}: $e");
-          print("Row data: $row");
+          print("Error parsing item at row ${i + 2}: $e");
+          // print("Row map: $rowMap");
           continue;
         }
       }
@@ -2559,107 +2578,213 @@ class GoogleSheetService {
     }
   }
 
-  // Edit item using Google Sheets API (delete and re-add approach)
+  /// Edit item using Google Sheets API (delete and re-add approach)
+  // static Future<void> editItemAlternative3(String userId, Item item) async {
+  //   print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+  //
+  //   try {
+  //     final client = await _getAuthClient();
+  //     final sheetsApi = SheetsApi(client);
+  //
+  //
+  //     // Get sheet metadata to find the correct sheetId (safer than hardcoding 0)
+  //     final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+  //     final sheet = spreadsheet.sheets!
+  //         .firstWhere((s) => s.properties?.title == itemSheetName);
+  //     final sheetId = sheet.properties!.sheetId!;
+  //     // Step 1: Find and delete the existing item
+  //     print("Step 1: Finding item to delete...");
+  //
+  //     final response = await sheetsApi.spreadsheets.values.get(
+  //       spreadsheetId,
+  //       "$itemSheetName!A:K",
+  //     );
+  //
+  //     if (response.values == null || response.values!.isEmpty) {
+  //       throw Exception("No data found in sheet");
+  //     }
+  //
+  //     int? targetRowIndex;
+  //     for (int i = 1; i < response.values!.length; i++) {
+  //       final row = response.values![i];
+  //       if (row.isNotEmpty && row[0]?.toString() == item.itemId) {
+  //         targetRowIndex = i; // 0-based index for delete operation
+  //         break;
+  //       }
+  //     }
+  //
+  //     if (targetRowIndex == null) {
+  //       throw Exception("Item with ID ${item.itemId} not found");
+  //     }
+  //
+  //     print("Found item at row index: $targetRowIndex");
+  //
+  //     // Delete the row using batch update
+  //     final deleteRequests = [
+  //       Request()
+  //         ..deleteDimension = (DeleteDimensionRequest()
+  //           ..range = (DimensionRange()
+  //             ..sheetId = sheetId // Adjust if your sheet has different ID
+  //             ..dimension = 'ROWS'
+  //             ..startIndex = targetRowIndex
+  //             ..endIndex = targetRowIndex + 1))
+  //     ];
+  //
+  //     final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
+  //       ..requests = deleteRequests;
+  //
+  //     print("Deleting row...");
+  //     await sheetsApi.spreadsheets.batchUpdate(
+  //       deleteBatchRequest,
+  //       spreadsheetId,
+  //     );
+  //
+  //     print("Delete successful");
+  //
+  //     // Step 2: Add the updated item (small delay for consistency)
+  //     await Future.delayed(Duration(seconds: 1));
+  //
+  //     print("Step 2: Adding updated item...");
+  //
+  //     // Prepare updated row values
+  //     final values = [
+  //       item.itemId,
+  //       item.itemName,
+  //       item.price.toString(),
+  //       item.gstPercent.toString(),
+  //       item.unitOfMeasurement,
+  //       item.currentStock.toString(),
+  //       item.detailRequirement,
+  //       item.isActive ? "TRUE" : "FALSE",
+  //       userId,
+  //     ];
+  //
+  //     print("Adding values: $values");
+  //
+  //     // Append the updated row
+  //     await sheetsApi.spreadsheets.values.append(
+  //       ValueRange.fromJson({
+  //         "values": [values]
+  //       }),
+  //       spreadsheetId,
+  //       "$itemSheetName!A:H",
+  //       valueInputOption: "RAW",
+  //     );
+  //
+  //     print("Add successful - Item edited using delete and add approach");
+  //
+  //   } catch (e) {
+  //     print("Error in editItemAlternative3: $e");
+  //     rethrow;
+  //   }
+  // }
+
   static Future<void> editItemAlternative3(String userId, Item item) async {
-    print("=== TRYING ALTERNATIVE 3: DELETE AND ADD (Google Sheets) ===");
+    print("=== UPDATING ITEM (Delete & Add Method) ===");
 
     try {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
+      // 1. Get Headers
+      final headerResponse = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$itemSheetName!1:1",
+      );
 
-      // Get sheet metadata to find the correct sheetId (safer than hardcoding 0)
+      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+        throw Exception("No headers found in Item sheet");
+      }
+
+      final headers = headerResponse.values![0].map((h) => h.toString().trim()).toList();
+      final headersLower = headers.map((h) => h.toString().toLowerCase()).toList();
+
+      // 2. Find and Delete Row (Existing logic)
       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
       final sheet = spreadsheet.sheets!
           .firstWhere((s) => s.properties?.title == itemSheetName);
       final sheetId = sheet.properties!.sheetId!;
-      // Step 1: Find and delete the existing item
-      print("Step 1: Finding item to delete...");
 
       final response = await sheetsApi.spreadsheets.values.get(
         spreadsheetId,
-        "$itemSheetName!A:I",
+        "$itemSheetName!A:Z",
       );
 
-      if (response.values == null || response.values!.isEmpty) {
-        throw Exception("No data found in sheet");
-      }
+      if (response.values == null) throw Exception("Sheet is empty");
 
       int? targetRowIndex;
+      final itemIdIndex = headersLower.indexOf('itemid');
+
+      if (itemIdIndex == -1) throw Exception("itemId column not found");
+
       for (int i = 1; i < response.values!.length; i++) {
         final row = response.values![i];
-        if (row.isNotEmpty && row[0]?.toString() == item.itemId) {
-          targetRowIndex = i; // 0-based index for delete operation
+        if (row.length > itemIdIndex && row[itemIdIndex]?.toString() == item.itemId) {
+          targetRowIndex = i; // 0-based index for API
           break;
         }
       }
 
-      if (targetRowIndex == null) {
-        throw Exception("Item with ID ${item.itemId} not found");
-      }
-
-      print("Found item at row index: $targetRowIndex");
-
-      // Delete the row using batch update
-      final deleteRequests = [
-        Request()
+      if (targetRowIndex != null) {
+        final deleteRequest = Request()
           ..deleteDimension = (DeleteDimensionRequest()
             ..range = (DimensionRange()
-              ..sheetId = sheetId // Adjust if your sheet has different ID
+              ..sheetId = sheetId
               ..dimension = 'ROWS'
               ..startIndex = targetRowIndex
-              ..endIndex = targetRowIndex + 1))
-      ];
+              ..endIndex = targetRowIndex + 1));
 
-      final deleteBatchRequest = BatchUpdateSpreadsheetRequest()
-        ..requests = deleteRequests;
+        await sheetsApi.spreadsheets.batchUpdate(
+          BatchUpdateSpreadsheetRequest()..requests = [deleteRequest],
+          spreadsheetId,
+        );
+        print("🗑️ Old item row deleted");
+      } else {
+        print("⚠️ Item not found to delete, will just add new row.");
+      }
 
-      print("Deleting row...");
-      await sheetsApi.spreadsheets.batchUpdate(
-        deleteBatchRequest,
-        spreadsheetId,
-      );
+      // 3. Add Updated Item (Using Dynamic Mapping)
+      final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
+      final now = DateTime.now();
 
-      print("Delete successful");
+      // Map item data to header keys
+      Map<String, dynamic> itemMap = {
+        'itemid': item.itemId,
+        'itemname': item.itemName,
+        'price': item.price.toString(),
+        'sellprice': item.sellPrice.toString(), // ✅ Added
+        'gstpercent': item.gstPercent.toString(),
+        'unitofmeasurement': item.unitOfMeasurement,
+        'currentstock': item.currentStock.toString(),
+        'detailrequirement': item.detailRequirement,
+        'isactive': item.isActive ? "TRUE" : "FALSE",
+        'userid': userId,
+        'updatedat': _dateFormatter.format(now),
+        // We don't overwrite createdAt if we don't have it, but for new row we might need it.
+        // Ideally fetch old createdAt, but for now using current time is acceptable for this flow
+        'createdat': _dateFormatter.format(now),
+      };
 
-      // Step 2: Add the updated item (small delay for consistency)
-      await Future.delayed(Duration(seconds: 1));
+      List<dynamic> newRow = [];
+      for (var header in headers) {
+        // Use lowercase header to lookup in itemMap
+        newRow.add(itemMap[header.toString().toLowerCase()] ?? '');
+      }
 
-      print("Step 2: Adding updated item...");
-
-      // Prepare updated row values
-      final values = [
-        item.itemId,
-        item.itemName,
-        item.price.toString(),
-        item.gstPercent.toString(),
-        item.unitOfMeasurement,
-        item.currentStock.toString(),
-        item.detailRequirement,
-        item.isActive ? "TRUE" : "FALSE",
-        userId,
-      ];
-
-      print("Adding values: $values");
-
-      // Append the updated row
       await sheetsApi.spreadsheets.values.append(
-        ValueRange.fromJson({
-          "values": [values]
-        }),
+        ValueRange.fromJson({"values": [newRow]}),
         spreadsheetId,
-        "$itemSheetName!A:H",
-        valueInputOption: "RAW",
+        "$itemSheetName!A:Z",
+        valueInputOption: "USER_ENTERED",
       );
 
-      print("Add successful - Item edited using delete and add approach");
+      print("✅ Item Updated Successfully with Sell Price");
 
     } catch (e) {
       print("Error in editItemAlternative3: $e");
       rethrow;
     }
   }
-
 
   // static Future<List<Invoice>> getInvoices({String? type}) async {
   //   print("🔄 Fetching invoices from Google Sheet...");
@@ -7436,6 +7561,7 @@ class GoogleSheetService {
           'itemId',
           'itemName',
           'price',
+          'sellPrice',
           'gstPercent',
           'unitOfMeasurement',
           'currentStock',
@@ -7450,8 +7576,8 @@ class GoogleSheetService {
           'customerId',
           'customerName',
           'customerEmail',
-          'customerPan',          // ✅ NEW
-          'customerGst',          // ✅ NEW
+          // 'customerPan',          // ✅ NEW
+          // 'customerGst',          // ✅ NEW
           'mobile',
           'customerAddress',
           'issueDate',
@@ -7464,12 +7590,10 @@ class GoogleSheetService {
           'status',
           'paymentMode',          // ✅ NEW - PAYMENT MODE
           'notes',
-          'paymentMethod',
-          'paymentStatus',
+          'profit',
           'userId',
-          'companyId',
-          'createdAt',
-          'updatedAt',
+          // 'createdAt',
+          // 'updatedAt',
         ],
         invoiceItemSheetName: [
           'invoiceId',
@@ -7479,6 +7603,7 @@ class GoogleSheetService {
           'description',
           'quantity',
           'rate',
+          'purchasePrice',
           'price',
           'issueDate',
           'gstRate',

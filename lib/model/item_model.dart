@@ -4,6 +4,7 @@ class Item {
   final String itemId;
   final String itemName;
   final double price;
+  double sellPrice;
   final double gstPercent;
 
   final String unitOfMeasurement;
@@ -16,6 +17,7 @@ class Item {
     required this.itemId,
     required this.itemName,
     required this.price,
+    this.sellPrice = 0.0,
     this.gstPercent = 0.0,
 
     this.unitOfMeasurement = 'pcs',
@@ -30,6 +32,7 @@ class Item {
       'itemId': itemId,
       'itemName': itemName,
       'price': price,
+      'sellPrice': sellPrice,
       'gst': gstPercent,
 
       'unitOfMeasurement': unitOfMeasurement,
@@ -45,6 +48,7 @@ class Item {
       itemId: map['itemId']?.toString() ?? '',
       itemName: map['itemName']?.toString() ?? '',
       price: double.tryParse(map['price']?.toString() ?? '0') ?? 0.0,
+      sellPrice: double.tryParse(map['sellPrice']?.toString() ?? '0') ?? 0.0,
       gstPercent: double.tryParse(map['gst']?.toString() ?? '0') ?? 0.0,
 
       unitOfMeasurement: map['unitOfMeasurement']?.toString() ?? 'pcs',

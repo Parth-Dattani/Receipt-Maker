@@ -33,6 +33,8 @@ class Invoice {
   final double? receivedAmount;
   final double? pendingAmount;
   final String? paymentMode; // ✅ NEW: Cash, UPI, Card, Bank Transfer, etc.
+  final double? profit;
+
 
   Invoice({
     required this.invoiceId,
@@ -62,7 +64,8 @@ class Invoice {
     this.challanId,
     this.receivedAmount,
     this.pendingAmount,
-    this.paymentMode, // ✅ NEW
+    this.paymentMode,
+    this.profit,
   });
 
   Map<String, dynamic> toMap() {
@@ -92,7 +95,8 @@ class Invoice {
       'challanId': challanId,
       'receivedAmount': receivedAmount,
       'pendingAmount': pendingAmount,
-      'paymentMode': paymentMode, // ✅ NEW
+      'paymentMode': paymentMode,
+      'profit': profit,
     };
   }
 
@@ -147,7 +151,8 @@ class Invoice {
       items: [],
       receivedAmount: double.tryParse(map['receivedAmount']?.toString() ?? '0') ?? 0.0,
       pendingAmount: double.tryParse(map['pendingAmount']?.toString() ?? '0') ?? 0.0,
-      paymentMode: map['paymentMode'] ?? map['payment_mode'], // ✅ NEW - supports both formats
+      paymentMode: map['paymentMode'] ?? map['payment_mode'],
+      profit: double.tryParse(map['profit']?.toString() ?? map['Profit']?.toString() ?? '0') ?? 0.0,
     );
   }
 
@@ -254,6 +259,7 @@ class InvoiceItem {
   final String description;
   final double quantity;
   final double rate;
+  double purchasePrice;
   final String itemId;
   final String itemName;
   final String? challanId;
@@ -271,6 +277,7 @@ class InvoiceItem {
     required this.description,
     required this.quantity,
     required this.rate,
+    this.purchasePrice = 0.0,
     required this.itemId,
     required this.itemName,
     this.challanId,
@@ -296,6 +303,7 @@ class InvoiceItem {
       'description': description,
       'quantity': quantity,
       'rate': rate,
+      'purchasePrice': purchasePrice,
       'totalPrice': calculatedTotalPrice,
       'gstRate': gstRate,
       'gstAmount': calculatedGstAmount,
@@ -334,6 +342,7 @@ class InvoiceItem {
     double? gstAmount = double.tryParse(map['gstAmount']?.toString() ?? '');
     double? amountWithGst = double.tryParse(map['amountWithGst']?.toString() ?? '');
     double? totalPrice = double.tryParse(map['totalPrice']?.toString() ?? '');
+    double purchasePrice = double.tryParse(map['purchasePrice']?.toString() ?? '0.0') ?? 0.0;
 
     print("✅ Parsed rate: $rate");
     print("✅ Parsed quantity: $quantity");
@@ -347,6 +356,7 @@ class InvoiceItem {
       description: map['description']?.toString() ?? '',
       quantity: quantity,
       rate: rate,  // ✅ Now properly gets value from 'price' column
+      purchasePrice: purchasePrice,
       itemId: map['itemId']?.toString() ?? '',
       invoiceId: map['invoiceId']?.toString() ?? '',
       itemName: map['itemName']?.toString() ?? '',
@@ -365,6 +375,7 @@ class InvoiceItem {
     String? description,
     double? quantity,
     double? rate,
+    double? purchasePrice,
     String? itemId,
     String? itemName,
     double? gstRate,
@@ -380,6 +391,7 @@ class InvoiceItem {
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       rate: rate ?? this.rate,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
       itemId: itemId ?? this.itemId,
       itemName: itemName ?? this.itemName,
       gstRate: gstRate ?? this.gstRate,

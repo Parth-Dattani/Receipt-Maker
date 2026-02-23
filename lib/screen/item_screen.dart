@@ -14,21 +14,6 @@ import 'package:shimmer/shimmer.dart';
 
 
 
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-
-// Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-
-// Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
-
-
-
-// Ensure you have your imports for AppColors, AppConstants, ItemController, and Item model here.
 
 class ItemScreen extends GetView<ItemController> {
   static const pageId = "/ItemScreen";
@@ -37,14 +22,11 @@ class ItemScreen extends GetView<ItemController> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Responsive Layout Switcher
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 900) {
-          // 📱 Mobile Layout (Preserved)
           return _buildMobileScaffold(context);
         } else {
-          // 💻 Web Layout (Updated to match Image)
           return _buildWebScaffold(context);
         }
       },
@@ -52,7 +34,7 @@ class ItemScreen extends GetView<ItemController> {
   }
 
   // ===========================================================================
-  // 📱 MOBILE LAYOUT (Preserved)
+  // 📱 MOBILE LAYOUT
   // ===========================================================================
 
   Widget _buildMobileScaffold(BuildContext context) {
@@ -67,25 +49,17 @@ class ItemScreen extends GetView<ItemController> {
         foregroundColor: Colors.white,
         title: const Text(
           "Items Management",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
           Obx(() => IconButton(
             icon: Icon(
-              controller.showInactiveItems.value
-                  ? Icons.visibility_off
-                  : Icons.visibility,
+              controller.showInactiveItems.value ? Icons.visibility_off : Icons.visibility,
               color: Colors.white,
             ),
             onPressed: controller.toggleShowInactive,
-            tooltip: controller.showInactiveItems.value
-                ? 'Hide Inactive Items'
-                : 'Show Inactive Items',
+            tooltip: controller.showInactiveItems.value ? 'Hide Inactive Items' : 'Show Inactive Items',
           )),
           const SizedBox(width: 12),
         ],
@@ -108,10 +82,7 @@ class ItemScreen extends GetView<ItemController> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.tealColor,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          "Add Item",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        label: const Text("Add Item", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         onPressed: () => _showAddItemDialog(context),
       ),
     );
@@ -120,28 +91,20 @@ class ItemScreen extends GetView<ItemController> {
   Widget _buildMobileItemList(List<Item> items) {
     return ListView.builder(
       itemCount: items.length,
-      padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       itemBuilder: (context, index) {
         final item = items[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 4,
           shadowColor: AppColors.tealColor.withOpacity(0.2),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           child: ExpansionTile(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             backgroundColor: item.isActive ? Colors.white : Colors.red.shade50,
             leading: CircleAvatar(
-              backgroundColor: item.isActive
-                  ? AppColors.tealColor.withOpacity(0.15)
-                  : Colors.red.shade100,
-              child: Icon(Icons.inventory_2_outlined,
-                  color: item.isActive
-                      ? AppColors.tealColor
-                      : Colors.red.shade600),
+              backgroundColor: item.isActive ? AppColors.tealColor.withOpacity(0.15) : Colors.red.shade100,
+              child: Icon(Icons.inventory_2_outlined, color: item.isActive ? AppColors.tealColor : Colors.red.shade600),
             ),
             title: Text(
               item.itemName,
@@ -149,17 +112,17 @@ class ItemScreen extends GetView<ItemController> {
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
                 color: item.isActive ? Colors.black : Colors.grey.shade600,
-                decoration: item.isActive
-                    ? TextDecoration.none
-                    : TextDecoration.lineThrough,
+                decoration: item.isActive ? TextDecoration.none : TextDecoration.lineThrough,
               ),
             ),
-            subtitle: Text(
-              "₹${item.price.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: AppColors.tealColor,
-              ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text("Purchase: ₹${item.price.toStringAsFixed(2)}", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text("Sell: ₹${item.sellPrice.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
+                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.tealColor)),
+              ],
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -167,20 +130,15 @@ class ItemScreen extends GetView<ItemController> {
                 if (item.isActive)
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    tooltip: 'Delete Item',
-                    onPressed: () =>
-                        _confirmItemStatusChange(context, item, restore: false),
+                    onPressed: () => _confirmItemStatusChange(context, item, restore: false),
                   )
                 else
                   IconButton(
                     icon: const Icon(Icons.restore, color: Colors.green),
-                    tooltip: 'Restore Item',
-                    onPressed: () =>
-                        _confirmItemStatusChange(context, item, restore: true),
+                    onPressed: () => _confirmItemStatusChange(context, item, restore: true),
                   ),
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
-                  tooltip: 'Edit Item',
                   onPressed: () => _showEditItemDialog(context, item),
                 ),
               ],
@@ -193,43 +151,29 @@ class ItemScreen extends GetView<ItemController> {
   }
 
   // ===========================================================================
-  // 💻 WEB LAYOUT (Updated to Match Image)
+  // 💻 WEB LAYOUT
   // ===========================================================================
 
   Widget _buildWebScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light SaaS Background
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.tealColor,
-
-        title: const Text(
-          "Item Management", // Matching image title style
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
+        title: const Text("Item Management", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
         actions: [
-          // 🔹 White Pill Button in AppBar
           Padding(
             padding: const EdgeInsets.only(right: 24.0, top: 10, bottom: 10),
             child: ElevatedButton.icon(
               onPressed: () => _showAddItemDialog(context),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text(
-                "Add Item",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              label: const Text("Add Item", style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.tealColor,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20), // Pill shape
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
             ),
           )
@@ -238,7 +182,6 @@ class ItemScreen extends GetView<ItemController> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🔹 Web Sub-Header (Directory + Toggle)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
               decoration: BoxDecoration(
@@ -248,28 +191,12 @@ class ItemScreen extends GetView<ItemController> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Item Directory",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  // Active Only Toggle
+                  const Text("Item Directory", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
                   Row(
                     children: [
-                      Text(
-                        "Active Only",
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
+                      Text("Active Only", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500, fontSize: 14)),
                       const SizedBox(width: 12),
                       Obx(() => Switch(
-                        // Logic: If showing inactive is false, then "Active Only" is true
                         value: !controller.showInactiveItems.value,
                         onChanged: (_) => controller.toggleShowInactive(),
                         activeColor: AppColors.tealColor,
@@ -279,33 +206,22 @@ class ItemScreen extends GetView<ItemController> {
                 ],
               ),
             ),
-
-            // 🔹 Web Grid Content
             Expanded(
               child: Obx(() {
-                if (controller.isLoading.value) {
-                  return _buildShimmerLoader(isWeb: true);
-                }
-
+                if (controller.isLoading.value) return _buildShimmerLoader(isWeb: true);
                 final items = controller.filteredItemList;
-
-                if (items.isEmpty) {
-                  return _buildEmptyState();
-                }
-
+                if (items.isEmpty) return _buildEmptyState();
                 return Padding(
                   padding: const EdgeInsets.all(32.0),
                   child: GridView.builder(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 400,
-                      mainAxisExtent: 220, // Compact height matching image
+                      mainAxisExtent: 240,
                       crossAxisSpacing: 24,
                       mainAxisSpacing: 24,
                     ),
                     itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      return _buildWebItemCard(context, items[index]);
-                    },
+                    itemBuilder: (context, index) => _buildWebItemCard(context, items[index]),
                   ),
                 );
               }),
@@ -316,20 +232,12 @@ class ItemScreen extends GetView<ItemController> {
     );
   }
 
-  // 🔹 Web Grid Card Design (Matching Image)
   Widget _buildWebItemCard(BuildContext context, Item item) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -337,122 +245,53 @@ class ItemScreen extends GetView<ItemController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Header: Icon and Status Badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Icon in light circle
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.inventory_2_outlined, // Box/Service icon
-                    color: AppColors.tealColor,
-                    size: 22,
-                  ),
+                  decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor, size: 22),
                 ),
-
-                // Status Badge (Green Border/Text)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: item.isActive ? Colors.white : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: item.isActive ? Colors.green : Colors.red,
-                      width: 1,
-                    ),
+                    border: Border.all(color: item.isActive ? Colors.green : Colors.red, width: 1),
                   ),
-                  child: Text(
-                    item.isActive ? "Active" : "Inactive",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: item.isActive ? Colors.green : Colors.red,
-                    ),
-                  ),
+                  child: Text(item.isActive ? "Active" : "Inactive", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: item.isActive ? Colors.green : Colors.red)),
                 ),
               ],
             ),
-
-            // Content: Name & Price
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.itemName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(item.itemName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      "₹${item.price.toStringAsFixed(2)}",
-                      style: TextStyle(
-                        color: AppColors.tealColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      " / ${item.unitOfMeasurement}",
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 14,
-                      ),
-                    ),
-                    // Optional: Stock info integrated subtly
-                    const Spacer(),
-                    if(item.currentStock != -1)
-                      Text(
-                        "Qty: ${item.currentStock}",
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                      )
-                  ],
-                ),
+                Text("Purchase: ₹${item.price.toStringAsFixed(2)}", style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                Text("Sell: ₹${item.sellPrice.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
+                    style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold, fontSize: 16)),
+
+                const Spacer(),
+                if (item.currentStock != -1)
+                  Text("Qty: ${item.currentStock}", style: TextStyle(fontSize: 12, color: Colors.grey.shade400))
               ],
             ),
-
-            // Divider
             Divider(color: Colors.grey.shade200, height: 1),
-
-            // Footer: Actions (Edit | Delete)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Edit Button
                 TextButton.icon(
                   onPressed: () => _showEditItemDialog(context, item),
                   icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
                   label: const Text("Edit", style: TextStyle(color: Colors.blue)),
                 ),
-
-                const SizedBox(width: 24), // Spacing between buttons
-
-                // Delete/Restore Button
+                const SizedBox(width: 24),
                 TextButton.icon(
-                  onPressed: () => _confirmItemStatusChange(
-                      context, item, restore: !item.isActive),
-                  icon: Icon(
-                    item.isActive ? Icons.delete : Icons.restore,
-                    size: 16,
-                    color: item.isActive ? Colors.red : Colors.green,
-                  ),
-                  label: Text(
-                    item.isActive ? "Delete" : "Restore",
-                    style: TextStyle(
-                      color: item.isActive ? Colors.red : Colors.green,
-                    ),
-                  ),
+                  onPressed: () => _confirmItemStatusChange(context, item, restore: !item.isActive),
+                  icon: Icon(item.isActive ? Icons.delete : Icons.restore, size: 16, color: item.isActive ? Colors.red : Colors.green),
+                  label: Text(item.isActive ? "Delete" : "Restore", style: TextStyle(color: item.isActive ? Colors.red : Colors.green)),
                 ),
               ],
             ),
@@ -469,188 +308,48 @@ class ItemScreen extends GetView<ItemController> {
   Widget _buildShimmerLoader({bool isWeb = false}) {
     int count = isWeb ? 8 : 6;
     return isWeb
-        ? Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 400,
-          mainAxisExtent: 220,
-          crossAxisSpacing: 24,
-          mainAxisSpacing: 24,
-        ),
-        itemCount: count,
-        itemBuilder: (_, __) => Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      ),
-    )
-        : ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: count,
-      itemBuilder: (context, index) => Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
-        child: Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18)),
-          child: Container(
-            height: 80,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
-        ),
-      ),
-    );
+        ? Padding(padding: const EdgeInsets.all(32.0), child: GridView.builder(gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 400, mainAxisExtent: 220, crossAxisSpacing: 24, mainAxisSpacing: 24), itemCount: count, itemBuilder: (_, __) => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))))))
+        : ListView.builder(padding: const EdgeInsets.all(16), itemCount: count, itemBuilder: (context, index) => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Card(margin: const EdgeInsets.only(bottom: 16), elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), child: Container(height: 80, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18))))));
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 100, color: Colors.grey.shade400),
-          const SizedBox(height: 20),
-          Text(
-            controller.showInactiveItems.value
-                ? "No services found"
-                : "No active services found",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Add your first service using the + button",
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inventory_2_outlined, size: 100, color: Colors.grey.shade400), const SizedBox(height: 20), Text(controller.showInactiveItems.value ? "No items found" : "No active items found", style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.grey.shade700)), const SizedBox(height: 12), Text("Add your first item using the + button", style: TextStyle(fontSize: 15, color: Colors.grey.shade500), textAlign: TextAlign.center)]));
   }
 
-  // Mobile Details View
   Widget _buildItemDetails(Item item) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailRow("Unit", item.unitOfMeasurement),
-              ),
-              Expanded(
-                child: _buildDetailRow("Stock",
-                    item.currentStock == -1 ? "Unlimited" : "${item.currentStock}"),
-              ),
-            ],
-          ),
+      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [Expanded(child: _buildDetailRow("Purchase Price", "₹${item.price.toStringAsFixed(2)}")), Expanded(child: _buildDetailRow("Sell Price", "₹${item.sellPrice.toStringAsFixed(2)}"))]),
+        const SizedBox(height: 12),
+        Row(children: [Expanded(child: _buildDetailRow("Unit", item.unitOfMeasurement)), Expanded(child: _buildDetailRow("Stock", item.currentStock == -1 ? "Unlimited" : "${item.currentStock}"))]),
+        const SizedBox(height: 12),
+        if (AppConstants.withGST.value) ...[
+          Row(children: [Expanded(child: _buildDetailRow("GST", "${item.gstPercent.toStringAsFixed(2)} %")), Expanded(child: _buildDetailRow("Final Sell Price", "₹${(item.sellPrice + (item.sellPrice * item.gstPercent / 100)).toStringAsFixed(2)}"))]),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailRow("Price", "₹${item.price.toStringAsFixed(2)}"),
-              ),
-              Expanded(
-                child: _buildDetailRow("Status", item.isActive ? "Active" : "Inactive"),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Obx(() => AppConstants.withGST.value
-              ? Row(
-            children: [
-              Expanded(
-                  child: _buildDetailRow(
-                      "GST", "${item.gstPercent.toStringAsFixed(2)} %")),
-              Expanded(
-                  child: _buildDetailRow("Final Price",
-                      "₹${(item.price + (item.price * item.gstPercent / 100)).toStringAsFixed(2)}")),
-            ],
-          )
-              : Row(
-            children: [
-              Expanded(
-                  child: _buildDetailRow("Final Price",
-                      "₹${item.price.toStringAsFixed(2)}")),
-            ],
-          )),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailRow("ID", item.itemId.toString()),
-              ),
-            ],
-          ),
-          if (item.detailRequirement.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow("Details", item.detailRequirement),
-          ],
         ],
-      ),
+        Row(children: [Expanded(child: _buildDetailRow("ID", item.itemId.toString()))]),
+        if (item.detailRequirement.isNotEmpty) ...[const SizedBox(height: 12), _buildDetailRow("Details", item.detailRequirement)],
+      ]),
     );
   }
 
   Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)), const SizedBox(height: 4), Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))]));
   }
 
-  // --- Dialogs (Item Specific) ---
-
+  // ✅ BEST UX LAYOUT (purchase & Sell Price in One Row)
   void _showAddItemDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
+    final sellPriceCtrl = TextEditingController();
     final stockCtrl = TextEditingController();
     final detailCtrl = TextEditingController();
-    final gstCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     String selectedUnit = controller.unitOptions.first;
-    double selectedGst = 5.0; // Default to 5%
+    double selectedGst = 5.0;
     bool isActive = true;
     bool isUnlimitedStock = false;
 
@@ -659,331 +358,95 @@ class ItemScreen extends GetView<ItemController> {
       barrierDismissible: false,
       builder: (_) {
         bool isAdding = false;
+        return StatefulBuilder(builder: (context, setState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 8,
+            insetPadding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85, maxWidth: 500),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Add New Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.tealColor)), IconButton(icon: Icon(Icons.close, color: AppColors.tealColor), onPressed: isAdding ? null : () => Navigator.pop(context))]),
+                    const SizedBox(height: 20),
+                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
+                    const SizedBox(height: 16),
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 8,
-              insetPadding: const EdgeInsets.all(20),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.85,
-                  maxWidth: 500, // Web Safe
-                ),
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // ✅ BEST UX: purchase Price & Sell Price Side-by-Side (Safe for Dialog)
+                    Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Add New Item",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.tealColor,
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.close, color: AppColors.tealColor),
-                              onPressed: isAdding ? null : () => Navigator.pop(context),
-                            ),
-                          ],
+                        Expanded(
+                          child: TextFormField(controller: priceCtrl, decoration: InputDecoration(labelText: "Purchase Price *", hintText: "0.00", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? "Required" : null),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Item Name
-                        TextFormField(
-                          controller: nameCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Item Name *",
-                            hintText: "Enter item name",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.label_outline, color: AppColors.tealColor),
-                          ),
-                          enabled: !isAdding,
-                          validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Price and Unit Row
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: priceCtrl,
-                                decoration: InputDecoration(
-                                  labelText: "Price *",
-                                  hintText: "0.00",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                  prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
-                                ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                enabled: !isAdding,
-                                validator: (value) {
-                                  final price = double.tryParse(value ?? '');
-                                  if (price == null || price <= 0) return "Valid price required";
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: selectedUnit,
-                                decoration: InputDecoration(
-                                  labelText: "Unit",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                ),
-                                items: controller.unitOptions.map((unit) {
-                                  return DropdownMenuItem(
-                                    value: unit,
-                                    child: Text(unit),
-                                  );
-                                }).toList(),
-                                onChanged: isAdding ? null : (value) {
-                                  setState(() => selectedUnit = value!);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // GST Percentage
-                        Obx(() => AppConstants.withGST.value
-                            ? Column(
-                          children: [
-                            DropdownButtonFormField<double>(
-                              value: selectedGst,
-                              decoration: InputDecoration(
-                                labelText: "GST (%) *",
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
-                              ),
-                              items: const [
-                                DropdownMenuItem(value: 0.0, child: Text("0%")),
-                                DropdownMenuItem(value: 5.0, child: Text("5%")),
-                                DropdownMenuItem(value: 12.0, child: Text("12%")),
-                                DropdownMenuItem(value: 18.0, child: Text("18%")),
-                              ],
-                              onChanged: isAdding ? null : (value) {
-                                setState(() => selectedGst = value!);
-                              },
-                              validator: (value) {
-                                if (value == null) return "Please select GST";
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Selected GST: ${selectedGst}%",
-                              style: TextStyle(
-                                color: AppColors.tealColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        )
-                            : const SizedBox.shrink()),
-
-                        // Stock Section
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: isUnlimitedStock,
-                                  onChanged: isAdding ? null : (value) {
-                                    setState(() {
-                                      isUnlimitedStock = value!;
-                                      if (isUnlimitedStock) stockCtrl.clear();
-                                    });
-                                  },
-                                ),
-                                const Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                            if (!isUnlimitedStock)
-                              TextFormField(
-                                controller: stockCtrl,
-                                decoration: InputDecoration(
-                                  labelText: "Current Stock *",
-                                  hintText: "Enter stock quantity",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                  prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor),
-                                ),
-                                keyboardType: TextInputType.number,
-                                enabled: !isAdding,
-                                validator: (value) {
-                                  if (isUnlimitedStock) return null;
-                                  final stock = int.tryParse(value ?? '');
-                                  if (stock == null || stock < 0) return "Valid stock required";
-                                  return null;
-                                },
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Detail Requirements
-                        TextFormField(
-                          controller: detailCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Detail Requirements",
-                            hintText: "Enter additional details (optional)",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.notes_outlined, color: AppColors.tealColor),
-                          ),
-                          maxLines: 3,
-                          enabled: !isAdding,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Status Toggle
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
-                              const SizedBox(width: 8),
-                              const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
-                              const Spacer(),
-                              Switch(
-                                value: isActive,
-                                onChanged: isAdding ? null : (value) {
-                                  setState(() => isActive = value);
-                                },
-                                activeColor: AppColors.tealColor,
-                              ),
-                              Text(
-                                isActive ? "Active" : "Inactive",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: isActive ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: isAdding ? null : () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              ),
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.tealColor,
-                                foregroundColor: AppColors.whiteColor,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                elevation: 3,
-                              ),
-                              onPressed: isAdding ? null : () async {
-                                if (formKey.currentState!.validate()) {
-                                  setState(() => isAdding = true);
-
-                                  final name = nameCtrl.text.trim();
-                                  final price = double.parse(priceCtrl.text);
-                                  // Use selectedGst variable directly for dropdown
-                                  final gstPercent = selectedGst;
-                                  final stock = isUnlimitedStock ? -1 : int.parse(stockCtrl.text);
-                                  final detail = detailCtrl.text.trim();
-
-                                  try {
-                                    await controller.addNewItem(
-                                      name: name,
-                                      price: price,
-                                      gstPercent: gstPercent,
-                                      unitOfMeasurement: selectedUnit,
-                                      currentStock: stock,
-                                      detailRequirement: detail,
-                                      isActive: isActive,
-                                    );
-                                    Navigator.pop(context);
-                                  } catch (e) {
-                                    setState(() => isAdding = false);
-                                  }
-                                }
-                              },
-                              child: isAdding
-                                  ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
-                                ),
-                              )
-                                  : const Text(
-                                "Add Item",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(controller: sellPriceCtrl, decoration: InputDecoration(labelText: "Sell Price *", hintText: "0.00", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? "Required" : null),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    // ✅ Unit & GST
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedUnit,
+                            decoration: InputDecoration(labelText: "Unit", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                            items: controller.unitOptions.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                            onChanged: (value) => setState(() => selectedUnit = value!),
+                          ),
+                        ),
+                        if (AppConstants.withGST.value) ...[
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: DropdownButtonFormField<double>(
+                              value: selectedGst,
+                              decoration: InputDecoration(labelText: "GST (%)", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                              items: const [DropdownMenuItem(value: 0.0, child: Text("0%")), DropdownMenuItem(value: 5.0, child: Text("5%")), DropdownMenuItem(value: 12.0, child: Text("12%")), DropdownMenuItem(value: 18.0, child: Text("18%"))],
+                              onChanged: (value) => setState(() => selectedGst = value!),
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(children: [Checkbox(value: isUnlimitedStock, onChanged: (value) => setState(() { isUnlimitedStock = value!; if (isUnlimitedStock) stockCtrl.clear(); })), const Text("Unlimited Stock")]),
+                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
+                    const SizedBox(height: 16),
+                    TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
+                    const SizedBox(height: 16),
+                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.tealColor), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
+                    const SizedBox(height: 24),
+                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isAdding ? null : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isAdding = true);
+                        try {
+                          await controller.addNewItem(name: nameCtrl.text.trim(), price: double.parse(priceCtrl.text), sellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : int.parse(stockCtrl.text), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
+                          Navigator.pop(context);
+                        } catch (e) { setState(() => isAdding = false); }
+                      }
+                    }, child: isAdding ? const CircularProgressIndicator(color: Colors.white) : const Text("Add Item", style: TextStyle(fontSize: 16, color: Colors.white))))
+                  ]),
                 ),
               ),
-            );
-          },
-        );
+            ),
+          );
+        });
       },
     );
   }
 
+  // ✅ BEST UX LAYOUT - Edit Item
   void _showEditItemDialog(BuildContext context, Item item) {
     final nameCtrl = TextEditingController(text: item.itemName);
     final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(2));
-    final gstCtrl = TextEditingController(text: item.gstPercent.toStringAsFixed(2));
-    final stockCtrl = TextEditingController(
-        text: item.currentStock == -1 ? '' : item.currentStock.toString()
-    );
+    final sellPriceCtrl = TextEditingController(text: item.sellPrice.toStringAsFixed(2));
+    final stockCtrl = TextEditingController(text: item.currentStock == -1 ? '' : item.currentStock.toString());
     final detailCtrl = TextEditingController(text: item.detailRequirement);
     final formKey = GlobalKey<FormState>();
 
@@ -997,361 +460,98 @@ class ItemScreen extends GetView<ItemController> {
       barrierDismissible: false,
       builder: (_) {
         bool isSaving = false;
+        return StatefulBuilder(builder: (context, setState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85, maxWidth: 500),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Edit Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.tealColor)), IconButton(icon: Icon(Icons.close, color: AppColors.tealColor), onPressed: isSaving ? null : () => Navigator.pop(context))]),
+                    const SizedBox(height: 20),
+                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
+                    const SizedBox(height: 16),
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 8,
-              insetPadding: const EdgeInsets.all(20),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.85,
-                  maxWidth: 500, // Web Safe
-                ),
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // ✅ BEST UX: purchase Price & Sell Price Side-by-Side
+                    Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Edit Item",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.tealColor,
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.close, color: AppColors.tealColor),
-                              onPressed: isSaving ? null : () => Navigator.pop(context),
-                            ),
-                          ],
+                        Expanded(
+                          child: TextFormField(controller: priceCtrl, decoration: InputDecoration(labelText: "Purchase Price *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Item Name
-                        TextFormField(
-                          controller: nameCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Item Name *",
-                            hintText: "Enter item name",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.label_outline, color: AppColors.tealColor),
-                          ),
-                          enabled: !isSaving,
-                          validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Price and Unit Row
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: priceCtrl,
-                                decoration: InputDecoration(
-                                  labelText: "Price *",
-                                  hintText: "0.00",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                  prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
-                                ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                enabled: !isSaving,
-                                validator: (value) {
-                                  final price = double.tryParse(value ?? '');
-                                  if (price == null || price <= 0) return "Valid price required";
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: selectedUnit,
-                                decoration: InputDecoration(
-                                  labelText: "Unit",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                ),
-                                items: controller.unitOptions.map((unit) {
-                                  return DropdownMenuItem(value: unit, child: Text(unit));
-                                }).toList(),
-                                onChanged: isSaving ? null : (value) {
-                                  setState(() => selectedUnit = value!);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // GST Percentage - Dropdown with only 0,5,12,18
-                        const SizedBox(height: 16),
-                        Obx(() => AppConstants.withGST.value
-                            ? Column(
-                          children: [
-                            DropdownButtonFormField<double>(
-                              value: selectedGst,
-                              decoration: InputDecoration(
-                                labelText: "GST (%) *",
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                                prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
-                              ),
-                              items: const [
-                                DropdownMenuItem(value: 0.0, child: Text("0%")),
-                                DropdownMenuItem(value: 5.0, child: Text("5%")),
-                                DropdownMenuItem(value: 12.0, child: Text("12%")),
-                                DropdownMenuItem(value: 18.0, child: Text("18%")),
-                              ],
-                              onChanged: isSaving ? null : (value) {
-                                setState(() => selectedGst = value!);
-                              },
-                              validator: (value) {
-                                if (value == null) {
-                                  return "Please select GST percentage";
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        )
-                            : const SizedBox.shrink()),
-
-                        // Stock Section
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: isUnlimitedStock,
-                                  onChanged: isSaving ? null : (value) {
-                                    setState(() {
-                                      isUnlimitedStock = value!;
-                                      if (isUnlimitedStock) stockCtrl.clear();
-                                    });
-                                  },
-                                ),
-                                const Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                            if (!isUnlimitedStock)
-                              TextFormField(
-                                controller: stockCtrl,
-                                decoration: InputDecoration(
-                                  labelText: "Current Stock *",
-                                  hintText: "Enter stock quantity",
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
-                                  prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor),
-                                ),
-                                keyboardType: TextInputType.number,
-                                enabled: !isSaving,
-                                validator: (value) {
-                                  if (isUnlimitedStock) return null;
-                                  final stock = int.tryParse(value ?? '');
-                                  if (stock == null || stock < 0) return "Valid stock required";
-                                  return null;
-                                },
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Detail Requirements
-                        TextFormField(
-                          controller: detailCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Detail Requirements",
-                            hintText: "Enter additional details (optional)",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixIcon: Icon(Icons.notes_outlined, color: AppColors.tealColor),
-                          ),
-                          maxLines: 3,
-                          enabled: !isSaving,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Status Toggle
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
-                              const SizedBox(width: 8),
-                              const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
-                              const Spacer(),
-                              Switch(
-                                value: isActive,
-                                onChanged: isSaving ? null : (value) {
-                                  setState(() => isActive = value);
-                                },
-                                activeColor: AppColors.tealColor,
-                              ),
-                              Text(
-                                isActive ? "Active" : "Inactive",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: isActive ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: isSaving ? null : () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              ),
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.tealColor,
-                                foregroundColor: AppColors.whiteColor,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                elevation: 3,
-                              ),
-                              onPressed: isSaving ? null : () async {
-                                if (formKey.currentState!.validate()) {
-                                  setState(() => isSaving = true);
-
-                                  final name = nameCtrl.text.trim();
-                                  final price = double.parse(priceCtrl.text);
-                                  // final gstPercent = double.parse(gstCtrl.text.isEmpty ? '0' : gstCtrl.text);
-                                  final stock = isUnlimitedStock ? -1 : int.parse(stockCtrl.text);
-                                  final detail = detailCtrl.text.trim();
-
-                                  try {
-                                    await controller.editItem(
-                                      itemId: item.itemId,
-                                      newName: name,
-                                      newPrice: price,
-                                      gstPercent: selectedGst,
-                                      unitOfMeasurement: selectedUnit,
-                                      currentStock: stock,
-                                      detailRequirement: detail,
-                                      isActive: isActive,
-                                    );
-                                    Navigator.pop(context);
-                                  } catch (e) {
-                                    setState(() => isSaving = false);
-                                  }
-                                }
-                              },
-                              child: isSaving
-                                  ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
-                                ),
-                              )
-                                  : const Text(
-                                "Update Item",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(controller: sellPriceCtrl, decoration: InputDecoration(labelText: "Sell Price *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+
+                    // ✅ Unit & GST
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedUnit,
+                            decoration: InputDecoration(labelText: "Unit", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                            items: controller.unitOptions.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                            onChanged: (value) => setState(() => selectedUnit = value!),
+                          ),
+                        ),
+                        if (AppConstants.withGST.value) ...[
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: DropdownButtonFormField<double>(
+                              value: selectedGst,
+                              decoration: InputDecoration(labelText: "GST (%)", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                              items: const [DropdownMenuItem(value: 0.0, child: Text("0%")), DropdownMenuItem(value: 5.0, child: Text("5%")), DropdownMenuItem(value: 12.0, child: Text("12%")), DropdownMenuItem(value: 18.0, child: Text("18%"))],
+                              onChanged: (value) => setState(() => selectedGst = value!),
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(children: [Checkbox(value: isUnlimitedStock, onChanged: (value) => setState(() { isUnlimitedStock = value!; if (isUnlimitedStock) stockCtrl.clear(); })), const Text("Unlimited Stock")]),
+                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
+                    const SizedBox(height: 16),
+                    TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
+                    const SizedBox(height: 16),
+                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.tealColor), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
+                    const SizedBox(height: 24),
+                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isSaving ? null : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() => isSaving = true);
+                        try {
+                          await controller.editItem(itemId: item.itemId, newName: nameCtrl.text.trim(), newPrice: double.parse(priceCtrl.text), newSellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : int.parse(stockCtrl.text), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
+                          Navigator.pop(context);
+                        } catch (e) { setState(() => isSaving = false); }
+                      }
+                    }, child: isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text("Update Item", style: TextStyle(fontSize: 16, color: Colors.white))))
+                  ]),
                 ),
               ),
-            );
-          },
-        );
+            ),
+          );
+        });
       },
     );
   }
 
-  void _confirmItemStatusChange(BuildContext context, Item item,
-      {required bool restore}) {
-    final title = restore ? "Restore Item" : "Delete Item";
-    final content = restore
-        ? "Do you want to restore '${item.itemName}'?\n\nThis will mark it as active again."
-        : "Do you want to delete '${item.itemName}'?\n\nThis will mark it as inactive.";
-    final buttonText = restore ? "Restore" : "Delete";
-    final buttonColor = restore ? Colors.green : Colors.red;
-    final icon = restore ? Icons.restore : Icons.delete_forever;
-
+  void _confirmItemStatusChange(BuildContext context, Item item, {required bool restore}) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(icon, color: buttonColor),
-            const SizedBox(width: 8),
-            Text(title, style: TextStyle(color: buttonColor)),
-          ],
-        ),
-        content: Text(content),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [Icon(restore ? Icons.restore : Icons.delete, color: restore ? Colors.green : Colors.red), const SizedBox(width: 8), Text(restore ? "Restore Item" : "Delete Item", style: TextStyle(color: restore ? Colors.green : Colors.red))]),
+        content: Text("Are you sure you want to ${restore ? "restore" : "delete"} '${item.itemName}'?"),
         actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: buttonColor,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            icon: Icon(icon, color: Colors.white),
-            label: Text(buttonText, style: const TextStyle(color: Colors.white)),
-            onPressed: () async {
-              Navigator.pop(context);
-              await controller.updateItemStatus(
-                itemId: item.itemId,
-                isActive: restore,
-              );
-            },
-          ),
+          TextButton(child: const Text("Cancel"), onPressed: () => Navigator.pop(context)),
+          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: restore ? Colors.green : Colors.red), onPressed: () async { Navigator.pop(context); await controller.updateItemStatus(itemId: item.itemId, isActive: restore); }, child: Text(restore ? "Restore" : "Delete", style: const TextStyle(color: Colors.white))),
         ],
       ),
     );
@@ -1359,7 +559,6 @@ class ItemScreen extends GetView<ItemController> {
 }
 
 
-///mobile working
 // class ItemScreen extends GetView<ItemController> {
 //   static const pageId = "/ItemScreen";
 //
@@ -1367,6 +566,25 @@ class ItemScreen extends GetView<ItemController> {
 //
 //   @override
 //   Widget build(BuildContext context) {
+//     // ✅ Responsive Layout Switcher
+//     return LayoutBuilder(
+//       builder: (context, constraints) {
+//         if (constraints.maxWidth < 900) {
+//           // 📱 Mobile Layout (Preserved)
+//           return _buildMobileScaffold(context);
+//         } else {
+//           // 💻 Web Layout (Updated to match Image)
+//           return _buildWebScaffold(context);
+//         }
+//       },
+//     );
+//   }
+//
+//   // ===========================================================================
+//   // 📱 MOBILE LAYOUT (Preserved)
+//   // ===========================================================================
+//
+//   Widget _buildMobileScaffold(BuildContext context) {
 //     return Scaffold(
 //       backgroundColor: Colors.grey.shade100,
 //       appBar: AppBar(
@@ -1375,13 +593,7 @@ class ItemScreen extends GetView<ItemController> {
 //         shape: const RoundedRectangleBorder(
 //           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
 //         ),
-//         leading: Padding(
-//           padding: const EdgeInsets.only(left: 12),
-//           child: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-//           onPressed: (){
-//             Get.back();
-//           },),
-//         ),
+//         foregroundColor: Colors.white,
 //         title: const Text(
 //           "Items Management",
 //           style: TextStyle(
@@ -1410,7 +622,7 @@ class ItemScreen extends GetView<ItemController> {
 //       body: SafeArea(
 //         child: Obx(() {
 //           if (controller.isLoading.value) {
-//             return _buildShimmerLoader();
+//             return _buildShimmerLoader(isWeb: false);
 //           }
 //
 //           final items = controller.filteredItemList;
@@ -1419,7 +631,7 @@ class ItemScreen extends GetView<ItemController> {
 //             return _buildEmptyState();
 //           }
 //
-//           return _buildItemList(items);
+//           return _buildMobileItemList(items);
 //         }),
 //       ),
 //       floatingActionButton: FloatingActionButton.extended(
@@ -1434,68 +646,10 @@ class ItemScreen extends GetView<ItemController> {
 //     );
 //   }
 //
-//   /// 🔹 Stylish shimmer loader
-//   Widget _buildShimmerLoader() {
-//     return ListView.builder(
-//       padding: const EdgeInsets.all(16),
-//       itemCount: 6,
-//       itemBuilder: (context, index) {
-//         return Shimmer.fromColors(
-//           baseColor: Colors.grey.shade300,
-//           highlightColor: Colors.grey.shade100,
-//           child: Card(
-//             margin: const EdgeInsets.only(bottom: 16),
-//             elevation: 2,
-//             shape:
-//             RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-//             child: Container(
-//               height: 80,
-//               decoration: BoxDecoration(
-//                 color: Colors.white,
-//                 borderRadius: BorderRadius.circular(18),
-//               ),
-//             ),
-//           ),
-//         );
-//       },
-//     );
-//   }
-//
-//   /// 🔹 Empty state with better illustration
-//   Widget _buildEmptyState() {
-//     return Center(
-//       child: Column(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Icon(Icons.inventory_2_outlined,
-//               size: 100, color: Colors.grey.shade400),
-//           const SizedBox(height: 20),
-//           Text(
-//             controller.showInactiveItems.value
-//                 ? "No items found"
-//                 : "No active items found",
-//             style: TextStyle(
-//               fontSize: 20,
-//               fontWeight: FontWeight.w600,
-//               color: Colors.grey.shade700,
-//             ),
-//           ),
-//           const SizedBox(height: 12),
-//           Text(
-//             "Add your first item using the + button",
-//             style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
-//             textAlign: TextAlign.center,
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   /// 🔹 Item List Cards with modern look
-//   Widget _buildItemList(List<Item> items) {
+//   Widget _buildMobileItemList(List<Item> items) {
 //     return ListView.builder(
 //       itemCount: items.length,
-//       padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
+//       padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
 //       itemBuilder: (context, index) {
 //         final item = items[index];
 //         return Card(
@@ -1508,8 +662,7 @@ class ItemScreen extends GetView<ItemController> {
 //             shape: RoundedRectangleBorder(
 //               borderRadius: BorderRadius.circular(18),
 //             ),
-//             backgroundColor:
-//             item.isActive ? Colors.white : Colors.red.shade50,
+//             backgroundColor: item.isActive ? Colors.white : Colors.red.shade50,
 //             leading: CircleAvatar(
 //               backgroundColor: item.isActive
 //                   ? AppColors.tealColor.withOpacity(0.15)
@@ -1524,8 +677,7 @@ class ItemScreen extends GetView<ItemController> {
 //               style: TextStyle(
 //                 fontWeight: FontWeight.w600,
 //                 fontSize: 16,
-//                 color:
-//                 item.isActive ? Colors.black : Colors.grey.shade600,
+//                 color: item.isActive ? Colors.black : Colors.grey.shade600,
 //                 decoration: item.isActive
 //                     ? TextDecoration.none
 //                     : TextDecoration.lineThrough,
@@ -1569,10 +721,459 @@ class ItemScreen extends GetView<ItemController> {
 //     );
 //   }
 //
+//   // ===========================================================================
+//   // 💻 WEB LAYOUT (Updated to Match Image)
+//   // ===========================================================================
+//
+//   Widget _buildWebScaffold(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: const Color(0xFFF5F7FA), // Light SaaS Background
+//       appBar: AppBar(
+//         elevation: 0,
+//         backgroundColor: AppColors.tealColor,
+//
+//         title: const Text(
+//           "Item Management", // Matching image title style
+//           style: TextStyle(
+//             color: Colors.white,
+//             fontWeight: FontWeight.w700,
+//             fontSize: 20,
+//           ),
+//         ),
+//         actions: [
+//           // 🔹 White Pill Button in AppBar
+//           Padding(
+//             padding: const EdgeInsets.only(right: 24.0, top: 10, bottom: 10),
+//             child: ElevatedButton.icon(
+//               onPressed: () => _showAddItemDialog(context),
+//               icon: const Icon(Icons.add, size: 18),
+//               label: const Text(
+//                 "Add Item",
+//                 style: TextStyle(fontWeight: FontWeight.bold),
+//               ),
+//               style: ElevatedButton.styleFrom(
+//                 backgroundColor: Colors.white,
+//                 foregroundColor: AppColors.tealColor,
+//                 elevation: 0,
+//                 padding: const EdgeInsets.symmetric(horizontal: 20),
+//                 shape: RoundedRectangleBorder(
+//                   borderRadius: BorderRadius.circular(20), // Pill shape
+//                 ),
+//               ),
+//             ),
+//           )
+//         ],
+//       ),
+//       body: SafeArea(
+//         child: Column(
+//           children: [
+//             // 🔹 Web Sub-Header (Directory + Toggle)
+//             Container(
+//               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+//               decoration: BoxDecoration(
+//                 color: Colors.white,
+//                 border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+//               ),
+//               child: Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   const Text(
+//                     "Item Directory",
+//                     style: TextStyle(
+//                       fontSize: 24,
+//                       fontWeight: FontWeight.bold,
+//                       color: Colors.black87,
+//                     ),
+//                   ),
+//                   // Active Only Toggle
+//                   Row(
+//                     children: [
+//                       Text(
+//                         "Active Only",
+//                         style: TextStyle(
+//                           color: Colors.grey.shade600,
+//                           fontWeight: FontWeight.w500,
+//                           fontSize: 14,
+//                         ),
+//                       ),
+//                       const SizedBox(width: 12),
+//                       Obx(() => Switch(
+//                         // Logic: If showing inactive is false, then "Active Only" is true
+//                         value: !controller.showInactiveItems.value,
+//                         onChanged: (_) => controller.toggleShowInactive(),
+//                         activeColor: AppColors.tealColor,
+//                       )),
+//                     ],
+//                   ),
+//                 ],
+//               ),
+//             ),
+//
+//             // 🔹 Web Grid Content
+//             Expanded(
+//               child: Obx(() {
+//                 if (controller.isLoading.value) {
+//                   return _buildShimmerLoader(isWeb: true);
+//                 }
+//
+//                 final items = controller.filteredItemList;
+//
+//                 if (items.isEmpty) {
+//                   return _buildEmptyState();
+//                 }
+//
+//                 return Padding(
+//                   padding: const EdgeInsets.all(32.0),
+//                   child: GridView.builder(
+//                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+//                       maxCrossAxisExtent: 400,
+//                       mainAxisExtent: 220, // Compact height matching image
+//                       crossAxisSpacing: 24,
+//                       mainAxisSpacing: 24,
+//                     ),
+//                     itemCount: items.length,
+//                     itemBuilder: (context, index) {
+//                       return _buildWebItemCard(context, items[index]);
+//                     },
+//                   ),
+//                 );
+//               }),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   // 🔹 Web Grid Card Design (Matching Image)
+//   Widget _buildWebItemCard(BuildContext context, Item item) {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(16),
+//         boxShadow: [
+//           BoxShadow(
+//             color: Colors.grey.withOpacity(0.08),
+//             spreadRadius: 2,
+//             blurRadius: 10,
+//             offset: const Offset(0, 4),
+//           ),
+//         ],
+//       ),
+//       child: Padding(
+//         padding: const EdgeInsets.all(20.0),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//           children: [
+//             // Header: Icon and Status Badge
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//               children: [
+//                 // Icon in light circle
+//                 Container(
+//                   padding: const EdgeInsets.all(10),
+//                   decoration: BoxDecoration(
+//                     color: AppColors.tealColor.withOpacity(0.1),
+//                     shape: BoxShape.circle,
+//                   ),
+//                   child: Icon(
+//                     Icons.inventory_2_outlined, // Box/Service icon
+//                     color: AppColors.tealColor,
+//                     size: 22,
+//                   ),
+//                 ),
+//
+//                 // Status Badge (Green Border/Text)
+//                 Container(
+//                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+//                   decoration: BoxDecoration(
+//                     color: item.isActive ? Colors.white : Colors.red.shade50,
+//                     borderRadius: BorderRadius.circular(20),
+//                     border: Border.all(
+//                       color: item.isActive ? Colors.green : Colors.red,
+//                       width: 1,
+//                     ),
+//                   ),
+//                   child: Text(
+//                     item.isActive ? "Active" : "Inactive",
+//                     style: TextStyle(
+//                       fontSize: 12,
+//                       fontWeight: FontWeight.w600,
+//                       color: item.isActive ? Colors.green : Colors.red,
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//
+//             // Content: Name & Price
+//             Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   item.itemName,
+//                   maxLines: 1,
+//                   overflow: TextOverflow.ellipsis,
+//                   style: const TextStyle(
+//                     fontSize: 18,
+//                     fontWeight: FontWeight.bold,
+//                     color: Colors.black87,
+//                   ),
+//                 ),
+//                 const SizedBox(height: 6),
+//                 Row(
+//                   children: [
+//                     Text(
+//                       "₹${item.price.toStringAsFixed(2)}",
+//                       style: TextStyle(
+//                         color: AppColors.tealColor,
+//                         fontWeight: FontWeight.bold,
+//                         fontSize: 16,
+//                       ),
+//                     ),
+//                     Text(
+//                       " / ${item.unitOfMeasurement}",
+//                       style: TextStyle(
+//                         color: Colors.grey.shade500,
+//                         fontSize: 14,
+//                       ),
+//                     ),
+//                     // Optional: Stock info integrated subtly
+//                     const Spacer(),
+//                     if(item.currentStock != -1)
+//                       Text(
+//                         "Qty: ${item.currentStock}",
+//                         style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+//                       )
+//                   ],
+//                 ),
+//               ],
+//             ),
+//
+//             // Divider
+//             Divider(color: Colors.grey.shade200, height: 1),
+//
+//             // Footer: Actions (Edit | Delete)
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: [
+//                 // Edit Button
+//                 TextButton.icon(
+//                   onPressed: () => _showEditItemDialog(context, item),
+//                   icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
+//                   label: const Text("Edit", style: TextStyle(color: Colors.blue)),
+//                 ),
+//
+//                 const SizedBox(width: 24), // Spacing between buttons
+//
+//                 // Delete/Restore Button
+//                 TextButton.icon(
+//                   onPressed: () => _confirmItemStatusChange(
+//                       context, item, restore: !item.isActive),
+//                   icon: Icon(
+//                     item.isActive ? Icons.delete : Icons.restore,
+//                     size: 16,
+//                     color: item.isActive ? Colors.red : Colors.green,
+//                   ),
+//                   label: Text(
+//                     item.isActive ? "Delete" : "Restore",
+//                     style: TextStyle(
+//                       color: item.isActive ? Colors.red : Colors.green,
+//                     ),
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   // ===========================================================================
+//   // ⚙️ HELPERS & DIALOGS
+//   // ===========================================================================
+//
+//   Widget _buildShimmerLoader({bool isWeb = false}) {
+//     int count = isWeb ? 8 : 6;
+//     return isWeb
+//         ? Padding(
+//       padding: const EdgeInsets.all(32.0),
+//       child: GridView.builder(
+//         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+//           maxCrossAxisExtent: 400,
+//           mainAxisExtent: 220,
+//           crossAxisSpacing: 24,
+//           mainAxisSpacing: 24,
+//         ),
+//         itemCount: count,
+//         itemBuilder: (_, __) => Shimmer.fromColors(
+//           baseColor: Colors.grey.shade300,
+//           highlightColor: Colors.grey.shade100,
+//           child: Container(
+//             decoration: BoxDecoration(
+//               color: Colors.white,
+//               borderRadius: BorderRadius.circular(16),
+//             ),
+//           ),
+//         ),
+//       ),
+//     )
+//         : ListView.builder(
+//       padding: const EdgeInsets.all(16),
+//       itemCount: count,
+//       itemBuilder: (context, index) => Shimmer.fromColors(
+//         baseColor: Colors.grey.shade300,
+//         highlightColor: Colors.grey.shade100,
+//         child: Card(
+//           margin: const EdgeInsets.only(bottom: 16),
+//           elevation: 2,
+//           shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(18)),
+//           child: Container(
+//             height: 80,
+//             decoration: BoxDecoration(
+//               color: Colors.white,
+//               borderRadius: BorderRadius.circular(18),
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildEmptyState() {
+//     return Center(
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Icon(Icons.inventory_2_outlined,
+//               size: 100, color: Colors.grey.shade400),
+//           const SizedBox(height: 20),
+//           Text(
+//             controller.showInactiveItems.value
+//                 ? "No services found"
+//                 : "No active services found",
+//             style: TextStyle(
+//               fontSize: 20,
+//               fontWeight: FontWeight.w600,
+//               color: Colors.grey.shade700,
+//             ),
+//           ),
+//           const SizedBox(height: 12),
+//           Text(
+//             "Add your first service using the + button",
+//             style: TextStyle(fontSize: 15, color: Colors.grey.shade500),
+//             textAlign: TextAlign.center,
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   // Mobile Details View
+//   Widget _buildItemDetails(Item item) {
+//     return Container(
+//       padding: const EdgeInsets.all(16),
+//       decoration: BoxDecoration(
+//         color: Colors.grey.shade50,
+//         borderRadius: BorderRadius.circular(12),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               Expanded(
+//                 child: _buildDetailRow("Unit", item.unitOfMeasurement),
+//               ),
+//               Expanded(
+//                 child: _buildDetailRow("Stock",
+//                     item.currentStock == -1 ? "Unlimited" : "${item.currentStock}"),
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+//           Row(
+//             children: [
+//               Expanded(
+//                 child: _buildDetailRow("Price", "₹${item.price.toStringAsFixed(2)}"),
+//               ),
+//               Expanded(
+//                 child: _buildDetailRow("Status", item.isActive ? "Active" : "Inactive"),
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 12),
+//           Obx(() => AppConstants.withGST.value
+//               ? Row(
+//             children: [
+//               Expanded(
+//                   child: _buildDetailRow(
+//                       "GST", "${item.gstPercent.toStringAsFixed(2)} %")),
+//               Expanded(
+//                   child: _buildDetailRow("Final Price",
+//                       "₹${(item.price + (item.price * item.gstPercent / 100)).toStringAsFixed(2)}")),
+//             ],
+//           )
+//               : Row(
+//             children: [
+//               Expanded(
+//                   child: _buildDetailRow("Final Price",
+//                       "₹${item.price.toStringAsFixed(2)}")),
+//             ],
+//           )),
+//           const SizedBox(height: 12),
+//           Row(
+//             children: [
+//               Expanded(
+//                 child: _buildDetailRow("ID", item.itemId.toString()),
+//               ),
+//             ],
+//           ),
+//           if (item.detailRequirement.isNotEmpty) ...[
+//             const SizedBox(height: 12),
+//             _buildDetailRow("Details", item.detailRequirement),
+//           ],
+//         ],
+//       ),
+//     );
+//   }
+//
+//   Widget _buildDetailRow(String label, String value) {
+//     return Padding(
+//       padding: const EdgeInsets.symmetric(vertical: 4),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Text(
+//             label,
+//             style: TextStyle(
+//               fontSize: 12,
+//               color: Colors.grey.shade600,
+//               fontWeight: FontWeight.w500,
+//             ),
+//           ),
+//           const SizedBox(height: 4),
+//           Text(
+//             value,
+//             style: const TextStyle(
+//               fontSize: 14,
+//               fontWeight: FontWeight.w600,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   // --- Dialogs (Item Specific) ---
 //
 //   void _showAddItemDialog(BuildContext context) {
 //     final nameCtrl = TextEditingController();
 //     final priceCtrl = TextEditingController();
+//     final sellPriceCtrl = TextEditingController();
 //     final stockCtrl = TextEditingController();
 //     final detailCtrl = TextEditingController();
 //     final gstCtrl = TextEditingController();
@@ -1594,12 +1195,12 @@ class ItemScreen extends GetView<ItemController> {
 //             return Dialog(
 //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
 //               elevation: 8,
-//               insetPadding: EdgeInsets.all(20),
+//               insetPadding: const EdgeInsets.all(20),
 //               child: Container(
-//                 padding: EdgeInsets.all(24),
+//                 padding: const EdgeInsets.all(24),
 //                 constraints: BoxConstraints(
 //                   maxHeight: MediaQuery.of(context).size.height * 0.85,
-//                   maxWidth: 500,
+//                   maxWidth: 500, // Web Safe
 //                 ),
 //                 child: SingleChildScrollView(
 //                   child: Form(
@@ -1625,7 +1226,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 20),
+//                         const SizedBox(height: 20),
 //
 //                         // Item Name
 //                         TextFormField(
@@ -1641,7 +1242,7 @@ class ItemScreen extends GetView<ItemController> {
 //                           enabled: !isAdding,
 //                           validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Price and Unit Row
 //                         Row(
@@ -1658,7 +1259,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   fillColor: Colors.grey.shade50,
 //                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
 //                                 ),
-//                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+//                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
 //                                 enabled: !isAdding,
 //                                 validator: (value) {
 //                                   final price = double.tryParse(value ?? '');
@@ -1667,7 +1268,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 },
 //                               ),
 //                             ),
-//                             SizedBox(width: 16),
+//                             const SizedBox(width: 16),
 //                             Expanded(
 //                               child: DropdownButtonFormField<String>(
 //                                 value: selectedUnit,
@@ -1690,9 +1291,18 @@ class ItemScreen extends GetView<ItemController> {
 //                             ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 16),
-//                         // GST Percentage - Dropdown with only 0,5,12,18
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
+//                         Expanded(
+//                           child: TextFormField(
+//                             controller: sellPriceCtrl, // ✅ Sell Price Field
+//                             decoration: InputDecoration(labelText: "Sell Price *", hintText: "0.00", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+//                             keyboardType: TextInputType.number,
+//                             validator: (value) => value!.isEmpty ? "Required" : null,
+//                           ),
+//                         ),
+//                         const SizedBox(height: 16),
+//
+//                         // GST Percentage
 //                         Obx(() => AppConstants.withGST.value
 //                             ? Column(
 //                           children: [
@@ -1705,7 +1315,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 fillColor: Colors.grey.shade50,
 //                                 prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
 //                               ),
-//                               items: [
+//                               items: const [
 //                                 DropdownMenuItem(value: 0.0, child: Text("0%")),
 //                                 DropdownMenuItem(value: 5.0, child: Text("5%")),
 //                                 DropdownMenuItem(value: 12.0, child: Text("12%")),
@@ -1715,13 +1325,11 @@ class ItemScreen extends GetView<ItemController> {
 //                                 setState(() => selectedGst = value!);
 //                               },
 //                               validator: (value) {
-//                                 if (value == null) {
-//                                   return "Please select GST percentage";
-//                                 }
+//                                 if (value == null) return "Please select GST";
 //                                 return null;
 //                               },
 //                             ),
-//                             SizedBox(height: 8),
+//                             const SizedBox(height: 8),
 //                             Text(
 //                               "Selected GST: ${selectedGst}%",
 //                               style: TextStyle(
@@ -1732,7 +1340,6 @@ class ItemScreen extends GetView<ItemController> {
 //                           ],
 //                         )
 //                             : const SizedBox.shrink()),
-//
 //
 //                         // Stock Section
 //                         Column(
@@ -1749,7 +1356,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                     });
 //                                   },
 //                                 ),
-//                                 Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
+//                                 const Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
 //                               ],
 //                             ),
 //                             if (!isUnlimitedStock)
@@ -1774,7 +1381,7 @@ class ItemScreen extends GetView<ItemController> {
 //                               ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Detail Requirements
 //                         TextFormField(
@@ -1790,11 +1397,11 @@ class ItemScreen extends GetView<ItemController> {
 //                           maxLines: 3,
 //                           enabled: !isAdding,
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Status Toggle
 //                         Container(
-//                           padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+//                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
 //                           decoration: BoxDecoration(
 //                             color: Colors.grey.shade50,
 //                             borderRadius: BorderRadius.circular(12),
@@ -1802,9 +1409,9 @@ class ItemScreen extends GetView<ItemController> {
 //                           child: Row(
 //                             children: [
 //                               Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
-//                               SizedBox(width: 8),
-//                               Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
-//                               Spacer(),
+//                               const SizedBox(width: 8),
+//                               const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
+//                               const Spacer(),
 //                               Switch(
 //                                 value: isActive,
 //                                 onChanged: isAdding ? null : (value) {
@@ -1822,7 +1429,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             ],
 //                           ),
 //                         ),
-//                         SizedBox(height: 24),
+//                         const SizedBox(height: 24),
 //
 //                         // Action Buttons
 //                         Row(
@@ -1831,7 +1438,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             TextButton(
 //                               onPressed: isAdding ? null : () => Navigator.pop(context),
 //                               style: TextButton.styleFrom(
-//                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+//                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
 //                               ),
 //                               child: Text(
 //                                 "Cancel",
@@ -1842,13 +1449,13 @@ class ItemScreen extends GetView<ItemController> {
 //                                 ),
 //                               ),
 //                             ),
-//                             SizedBox(width: 12),
+//                             const SizedBox(width: 12),
 //                             ElevatedButton(
 //                               style: ElevatedButton.styleFrom(
 //                                 backgroundColor: AppColors.tealColor,
 //                                 foregroundColor: AppColors.whiteColor,
 //                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//                                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+//                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
 //                                 elevation: 3,
 //                               ),
 //                               onPressed: isAdding ? null : () async {
@@ -1857,7 +1464,10 @@ class ItemScreen extends GetView<ItemController> {
 //
 //                                   final name = nameCtrl.text.trim();
 //                                   final price = double.parse(priceCtrl.text);
-//                                   final gstPercent = double.parse(gstCtrl.text.isEmpty ? '0' : gstCtrl.text);
+//                                   final sellPrice = double.parse(sellPriceCtrl.text);
+//
+//                                   // Use selectedGst variable directly for dropdown
+//                                   final gstPercent = selectedGst;
 //                                   final stock = isUnlimitedStock ? -1 : int.parse(stockCtrl.text);
 //                                   final detail = detailCtrl.text.trim();
 //
@@ -1865,7 +1475,8 @@ class ItemScreen extends GetView<ItemController> {
 //                                     await controller.addNewItem(
 //                                       name: name,
 //                                       price: price,
-//                                       gstPercent: selectedGst,
+//                                       sellPrice: sellPrice,
+//                                       gstPercent: gstPercent,
 //                                       unitOfMeasurement: selectedUnit,
 //                                       currentStock: stock,
 //                                       detailRequirement: detail,
@@ -1886,7 +1497,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
 //                                 ),
 //                               )
-//                                   : Text(
+//                                   : const Text(
 //                                 "Add Item",
 //                                 style: TextStyle(
 //                                   fontSize: 16,
@@ -1911,6 +1522,7 @@ class ItemScreen extends GetView<ItemController> {
 //   void _showEditItemDialog(BuildContext context, Item item) {
 //     final nameCtrl = TextEditingController(text: item.itemName);
 //     final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(2));
+//     final sellPriceCtrl = TextEditingController(text: item.sellPrice.toStringAsFixed(2));
 //     final gstCtrl = TextEditingController(text: item.gstPercent.toStringAsFixed(2));
 //     final stockCtrl = TextEditingController(
 //         text: item.currentStock == -1 ? '' : item.currentStock.toString()
@@ -1934,12 +1546,12 @@ class ItemScreen extends GetView<ItemController> {
 //             return Dialog(
 //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
 //               elevation: 8,
-//               insetPadding: EdgeInsets.all(20),
+//               insetPadding: const EdgeInsets.all(20),
 //               child: Container(
-//                 padding: EdgeInsets.all(24),
+//                 padding: const EdgeInsets.all(24),
 //                 constraints: BoxConstraints(
 //                   maxHeight: MediaQuery.of(context).size.height * 0.85,
-//                   maxWidth: 500,
+//                   maxWidth: 500, // Web Safe
 //                 ),
 //                 child: SingleChildScrollView(
 //                   child: Form(
@@ -1965,7 +1577,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 20),
+//                         const SizedBox(height: 20),
 //
 //                         // Item Name
 //                         TextFormField(
@@ -1981,7 +1593,7 @@ class ItemScreen extends GetView<ItemController> {
 //                           enabled: !isSaving,
 //                           validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Price and Unit Row
 //                         Row(
@@ -1998,7 +1610,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   fillColor: Colors.grey.shade50,
 //                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
 //                                 ),
-//                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+//                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
 //                                 enabled: !isSaving,
 //                                 validator: (value) {
 //                                   final price = double.tryParse(value ?? '');
@@ -2007,7 +1619,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 },
 //                               ),
 //                             ),
-//                             SizedBox(width: 16),
+//                             const SizedBox(width: 16),
 //                             Expanded(
 //                               child: DropdownButtonFormField<String>(
 //                                 value: selectedUnit,
@@ -2027,10 +1639,18 @@ class ItemScreen extends GetView<ItemController> {
 //                             ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
+//                         Expanded(
+//                           child: TextFormField(
+//                             controller: sellPriceCtrl,
+//                             decoration: InputDecoration(labelText: "Sell Price", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+//                             keyboardType: TextInputType.number,
+//                           ),
+//                         ),
+//                         const SizedBox(height: 16),
 //
 //                         // GST Percentage - Dropdown with only 0,5,12,18
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //                         Obx(() => AppConstants.withGST.value
 //                             ? Column(
 //                           children: [
@@ -2043,7 +1663,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 fillColor: Colors.grey.shade50,
 //                                 prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
 //                               ),
-//                               items: [
+//                               items: const [
 //                                 DropdownMenuItem(value: 0.0, child: Text("0%")),
 //                                 DropdownMenuItem(value: 5.0, child: Text("5%")),
 //                                 DropdownMenuItem(value: 12.0, child: Text("12%")),
@@ -2059,12 +1679,10 @@ class ItemScreen extends GetView<ItemController> {
 //                                 return null;
 //                               },
 //                             ),
-//                             SizedBox(height: 8),
+//                             const SizedBox(height: 8),
 //                           ],
 //                         )
 //                             : const SizedBox.shrink()),
-//
-//
 //
 //                         // Stock Section
 //                         Column(
@@ -2081,7 +1699,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                     });
 //                                   },
 //                                 ),
-//                                 Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
+//                                 const Text("Unlimited Stock", style: TextStyle(fontWeight: FontWeight.w500)),
 //                               ],
 //                             ),
 //                             if (!isUnlimitedStock)
@@ -2106,7 +1724,7 @@ class ItemScreen extends GetView<ItemController> {
 //                               ),
 //                           ],
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Detail Requirements
 //                         TextFormField(
@@ -2120,13 +1738,13 @@ class ItemScreen extends GetView<ItemController> {
 //                             prefixIcon: Icon(Icons.notes_outlined, color: AppColors.tealColor),
 //                           ),
 //                           maxLines: 3,
-//                           //enabled: not isSaving,
+//                           enabled: !isSaving,
 //                         ),
-//                         SizedBox(height: 16),
+//                         const SizedBox(height: 16),
 //
 //                         // Status Toggle
 //                         Container(
-//                           padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+//                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
 //                           decoration: BoxDecoration(
 //                             color: Colors.grey.shade50,
 //                             borderRadius: BorderRadius.circular(12),
@@ -2134,9 +1752,9 @@ class ItemScreen extends GetView<ItemController> {
 //                           child: Row(
 //                             children: [
 //                               Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
-//                               SizedBox(width: 8),
-//                               Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
-//                               Spacer(),
+//                               const SizedBox(width: 8),
+//                               const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
+//                               const Spacer(),
 //                               Switch(
 //                                 value: isActive,
 //                                 onChanged: isSaving ? null : (value) {
@@ -2154,7 +1772,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             ],
 //                           ),
 //                         ),
-//                         SizedBox(height: 24),
+//                         const SizedBox(height: 24),
 //
 //                         // Action Buttons
 //                         Row(
@@ -2163,7 +1781,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             TextButton(
 //                               onPressed: isSaving ? null : () => Navigator.pop(context),
 //                               style: TextButton.styleFrom(
-//                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+//                                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
 //                               ),
 //                               child: Text(
 //                                 "Cancel",
@@ -2174,13 +1792,13 @@ class ItemScreen extends GetView<ItemController> {
 //                                 ),
 //                               ),
 //                             ),
-//                             SizedBox(width: 12),
+//                             const SizedBox(width: 12),
 //                             ElevatedButton(
 //                               style: ElevatedButton.styleFrom(
 //                                 backgroundColor: AppColors.tealColor,
 //                                 foregroundColor: AppColors.whiteColor,
 //                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//                                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+//                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
 //                                 elevation: 3,
 //                               ),
 //                               onPressed: isSaving ? null : () async {
@@ -2189,7 +1807,8 @@ class ItemScreen extends GetView<ItemController> {
 //
 //                                   final name = nameCtrl.text.trim();
 //                                   final price = double.parse(priceCtrl.text);
-//                                   final gstPercent = double.parse(gstCtrl.text.isEmpty ? '0' : gstCtrl.text);
+//                                   final sellPrice = double.parse(sellPriceCtrl.text);
+//                                   // final gstPercent = double.parse(gstCtrl.text.isEmpty ? '0' : gstCtrl.text);
 //                                   final stock = isUnlimitedStock ? -1 : int.parse(stockCtrl.text);
 //                                   final detail = detailCtrl.text.trim();
 //
@@ -2198,6 +1817,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                       itemId: item.itemId,
 //                                       newName: name,
 //                                       newPrice: price,
+//                                       newSellPrice: sellPrice,
 //                                       gstPercent: selectedGst,
 //                                       unitOfMeasurement: selectedUnit,
 //                                       currentStock: stock,
@@ -2219,7 +1839,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.whiteColor),
 //                                 ),
 //                               )
-//                                   : Text(
+//                                   : const Text(
 //                                 "Update Item",
 //                                 style: TextStyle(
 //                                   fontSize: 16,
@@ -2241,100 +1861,6 @@ class ItemScreen extends GetView<ItemController> {
 //     );
 //   }
 //
-//   Widget _buildItemDetails(Item item) {
-//     return Container(
-//       padding: EdgeInsets.all(16),
-//       decoration: BoxDecoration(
-//         color: Colors.grey.shade50,
-//         borderRadius: BorderRadius.circular(12),
-//       ),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Row(
-//             children: [
-//               Expanded(
-//                 child: _buildDetailRow("Unit", item.unitOfMeasurement),
-//               ),
-//               Expanded(
-//                 child: _buildDetailRow("Stock", item.currentStock == -1
-//                     ? "Unlimited"
-//                     : "${item.currentStock}"),
-//               ),
-//             ],
-//           ),
-//           SizedBox(height: 12),
-//           Row(
-//             children: [
-//               Expanded(
-//                 child: _buildDetailRow("Price", "₹${item.price.toStringAsFixed(2)}"),
-//               ),
-//               Expanded(
-//                 child: _buildDetailRow("Status", item.isActive ? "Active" : "Inactive"),
-//               ),
-//             ],
-//           ),
-//           SizedBox(height: 12),
-//           Obx(() => AppConstants.withGST.value
-//               ? Row(
-//             children: [
-//               Expanded(child: _buildDetailRow("GST", "${item.gstPercent.toStringAsFixed(2)} %")),
-//               Expanded(child: _buildDetailRow(
-//                   "Final Price",
-//                   "₹${(item.price + (item.price * item.gstPercent / 100)).toStringAsFixed(2)}")),
-//             ],
-//           )
-//               : Row(
-//             children: [
-//               Expanded(child: _buildDetailRow("Final Price", "₹${item.price.toStringAsFixed(2)}")),
-//             ],
-//           )),
-//
-//           SizedBox(height: 12),
-//           Row(
-//             children: [
-//               Expanded(
-//                 child: _buildDetailRow("ID", item.itemId.toString()),
-//               ),
-//             ],
-//           ),
-//           if (item.detailRequirement.isNotEmpty) ...[
-//             SizedBox(height: 12),
-//             _buildDetailRow("Details", item.detailRequirement),
-//           ],
-//         ],
-//       ),
-//     );
-//   }
-//
-//   Widget _buildDetailRow(String label, String value) {
-//     return Padding(
-//       padding: EdgeInsets.symmetric(vertical: 4),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Text(
-//             label,
-//             style: TextStyle(
-//               fontSize: 12,
-//               color: Colors.grey.shade600,
-//               fontWeight: FontWeight.w500,
-//             ),
-//           ),
-//           SizedBox(height: 4),
-//           Text(
-//             value,
-//             style: TextStyle(
-//               fontSize: 14,
-//               fontWeight: FontWeight.w600,
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   /// 🔹 Confirmation dialog modernized
 //   void _confirmItemStatusChange(BuildContext context, Item item,
 //       {required bool restore}) {
 //     final title = restore ? "Restore Item" : "Delete Item";
@@ -2370,7 +1896,7 @@ class ItemScreen extends GetView<ItemController> {
 //                   borderRadius: BorderRadius.circular(12)),
 //             ),
 //             icon: Icon(icon, color: Colors.white),
-//             label: Text(buttonText),
+//             label: Text(buttonText, style: const TextStyle(color: Colors.white)),
 //             onPressed: () async {
 //               Navigator.pop(context);
 //               await controller.updateItemStatus(
@@ -2384,5 +1910,7 @@ class ItemScreen extends GetView<ItemController> {
 //     );
 //   }
 // }
+
+
 
 

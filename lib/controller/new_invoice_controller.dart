@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../constant/constant.dart';
 import '../model/model.dart';
+import '../screen/screen.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../utils/utils.dart';
@@ -131,6 +132,7 @@ class NewInvoiceController extends GetxController {
   final RxMap<int, String> violationMessages = <int, String>{}.obs;  // Track which item violated
   bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
   var forceRefreshTriggers = <int, int>{}.obs;
+
 
 //  @override
 //   void onInit() {
@@ -1944,7 +1946,7 @@ class NewInvoiceController extends GetxController {
       final double newGstAmount = (newTotalPrice * item.gstRate) / 100;
       final double newAmountWithGst = newTotalPrice + newGstAmount;
 
-      invoiceItems[index] = InvoiceItem(
+      invoiceItems[index] = item.copyWith(
         customerId: item.customerId,
         invoiceId: item.invoiceId,
         description: description ?? item.description,
@@ -2247,11 +2249,12 @@ class NewInvoiceController extends GetxController {
       customerId: customerId,
       description: finalDescription,
       quantity: currentItem.quantity,
-      rate: item.price.toDouble(),
+      rate: item.sellPrice.toDouble(),
+      purchasePrice: item.price.toDouble(),
       gstRate: gstRateToUse,
       itemId: item.itemId,
       itemName: item.itemName,
-      totalPrice: currentItem.quantity * item.price.toDouble(),
+      totalPrice: currentItem.quantity * item.sellPrice.toDouble(),
       unit: item.unitOfMeasurement,
         descriptionController: existingController
     );
@@ -2270,7 +2273,7 @@ class NewInvoiceController extends GetxController {
 
     // ✅ UPDATE CONTROLLERS for the current index
     //updateQuantityController(index, currentItem.quantity);
-    updatePriceController(index, item.price.toDouble());
+    updatePriceController(index, item.sellPrice.toDouble());
     ensureControllersMatch();
 
     calculateTotals();
@@ -2538,6 +2541,7 @@ class NewInvoiceController extends GetxController {
     //       :  item.description ??  '' ,
       'quantity': item.quantity.toString(),
       'price': item.rate.toString(),
+      'purchasePrice': item.purchasePrice.toString(),
       'gstRate': item.gstRate.toString(),
       'gstAmount': item.gstAmount.toString(),
       'amountWithGst': item.amountWithGst.toString(),
@@ -2644,7 +2648,7 @@ class NewInvoiceController extends GetxController {
     return true;
   }
 
-  Future<bool> saveInvoice({required bool isDraft}) async {
+  Future<bool> saveInvoiceOld({required bool isDraft}) async {
     try {
       // ✅ Quick Invoice validation - only mobile required
       if (invoiceType.value.isQuickMode) {
@@ -3011,6 +3015,330 @@ class NewInvoiceController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+
+
+  Future<bool> saveInvoice({required bool isDraft}) async {
+    try {
+      // ---------------- VALIDATION STEPS (SAME AS BEFORE) ----------------
+      if (invoiceType.value.isQuickMode) {
+        if (customerMobileController.text.trim().isEmpty) {
+          showCustomSnackbar(title: "Mobile Required", message: "Please enter customer mobile number", baseColor: Colors.red.shade700, icon: Icons.phone_missed);
+          return false;
+        }
+        String mobile = customerMobileController.text.trim();
+        if (mobile.length < 10) {
+          showCustomSnackbar(title: "Invalid Mobile", message: "Please enter valid mobile number", baseColor: Colors.orange.shade700, icon: Icons.warning);
+          return false;
+        }
+        if (customerNameController.text.trim().isEmpty) {
+          customerNameController.text = "Customer-${mobile.substring(mobile.length - 4)}";
+        }
+      } else {
+        if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) validateManualCustomerEntry();
+        if (customerNameController.text.trim().isEmpty) {
+          showCustomSnackbar(title: "Customer Required", message: "Select or enter customer details", baseColor: Colors.red.shade700, icon: Icons.person_outline);
+          return false;
+        }
+      }
+
+      if (!formKey.currentState!.validate()) {
+        showCustomSnackbar(title: "Validation Error", message: "Fill all required fields", baseColor: Colors.orange.shade700, icon: Icons.warning);
+        return false;
+      }
+
+      if (!_validateInvoiceItems()) return false;
+      _removeEmptyItemsBeforeSave();
+
+      if (hasAnyStockViolation) {
+        showCustomSnackbar(title: "Cannot Create Invoice", message: "Fix stock issues first", baseColor: Colors.red.shade700, icon: Icons.error_outline);
+        return false;
+      }
+
+      if (invoiceItems.isEmpty) {
+        showCustomSnackbar(title: "No Valid Items", message: "Add at least one valid item", baseColor: Colors.red.shade700, icon: Icons.error_outline);
+        return false;
+      }
+
+      // ---------------- SAVE LOGIC ----------------
+      isLoading.value = true;
+      debugAllItemsCustomerId();
+      calculateTotals();
+
+      String finalCustomerId = _getValidCustomerId();
+      double calculatedInvoiceProfit = 0.0;
+      for (var item in invoiceItems) {
+        double sellTotal = item.rate * item.quantity;
+        double purchaseTotal = item.purchasePrice * item.quantity;
+        calculatedInvoiceProfit += (sellTotal - purchaseTotal);
+      }
+
+      // Prepare Data
+      Map<String, dynamic> invoiceData = {
+        'invoiceId': invoiceNumberController.text,
+        'customerId': finalCustomerId,
+        'customerName': customerNameController.text.trim(),
+        'customerPan': customerPanController.text.trim(),
+        'customerGst': customerGstController.text.trim(),
+        'mobile': customerMobileController.text.trim(),
+        'customerEmail': customerEmailController.text.trim(),
+        'customerAddress': customerAddressController.text.trim(),
+        'issueDate': invoiceDate.value.toIso8601String(),
+        'dueDate': paymentDueDate.value.toIso8601String(),
+        'subtotal': subtotal.value,
+        'gstRate': invoiceItems.isNotEmpty ? invoiceItems.first.gstRate : 0.0,
+        'gstAmount': gstAmount.value,
+        'totalAmount': totalAmount.value,
+        'notes': notesController.text,
+        'status': paymentStatus.value,
+        'userId': AppConstants.userId,
+        'receivedAmount': receivedAmount.value,
+        'pendingAmount': pendingAmount.value,
+        'invoiceType': invoiceType.value.name,
+        'paymentMode': (paymentStatus.value == 'Paid' || paymentStatus.value == 'Partial') ? paymentMode.value : '',
+        'profit': calculatedInvoiceProfit,
+      };
+
+      // Save to Google Sheets
+      if (isInEditMode) {
+        await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);
+        List<Map<String, dynamic>> itemsData = [];
+        for (var item in invoiceItems) {
+          itemsData.add(createInvoiceItemData(item));
+        }
+        await GoogleSheetService.updateInvoiceItems(invoiceNumberController.text, itemsData, AppConstants.userId);
+      } else {
+        final actualInvoiceId = await incrementAndGetInvoiceNumber();
+        invoiceNumberController.text = actualInvoiceId;
+        invoiceData['invoiceId'] = actualInvoiceId;
+
+        await GoogleSheetService.addInvoice(invoiceData, AppConstants.userId);
+        List<Map<String, dynamic>> itemsData = invoiceItems.map((item) => createInvoiceItemData(item)).toList();
+        await GoogleSheetService.addInvoiceItemsBatch(itemsData, AppConstants.userId);
+
+        // Deduct Stock (Skip challan items)
+        List<InvoiceItem> itemsToDeductStock = invoiceItems.where((item) {
+          return (item.challanId == null || item.challanId!.isEmpty);
+        }).toList();
+
+        if (itemsToDeductStock.isNotEmpty) {
+          await GoogleSheetService.updateStockAfterInvoice(itemsToDeductStock);
+        }
+
+        // Update Challan Status
+        List<String> challanIds = invoiceItems
+            .where((item) => (item.challanId ?? '').isNotEmpty)
+            .map((item) => item.challanId!)
+            .toSet().toList();
+
+        if (challanIds.isNotEmpty) {
+          await GoogleSheetService.updateChallanStatusBatch(challanIds, "Progress", AppConstants.userId);
+        }
+      }
+
+      // Refresh Controllers
+      _refreshParentControllers();
+
+      // ---------------- PREPARE DATA FOR PRINT/PDF ----------------
+      List<Invoice> invoiceModels = invoiceItems.map((item) {
+        return Invoice(
+          invoiceId: invoiceNumberController.text,
+          itemId: item.itemId,
+          itemName: item.itemName,
+          qty: item.quantity,
+          price: item.rate.toDouble(),
+          mobile: customerMobileController.text.trim(),
+          customerId: finalCustomerId,
+          customerName: customerNameController.text.trim(),
+          customerEmail: customerEmailController.text.trim(),
+          customerPan: customerPanController.text.trim(),
+          customerGst: customerGstController.text.trim(),
+          customerAddress: customerAddressController.text.trim(),
+          issueDate: invoiceDate.value,
+          dueDate: paymentDueDate.value, // ✅ Use paymentDueDate
+          subtotal: subtotal.value,
+          gst: item.gstRate,
+          gstRate: item.gstRate,
+          gstAmount: gstAmount.value,
+          totalAmount: totalAmount.value,
+          notes: notesController.text,
+          status: paymentStatus.value,
+          items: [item],
+        );
+      }).toList();
+
+      // ---------------- STOP LOADING & SHOW DIALOG ----------------
+      isLoading.value = false;
+
+      // ✅ OPEN DIALOG: Print vs PDF
+      await _showOutputFormatDialog(invoiceModels);
+
+      return true;
+
+    } catch (e, stackTrace) {
+      print("Error saving invoice: $e");
+      print("Stack trace: $stackTrace");
+      isLoading.value = false;
+      showCustomSnackbar(title: "Error", message: "Failed: ${e.toString()}", baseColor: Colors.red.shade700, icon: Icons.error);
+      return false;
+    }
+  }
+
+// ✅ NEW: DIALOG FOR INVOICE PRINT/PDF
+  Future<void> _showOutputFormatDialog(List<Invoice> invoiceModels) async {
+    final bool hasChallan = invoiceItems.any((it) => (it.challanId ?? '').isNotEmpty);
+
+    await Get.defaultDialog(
+      title: "Invoice Saved Successfully",
+      titleStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+      content: Column(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 50),
+          SizedBox(height: 10),
+          Text("Select output format:"),
+          SizedBox(height: 20),
+
+          // 1. Thermal Print
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, foregroundColor: Colors.white),
+              icon: Icon(Icons.print),
+              label: Text("Thermal Print "),
+              onPressed: () async {
+                Get.back(); // Close Dialog
+
+                if (hasChallan) {
+                  await InvoiceHelper.generateAndShareInvoiceFromChallan(
+                    invoiceItems, // Using items directly for challan based
+                    invoiceNumberController.text,
+                    _formatDate(invoiceDate.value),
+                    selectedFromDate.value.toString(),
+                    selectedToDate.value.toString(),
+                    customerNameController.text.trim(),
+                    customerMobileController.text.trim(),
+                    customerEmailController.text.trim(),
+                    customerPanController.text.trim(),
+                    customerGstController.text.trim(),
+                    customerAddressController.text.trim(),
+                    subtotal.value,
+                    taxAmount.value,
+                    totalAmount.value,
+                    notesController.text,
+                    companyData.value,
+                    invoiceType.value,
+                    gstAmount.value,
+                    _formatDate(paymentDueDate.value),
+                  );
+                } else {
+                  // ✅ Using Standard Print Method
+                  await InvoiceHelper.generateAndShareInvoicePrint(
+                    invoiceModels,
+                    customerNameController.text.trim(),
+                    customerMobileController.text.trim(),
+                    customerEmailController.text.trim(),
+                    customerPanController.text.trim(),
+                    customerGstController.text.trim(),
+                    customerAddressController.text.trim(),
+                    subtotal.value,
+                    _formatDate(invoiceDate.value),
+                    totalAmount.value,
+                    notesController.text,
+                    companyData.value,
+                    invoiceType.value,
+                    gstAmount.value,
+                    _formatDate(paymentDueDate.value),
+                  );
+                }
+                _finishAndClose();
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
+          // 2. Standard PDF (A4)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
+              icon: Icon(Icons.picture_as_pdf),
+              label: Text("Save as PDF "),
+              onPressed: () async {
+                Get.back(); // Close Dialog
+
+                // ✅ Standard A4 PDF Generation (Existing Method)
+                // NOTE: Use your existing A4 method here.
+                // Assuming 'generateAndShareInvoice' exists for A4.
+
+                // If you don't have a separate method, use the same one but maybe pass a flag?
+                // Or call the specific A4 method if you have it.
+
+                await InvoiceHelper.generateAndShareInvoice(
+                  invoiceModels,
+                  customerNameController.text.trim(),
+                  customerMobileController.text.trim(),
+                  customerEmailController.text.trim(),
+                  customerPanController.text.trim(),
+                  customerGstController.text.trim(),
+                  customerAddressController.text.trim(),
+                  subtotal.value,
+                  _formatDate(invoiceDate.value),
+                  totalAmount.value,
+                  notesController.text,
+                  companyData.value,
+                  invoiceType.value,
+                  gstAmount.value,
+                  _formatDate(paymentDueDate.value),
+                );
+
+                _finishAndClose();
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
+          // 3. Skip
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _finishAndClose();
+            },
+            child: Text("Skip & Close", style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+// ✅ Correct Navigation
+  void _finishAndClose() {
+    clearForm();
+    Get.until((route) => route.settings.name == DashboardScreen.pageId);
+
+    // 🔄 REFRESH DATA SILENTLY (Optional but Recommended)
+    try {
+      if (Get.isRegistered<DashboardController>()) {
+        Get.find<DashboardController>().refreshDataSilently();
+      }
+
+      if (Get.isRegistered<InvoiceListController>()) {
+        print("🔄 Refreshing Invoice List...");
+        Get.find<InvoiceListController>().loadInvoices();
+      }
+    } catch (e) {
+      print("Error refreshing dashboard: $e");
+    }
+
+    showCustomSnackbar(
+      title: "Success",
+      message: "Invoice saved successfully!",
+      baseColor: Colors.green.shade700,
+      icon: Icons.check_circle_outline,
+    );
   }
 
   void updatePaymentMode(String mode) {

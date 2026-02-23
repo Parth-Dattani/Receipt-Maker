@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 
 import '../constant/constant.dart';
 import '../model/model.dart';
+import '../screen/screen.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../widgets/widgets.dart';
@@ -922,10 +923,32 @@ class NewChallanController extends BaseController {
     }
   }
 
+
   void selectRemoteItemForIndex(int index, Item item) {
     if (index >= challanItems.length) return;
 
-    // Check if this item already exists in challanItems (excluding current index)
+    // 1. Stock Check Logic
+    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
+    final isProductBusiness = businessType != 'service' && businessType != 'client';
+
+    if (isProductBusiness) {
+      if ((item.currentStock ?? 0) <= 0) {
+        String unit = item.unitOfMeasurement ?? 'units';
+        Get.snackbar(
+          "Out of Stock",
+          "Item '${item.itemName}' has 0 $unit stock available.\nPlease add stock in Inventory first.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+          icon: Icon(Icons.inventory_2_outlined, color: Colors.white),
+          duration: Duration(seconds: 4),
+          margin: EdgeInsets.all(16),
+        );
+        return; // Stop selection if no stock
+      }
+    }
+
+    // 2. Duplicate Check Logic
     int existingIndex = -1;
     for (int i = 0; i < challanItems.length; i++) {
       if (i != index && challanItems[i].itemId == item.itemId && challanItems[i].itemId.isNotEmpty) {
@@ -935,22 +958,21 @@ class NewChallanController extends BaseController {
     }
 
     if (existingIndex != -1) {
-      // Item already exists - merge quantities
+      // Merge quantities
       final existingItem = challanItems[existingIndex];
       final currentQty = challanItems[index].quantity;
+      final newQty = existingItem.quantity + currentQty;
 
-      // Update the existing item with increased quantity
       challanItems[existingIndex] = existingItem.copyWith(
-        quantity: existingItem.quantity + currentQty,
+        quantity: newQty,
       );
 
       // Remove the duplicate row
       removeItem(index);
 
-      // Show feedback to user
       Get.snackbar(
         "Item Merged",
-        "Quantity added to existing ${item.itemName}. Total: ${existingItem.quantity + currentQty}",
+        "Quantity added to existing ${item.itemName}. Total: $newQty",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.tealColor.withOpacity(0.8),
         colorText: Colors.white,
@@ -958,19 +980,16 @@ class NewChallanController extends BaseController {
         margin: EdgeInsets.all(16),
       );
 
-      // Recalculate totals after merging
       calculateTotals();
-
       return;
     }
 
-    // No duplicate found - proceed with normal item selection
+    // 3. Select New Item
     final currentItem = challanItems[index];
     String customerId = _getValidCustomerId();
 
     // Validate customer ID only in edit mode
     if (customerId.isEmpty && isEditMode.value) {
-      print("ERROR: Cannot select item in edit mode - no valid customer ID found");
       Get.snackbar(
         'Error',
         'Customer ID missing. Please reload the challan.',
@@ -980,33 +999,37 @@ class NewChallanController extends BaseController {
       return;
     }
 
-    // Determine GST rate to use
+    // Determine GST rate
     double gstRateToUse;
     if (isEditMode.value && currentItem.itemId.isNotEmpty) {
       gstRateToUse = currentItem.gstRate;
-      print("Edit mode: Preserving existing GST rate: $gstRateToUse for existing item");
     } else {
       gstRateToUse = item.gstPercent.toDouble();
-      print("Using item master GST rate: $gstRateToUse for new/empty item");
     }
 
-    // Update the item at the current index
+    // ✅ UPDATE: Use sellPrice instead of price
     challanItems[index] = ChallanItem(
       customerId: customerId,
       description: item.itemName,
       quantity: currentItem.quantity,
-      price: item.price.toDouble(),
+      price: item.sellPrice.toDouble(), // ✅ CHANGED: item.price -> item.sellPrice
       gstRate: gstRateToUse,
       itemId: item.itemId,
       itemName: item.itemName,
-      totalPrice: currentItem.quantity * item.price.toDouble(),
+      totalPrice: currentItem.quantity * item.sellPrice.toDouble(), // ✅ CHANGED
       unit: item.unitOfMeasurement,
+      gstAmount: 0,
+      amountWithGst: 0,
     );
 
-    print("Updated item $index with customer ID: '${challanItems[index].customerId}'");
+    // ✅ Update the Price Controller Text immediately
+    final priceCtrl = getPriceController(index);
+    priceCtrl.text = item.sellPrice.toStringAsFixed(2);
+
+    print("Updated item $index: ${item.itemName} with Sell Price: ${item.sellPrice}");
+
     calculateTotals();
   }
-
 
 // Helper method to manually update GST rate if needed
   void updateItemGstRate(int index, double newGstRate) {
@@ -1344,81 +1367,324 @@ class NewChallanController extends BaseController {
     return true;
   }
 
+  // Future<bool> saveChallan({required bool isDraft}) async {
+  //   try {
+  //
+  //     // ✅ Handle manual customer entry
+  //     if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
+  //       validateManualCustomerEntry();
+  //     }
+  //
+  //     // ✅ FIRST: Validate customer is selected/entered
+  //     if (customerNameController.text.trim().isEmpty) {
+  //       showCustomSnackbar(
+  //         title: "Customer Required",
+  //         message: "Please select a customer or enter customer details",
+  //         baseColor: Colors.red.shade700,
+  //         icon: Icons.person_outline,
+  //       );
+  //       return false;
+  //     }
+  //
+  //     if (!formKey.currentState!.validate()) {
+  //       showCustomSnackbar(
+  //         title: "Validation Error",
+  //         message: "Please fill all required fields",
+  //         baseColor: Colors.orange.shade700,
+  //         icon: Icons.warning,
+  //       );
+  //       return false;
+  //     }
+  //
+  //     if (!_validateChallanItems()) {
+  //       return false;
+  //     }
+  //
+  //     // ✅ NEW: Check for stock violations FIRST
+  //     if (hasAnyStockViolation) {
+  //       String violationList = violationMessages.values.join('\n• ');
+  //
+  //       showCustomSnackbar(
+  //         title: "Cannot Create Challan",
+  //         message: "Fix these issues first:\n• $violationList",
+  //         baseColor: Colors.red.shade700,
+  //         icon: Icons.error_outline,
+  //         duration: Duration(seconds: 5),
+  //       );
+  //       return false;
+  //     }
+  //
+  //     _removeEmptyItemsBeforeSave();
+  //
+  //     // Double-check after removing empty items
+  //     if (challanItems.isEmpty) {
+  //       showCustomSnackbar(
+  //         title: "No Valid Items",
+  //         message: "Please add at least one valid item to the challan",
+  //         baseColor: Colors.red.shade700,
+  //         icon: Icons.error_outline,
+  //       );
+  //       return false;
+  //     }
+  //     isLoading.value = true;
+  //
+  //     debugAllItemsCustomerId();
+  //     calculateTotals();
+  //
+  //     String finalCustomerId = _getValidCustomerId();
+  //
+  //     // ✅ Final customer ID check
+  //     if (finalCustomerId.isEmpty) {
+  //       isLoading.value = false;
+  //       showCustomSnackbar(
+  //         title: "Customer ID Error",
+  //         message: "Unable to determine customer ID. Please try again.",
+  //         baseColor: Colors.red.shade700,
+  //         icon: Icons.error_outline,
+  //       );
+  //       return false;
+  //     }
+  //
+  //     final challanId = challanNumberController.text;
+  //
+  //     Map<String, dynamic> challanData = {
+  //       'challanId': challanId,
+  //       'challanDate': _formatDate(challanDate.value),
+  //       'customerId': finalCustomerId,
+  //       'customerName': customerNameController.text.trim(),
+  //       'customerMobile': customerMobileController.text.trim(),
+  //       'customerEmail': customerEmailController.text.trim(),
+  //       'customerPan': customerPanController.text.trim(),
+  //       'customerGst': customerGstController.text.trim(),
+  //       'customerAddress': customerAddressController.text.trim(),
+  //       'subtotal': subtotal.value,
+  //       'gstRate': challanItems.isNotEmpty ? challanItems.first.gstRate : 0.0,
+  //       'gstAmount': gstAmount.value,
+  //       'totalAmount': totalAmount.value,
+  //       'paymentStatus': paymentStatus.value,
+  //       'notes': notesController.text,
+  //       'status': isDraft ? 'draft' : 'inProgress',
+  //       'userId': AppConstants.userId,
+  //     };
+  //
+  //     if (isInEditMode) {
+  //       print("=== UPDATING EXISTING CHALLAN ===");
+  //
+  //       await GoogleSheetService.updateChallanWithCacheClear(
+  //         challanData,
+  //         AppConstants.userId,
+  //       );
+  //
+  //       List<Map<String, dynamic>> itemsData =
+  //       challanItems.map((item) => createChallanItemData(item)).toList();
+  //
+  //       await GoogleSheetService.updateChallanItemsWithCacheClear(
+  //         challanId,
+  //         itemsData,
+  //         AppConstants.userId,
+  //       );
+  //       isLoading.value = false;
+  //
+  //       await _refreshParentControllersAsync();
+  //
+  //       // ✅ Generate challan PDF (same as 1st code)
+  //       List<Challan> challanModel = challanItems.map((item) {
+  //         return Challan(
+  //           challanId: challanId,
+  //           itemId: item.itemId,
+  //           itemName: item.description,
+  //           qty: item.quantity,
+  //           price: item.price.toDouble(),
+  //           gst: item.gstRate,
+  //           customerMobile: customerMobileController.text.trim(),
+  //           customerId: selectedCustomerId.value,
+  //           customerName: customerNameController.text.trim(),
+  //           customerEmail: customerEmailController.text.trim(),
+  //           customerPan: customerPanController.text.trim(),
+  //           customerGst: customerGstController.text.trim(),
+  //           customerAddress: customerAddressController.text.trim(),
+  //           subtotal: subtotal.value,
+  //           totalAmount: totalAmount.value,
+  //           gstAmount: gstAmount.value,
+  //           notes: notesController.text,
+  //           status: paymentStatus.value,
+  //         );
+  //       }).toList();
+  //
+  //       if(!isInEditMode)
+  //         await InvoiceHelper.generateAndShareChallanPrint(
+  //         challanModel,
+  //         customerNameController.text.trim(),
+  //         customerMobileController.text.trim(),
+  //         customerEmailController.text.trim(),
+  //         customerPanController.text.trim(),
+  //         customerGstController.text.trim(),
+  //         customerAddressController.text.trim(),
+  //         subtotal.value,
+  //         challanDateController.text,
+  //         totalAmount.value,
+  //         paymentStatus.value,
+  //         notesController.text,
+  //         companyData.value,
+  //         gstAmount.value,
+  //       );
+  //
+  //       Get.back(result: true);
+  //       await Future.delayed(const Duration(milliseconds: 100),() {
+  //         showCustomSnackbar(
+  //           title: "Success",
+  //           message: "Challan updated successfully!",
+  //           baseColor: Colors.green.shade700,
+  //           icon: Icons.check_circle_outline,
+  //         );
+  //       },);
+  //
+  //       return true;
+  //
+  //     }
+  //     else {
+  //       print("=== CREATING NEW CHALLAN ===");
+  //
+  //       await GoogleSheetService.addChallan(challanData, AppConstants.userId);
+  //
+  //       /// ✅ Instead of looping, use batch add
+  //       List<Map<String, dynamic>> itemsData =
+  //       challanItems.map((item) => createChallanItemData(item)).toList();
+  //
+  //       await GoogleSheetService.addChallanItemsBatch(
+  //         itemsData,
+  //         AppConstants.userId,
+  //       );
+  //
+  //       await GoogleSheetService.updateStockAfterDispatch(challanItems);
+  //
+  //       // ✅ Generate challan PDF (same as 1st code)
+  //       List<Challan> challanModel = challanItems.map((item) {
+  //         return Challan(
+  //           challanId: challanId,
+  //           itemId: item.itemId,
+  //           itemName: item.description,
+  //           qty: item.quantity,
+  //           price: item.price.toDouble(),
+  //           gst: item.gstRate,
+  //           customerMobile: customerMobileController.text.trim(),
+  //           customerId: selectedCustomerId.value,
+  //           customerName: customerNameController.text.trim(),
+  //           customerEmail: customerEmailController.text.trim(),
+  //           customerAddress: customerAddressController.text.trim(),
+  //           subtotal: subtotal.value,
+  //           totalAmount: totalAmount.value,
+  //           gstAmount: gstAmount.value,
+  //           notes: notesController.text,
+  //           status: paymentStatus.value,
+  //         );
+  //       }).toList();
+  //
+  //       await InvoiceHelper.generateAndShareChallanPrint(
+  //         challanModel,
+  //         customerNameController.text.trim(),
+  //         customerMobileController.text.trim(),
+  //         customerEmailController.text.trim(),
+  //         customerPanController.text.trim(),
+  //         customerGstController.text.trim(),
+  //         customerAddressController.text.trim(),
+  //         subtotal.value,
+  //         challanDateController.text,
+  //         totalAmount.value,
+  //         paymentStatus.value,
+  //         notesController.text,
+  //         companyData.value,
+  //         gstAmount.value,
+  //       );
+  //
+  //       showCustomSnackbar(
+  //         title: "Success",
+  //         message: "Challan created successfully!",
+  //         baseColor: Colors.green.shade700,
+  //         icon: Icons.check_circle_outline,
+  //       );
+  //
+  //       clearForm();
+  //       Get.back(result: true);
+  //       return true;
+  //     }
+  //
+  //   } catch (e) {
+  //     print("❌ Error saving challan: $e");
+  //     showCustomSnackbar(
+  //       title: "Error",
+  //       message: "Failed to save challan: ${e.toString()}",
+  //       baseColor: Colors.red.shade700,
+  //       icon: Icons.error,
+  //     );
+  //     return false;
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // }
+
   Future<bool> saveChallan({required bool isDraft}) async {
     try {
-
-      // ✅ Handle manual customer entry
+      // ---------------- VALIDATION STEPS ----------------
       if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
         validateManualCustomerEntry();
       }
 
-      // ✅ FIRST: Validate customer is selected/entered
       if (customerNameController.text.trim().isEmpty) {
         showCustomSnackbar(
-          title: "Customer Required",
-          message: "Please select a customer or enter customer details",
-          baseColor: Colors.red.shade700,
-          icon: Icons.person_outline,
-        );
+            title: "Customer Required",
+            message: "Please select a customer or enter customer details",
+            baseColor: Colors.red.shade700,
+            icon: Icons.person_outline);
         return false;
       }
 
       if (!formKey.currentState!.validate()) {
         showCustomSnackbar(
-          title: "Validation Error",
-          message: "Please fill all required fields",
-          baseColor: Colors.orange.shade700,
-          icon: Icons.warning,
-        );
+            title: "Validation Error",
+            message: "Please fill all required fields",
+            baseColor: Colors.orange.shade700,
+            icon: Icons.warning);
         return false;
       }
 
-      if (!_validateChallanItems()) {
-        return false;
-      }
+      if (!_validateChallanItems()) return false;
 
-      // ✅ NEW: Check for stock violations FIRST
       if (hasAnyStockViolation) {
         String violationList = violationMessages.values.join('\n• ');
-
         showCustomSnackbar(
-          title: "Cannot Create Challan",
-          message: "Fix these issues first:\n• $violationList",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-          duration: Duration(seconds: 5),
-        );
+            title: "Cannot Create Challan",
+            message: "Fix these issues first:\n• $violationList",
+            baseColor: Colors.red.shade700,
+            icon: Icons.error_outline,
+            duration: Duration(seconds: 5));
         return false;
       }
 
       _removeEmptyItemsBeforeSave();
 
-      // Double-check after removing empty items
       if (challanItems.isEmpty) {
         showCustomSnackbar(
-          title: "No Valid Items",
-          message: "Please add at least one valid item to the challan",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+            title: "No Valid Items",
+            message: "Please add at least one valid item",
+            baseColor: Colors.red.shade700,
+            icon: Icons.error_outline);
         return false;
       }
-      isLoading.value = true;
 
+      // ---------------- SAVING PROCESS START ----------------
+      isLoading.value = true;
       debugAllItemsCustomerId();
       calculateTotals();
 
       String finalCustomerId = _getValidCustomerId();
-
-      // ✅ Final customer ID check
       if (finalCustomerId.isEmpty) {
         isLoading.value = false;
         showCustomSnackbar(
-          title: "Customer ID Error",
-          message: "Unable to determine customer ID. Please try again.",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+            title: "Customer ID Error",
+            message: "Unable to determine customer ID.",
+            baseColor: Colors.red.shade700,
+            icon: Icons.error_outline);
         return false;
       }
 
@@ -1444,162 +1710,186 @@ class NewChallanController extends BaseController {
         'userId': AppConstants.userId,
       };
 
+      // --- SAVE TO GOOGLE SHEETS ---
       if (isInEditMode) {
-        print("=== UPDATING EXISTING CHALLAN ===");
-
-        await GoogleSheetService.updateChallanWithCacheClear(
-          challanData,
-          AppConstants.userId,
-        );
-
-        List<Map<String, dynamic>> itemsData =
-        challanItems.map((item) => createChallanItemData(item)).toList();
-
-        await GoogleSheetService.updateChallanItemsWithCacheClear(
-          challanId,
-          itemsData,
-          AppConstants.userId,
-        );
-        isLoading.value = false;
-
+        await GoogleSheetService.updateChallanWithCacheClear(challanData, AppConstants.userId);
+        List<Map<String, dynamic>> itemsData = challanItems.map((item) => createChallanItemData(item)).toList();
+        await GoogleSheetService.updateChallanItemsWithCacheClear(challanId, itemsData, AppConstants.userId);
         await _refreshParentControllersAsync();
-
-        // ✅ Generate challan PDF (same as 1st code)
-        List<Challan> challanModel = challanItems.map((item) {
-          return Challan(
-            challanId: challanId,
-            itemId: item.itemId,
-            itemName: item.description,
-            qty: item.quantity,
-            price: item.price.toDouble(),
-            gst: item.gstRate,
-            customerMobile: customerMobileController.text.trim(),
-            customerId: selectedCustomerId.value,
-            customerName: customerNameController.text.trim(),
-            customerEmail: customerEmailController.text.trim(),
-            customerPan: customerPanController.text.trim(),
-            customerGst: customerGstController.text.trim(),
-            customerAddress: customerAddressController.text.trim(),
-            subtotal: subtotal.value,
-            totalAmount: totalAmount.value,
-            gstAmount: gstAmount.value,
-            notes: notesController.text,
-            status: paymentStatus.value,
-          );
-        }).toList();
-
-        if(!isInEditMode)
-          await InvoiceHelper.generateAndShareChallanPrint(
-          challanModel,
-          customerNameController.text.trim(),
-          customerMobileController.text.trim(),
-          customerEmailController.text.trim(),
-          customerPanController.text.trim(),
-          customerGstController.text.trim(),
-          customerAddressController.text.trim(),
-          subtotal.value,
-          challanDateController.text,
-          totalAmount.value,
-          paymentStatus.value,
-          notesController.text,
-          companyData.value,
-          gstAmount.value,
-        );
-
-        Get.back(result: true);
-        await Future.delayed(const Duration(milliseconds: 100),() {
-          showCustomSnackbar(
-            title: "Success",
-            message: "Challan updated successfully!",
-            baseColor: Colors.green.shade700,
-            icon: Icons.check_circle_outline,
-          );
-        },);
-
-        return true;
-
-      }
-      else {
-        print("=== CREATING NEW CHALLAN ===");
-
+      } else {
         await GoogleSheetService.addChallan(challanData, AppConstants.userId);
-
-        /// ✅ Instead of looping, use batch add
-        List<Map<String, dynamic>> itemsData =
-        challanItems.map((item) => createChallanItemData(item)).toList();
-
-        await GoogleSheetService.addChallanItemsBatch(
-          itemsData,
-          AppConstants.userId,
-        );
-
+        List<Map<String, dynamic>> itemsData = challanItems.map((item) => createChallanItemData(item)).toList();
+        await GoogleSheetService.addChallanItemsBatch(itemsData, AppConstants.userId);
         await GoogleSheetService.updateStockAfterDispatch(challanItems);
-
-        // ✅ Generate challan PDF (same as 1st code)
-        List<Challan> challanModel = challanItems.map((item) {
-          return Challan(
-            challanId: challanId,
-            itemId: item.itemId,
-            itemName: item.description,
-            qty: item.quantity,
-            price: item.price.toDouble(),
-            gst: item.gstRate,
-            customerMobile: customerMobileController.text.trim(),
-            customerId: selectedCustomerId.value,
-            customerName: customerNameController.text.trim(),
-            customerEmail: customerEmailController.text.trim(),
-            customerAddress: customerAddressController.text.trim(),
-            subtotal: subtotal.value,
-            totalAmount: totalAmount.value,
-            gstAmount: gstAmount.value,
-            notes: notesController.text,
-            status: paymentStatus.value,
-          );
-        }).toList();
-
-        await InvoiceHelper.generateAndShareChallanPrint(
-          challanModel,
-          customerNameController.text.trim(),
-          customerMobileController.text.trim(),
-          customerEmailController.text.trim(),
-          customerPanController.text.trim(),
-          customerGstController.text.trim(),
-          customerAddressController.text.trim(),
-          subtotal.value,
-          challanDateController.text,
-          totalAmount.value,
-          paymentStatus.value,
-          notesController.text,
-          companyData.value,
-          gstAmount.value,
-        );
-
-        showCustomSnackbar(
-          title: "Success",
-          message: "Challan created successfully!",
-          baseColor: Colors.green.shade700,
-          icon: Icons.check_circle_outline,
-        );
-
-        clearForm();
-        Get.back(result: true);
-        return true;
       }
+
+      // ---------------- DATA SAVED - NOW ASK FOR PRINT ----------------
+      isLoading.value = false; // Stop loading UI
+
+      // Prepare Model for PDF
+      List<Challan> challanModel = challanItems.map((item) {
+        return Challan(
+          challanId: challanId,
+          itemId: item.itemId,
+          itemName: item.description,
+          qty: item.quantity,
+          price: item.price.toDouble(),
+          gst: item.gstRate,
+          customerMobile: customerMobileController.text.trim(),
+          customerId: selectedCustomerId.value,
+          customerName: customerNameController.text.trim(),
+          customerEmail: customerEmailController.text.trim(),
+          customerPan: customerPanController.text.trim(),
+          customerGst: customerGstController.text.trim(),
+          customerAddress: customerAddressController.text.trim(),
+          subtotal: subtotal.value,
+          totalAmount: totalAmount.value,
+          gstAmount: gstAmount.value,
+          notes: notesController.text,
+          status: paymentStatus.value,
+        );
+      }).toList();
+
+      // ✅ Show Dialog asking for Print Type
+      await _showOutputFormatDialog(challanModel);
+
+      return true;
 
     } catch (e) {
       print("❌ Error saving challan: $e");
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to save challan: ${e.toString()}",
-        baseColor: Colors.red.shade700,
-        icon: Icons.error,
-      );
-      return false;
-    } finally {
       isLoading.value = false;
+      showCustomSnackbar(title: "Error", message: "Failed: ${e.toString()}", baseColor: Colors.red.shade700, icon: Icons.error);
+      return false;
     }
   }
 
+  // ✅ New Method to Show Dialog
+  Future<void> _showOutputFormatDialog(List<Challan> challanModel) async {
+    await Get.defaultDialog(
+      title: "Challan Saved Successfully",
+      titleStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+      content: Column(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 50),
+          SizedBox(height: 10),
+          Text("How would you like to share/print?"),
+          SizedBox(height: 20),
+
+          // Button 1: Thermal Print
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, foregroundColor: Colors.white),
+              icon: Icon(Icons.print),
+              label: Text("Thermal Print"),
+              onPressed: () async {
+                Get.back(); // Close Dialog
+
+                await InvoiceHelper.generateAndShareChallanPrint(
+                  challanModel,
+                  customerNameController.text.trim(),
+                  customerMobileController.text.trim(),
+                  customerEmailController.text.trim(),
+                  customerPanController.text.trim(),
+                  customerGstController.text.trim(),
+                  customerAddressController.text.trim(),
+                  subtotal.value,
+                  challanDateController.text,
+                  totalAmount.value,
+                  paymentStatus.value,
+                  notesController.text,
+                  companyData.value,
+                  gstAmount.value,
+                );
+
+                _finishAndClose(); // Clear form & Go Back
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
+          // Button 2: Standard PDF (A4)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
+              icon: Icon(Icons.picture_as_pdf),
+              label: Text("Save as PDF (A4)"),
+              onPressed: () async {
+                Get.back(); // Close Dialog
+
+                // ✅ Calling the Standard PDF Method
+                await InvoiceHelper.generateAndShareChallan(
+                  challanModel,
+                  customerNameController.text.trim(),
+                  customerMobileController.text.trim(),
+                  customerEmailController.text.trim(),
+                  customerPanController.text.trim(),
+                  customerGstController.text.trim(),
+                  customerAddressController.text.trim(),
+                  subtotal.value,
+                  challanDateController.text,
+                  totalAmount.value,
+                  paymentStatus.value,
+                  notesController.text,
+                  companyData.value,
+                  gstAmount.value,
+                );
+
+                _finishAndClose(); // Clear form & Go Back
+              },
+            ),
+          ),
+
+          SizedBox(height: 10),
+
+          // Button 3: Skip / Close
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _finishAndClose();
+            },
+            child: Text("Skip & Close", style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // Helper to cleanup and close screen
+  void _finishAndClose() {
+    // 1. ફોર્મ ક્લિયર કરો
+    clearForm();
+
+    // 2. Dashboard પર પાછા જાઓ (રીલોડ કર્યા વગર)
+    // આ લાઈન stack માંથી બધી સ્ક્રીન કાઢી નાખશે જ્યાં સુધી Dashboard ન આવે.
+    Get.until((route) => route.settings.name == DashboardScreen.pageId);
+
+    // 3. ડેટા Silent Refresh કરો (Shimmer વગર)
+    try {
+      // Dashboard રીફ્રેશ કરો
+      if (Get.isRegistered<DashboardController>()) {
+        Get.find<DashboardController>().refreshDataSilently();
+      }
+
+      // જો Challan List સ્ક્રીન મેમરીમાં હોય તો તેને પણ અપડેટ કરો
+      if (Get.isRegistered<ChallanListController>()) {
+        Get.find<ChallanListController>().loadChallans();
+      }
+    } catch (e) {
+      print("Error refreshing background data: $e");
+    }
+
+    // 4. Success Message બતાવો
+    showCustomSnackbar(
+      title: "Success",
+      message: "Challan saved successfully!",
+      baseColor: Colors.green.shade700,
+      icon: Icons.check_circle_outline,
+    );
+  }
 
   /// FIXED: Async refresh with proper await
   Future<void> _refreshParentControllersAsync() async {
