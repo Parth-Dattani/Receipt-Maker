@@ -1341,10 +1341,9 @@ class DashboardController extends BaseController {
     }
     Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-    await Get.to(() => NewInvoiceScreen());
+    await Get.toNamed(NewInvoiceScreen.pageId);
     print("🔄 Returned from Invoice Creation, refreshing...");
     await refreshDashboard();
-    //Get.toNamed(NewInvoiceScreen.pageId);
   }
 
   void navigateToCreateInvoice22() {

@@ -673,7 +673,7 @@ class NewInvoiceController extends GetxController {
 
       for (int i = 0; i < invoiceItems.length; i++) {
         quantityControllers.add(
-            TextEditingController(text: invoiceItems[i].quantity.toString())
+            TextEditingController(text: invoiceItems[i].quantity > 0 ? invoiceItems[i].quantity.toString() : '')
         );
         priceControllers.add(
             TextEditingController(text: invoiceItems[i].rate.toString())
@@ -879,7 +879,7 @@ class NewInvoiceController extends GetxController {
 
       for (int i = 0; i < invoiceItems.length; i++) {
         quantityControllers.add(
-            TextEditingController(text: invoiceItems[i].quantity.toString())
+            TextEditingController(text: invoiceItems[i].quantity > 0 ? invoiceItems[i].quantity.toString() : '')
         );
         priceControllers.add(
             TextEditingController(text: invoiceItems[i].rate.toString())
@@ -1913,7 +1913,7 @@ class NewInvoiceController extends GetxController {
 
     invoiceItems.add(InvoiceItem(
       description: '',
-      quantity: 1,
+      quantity: 0,
       rate: 0.0,
       gstRate: 0.0,
       itemId: '',
@@ -2081,22 +2081,20 @@ class NewInvoiceController extends GetxController {
     // ✅ Don't modify lists during build - just return what exists
     if (index >= quantityControllers.length || index < 0) {
       print("⚠️ Index $index out of bounds for quantityControllers (length: ${quantityControllers.length})");
-      // Return a temporary controller (will be fixed on next frame)
-      return TextEditingController(text: initialValue?.toString() ?? '');
+      // Blank when 0/null so quantity field can start empty
+      final display = (initialValue == null || initialValue <= 0) ? '' : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
+      return TextEditingController(text: display);
     }
 
     final controller = quantityControllers[index];
 
-    // Only update text if different (avoid infinite loops)
+    // Only update text if different; treat 0 as blank so field can be empty initially
     if (initialValue != null) {
-      String newText = initialValue % 1 == 0
-          ? initialValue.toInt().toString()
-          : initialValue.toString();
+      String newText = (initialValue <= 0) ? '' : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
 
       if (controller.text != newText) {
-        // Use post-frame callback to avoid setState during build
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!controller.hasListeners) return; // Skip if disposed
+          if (!controller.hasListeners) return;
           try {
             controller.text = newText;
           } catch (e) {
@@ -2580,8 +2578,8 @@ class NewInvoiceController extends GetxController {
           (item.description?.isEmpty ?? true) &&
           (item.itemName?.isEmpty ?? true);
 
-      // Keep items that have been filled or have quantity/rate changes
-      return isEmpty && item.quantity == 1 && item.rate == 0.0;
+      // Keep items that have been filled or have quantity/rate changes (quantity 0 or 1 = blank/template row)
+      return isEmpty && item.quantity <= 1 && item.rate == 0.0;
     });
 
     // Ensure at least one item remains
@@ -3492,7 +3490,7 @@ class NewInvoiceController extends GetxController {
     }
 
     // Proceed with normal edit flow
-    Get.to(() => NewInvoiceScreen(), arguments: {
+    Get.toNamed(NewInvoiceScreen.pageId, arguments: {
       'editMode': true,
       'invoiceId': invoice.invoiceId,
       'invoiceData': invoice,

@@ -14,7 +14,7 @@ import '../common/in_app_webview_screen.dart';
 
 
 class DashboardScreen extends GetView<DashboardController> {
-  static const String pageId = '/DashboardScreen';
+  static const String pageId = '/dashboard';
 
   const DashboardScreen({super.key});
 
@@ -301,6 +301,10 @@ class DashboardScreen extends GetView<DashboardController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Web: Today's Collection above Financial Metrics
+        _buildCashBoxCard(isWeb: true),
+        const SizedBox(height: 16),
+
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
@@ -313,69 +317,28 @@ class DashboardScreen extends GetView<DashboardController> {
           ),
         ),
 
-        // ✅ IntrinsicHeight: આનાથી બાજુના બે કાર્ડની હાઈટ પહેલા કાર્ડ જેટલી થશે
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch, // ✅ ખેંચીને લાંબુ કરશે
-            children: [
-              // --- COLUMN 1: Financial Metrics (તમારા 6 નાના કાર્ડ્સ) ---
-              Expanded(
-                flex: 3, // પહોળાઈ 3 ગણી
-                child: Column(
-                  children: [
-                    // લાઈન 1: Sales, To Receive, Invoices
-                    Row(
-                      children: [
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Sales', value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}', icon: Icons.trending_up, iconColor: Colors.green, bgColor: Colors.green.shade50))),
-                        const SizedBox(width: 14),
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Receive', value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}', icon: Icons.download_rounded, iconColor: Colors.orange, bgColor: Colors.orange.shade50))),
-                        const SizedBox(width: 14),
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Invoices', value: '${controller.invoiceList.length}', icon: Icons.receipt_rounded, iconColor: Colors.blue, bgColor: Colors.blue.shade50, badge: controller.overdueCount.value > 0 ? controller.overdueCount.value.toString() : null))),
-                      ],
-                    ),
+        // Row 1: Sales, To Receive, Invoices
+        Row(
+          children: [
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Sales', value: '₹${AppUtil.formatCurrency(controller.totalRevenue.value)}', icon: Icons.trending_up, iconColor: Colors.green, bgColor: Colors.green.shade50))),
+            const SizedBox(width: 10),
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Receive', value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}', icon: Icons.download_rounded, iconColor: Colors.orange, bgColor: Colors.orange.shade50))),
+            const SizedBox(width: 10),
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Invoices', value: '${controller.invoiceList.length}', icon: Icons.receipt_rounded, iconColor: Colors.blue, bgColor: Colors.blue.shade50, badge: controller.overdueCount.value > 0 ? controller.overdueCount.value.toString() : null))),
+          ],
+        ),
 
-                    const SizedBox(height: 14), // વચ્ચેની જગ્યા
+        const SizedBox(height: 10),
 
-                    // લાઈન 2: Purchase, To Pay, Orders
-                    Row(
-                      children: [
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Purchase', value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}', icon: Icons.shopping_cart, iconColor: Colors.red, bgColor: Colors.red.shade50))),
-                        const SizedBox(width: 14),
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Pay', value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}', icon: Icons.upload_rounded, iconColor: Colors.deepOrange, bgColor: Colors.deepOrange.shade50))),
-                        const SizedBox(width: 14),
-                        Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Orders', value: '${controller.totalPurchases.value}', icon: Icons.shopping_bag_rounded, iconColor: Colors.indigo, bgColor: Colors.indigo.shade50, badge: controller.overduePurchases.value > 0 ? controller.overduePurchases.value.toString() : null))),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              // --- COLUMN 2: Invoice Status (હવે આની હાઈટ Col 1 જેટલી થશે) ---
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                    Expanded(
-
-                      child: _buildCashBoxCard(isWeb: true),
-                    ),
-
-
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              // // --- COLUMN 3: Cash Box (હવે આની હાઈટ Col 1 જેટલી થશે) ---
-              // Expanded(
-              //   flex: 1,
-              //   child: _buildCashBoxCard(isWeb: true),
-              // ),
-            ],
-          ),
+        // Row 2: Purchase, To Pay, Orders
+        Row(
+          children: [
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Purchase', value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}', icon: Icons.shopping_cart, iconColor: Colors.red, bgColor: Colors.red.shade50))),
+            const SizedBox(width: 10),
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'To Pay', value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}', icon: Icons.upload_rounded, iconColor: Colors.deepOrange, bgColor: Colors.deepOrange.shade50))),
+            const SizedBox(width: 10),
+            Expanded(child: Obx(() => _buildCompactMetricCard(title: 'Orders', value: '${controller.totalPurchases.value}', icon: Icons.shopping_bag_rounded, iconColor: Colors.indigo, bgColor: Colors.indigo.shade50, badge: controller.overduePurchases.value > 0 ? controller.overduePurchases.value.toString() : null))),
+          ],
         ),
       ],
     );
@@ -788,6 +751,44 @@ class DashboardScreen extends GetView<DashboardController> {
                 const Divider(color: Colors.white24, height: 12),
 
                 _buildWebMenuItem(Icons.logout, "logout".tr, false, () => controller.logout()),
+
+                const Divider(color: Colors.white24, height: 12),
+                // Privacy Policy + Version (same as mobile drawer)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InkWell(
+                        onTap: () async {
+                          const url = 'https://drive.google.com/file/d/1hRCygh-bIP1rAJTgTI5cdmnt9eeZLtif/view?usp=drive_link';
+                          if (kIsWeb) {
+                            final uri = Uri.parse(url);
+                            try {
+                              await launchUrl(uri, mode: LaunchMode.platformDefault);
+                            } catch (_) {
+                              Get.snackbar('Error', 'Could not open Privacy Policy');
+                            }
+                          } else {
+                            Get.to(() => InAppWebViewScreen(url: url, title: 'Privacy Policy'));
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Privacy Policy', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        ),
+                      ),
+                      Obx(() => Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('invoice_sathi'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          Text('v${controller.appVersion.value}', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                        ],
+                      )),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -1381,9 +1382,104 @@ class DashboardScreen extends GetView<DashboardController> {
           controller.todayUpiAmount.value +
           controller.todayCardAmount.value;
 
+      if (isWeb) {
+        // Web: clean white card with teal accent to match dashboard
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Today's Collection",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateStr,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "Profit: ₹${AppUtil.formatCurrency(controller.todayProfit.value)}",
+                      style: TextStyle(
+                        color: AppColors.tealColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "₹${AppUtil.formatCurrency(total)}",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.tealColor,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _buildBalancedBox("Cash", controller.todayCashAmount.value, Colors.green, isWeb: true)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildBalancedBox("UPI", controller.todayUpiAmount.value, Colors.blue, isWeb: true)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildBalancedBox("Card", controller.todayCardAmount.value, Colors.orange, isWeb: true)),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Mobile: original teal card
       return Container(
         width: double.infinity,
-        // ✅ Top Padding (TP) ને 16 કર્યું અને બાકીનું 10 રાખ્યું જેથી લુક પ્રોફેશનલ લાગે
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         decoration: BoxDecoration(
           color: AppColors.tealColor,
@@ -1393,30 +1489,21 @@ class DashboardScreen extends GetView<DashboardController> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start, // Top aligned
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       "Today's Collection",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      dateStr,
-                      style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.7)),
-                    ),
+                    Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.7))),
                   ],
                 ),
-                // Profit Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -1425,39 +1512,24 @@ class DashboardScreen extends GetView<DashboardController> {
                   ),
                   child: Text(
                     "Profit: ₹${AppUtil.formatCurrency(controller.todayProfit.value)}",
-                    style: const TextStyle(
-                      color: Color(0xFF1B5E20),
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Color(0xFF1B5E20), fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
-
-            const SizedBox(height: 12), // Title અને અમાઉન્ટ વચ્ચે થોડો ગેપ
-
-            // Main Amount Text
+            const SizedBox(height: 12),
             Text(
               "₹${AppUtil.formatCurrency(total)}",
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                height: 1.0,
-              ),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
             ),
-
             const SizedBox(height: 14),
-
-            // Payment Breakdown Row
             Row(
               children: [
-                Expanded(child: _buildBalancedBox("Card", controller.todayCardAmount.value, Colors.orange)),
+                Expanded(child: _buildBalancedBox("Cash", controller.todayCashAmount.value, Colors.green)),
                 const SizedBox(width: 8),
                 Expanded(child: _buildBalancedBox("UPI", controller.todayUpiAmount.value, Colors.blue)),
                 const SizedBox(width: 8),
-                Expanded(child: _buildBalancedBox("Cash", controller.todayCashAmount.value, Colors.green)),
+                Expanded(child: _buildBalancedBox("Card", controller.todayCardAmount.value, Colors.orange)),
               ],
             ),
           ],
@@ -1466,27 +1538,44 @@ class DashboardScreen extends GetView<DashboardController> {
     });
   }
 
-// Final Compact Box
-  Widget _buildBalancedBox(String label, double amount, Color iconColor) {
+  Widget _buildBalancedBox(String label, double amount, Color iconColor, {bool isWeb = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 8 : 5, horizontal: isWeb ? 6 : 0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
+        color: isWeb ? iconColor.withOpacity(0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: isWeb ? Border.all(color: iconColor.withOpacity(0.2)) : null,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle)),
-              const SizedBox(width: 3),
-              Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w500, color: Colors.black54)),
+              Container(
+                width: isWeb ? 8 : 6,
+                height: isWeb ? 8 : 6,
+                decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
+              ),
+              SizedBox(width: isWeb ? 6 : 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: isWeb ? 11 : 9,
+                  fontWeight: FontWeight.w600,
+                  color: isWeb ? Colors.grey.shade800 : Colors.black54,
+                ),
+              ),
             ],
           ),
+          SizedBox(height: isWeb ? 4 : 0),
           Text(
             "₹${AppUtil.formatCurrency(amount)}",
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: isWeb ? 12 : 11,
+              fontWeight: FontWeight.bold,
+              color: isWeb ? Colors.grey.shade900 : Colors.black87,
+            ),
           ),
         ],
       ),

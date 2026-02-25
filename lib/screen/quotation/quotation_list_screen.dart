@@ -68,7 +68,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
                 onPressed: () async {
                   Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-                  await Get.to(() => NewInvoiceScreen());
+                  await Get.toNamed(NewInvoiceScreen.pageId);
                 },
                 icon:  Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label:  Text("New Quotation", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
@@ -628,7 +628,7 @@ class QuotationListScreen extends GetView<QuotationListController> {
             onPressed: () async {
               Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-              await Get.to(() => NewInvoiceScreen());
+              await Get.toNamed(NewInvoiceScreen.pageId);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
             child: Text('create_quotation'.tr, style: const TextStyle(color: Colors.white)),

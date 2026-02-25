@@ -22,7 +22,7 @@ import 'package:get/get.dart';
 
 
 class NewInvoiceScreen extends GetView<NewInvoiceController> {
-  static const String pageId = '/NewInvoiceScreen';
+  static const String pageId = '/new-invoice';
 
   const NewInvoiceScreen({super.key});
 
@@ -1591,10 +1591,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                   controller.itemsWithStockViolation.add(index);
                                                   controller.violationMessages[index] = "Invalid quantity";
 
-                                                  // ✅ Revert to previous valid quantity
+                                                  // ✅ Revert to previous valid quantity (blank when 0)
                                                   Future.delayed(Duration(milliseconds: 100), () {
                                                     final qtyController = controller.getQuantityController(index);
-                                                    qtyController.text = item.quantity.toString();
+                                                    qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
                                                     qtyController.selection = TextSelection.fromPosition(
                                                       TextPosition(offset: qtyController.text.length),
                                                     );
@@ -1618,10 +1618,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                     controller.itemsWithStockViolation.add(index);
                                                     controller.violationMessages[index] = "Must be whole number";
 
-                                                    // ✅ Revert to previous valid quantity
+                                                    // ✅ Revert to previous valid quantity (blank when 0)
                                                     Future.delayed(Duration(milliseconds: 100), () {
                                                       final qtyController = controller.getQuantityController(index);
-                                                      qtyController.text = item.quantity.toString();
+                                                      qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
                                                       qtyController.selection = TextSelection.fromPosition(
                                                         TextPosition(offset: qtyController.text.length),
                                                       );

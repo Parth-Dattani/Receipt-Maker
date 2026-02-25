@@ -31,15 +31,8 @@ class NewChallanScreen extends GetView<NewChallanController> {
         return Scaffold(
           backgroundColor: Colors.grey.shade100,
           appBar: AppBar(
-            elevation: 4,
-            foregroundColor: Colors.white,
-            backgroundColor: AppColors.tealColor,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            ),
             title: Row(
               children: [
-                // Left side: Challan title
                 Obx(() => Text(
                   controller.isEditMode.value ? 'edit_challan'.tr : 'new_challan'.tr,
                   style: const TextStyle(
@@ -48,22 +41,23 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     fontSize: 20,
                   ),
                 )),
-
-                // ✅ NEW: Add company name on right side for web layout
                 if (isWeb) ...[
-                  Spacer(),
-                  Obx(() => Text(
+                  const Spacer(),
+                  Text(
                     AppConstants.companyName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
-                  )),
+                  ),
                 ],
               ],
             ),
-            // Center only on mobile
+            backgroundColor: controller.isEditMode.value
+                ? Colors.orange.shade700
+                : AppColors.tealColor,
+            foregroundColor: Colors.white,
             actions: [
               Obx(() => controller.isEditMode.value
                   ? _buildEditModeActions()
@@ -1510,10 +1504,10 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                               controller.itemsWithStockViolation.add(index);
                                               controller.violationMessages[index] = "Invalid quantity";
 
-                                              // ✅ Revert to previous valid quantity
+                                              // ✅ Revert to previous valid quantity (blank when 0)
                                               Future.delayed(Duration(milliseconds: 100), () {
                                                 final qtyController = controller.getQuantityController(index);
-                                                qtyController.text = item.quantity.toString();
+                                                qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
                                                 qtyController.selection = TextSelection.fromPosition(
                                                   TextPosition(offset: qtyController.text.length),
                                                 );
@@ -1532,10 +1526,10 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                                 controller.itemsWithStockViolation.add(index);
                                                 controller.violationMessages[index] = "Must be whole number";
 
-                                                // ✅ Revert to previous valid quantity
+                                                // ✅ Revert to previous valid quantity (blank when 0)
                                                 Future.delayed(Duration(milliseconds: 100), () {
                                                   final qtyController = controller.getQuantityController(index);
-                                                  qtyController.text = item.quantity.toString();
+                                                  qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
                                                   qtyController.selection = TextSelection.fromPosition(
                                                     TextPosition(offset: qtyController.text.length),
                                                   );

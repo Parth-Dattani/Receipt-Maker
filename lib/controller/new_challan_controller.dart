@@ -392,47 +392,39 @@ class NewChallanController extends BaseController {
     super.onClose();
   }
 
-  /// ✅ Keep quantityControllers in sync with challanItems
+  /// ✅ Keep quantityControllers in sync with challanItems (0 = blank, never show "0")
   TextEditingController getQuantityController(int index, {double? initialValue}) {
     // Ensure we have enough controllers
     while (quantityControllers.length < challanItems.length) {
       final itemIndex = quantityControllers.length;
       final item = challanItems[itemIndex];
-
-      // ✅ Start with empty string instead of default "1"
-      String quantityText = "";
-
-      quantityControllers.add(
-        TextEditingController(text: quantityText),
-      );
-
-      print("✅ Created quantity controller for index $itemIndex with empty value");
+      final quantityText = item.quantity > 0 ? item.quantity.toString() : '';
+      quantityControllers.add(TextEditingController(text: quantityText));
     }
 
     // Remove excess controllers (when items are deleted)
     while (quantityControllers.length > challanItems.length) {
       final removedController = quantityControllers.removeLast();
       removedController.dispose();
-      print("🗑️ Disposed excess quantity controller");
     }
 
     // Validate index
     if (index >= quantityControllers.length) {
-      print("⚠️ Warning: Index $index is out of bounds for quantityControllers");
-      return TextEditingController();
+      return TextEditingController(text: '');
     }
 
-    // ✅ Only update if initialValue is explicitly provided AND controller is empty
-    if (initialValue != null && quantityControllers[index].text.isEmpty) {
-      String newText = initialValue % 1 == 0
-          ? initialValue.toInt().toString()
-          : initialValue.toString();
-
-      quantityControllers[index].text = newText;
-      print("📝 Set initial quantity at index $index to: $newText");
+    final controller = quantityControllers[index];
+    // Only set text when initialValue > 0; treat 0 as blank so Qty starts empty
+    if (initialValue != null && initialValue > 0) {
+      String newText = initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString();
+      if (controller.text != newText) {
+        controller.text = newText;
+      }
+    } else if (initialValue != null && initialValue <= 0 && controller.text.isNotEmpty) {
+      controller.text = '';
     }
 
-    return quantityControllers[index];
+    return controller;
   }
 
   Future<void> loadChallans() async {
@@ -889,7 +881,7 @@ class NewChallanController extends BaseController {
 
     challanItems.add(ChallanItem(
       description: '',
-      quantity: 1.0,
+      quantity: 0,
       price: 0.0,
       gstRate: 0.0,
       itemId: '',
@@ -1300,7 +1292,7 @@ class NewChallanController extends BaseController {
           (item.itemName?.isEmpty ?? true);
 
       // Keep items that have been filled or have quantity/rate changes
-      return isEmpty && item.quantity == 1 && item.price == 0.0;
+      return isEmpty && item.quantity <= 1 && item.price == 0.0;
     });
 
     // Ensure at least one item remains

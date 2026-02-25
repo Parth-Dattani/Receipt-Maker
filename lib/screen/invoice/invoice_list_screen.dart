@@ -52,7 +52,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                 onPressed: () async {
                   Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-                  await Get.to(() => NewInvoiceScreen());
+                  await Get.toNamed(NewInvoiceScreen.pageId);
                 },
                 icon:  Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label:  Text("New Invoice", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
@@ -556,7 +556,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
             onPressed: () async {
               Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-              await Get.to(() => NewInvoiceScreen());
+              await Get.toNamed(NewInvoiceScreen.pageId);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
             child: const Text("Create Invoice", style: TextStyle(color: Colors.white)),

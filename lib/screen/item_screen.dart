@@ -160,6 +160,7 @@ class ItemScreen extends GetView<ItemController> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.tealColor,
+        foregroundColor: Colors.white,
         title: const Text("Item Management", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
         actions: [
           Padding(
