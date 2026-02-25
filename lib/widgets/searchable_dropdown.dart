@@ -9,6 +9,8 @@ class SearchableDropdown<T> extends StatefulWidget {
   final String hintText;
   final String searchHintText;
   final Widget Function(T)? itemBuilder;
+  /// Optional: string used for search/filter. If null, [itemLabel] is used.
+  final String Function(T)? searchLabel;
   final bool enabled;
 
   const SearchableDropdown({
@@ -20,6 +22,7 @@ class SearchableDropdown<T> extends StatefulWidget {
     this.hintText = 'Select an option',
     this.searchHintText = 'Search...',
     this.itemBuilder,
+    this.searchLabel,
     this.enabled = true,
   }) : super(key: key);
 
@@ -39,6 +42,7 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
         hintText: widget.hintText,
         searchHintText: widget.searchHintText,
         itemBuilder: widget.itemBuilder,
+        searchLabel: widget.searchLabel,
       ),
     );
   }
@@ -89,6 +93,7 @@ class _SearchDialog<T> extends StatefulWidget {
   final String hintText;
   final String searchHintText;
   final Widget Function(T)? itemBuilder;
+  final String Function(T)? searchLabel;
 
   const _SearchDialog({
     Key? key,
@@ -99,6 +104,7 @@ class _SearchDialog<T> extends StatefulWidget {
     required this.hintText,
     required this.searchHintText,
     this.itemBuilder,
+    this.searchLabel,
   }) : super(key: key);
 
   @override
@@ -125,9 +131,10 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
       if (query.isEmpty) {
         _filteredItems = List.from(widget.items);
       } else {
+        final q = query.toLowerCase();
         _filteredItems = widget.items.where((item) {
-          final label = widget.itemLabel(item).toLowerCase();
-          return label.contains(query.toLowerCase());
+          final label = (widget.searchLabel ?? widget.itemLabel)(item).toLowerCase();
+          return label.contains(q);
         }).toList();
       }
     });
@@ -148,7 +155,7 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Select ${widget.hintText}'),
+      title: Text(widget.hintText),
       contentPadding: EdgeInsets.fromLTRB(16, 16, 16, 0),
       content: Container(
         width: double.maxFinite,
@@ -161,7 +168,6 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
             // Search TextField
             TextField(
               controller: _searchController,
-              autofocus: true,
               decoration: InputDecoration(
                 hintText: widget.searchHintText,
                 prefixIcon: Icon(Icons.search),

@@ -193,6 +193,7 @@ class SplashController extends BaseController {
   Future<void> loadCompanySettingsFromData(Map<String, dynamic> data) async {
     try {
       final isChallanEnabled = data['isChallanEnabled'] ?? false;
+      final isCashMemoEnabled = data['isCashMemoEnabled'] ?? false;
       final isGstEnabled = data['isGstEnabled'] ?? false;
       final businessType = data['businessType'] ?? 'Trading';
       final isDueDateEnabled = data['isDueDateEnabled'] ?? false;
@@ -200,6 +201,7 @@ class SplashController extends BaseController {
 
       // Store in SharedPreferences
       await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+      await sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled);
       await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
       await AppConstants.setBusinessType(businessType);
       await AppConstants.setDueDateEnabled(isDueDateEnabled);
@@ -207,9 +209,10 @@ class SplashController extends BaseController {
 
       // Update AppConstants
       AppConstants.isChallan.value = isChallanEnabled;
+      AppConstants.isCashMemo.value = isCashMemoEnabled;
       AppConstants.withGST.value = isGstEnabled;
 
-      print("✅ Settings Loaded → Challan=$isChallanEnabled | GST=$isGstEnabled | Type=$businessType");
+      print("✅ Settings Loaded → Challan=$isChallanEnabled | CashMemo=$isCashMemoEnabled | GST=$isGstEnabled | Type=$businessType");
     } catch (e) {
       print("Error loading company settings: $e");
     }

@@ -172,7 +172,7 @@ import 'controller.dart';
 //
 //   void viewInvoiceDetails(Invoice invoice) {
 //     Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-//     Get.to(() => InvoiceDetailsScreen(), arguments: invoice);
+//     Get.toNamed(InvoiceDetailsScreen.pageId, arguments: invoice);
 //     ///Get.toNamed(InvoiceDetailsScreen.pageId, arguments: invoice);
 //   }
 //
@@ -537,7 +537,7 @@ class InvoiceListController extends BaseController {
 
   void viewInvoiceDetails(Invoice invoice) {
     Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-    Get.to(() => InvoiceDetailsScreen(), arguments: invoice);
+    Get.toNamed(InvoiceDetailsScreen.pageId, arguments: invoice);
   }
 
   void editInvoice(Invoice invoice) {

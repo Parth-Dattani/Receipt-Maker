@@ -811,37 +811,18 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                   .toString()
                                   .toUpperCase(),
                           hintText: 'Select Customer',
-                          searchHintText: 'Search customers by name...',
-                          itemBuilder: (customer) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                (customer['name'] ?? 'Unknown').toString().toUpperCase(),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              if (customer['mobile1'] != null &&
-                                  customer['mobile1'].toString().isNotEmpty)
-                                Padding(
-                                  padding: EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.phone, size: 12,
-                                          color: Colors.grey.shade600),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        customer['mobile1'].toString(),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
+                          searchHintText: 'Search customers by name or phone...',
+                          searchLabel: (customer) {
+                            final name = (customer['name'] ?? '').toString();
+                            final mobile = (customer['mobile1'] ?? customer['mobile2'] ?? '').toString();
+                            return '$name $mobile'.trim();
+                          },
+                          itemBuilder: (customer) => Text(
+                            (customer['name'] ?? 'Unknown').toString().toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                           ),
                           onChanged: (selectedCustomer) {
                             if (selectedCustomer == null) {
@@ -2265,77 +2246,76 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
 
   Widget _buildCalculationsSection() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'calculations'.tr,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: controller.isEditMode.value
-                    ? Colors.orange.shade700
-                    : AppColors.tealColor,
+    return Obx(() {
+      final showPaymentStatus = controller.invoiceType.value == InvoiceType.invoice ||
+          controller.invoiceType.value == InvoiceType.quickInvoice;
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'calculations'.tr,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: controller.isEditMode.value
+                      ? Colors.orange.shade700
+                      : AppColors.tealColor,
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            Obx(() => Column(
-              children: [
-                _buildTotalRow('Subtotal', controller.subtotal.value),
-                if (AppConstants.withGST.value) ...[
-                  _buildTotalRow('CGST', controller.gstAmount.value / 2),
-                  _buildTotalRow('SGST', controller.gstAmount.value / 2),
+              SizedBox(height: 16),
+              Obx(() => Column(
+                children: [
+                  _buildTotalRow('Subtotal', controller.subtotal.value),
+                  if (AppConstants.withGST.value) ...[
+                    _buildTotalRow('CGST', controller.gstAmount.value / 2),
+                    _buildTotalRow('SGST', controller.gstAmount.value / 2),
+                  ],
+                  Divider(),
+                  _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
                 ],
+              )),
+
+              // ✅ PAYMENT STATUS SECTION (Invoice and Quick Invoice)
+              if (showPaymentStatus) ...[
+                SizedBox(height: 20),
                 Divider(),
-                _buildTotalRow('Total Amount', controller.totalAmount.value, isTotal: true),
-              ],
-            )),
-
-            // ✅ PAYMENT STATUS SECTION (Only for Invoice type)
-            Obx(() {
-              if (controller.invoiceType.value == InvoiceType.invoice) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Text("payment_status".tr),
+                Row(
                   children: [
-                    SizedBox(height: 20),
-                    Divider(),
-                    Text("payment_status".tr),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Obx(() => Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: DropdownButton<String>(
-                              value: controller.paymentStatus.value,
-                              isExpanded: true,
-                              underline: SizedBox(),
-                              items: [
-                                DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-                                DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                                DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                              ],
-                              onChanged: (value) {
-                                if (value != null) {
-                                  controller.updatePaymentStatus(value);
-                                }
-                              },
-                            ),
-                          )),
+                    Expanded(
+                      child: Obx(() => Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                        child: DropdownButton<String>(
+                          value: controller.paymentStatus.value,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          items: [
+                            DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                            DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                            DropdownMenuItem(value: 'Partial', child: Text('Partial')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              controller.updatePaymentStatus(value);
+                            }
+                          },
+                        ),
+                      )),
                     ),
+                  ],
+                ),
 
-                    // ✅ NEW: PAYMENT MODE SELECTION (Shows for Paid/Partial)
-                    Obx(() {
+                // ✅ NEW: PAYMENT MODE SELECTION (Shows for Paid/Partial)
+                Obx(() {
                       if (controller.paymentStatus.value == 'Paid' ||
                           controller.paymentStatus.value == 'Partial') {
                         return Column(
@@ -2583,15 +2563,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       }
                       return SizedBox.shrink();
                     }),
-                  ],
-                );
-              }
-              return SizedBox.shrink();
-            }),
-          ],
+              ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+  });
   }
 
   Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {
@@ -2965,10 +2942,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                               hint: Text('Select Customer (${customersWithChallans.length} available)'),
                               underline: SizedBox(),
                               items: [
-                                DropdownMenuItem(
-                                  value: null,
-                                  child: Text('Select Customer'),
-                                ),
                                 ...customersWithChallans.map((customerName) {
                                   final challanCount = controller.allChallans
                                       .where((challan) =>

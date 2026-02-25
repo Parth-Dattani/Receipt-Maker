@@ -256,7 +256,7 @@ import 'controller.dart';
 //
 //   void viewQuotationDetails(Invoice quotation) {
 //     Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-//     Get.to(() => InvoiceDetailsScreen(), arguments: quotation);
+//     Get.toNamed(InvoiceDetailsScreen.pageId, arguments: quotation);
 //   }
 //
 //   Future<void> deleteQuotation(Invoice quotation) async {
@@ -575,7 +575,7 @@ class QuotationListController extends BaseController {
 
   void viewQuotationDetails(Invoice quotation) {
     Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-    Get.to(() => InvoiceDetailsScreen(), arguments: quotation);
+    Get.toNamed(InvoiceDetailsScreen.pageId, arguments: quotation);
   }
 
   Future<void> deleteQuotation(Invoice quotation) async {

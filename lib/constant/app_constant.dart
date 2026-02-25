@@ -15,6 +15,7 @@ class AppConstants{
    static String accessKey = "";
    static String businessType = "Trading";
    static final isChallan = false.obs; //isChallanEnabled
+   static final isCashMemo = false.obs; // isCashMemoEnabled
    static final withGST = false.obs; //isGstEnabled
    static final isGujarati = false.obs; //Language toggle
    static final isDemo = false.obs;
@@ -33,6 +34,7 @@ class AppConstants{
       businessType = await sharedPreferencesHelper.getPrefData("businessType") ?? "Trading"; // 🆕 Load businessType
 
       isChallan.value = await sharedPreferencesHelper.retrievePrefBoolData("isChallanEnabled") ?? false;
+      isCashMemo.value = await sharedPreferencesHelper.retrievePrefBoolData("isCashMemoEnabled") ?? false;
       withGST.value = await sharedPreferencesHelper.retrievePrefBoolData("isGstEnabled") ?? false;
       isGujarati.value = await sharedPreferencesHelper.retrievePrefBoolData("isGujarati") ?? false;
       isDemo.value = await sharedPreferencesHelper.retrievePrefBoolData("isDemo") ?? false; // 🆕 Load demo status
@@ -92,6 +94,12 @@ class AppConstants{
    static Future<void> setChallanEnabled(bool value) async {
       isChallan.value = value;
       await sharedPreferencesHelper.storeBoolPrefData("isChallanEnabled", value);
+   }
+
+   /// 🔹 Update + persist isCashMemoEnabled
+   static Future<void> setCashMemoEnabled(bool value) async {
+      isCashMemo.value = value;
+      await sharedPreferencesHelper.storeBoolPrefData("isCashMemoEnabled", value);
    }
 
    /// 🔹 Update + persist isGstEnabled

@@ -332,6 +332,7 @@ class DashboardController extends BaseController {
 
     // Update local observable
     if (key == 'isChallanEnabled') AppConstants.isChallan.value = value;
+    if (key == 'isCashMemoEnabled') AppConstants.isCashMemo.value = value;
     if (key == 'isGstEnabled') AppConstants.withGST.value = value;
 
     // Update Firestore
@@ -442,12 +443,15 @@ class DashboardController extends BaseController {
         final data = doc.data();
         if (data != null) {
           final isChallanEnabled = data['isChallanEnabled'] ?? false;
+          final isCashMemoEnabled = data['isCashMemoEnabled'] ?? false;
           final isGstEnabled = data['isGstEnabled'] ?? false;
 
           await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
+          await sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled);
           await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
 
           AppConstants.isChallan.value = isChallanEnabled;
+          AppConstants.isCashMemo.value = isCashMemoEnabled;
           AppConstants.withGST.value = isGstEnabled;
 
           final businessType = data['businessType'] ?? 'Trading';
@@ -1380,7 +1384,7 @@ class DashboardController extends BaseController {
       Get.put(StockReportController());
     }
 
-    await Get.to(() => StockReportScreen());
+    await Get.toNamed(StockReportScreen.pageId);
 
     print("🔄 Returned from Stock Report, refreshing...");
     await refreshDashboard();
@@ -1390,7 +1394,7 @@ class DashboardController extends BaseController {
     Get.lazyPut<ItemController>(() => ItemController());
 
     // ✅ Wait for result from Purchase Entry screen
-    final result = await Get.to(() => InventoryManagementScreen());
+    final result = await Get.toNamed(InventoryManagementScreen.pageId);
 
     /// ✅ If purchase was saved successfully, refresh dashboard
     //if (result == true) {
@@ -1413,7 +1417,7 @@ class DashboardController extends BaseController {
 
   Future<void> navigateToInvoiceList() async {
     Get.lazyPut<InvoiceListController>(() => InvoiceListController());
-    await Get.to(InvoiceListScreen());
+    await Get.toNamed(InvoiceListScreen.pageId);
     // ✅ Always refresh when returning
     print("🔄 Returned from Invoice List, refreshing...");
     await refreshDashboard();
@@ -1421,7 +1425,7 @@ class DashboardController extends BaseController {
 
   Future<void> navigateToInventory() async {
     Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-    await Get.to(() => PurchaseEntryScreen());
+    await Get.toNamed(PurchaseEntryScreen.pageId);
 
     /// ✅ If purchase was saved successfully, refresh dashboard
     //if (result == true) {
@@ -1435,7 +1439,7 @@ class DashboardController extends BaseController {
     Get.delete<PurchaseListController>();
     }
     Get.put(PurchaseListController());
-    await Get.to(() => PurchaseListScreen());
+    await Get.toNamed(PurchaseListScreen.pageId);
 
     // ✅ Refresh when returning
     print("🔄 Returned from Challan List, refreshing...");
@@ -1523,7 +1527,7 @@ class DashboardController extends BaseController {
       }
 
       // ✅ Wait for result from Customer List
-      await Get.to(() => const CustomerListScreen());
+      await Get.toNamed(CustomerListScreen.pageId);
 
       // ✅ Refresh customer count when returning
       print("🔄 Returned from Customer List, refreshing count...");
@@ -1645,7 +1649,7 @@ class DashboardController extends BaseController {
                   onPressed: () {
                     Get.back(); // Close dialog
                     // Try to navigate to full customer list
-                    Get.to(() =>  CustomerListScreen());
+                    Get.toNamed(CustomerListScreen.pageId);
                   },
                   icon: Icon(Icons.list),
                   label: Text('View All Customers'),
@@ -1686,7 +1690,7 @@ class DashboardController extends BaseController {
       Get.delete<ChallanListController>();
     }
     Get.put(ChallanListController());
-    await Get.to(() => ChallanListScreen());
+    await Get.toNamed(ChallanListScreen.pageId);
 
     // ✅ Refresh when returning
     print("🔄 Returned from Challan List, refreshing...");
@@ -1699,7 +1703,7 @@ class DashboardController extends BaseController {
       Get.delete<QuotationListController>();
     }
     Get.put(QuotationListController());
-    await Get.to(() => QuotationListScreen());
+    await Get.toNamed(QuotationListScreen.pageId);
 
     // ✅ Refresh when returning
     print("🔄 Returned from Quotation List, refreshing...");
@@ -1711,7 +1715,7 @@ class DashboardController extends BaseController {
       Get.delete<PaymentDetailsController>();
     }
     Get.put(PaymentDetailsController());
-    await Get.to(() => PaymentDetailsScreen());
+    await Get.toNamed(PaymentDetailsScreen.pageId);
 
     // ✅ Refresh when returning
     print("🔄 Returned from Payment Details, refreshing...");
@@ -1725,7 +1729,7 @@ class DashboardController extends BaseController {
     }
     Get.put(NewChallanController());
 
-    await Get.to(() => NewChallanScreen());
+    await Get.toNamed(NewChallanScreen.pageId);
 
     // ✅ Refresh when returning
     print("🔄 Returned from New Challan, refreshing...");
@@ -1747,10 +1751,10 @@ class DashboardController extends BaseController {
       },
     );
 
-    // If update was successful, refresh dashboard
+    // If update was successful, refresh dashboard and wait so UI shows updated data
     if (result == true) {
       print("Company updated, refreshing dashboard...");
-      refreshDashboard();
+      await refreshDashboard();
     }
   }
 
@@ -2401,7 +2405,7 @@ class DashboardController extends BaseController {
   void viewInvoiceDetails(Invoice invoice) {
 
     Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-    Get.to(() => InvoiceDetailsScreen(), arguments: invoice);
+    Get.toNamed(InvoiceDetailsScreen.pageId, arguments: invoice);
   }
 
   // Method to get customer count for dashboard display
@@ -2458,6 +2462,7 @@ class DashboardController extends BaseController {
       AppConstants.spreadsheetId = "";
       AppConstants.accessKey = "";
       AppConstants.isChallan.value = false;
+      AppConstants.isCashMemo.value = false;
       AppConstants.withGST.value = false;
 
       // 🔹 (Optional) Clear any controller states if needed

@@ -660,6 +660,7 @@ class InvoiceDetailsController extends GetxController {
           description: itemName,
           quantity: qty,
           rate: rate,
+          purchasePrice: (i < invoiceItems.length) ? invoiceItems[i].purchasePrice : 0.0,
         ));
       }
 
@@ -676,13 +677,23 @@ class InvoiceDetailsController extends GetxController {
       print("GST: $gstAmount");
       print("Total: $total");
 
+      double calculatedProfit = 0.0;
+      for (var it in updatedItems) {
+        final sellTotal = (it.rate ?? 0) * (it.quantity ?? 0);
+        final purchaseTotal = it.purchasePrice * (it.quantity ?? 0);
+        calculatedProfit += (sellTotal - purchaseTotal);
+      }
+
       final invoiceData = {
         'invoiceId': updatedInvoice.invoiceId,
         'customerName': customerNameCtrl.text,
+        'customerPan': customerPanCtrl.text,
+        'customerGst': customerGstCtrl.text,
         'pan': customerPanCtrl.text,
         'gst': customerGstCtrl.text,
         'customerEmail': customerEmailCtrl.text,
         'customerPhone': customerPhoneCtrl.text,
+        'mobile': customerPhoneCtrl.text,
         'customerAddress': customerAddressCtrl.text,
         'issueDate': updatedInvoice.issueDate?.toIso8601String(),
         'dueDate': updatedInvoice.dueDate?.toIso8601String(),
@@ -691,6 +702,8 @@ class InvoiceDetailsController extends GetxController {
         'discountAmount': discount.toStringAsFixed(2),
         'totalAmount': total.toStringAsFixed(2),
         'status': selectedStatus.value,
+        'profit': calculatedProfit,
+        'invoiceType': 'invoice',
       };
 
       await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);

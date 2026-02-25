@@ -2927,6 +2927,7 @@ class NewInvoiceController extends GetxController {
             invoiceType.value,
             gstAmount.value,
             _formatDate(paymentDueDate.value),
+            paymentStatus: paymentStatus.value,
           );
         } else {
           await InvoiceHelper.generateAndShareInvoicePrint(
@@ -3228,6 +3229,7 @@ class NewInvoiceController extends GetxController {
                     invoiceType.value,
                     gstAmount.value,
                     _formatDate(paymentDueDate.value),
+                    paymentStatus: paymentStatus.value,
                   );
                 } else {
                   // ✅ Using Standard Print Method

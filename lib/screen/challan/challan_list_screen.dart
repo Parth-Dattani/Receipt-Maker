@@ -61,7 +61,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                   }
                   Get.put(NewChallanController());
 
-                  await Get.to(() => NewChallanScreen());
+                  await Get.toNamed(NewChallanScreen.pageId);
                 },
                 icon: Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label: Text("New Challan", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
@@ -339,7 +339,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
               }
               Get.put(NewChallanController());
 
-              await Get.to(() => NewChallanScreen());
+              await Get.toNamed(NewChallanScreen.pageId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.tealColor,

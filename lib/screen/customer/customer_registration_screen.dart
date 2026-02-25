@@ -17,10 +17,10 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Background logic: Gradient for Mobile, White for Web (cleaner split view)
+      backgroundColor: Colors.grey.shade100,
+      appBar: _buildAppBar(context),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Check for Web Width
           if (constraints.maxWidth > 1000) {
             return _buildWebLayout(context);
           } else {
@@ -31,85 +31,87 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     );
   }
 
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: AppColors.tealColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Obx(() => Text(
+        controller.isEditMode.value ? "Edit Customer" : "Customer Registration",
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      )),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.help_outline),
+          onPressed: _showHelpDialog,
+        ),
+      ],
+    );
+  }
+
   // ===========================================================================
-  // 📱 MOBILE LAYOUT (Your Original Layout)
+  // 📱 MOBILE LAYOUT (collapsible cards, progress, header — only colors use design teal)
   // ===========================================================================
   Widget _buildMobileLayout(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFF6A11CB),
-            Colors.teal,
-            Colors.tealAccent,
-            Color(0xFF2575FC),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildCustomAppBar(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Obx(() => Form(
-                  key: controller.formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildProgressIndicator(),
-                      const SizedBox(height: 20),
-                      _buildAnimatedHeader(context),
-                      const SizedBox(height: 25),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Obx(() => Form(
+          key: controller.formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProgressIndicator(),
+              const SizedBox(height: 20),
+              _buildAnimatedHeader(context),
+              const SizedBox(height: 25),
 
-                      _buildSectionCard(
-                        title: "Personal Information",
-                        icon: Icons.person,
-                        isExpanded: controller.personalInfoExpanded.value,
-                        onToggle: () => controller.togglePersonalInfo(),
-                        children: _buildPersonalFields(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildSectionCard(
-                        title: "Business Information",
-                        icon: Icons.business,
-                        isExpanded: controller.businessInfoExpanded.value,
-                        onToggle: () => controller.toggleBusinessInfo(),
-                        children: _buildBusinessFields(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildSectionCard(
-                        title: "Contact Information",
-                        icon: Icons.contact_phone,
-                        isExpanded: controller.contactInfoExpanded.value,
-                        onToggle: () => controller.toggleContactInfo(),
-                        children: _buildContactFields(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildSectionCard(
-                        title: "Additional Notes",
-                        icon: Icons.notes,
-                        isExpanded: controller.notesExpanded.value,
-                        onToggle: () => controller.toggleNotes(),
-                        children: _buildNotesFields(),
-                      ),
-
-                      const SizedBox(height: 30),
-                      _buildActionButtons(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                )),
+              _buildSectionCard(
+                title: "Personal Information",
+                icon: Icons.person,
+                isExpanded: controller.personalInfoExpanded.value,
+                onToggle: () => controller.togglePersonalInfo(),
+                children: _buildPersonalFields(),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 16),
+
+              _buildSectionCard(
+                title: "Business Information",
+                icon: Icons.business,
+                isExpanded: controller.businessInfoExpanded.value,
+                onToggle: () => controller.toggleBusinessInfo(),
+                children: _buildBusinessFields(),
+              ),
+              const SizedBox(height: 16),
+
+              _buildSectionCard(
+                title: "Contact Information",
+                icon: Icons.contact_phone,
+                isExpanded: controller.contactInfoExpanded.value,
+                onToggle: () => controller.toggleContactInfo(),
+                children: _buildContactFields(),
+              ),
+              const SizedBox(height: 16),
+
+              _buildSectionCard(
+                title: "Additional Notes",
+                icon: Icons.notes,
+                isExpanded: controller.notesExpanded.value,
+                onToggle: () => controller.toggleNotes(),
+                children: _buildNotesFields(),
+              ),
+
+              const SizedBox(height: 30),
+              _buildActionButtons(),
+              const SizedBox(height: 20),
+            ],
+          ),
+        )),
       ),
     );
   }
@@ -120,102 +122,83 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
   // Replace your _buildWebLayout method with this updated version
 
   Widget _buildWebLayout(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Column(
-        children: [
-          // ✅ Full-width header (outside the constrained box)
-          _buildMergedWebHeader(context),
-
-          // Main content with width constraint
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1400),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  child: Form(
-                    key: controller.formKey,
-                    child: Column(
-                      children: [
-                        // ✅ TWO COLUMN LAYOUT
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1400),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Form(
+            key: controller.formKey,
+            child: Column(
+              children: [
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Column(
                             children: [
-                              // LEFT COLUMN - Personal + Notes
-                              Expanded(
-                                flex: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: Column(
-                                    children: [
-                                      _buildWebSectionCardOptimized(
-                                        "Personal Information",
-                                        Icons.person,
-                                        _buildPersonalFieldsWeb(),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildWebSectionCardOptimized(
-                                        "Additional Notes",
-                                        Icons.subject,
-                                        _buildNotesFields(),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              _buildWebSectionCardOptimized(
+                                "Personal Information",
+                                Icons.person,
+                                _buildPersonalFieldsWeb(),
+                              ),
+                              const SizedBox(height: 24),
+                              _buildWebSectionCardOptimized(
+                                "Additional Notes",
+                                Icons.subject,
+                                _buildNotesFields(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Column(
+                            children: [
+                              _buildWebSectionCardOptimized(
+                                "Business Information",
+                                Icons.business,
+                                _buildBusinessFieldsWeb(),
+                              ),
+                              const SizedBox(height: 24),
+                              _buildWebSectionCardOptimized(
+                                "Contact Information",
+                                Icons.contact_phone,
+                                _buildContactFieldsWeb(),
                               ),
 
-                              // RIGHT COLUMN - Business + Contact
-                              Expanded(
-                                flex: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-                                  child: Column(
-                                    children: [
-                                      _buildWebSectionCardOptimized(
-                                        "Business Information",
-                                        Icons.business,
-                                        _buildBusinessFieldsWeb(),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildWebSectionCardOptimized(
-                                        "Contact Information",
-                                        Icons.contact_phone,
-                                        _buildContactFieldsWeb(),
-                                      ),
-
-                                      SizedBox(height: 40,),
-                                      Center(
-                                        child: Container(
-                                          constraints: const BoxConstraints(maxWidth: 500),
-                                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                                          child: _buildActionButtons(isWeb: true),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                              const SizedBox(height: 40),
+                              Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(maxWidth: 500),
+                                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                                  child: _buildActionButtons(isWeb: true),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
-
-                        const SizedBox(height: 40),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 40),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-// ✅ NEW: Compact Merged Header (AppBar + Animated Header Combined)
+// ✅ NEW: Compact Merged Header (AppBar + Animated Header Combined) — kept for reference, not used (screen uses standard AppBar)
   Widget _buildMergedWebHeader(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -669,12 +652,17 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Progress", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500)),
-              Text("${(controller.formProgress.value * 100).toInt()}%", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Text("Progress", style: TextStyle(color: Colors.grey.shade700, fontSize: 14, fontWeight: FontWeight.w500)),
+              Text("${(controller.formProgress.value * 100).toInt()}%", style: TextStyle(color: Colors.grey.shade800, fontSize: 14, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(value: controller.formProgress.value, backgroundColor: Colors.white.withOpacity(0.3), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white), minHeight: 4),
+          LinearProgressIndicator(
+            value: controller.formProgress.value,
+            backgroundColor: Colors.grey.shade300,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+            minHeight: 4,
+          ),
         ],
       ),
     );
@@ -691,24 +679,31 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Obx(() => Column(
               children: [
-                Icon(controller.isEditMode.value ? Icons.edit : Icons.person_add, color: _themeColor, size: 40), // Purple Icon
+                Icon(controller.isEditMode.value ? Icons.edit : Icons.person_add, color: _themeColor, size: 40),
                 const SizedBox(height: 12),
                 Text(
                   controller.isEditMode.value ? "Update Customer Details" : "Register New Customer",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: _themeColor, fontWeight: FontWeight.bold), // Purple Text
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: _themeColor, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   controller.isEditMode.value ? "Update details to modify info" : "Fill in the details to add a new customer",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                 ),
               ],
             )),
@@ -734,19 +729,19 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.blue.shade50, Colors.purple.shade50]),
+                  color: AppColors.tealColor.withOpacity(0.08),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFF6A11CB).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(icon, color: const Color(0xFF6A11CB), size: 20),
+                      decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(icon, color: AppColors.tealColor, size: 20),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6A11CB)))),
-                    AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 300), child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF6A11CB))),
+                    Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+                    AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 300), child: Icon(Icons.keyboard_arrow_down, color: AppColors.tealColor)),
                   ],
                 ),
               ),
@@ -798,14 +793,14 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         maxLines: maxLines,
         inputFormatters: inputFormatters,
         decoration: InputDecoration(
-          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF6A11CB).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color:  AppColors.tealColor, size: 20)),
+          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: AppColors.tealColor, size: 20)),
           labelText: label,
           hintText: hint,
           filled: true,
           fillColor: Colors.grey.shade50,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF6A11CB), width: 2)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.tealColor, width: 2)),
         ),
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) return "This field is required";

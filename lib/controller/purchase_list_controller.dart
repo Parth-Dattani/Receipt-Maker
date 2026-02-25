@@ -121,7 +121,7 @@ class PurchaseListController extends BaseController {
       Get.delete<PurchaseDetailsController>(force: true);
     }
     Get.lazyPut<PurchaseDetailsController>(() => PurchaseDetailsController());
-    Get.to(() => PurchaseDetailsScreen(), arguments: purchase);
+    Get.toNamed(PurchaseDetailsScreen.pageId, arguments: purchase);
   }
 
   void editPurchase(PurchaseEntry purchase) {

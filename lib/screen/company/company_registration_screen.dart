@@ -802,6 +802,19 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 )),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.receipt, color: AppColors.tealColor, size: 24),
+                const SizedBox(width: 12),
+                const Expanded(child: Text("Enable CashMemo", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
+                Obx(() => Checkbox(
+                  value: controller.isCashMemoEnabled.value,
+                  onChanged: (val) => controller.isCashMemoEnabled.value = val ?? false,
+                  activeColor: AppColors.tealColor,
+                )),
+              ],
+            ),
           ],
         ),
       ),
@@ -932,7 +945,41 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 class CompanyFormShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Shimmer.fromColors(baseColor: Colors.grey[300]!, highlightColor: Colors.grey[100]!, child: SingleChildScrollView(padding: EdgeInsets.all(16), child: Column(children: [Container(height: 200, color: Colors.white)])));
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _shimmerCard(height: 140),
+            const SizedBox(height: 12),
+            _shimmerCard(height: 120),
+            const SizedBox(height: 12),
+            _shimmerCard(height: 160),
+            const SizedBox(height: 12),
+            _shimmerCard(height: 100),
+            const SizedBox(height: 12),
+            _shimmerCard(height: 80),
+            const SizedBox(height: 12),
+            _shimmerCard(height: 60),
+            const SizedBox(height: 30),
+            _shimmerCard(height: 48),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerCard({required double height}) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
   }
 }
 

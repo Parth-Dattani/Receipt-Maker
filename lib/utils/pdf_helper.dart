@@ -28,6 +28,16 @@ import '../services/service.dart';
 
 class InvoiceHelper {
 
+  /// When isCashMemoEnabled: Paid → "Cash Memo", else → "Debit Memo". Otherwise "INVOICE" (or "QUOTATION").
+  static String getInvoiceDocumentTitle(InvoiceType invoiceType, String? paymentStatus) {
+    if (invoiceType == InvoiceType.quotation) return 'QUOTATION';
+    if (AppConstants.isCashMemo.value) {
+      if (paymentStatus == 'Paid') return 'Cash Memo';
+      return 'Debit Memo';
+    }
+    return 'INVOICE';
+  }
+
   static Future<void> generateAndShareInvoice(
       List<Invoice> invoices,
       String userName,
@@ -84,8 +94,9 @@ class InvoiceHelper {
       final PdfColor borderColor = PdfColors.grey300;
       final PdfColor rowAlt = PdfColors.grey50;
 
-      final String documentTitle =
-      invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
+      final String documentTitle = getInvoiceDocumentTitle(
+          invoiceType,
+          invoices.isNotEmpty ? invoices.first.status : null);
 
       pdf.addPage(
         pw.MultiPage(
@@ -772,7 +783,9 @@ class InvoiceHelper {
       );
 
       final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
-      final String documentTitle = invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
+      final String documentTitle = getInvoiceDocumentTitle(
+          invoiceType,
+          invoices.isNotEmpty ? invoices.first.status : null);
 
       // Company Data
       String companyName = companyData['companyName'] ?? '';
@@ -1088,6 +1101,7 @@ class InvoiceHelper {
       InvoiceType invoiceType,
       double gstAmount,
       String dueDate,  // ✅ ADD THIS PARAMETER
+      {String? paymentStatus}
       ) async {
     try {
       final pdf = pw.Document();
@@ -1126,8 +1140,7 @@ class InvoiceHelper {
       final PdfColor borderColor = PdfColors.grey300;
       final PdfColor rowAlt = PdfColors.grey50;
 
-      final String documentTitle =
-      invoiceType == InvoiceType.quotation ? 'QUOTATION' : 'INVOICE';
+      final String documentTitle = getInvoiceDocumentTitle(invoiceType, paymentStatus);
 
       pdf.addPage(
         pw.MultiPage(
@@ -2996,6 +3009,10 @@ class InvoiceHelper {
       String companyEmail = companyData['email'] ?? 'company@email.com';
       String companyGst = companyData['gstNumber'] ?? 'GSTIN: XXXXXXXXXXXXXX';
 
+      final String documentTitle = getInvoiceDocumentTitle(
+          InvoiceType.invoice,
+          invoices.isNotEmpty ? invoices.first.status : null);
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -3052,7 +3069,7 @@ class InvoiceHelper {
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
                         pw.Text(
-                          'INVOICE',
+                          documentTitle,
                           style: pw.TextStyle(
                             fontSize: 24,
                             fontWeight: pw.FontWeight.bold,
@@ -4595,7 +4612,7 @@ class InvoiceHelper {
     final PdfColor rowAlt = PdfColors.grey50;
 
     // Document details
-    final docTitle = isChallan ? "CHALLAN" : "INVOICE";
+    final docTitle = isChallan ? "CHALLAN" : getInvoiceDocumentTitle(InvoiceType.invoice, invoice?.status);
     final docId = isChallan ? challan!.challanId : invoice!.invoiceId;
     final docDate = isChallan
         ? challan!.challanDate ?? DateTime.now()
@@ -5176,7 +5193,7 @@ class InvoiceHelper {
       );
 
       // Data Extraction
-      final String docTitle = isChallan ? "DELIVERY CHALLAN" : "INVOICE";
+      final String docTitle = isChallan ? "DELIVERY CHALLAN" : getInvoiceDocumentTitle(InvoiceType.invoice, invoice?.status);
       final String docId = isChallan ? (challan?.challanId ?? "UNK") : (invoice?.invoiceId ?? "UNK");
       final String docDate = isChallan
           ? (challan?.challanDate != null ? DateFormat('dd-MM-yyyy').format(challan!.challanDate!) : "")
@@ -5533,6 +5550,8 @@ class InvoiceHelper {
     String companyIfsc = companyData["ifsc"] ?? 'IFSC Code';
     String companyPan = companyData["pan"] ?? 'PAN Number';
 
+    final String documentTitle = getInvoiceDocumentTitle(InvoiceType.invoice, invoice.status);
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -5613,7 +5632,7 @@ class InvoiceHelper {
                       child: pw.Column(
                         children: [
                           pw.Text(
-                            'INVOICE',
+                            documentTitle,
                             style: pw.TextStyle(
                               color: PdfColors.blue800,
                               fontSize: 16,

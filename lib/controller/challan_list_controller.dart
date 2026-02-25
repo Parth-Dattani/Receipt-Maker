@@ -133,7 +133,7 @@ import 'package:flutter/material.dart';
 //
 //     Get.lazyPut<ChallanDetailsController>(() => ChallanDetailsController());
 //
-//     Get.to(() => ChallanDetailsScreen(), arguments: challan);
+//     Get.toNamed(ChallanDetailsScreen.pageId, arguments: challan);
 //   }
 //
 //   void editChallan(Challan challan) {
@@ -396,7 +396,7 @@ class ChallanListController extends BaseController {
       Get.delete<ChallanDetailsController>(force: true);
     }
     Get.lazyPut<ChallanDetailsController>(() => ChallanDetailsController());
-    Get.to(() => ChallanDetailsScreen(), arguments: challan);
+    Get.toNamed(ChallanDetailsScreen.pageId, arguments: challan);
   }
 
   void editChallan(Challan challan) {

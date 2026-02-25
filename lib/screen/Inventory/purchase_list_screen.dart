@@ -59,7 +59,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-                  await Get.to(() => PurchaseEntryScreen());
+                  await Get.toNamed(PurchaseEntryScreen.pageId);
                 },
                 icon: Icon(Icons.add, size: 18, color: AppColors.tealColor),
                 label:  Text("New Purchase", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
@@ -99,7 +99,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
           ? FloatingActionButton(
         onPressed: () async{
           Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-          await Get.to(() => PurchaseEntryScreen());
+          await Get.toNamed(PurchaseEntryScreen.pageId);
         },
         backgroundColor: AppColors.tealColor,
         child: const Icon(Icons.add, color: Colors.white),

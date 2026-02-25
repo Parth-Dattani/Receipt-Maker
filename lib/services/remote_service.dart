@@ -2997,6 +2997,8 @@ class GoogleSheetService {
         'notes',
         'paymentMethod',
         'paymentStatus',
+        'profit',
+        'invoiceType',
         'userId',
         'companyId',
         'createdAt',
@@ -3351,6 +3353,14 @@ class GoogleSheetService {
           newValue = invoiceData['notes']?.toString();
         } else if (headerLower.contains('userid')) {
           newValue = userId;
+        } else if (headerLower.contains('profit')) {
+          newValue = invoiceData['profit']?.toString();
+        } else if (headerLower.contains('invoicetype')) {
+          newValue = invoiceData['invoiceType']?.toString();
+        } else if (headerLower.contains('customerpan') || headerLower == 'pan') {
+          newValue = invoiceData['customerPan']?.toString() ?? invoiceData['pan']?.toString();
+        } else if (headerLower.contains('customergst') || headerLower == 'gst') {
+          newValue = invoiceData['customerGst']?.toString() ?? invoiceData['gst']?.toString();
         }
 
         // ✅✅✅ MAIN FIX: MERGE LOGIC ✅✅✅

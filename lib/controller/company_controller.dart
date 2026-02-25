@@ -42,6 +42,7 @@ class CompanyController extends BaseController {
   var isDueDateEnabled = false.obs;
 
   var isChallanEnabled = false.obs;
+  var isCashMemoEnabled = false.obs;
   var selectedCountry = ''.obs;
   var selectedState = ''.obs;
   var isGstEnabled = false.obs;
@@ -77,6 +78,7 @@ class CompanyController extends BaseController {
       existingCompanyId = args['companyId'];
       print('Edit mode enabled with company ID: $existingCompanyId');
       _populateFields(args['companyData']);
+      isLoading.value = false; // Ensure form shows immediately in edit mode
     } else {
       print('Create mode enabled');
       _checkCompanyRegistration();
@@ -145,6 +147,7 @@ class CompanyController extends BaseController {
     extraNote3Controller.text = companyData['extraNote3'] ?? '';
 
     isChallanEnabled.value = companyData['isChallanEnabled'] ?? false;
+    isCashMemoEnabled.value = companyData['isCashMemoEnabled'] ?? false;
     isGstEnabled.value = companyData['isGstEnabled'] ?? false;
 
     invoiceStartingNumberController.text = (companyData['invoiceStartingNumber'] ?? 1).toString();
@@ -315,6 +318,7 @@ class CompanyController extends BaseController {
         'updatedAt': FieldValue.serverTimestamp(),
         'isActive': true,
         'isChallanEnabled': isChallanEnabled.value,
+        'isCashMemoEnabled': isCashMemoEnabled.value,
         'isGstEnabled': isGstEnabled.value,
 
         // 🆕 NEW: Store invoice starting number
@@ -337,6 +341,7 @@ class CompanyController extends BaseController {
       AppConstants.isChallan.value = isChallanEnabled.value;
       AppConstants.withGST.value = isGstEnabled.value;
       await AppConstants.setChallanEnabled(isChallanEnabled.value);
+      await AppConstants.setCashMemoEnabled(isCashMemoEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
 
@@ -437,6 +442,7 @@ class CompanyController extends BaseController {
         'extraNote3': isExtraNotesEnabled.value ? extraNote3Controller.text.trim() : '',
         'updatedAt': FieldValue.serverTimestamp(),
         'isChallanEnabled': isChallanEnabled.value,
+        'isCashMemoEnabled': isCashMemoEnabled.value,
         'isGstEnabled': isGstEnabled.value,
         'invoiceStartingNumber': invoiceStartNum,
       };
@@ -480,6 +486,7 @@ class CompanyController extends BaseController {
           AppConstants.isChallan.value = isChallanEnabled.value;
           AppConstants.withGST.value = isGstEnabled.value;
           await AppConstants.setChallanEnabled(isChallanEnabled.value);
+          await AppConstants.setCashMemoEnabled(isCashMemoEnabled.value);
           await AppConstants.setGstEnabled(isGstEnabled.value);
           await AppConstants.setBusinessType(selectedBusinessType.value);
 
@@ -497,6 +504,7 @@ class CompanyController extends BaseController {
       AppConstants.isChallan.value = isChallanEnabled.value;
       AppConstants.withGST.value = isGstEnabled.value;
       await AppConstants.setChallanEnabled(isChallanEnabled.value);
+      await AppConstants.setCashMemoEnabled(isCashMemoEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
       // 🆕 NEW: Save due date settings to AppConstants
@@ -508,16 +516,20 @@ class CompanyController extends BaseController {
       );
       await AppConstants.setExtraNotesEnabled(isExtraNotesEnabled.value);
 
+      isLoading.value = false;
 
+      // Close snackbar so it doesn't block navigation
+      try {
+        Get.closeCurrentSnackbar();
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 150));
 
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (Get.isOverlaysOpen) {
-          Get.back(result: true); // Pass result indicating update success
-          Future.delayed(const Duration(milliseconds: 200), () => Get.back(result: true));
-        } else {
-          Get.back(result: true);
-        }
-      });
+      // Navigate back to Dashboard screen (same pattern as invoice/challan)
+      Get.until((route) => route.settings.name == DashboardScreen.pageId);
+      if (Get.isRegistered<DashboardController>()) {
+        await Get.find<DashboardController>().refreshDashboard();
+      }
+      return;
     } catch (e) {
       print('Update error: $e');
       showCustomSnackbar(

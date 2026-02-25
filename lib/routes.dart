@@ -1,6 +1,7 @@
 import 'package:demo_prac_getx/screen/payment/payment_details_screen.dart';
 import 'package:demo_prac_getx/screen/screen.dart';
 import 'package:demo_prac_getx/screen/setting/setting_screen.dart';
+import 'package:demo_prac_getx/screen/Inventory/inventory_management_screen.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'binding/bindings.dart';
 
@@ -58,11 +59,15 @@ List<GetPage> appPages = [
   ),
 
   GetPage(
-      name: StockReportScreen.pageId,
-      page: () => StockReportScreen(),
-      binding: StockReportBinding()
+    name: StockReportScreen.pageId,
+    page: () => StockReportScreen(),
+    binding: StockReportBinding()
   ),
-
+  GetPage(
+    name: InventoryManagementScreen.pageId,
+    page: () => InventoryManagementScreen(),
+    binding: ItemBinding()
+  ),
   GetPage(
       name: SettingsScreen.pageId,
       page: () => SettingsScreen(),
@@ -104,7 +109,11 @@ List<GetPage> appPages = [
     page: () => ChallanListScreen(),
     binding: ChallanListBinding(),
     ),
-
+  GetPage(
+    name: NewChallanScreen.pageId,
+    page: () => NewChallanScreen(),
+    binding: NewChallanBinding(),
+  ),
   GetPage(
     name: ChallanDetailsScreen.pageId,
     page: () => ChallanDetailsScreen(),
