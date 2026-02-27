@@ -1501,7 +1501,7 @@ class DashboardScreen extends GetView<DashboardController> {
                       style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
-                    Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.7))),
+                    Text(dateStr, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85))),
                   ],
                 ),
                 Container(

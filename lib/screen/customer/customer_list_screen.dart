@@ -435,7 +435,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
       child: TextField(
         onChanged: (value) => controller.searchCustomers(value),
         decoration: InputDecoration(
-          hintText: 'search_hint'.tr,
+          hintText: 'search_by_name_mobile_or_email'.tr,
           prefixIcon:  Icon(Icons.search, color: AppColors.tealColor),
           suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
               ? IconButton(icon:  Icon(Icons.clear, color: AppColors.tealColor), onPressed: controller.clearSearch)

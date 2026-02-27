@@ -308,6 +308,17 @@ class NewInvoiceController extends GetxController {
         return;
       }
 
+      // ✅ PRIORITY 4: Create invoice with pre-selected customer (from Customer List)
+      if (arguments is Map && (arguments['customerData'] != null || arguments['customerId'] != null)) {
+        print("👤 [ARGS] Customer pre-selection from Customer List");
+        _customerFromListApplied = true;
+        _loadEssentialData().then((_) async {
+          await _loadSecondaryData();
+          _applyCustomerFromArguments(arguments as Map);
+        });
+        return;
+      }
+
       // ✅ DEFAULT: Normal new invoice
       print("📝 [ARGS] Default new invoice flow");
       _loadEssentialData();
@@ -397,6 +408,43 @@ class NewInvoiceController extends GetxController {
       );
       Get.back();
     }
+  }
+
+  /// Applies pre-selected customer when navigating from Customer List (Create Invoice).
+  void _applyCustomerFromArguments(Map arguments) {
+    try {
+      if (arguments['customerData'] != null && arguments['customerData'] is Map) {
+        final customerData = Map<String, dynamic>.from(arguments['customerData'] as Map);
+        if (!customers.any((c) => c['customerId']?.toString() == customerData['customerId']?.toString())) {
+          customers.insert(0, customerData);
+          customers.refresh();
+        }
+        selectCustomer(customerData);
+        print("✅ [ARGS] Customer auto-selected from Customer List: ${customerData['name']}");
+      } else if (arguments['customerId'] != null && arguments['customerId'].toString().isNotEmpty) {
+        final customerId = arguments['customerId'].toString();
+        selectedCustomerId.value = customerId;
+        _fetchCustomerDetailsById(customerId);
+        customers.refresh();
+        print("✅ [ARGS] Customer auto-selected by ID from Customer List: $customerId");
+      }
+    } catch (e) {
+      print("❌ [ARGS] Error applying customer from arguments: $e");
+    }
+  }
+
+  /// Call from UI when screen is shown - applies customer from route args if not yet applied.
+  bool _customerFromListApplied = false;
+  void applyCustomerFromRouteIfNeeded(dynamic arguments) {
+    if (arguments == null || arguments is! Map) return;
+    if (arguments['customerData'] == null && arguments['customerId'] == null) return;
+    if (_customerFromListApplied) return;
+    if (selectedCustomerId.value.isNotEmpty) return;
+    _customerFromListApplied = true;
+    _loadEssentialData().then((_) async {
+      await _loadSecondaryData();
+      _applyCustomerFromArguments(arguments as Map);
+    });
   }
 
 

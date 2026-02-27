@@ -82,8 +82,8 @@ List<GetPage> appPages = [
 
   GetPage(
       name: CustomerListScreen.pageId,
-      page: () => CompanySelectionScreen(),
-      binding: CompanySelectionBinding()
+      page: () => CustomerListScreen(),
+      binding: CustomerListBinding()
   ),
 
   GetPage(

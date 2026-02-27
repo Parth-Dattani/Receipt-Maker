@@ -28,6 +28,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.applyCustomerFromRouteIfNeeded(Get.arguments);
+    });
     return LayoutBuilder(
       builder: (context, constraints) {
         // Check if it's web layout (width > 900)

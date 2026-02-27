@@ -1249,7 +1249,13 @@ class CustomerListController extends BaseController {
   }
 
   void createInvoiceForCustomer(Map<String, dynamic> customer) {
-    Get.toNamed(NewInvoiceScreen.pageId, arguments: {'customerId': customer['customerId']});
+    if (Get.isRegistered<NewInvoiceController>()) {
+      Get.delete<NewInvoiceController>(force: true);
+    }
+    Get.toNamed(NewInvoiceScreen.pageId, arguments: {
+      'customerId': customer['customerId'],
+      'customerData': customer,
+    });
   }
 
   /// ✅ FIXED: Delete from Google Sheets
