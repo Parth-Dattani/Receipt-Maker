@@ -392,36 +392,34 @@ class NewChallanController extends BaseController {
     super.onClose();
   }
 
-  /// ✅ Keep quantityControllers in sync with challanItems (0 = blank, never show "0")
+  /// Keep quantityControllers in sync with challanItems.
+  /// Sets initial value only when controller is empty (avoids cursor jump while typing).
   TextEditingController getQuantityController(int index, {double? initialValue}) {
-    // Ensure we have enough controllers
     while (quantityControllers.length < challanItems.length) {
-      final itemIndex = quantityControllers.length;
-      final item = challanItems[itemIndex];
-      final quantityText = item.quantity > 0 ? item.quantity.toString() : '';
-      quantityControllers.add(TextEditingController(text: quantityText));
+      quantityControllers.add(TextEditingController());
     }
 
-    // Remove excess controllers (when items are deleted)
     while (quantityControllers.length > challanItems.length) {
-      final removedController = quantityControllers.removeLast();
-      removedController.dispose();
+      quantityControllers.removeLast().dispose();
     }
 
-    // Validate index
-    if (index >= quantityControllers.length) {
-      return TextEditingController(text: '');
+    if (index >= quantityControllers.length || index < 0) {
+      return TextEditingController();
     }
 
     final controller = quantityControllers[index];
-    // Only set text when initialValue > 0; treat 0 as blank so Qty starts empty
-    if (initialValue != null && initialValue > 0) {
-      String newText = initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString();
+
+    if (initialValue != null && controller.text.isEmpty) {
+      String newText = (initialValue <= 0)
+          ? ''
+          : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
+
       if (controller.text != newText) {
-        controller.text = newText;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!controller.hasListeners) return;
+          controller.text = newText;
+        });
       }
-    } else if (initialValue != null && initialValue <= 0 && controller.text.isNotEmpty) {
-      controller.text = '';
     }
 
     return controller;
@@ -1752,6 +1750,40 @@ class NewChallanController extends BaseController {
       isLoading.value = false;
       showCustomSnackbar(title: "Error", message: "Failed: ${e.toString()}", baseColor: Colors.red.shade700, icon: Icons.error);
       return false;
+    }
+  }
+
+  /// Delete the current challan from Google Sheet (edit mode only). Removes ChallanItems rows then Challan row.
+  Future<void> deleteChallan() async {
+    if (!isEditMode.value || editingChallanId.value.isEmpty) {
+      Get.snackbar('Error', 'No challan to delete', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100, colorText: Colors.red.shade800);
+      return;
+    }
+    try {
+      isLoading.value = true;
+      final challanId = editingChallanId.value;
+      await GoogleSheetService.deleteChallanItemsByChallanId(challanId);
+      await GoogleSheetService.deleteChallanFromSheet(challanId);
+      await _refreshParentControllersAsync();
+      Get.until((route) => route.settings.name == ChallanListScreen.pageId);
+      Get.snackbar(
+        'delete_challan'.tr,
+        'Challan removed from sheet.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+      );
+    } catch (e) {
+      print("❌ Error deleting challan: $e");
+      Get.snackbar(
+        'Error',
+        'Failed to delete challan: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -577,6 +577,42 @@ class NewInvoiceController extends GetxController {
     update();
   }
 
+  /// Delete the current invoice from Google Sheet (edit mode only). Removes InvoiceItems rows then Invoice row.
+  Future<void> deleteInvoice() async {
+    if (!isEditMode.value || editingInvoiceId.value.isEmpty) {
+      Get.snackbar('Error', 'No invoice to delete', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100, colorText: Colors.red.shade800);
+      return;
+    }
+    try {
+      isLoading.value = true;
+      final invoiceId = editingInvoiceId.value;
+      await GoogleSheetService.deleteInvoiceItemsFromSheet(invoiceId);
+      await GoogleSheetService.deleteInvoiceFromSheet(invoiceId);
+      if (Get.isRegistered<InvoiceListController>()) {
+        await Get.find<InvoiceListController>().loadInvoices();
+      }
+      Get.until((route) => route.settings.name == InvoiceListScreen.pageId);
+      Get.snackbar(
+        'Delete Invoice',
+        'Invoice removed from sheet.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+      );
+    } catch (e) {
+      print("❌ Error deleting invoice: $e");
+      Get.snackbar(
+        'Error',
+        'Failed to delete invoice: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   String formatOriginalInvoiceDate() {
     final invoiceData = originalInvoiceData.value;
     // Try to get issueDate first (invoice date)
@@ -2136,8 +2172,11 @@ class NewInvoiceController extends GetxController {
 
     final controller = quantityControllers[index];
 
-    // Only update text if different; treat 0 as blank so field can be empty initially
-    if (initialValue != null) {
+    // Only sync from model to controller when controller is empty (initial display).
+    // Do NOT overwrite while user is typing (e.g. "8." for 8.6) - that caused Qty
+    // to not accept typing on web because each keystroke triggered rebuild and
+    // overwrote the field; paste worked because it applied the full value at once.
+    if (initialValue != null && controller.text.isEmpty) {
       String newText = (initialValue <= 0) ? '' : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
 
       if (controller.text != newText) {

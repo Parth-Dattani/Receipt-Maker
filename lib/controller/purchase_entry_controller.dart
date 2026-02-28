@@ -1114,23 +1114,28 @@ class PurchaseEntryController extends BaseController {
     return priceControllers[index];
   }
 
-  /// Get or create qty controller for specific index
+  /// Get or create qty controller for specific index.
+  /// Sets initial value only when controller is empty (avoids cursor jump while typing).
   TextEditingController getQtyController(int index, {double? initialValue}) {
-    // Create controller if it doesn't exist
     if (!qtyControllers.containsKey(index)) {
       qtyControllers[index] = TextEditingController();
     }
 
-    // Get the current value
-    final currentValue = initialValue ??
-        (index < purchaseItems.length ? purchaseItems[index].quantity : 1.0);
+    final controller = qtyControllers[index]!;
 
-    // Update controller text
-    if (qtyControllers[index]!.text != currentValue.toString()) {
-      qtyControllers[index]!.text = currentValue.toString();
+    if (initialValue != null && controller.text.isEmpty) {
+      String newText = (initialValue <= 0)
+          ? ''
+          : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
+      if (controller.text != newText) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!controller.hasListeners) return;
+          controller.text = newText;
+        });
+      }
     }
 
-    return qtyControllers[index]!;
+    return controller;
   }
 
   // REPLACE your existing _initializeItemControllers with this:
@@ -1380,13 +1385,43 @@ class PurchaseEntryController extends BaseController {
   Future<void> fetchItems() async {
     try {
       isLoading.value = true;
-      List<Item> items = await GoogleSheetService.getItems(userId: AppConstants.userId);
+      // Ensure we have latest userId (e.g. after login/prefs load)
+      if (AppConstants.userId.isEmpty) {
+        await AppConstants.loadFromPrefs();
+      }
+      final userId = AppConstants.userId.trim();
+      // When userId is empty, pass null so getItems returns all items (no filter)
+      List<Item> items = await GoogleSheetService.getItems(
+        userId: userId.isEmpty ? null : userId,
+      );
+      // If filtered by userId returned nothing, try loading all items (sheet may not have userid column or different value)
+      if (items.isEmpty && userId.isNotEmpty) {
+        items = await GoogleSheetService.getItems(userId: null);
+      }
       itemList.assignAll(items);
+      if (items.isEmpty) {
+        print("Purchase Entry: No items found in sheet.");
+      } else {
+        print("Purchase Entry: Loaded ${items.length} items");
+      }
     } catch (e) {
       print("Error fetching items: $e");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Refresh item list from sheet (e.g. after adding items elsewhere). Updates itemList and shows feedback.
+  Future<void> refreshItems() async {
+    await fetchItems();
+    Get.snackbar(
+      'Items refreshed',
+      '${itemList.length} items loaded',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: AppColors.tealColor.withOpacity(0.9),
+      colorText: Colors.white,
+      duration: Duration(seconds: 2),
+    );
   }
 
   void toggleVendorForm() {
@@ -1610,10 +1645,7 @@ class PurchaseEntryController extends BaseController {
         createdAt: item.createdAt,
       );
 
-      // ✅ Update controllers if values changed
-      if (quantity != null && qtyControllers.containsKey(index)) {
-        qtyControllers[index]!.text = quantity.toString();
-      }
+      // Do not overwrite qty controller text here (causes cursor jump while typing)
 
       calculateTotals();
     }

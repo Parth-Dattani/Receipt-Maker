@@ -1,5 +1,6 @@
 import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:demo_prac_getx/utils/calculations.dart';
+import 'package:demo_prac_getx/utils/input_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -1544,10 +1545,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                   color: Colors.orange,
                                                 ),
                                               ),
-                                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                                              ],
+                                              keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                                  ? TextInputType.number
+                                                  : TextInputType.numberWithOptions(decimal: true),
+                                              inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                                  ? [IntegerOnlyInputFormatter()]
+                                                  : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                               onChanged: (value) {
                                                 print("📝 Quantity input changed: $value");
 
@@ -1715,10 +1718,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                 filled: isFromChallan,
                                                 fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                               ),
-                                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                                              ],
+                                              keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                                  ? TextInputType.number
+                                                  : TextInputType.numberWithOptions(decimal: true),
+                                              inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                                  ? [IntegerOnlyInputFormatter()]
+                                                  : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                               onChanged: (value) {
                                                 if (isFromChallan) return;
                                                 print("📝 Quantity input changed: $value for item index: $index");
@@ -2151,8 +2156,14 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       filled: isFromChallan,
                                       fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                     ),
-                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                    keyboardType: kIsWeb
+                                        ? TextInputType.text
+                                        : ((item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                            ? TextInputType.number
+                                            : TextInputType.numberWithOptions(decimal: true)),
+                                    inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
+                                        ? [IntegerOnlyInputFormatter()]
+                                        : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                     onChanged: (value) {
                                       if (isFromChallan) return;
                                       // --- COPIED VALIDATION LOGIC START ---
@@ -3057,13 +3068,15 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         content: Text('Are you sure you want to delete this invoice? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              if (Get.isOverlaysOpen) Navigator.of(Get.overlayContext!).pop();
+            },
             child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Get.back();
-              // controller.deleteInvoice();
+              if (Get.isOverlaysOpen) Navigator.of(Get.overlayContext!).pop();
+              controller.deleteInvoice();
             },
             child: Text(
               'Delete',
@@ -3072,6 +3085,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
           ),
         ],
       ),
+      barrierDismissible: false,
     );
   }
 }

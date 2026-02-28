@@ -2539,22 +2539,32 @@ class GoogleSheetService {
 
         try {
           // Parse row data
+          final rawIsActive = rowMap['isactive']?.toString().trim().toLowerCase();
+          final isActive = rawIsActive == null ||
+              rawIsActive.isEmpty ||
+              rawIsActive == 'true' ||
+              rawIsActive == '1' ||
+              rawIsActive == 'yes' ||
+              rawIsActive == 'y';
+
           final item = Item(
             itemId: rowMap['itemid'] ?? '',
             itemName: rowMap['itemname'] ?? '',
             price: double.tryParse(rowMap['price'] ?? '0') ?? 0.0,
             sellPrice: double.tryParse(rowMap['sellprice'] ?? '0') ?? 0.0, // ✅ Read Sell Price
             gstPercent: double.tryParse(rowMap['gstpercent'] ?? '0') ?? 0.0,
-            unitOfMeasurement: rowMap['unitofmeasurement'] ?? '',
+            unitOfMeasurement: ((rowMap['unitofmeasurement'] ?? '').toString().trim().isEmpty)
+                ? 'pcs'
+                : (rowMap['unitofmeasurement'] ?? 'pcs').toString(),
             currentStock: int.tryParse(rowMap['currentstock'] ?? '0') ?? 0,
             detailRequirement: rowMap['detailrequirement'] ?? '',
-            isActive: (rowMap['isactive']?.toLowerCase() == 'true'),
+            isActive: isActive,
           );
 
-          // Filter by userId if provided
+          // Filter by userId if provided (trim both to avoid mismatch from spaces)
           if (userId != null && userId.isNotEmpty) {
-            String rowUserId = rowMap['userid'] ?? '';
-            if (rowUserId == userId) {
+            String rowUserId = (rowMap['userid'] ?? '').toString().trim();
+            if (rowUserId == userId.trim()) {
               items.add(item);
             }
           } else {
@@ -4981,6 +4991,155 @@ class GoogleSheetService {
 
     } catch (e) {
       print("❌ Error deleting challan items: $e");
+      rethrow;
+    }
+  }
+
+  /// Delete the Challan row from the Challan sheet (by challanId). Call after deleting challan items.
+  static Future<void> deleteChallanFromSheet(String challanId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ Challan sheet is empty, nothing to delete");
+        return;
+      }
+
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      final challanIdIndex = headers.indexWhere((h) => h.toLowerCase() == 'challanid');
+
+      if (challanIdIndex == -1) {
+        print("⚠️ challanId column not found in Challan sheet");
+        return;
+      }
+
+      List<List<Object?>> filteredData = [response.values![0]];
+
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length <= challanIdIndex ||
+            row[challanIdIndex].toString().trim() != challanId) {
+          filteredData.add(row);
+        }
+      }
+
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$challanSheetName!A:Z",
+      );
+
+      if (filteredData.length > 1) {
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: filteredData),
+          spreadsheetId,
+          "$challanSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+
+      clearChallanItemCache(challanId);
+      _challanCache.remove(challanId);
+      print("🗑️ Deleted challan $challanId from Challan sheet");
+    } catch (e) {
+      print("❌ Error deleting challan from sheet: $e");
+      rethrow;
+    }
+  }
+
+  /// Delete all InvoiceItems rows for the given invoiceId from the InvoiceItems sheet.
+  static Future<void> deleteInvoiceItemsFromSheet(String invoiceId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceItemSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) return;
+
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      final invoiceIdIndex = headers.indexWhere((h) => h.toLowerCase() == 'invoiceid');
+      if (invoiceIdIndex == -1) return;
+
+      List<List<Object?>> filteredData = [response.values![0]];
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length <= invoiceIdIndex || row[invoiceIdIndex].toString().trim() != invoiceId) {
+          filteredData.add(row);
+        }
+      }
+
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$invoiceItemSheetName!A:Z",
+      );
+      if (filteredData.length > 1) {
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: filteredData),
+          spreadsheetId,
+          "$invoiceItemSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+      _invoiceItemCache.remove(invoiceId);
+      print("🗑️ Deleted invoice items for invoiceId: $invoiceId");
+    } catch (e) {
+      print("❌ Error deleting invoice items from sheet: $e");
+      rethrow;
+    }
+  }
+
+  /// Delete the Invoice row from the Invoice sheet by invoiceId.
+  static Future<void> deleteInvoiceFromSheet(String invoiceId) async {
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$invoiceSheetName!A:Z",
+      );
+
+      if (response.values == null || response.values!.isEmpty) return;
+
+      final headers = response.values![0].map((h) => h.toString().trim()).toList();
+      final invoiceIdIndex = headers.indexWhere((h) => h.toLowerCase() == 'invoiceid');
+      if (invoiceIdIndex == -1) return;
+
+      List<List<Object?>> filteredData = [response.values![0]];
+      for (int i = 1; i < response.values!.length; i++) {
+        final row = response.values![i];
+        if (row.length <= invoiceIdIndex || row[invoiceIdIndex].toString().trim() != invoiceId) {
+          filteredData.add(row);
+        }
+      }
+
+      await sheetsApi.spreadsheets.values.clear(
+        ClearValuesRequest(),
+        spreadsheetId,
+        "$invoiceSheetName!A:Z",
+      );
+      if (filteredData.length > 1) {
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange(values: filteredData),
+          spreadsheetId,
+          "$invoiceSheetName!A1",
+          valueInputOption: "USER_ENTERED",
+        );
+      }
+      print("🗑️ Deleted invoice $invoiceId from Invoice sheet");
+    } catch (e) {
+      print("❌ Error deleting invoice from sheet: $e");
       rethrow;
     }
   }

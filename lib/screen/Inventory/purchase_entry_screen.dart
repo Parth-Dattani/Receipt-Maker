@@ -4,13 +4,15 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../utils/utils.dart';
+import '../../utils/input_formatters.dart';
 import '../../widgets/widgets.dart';
 
+import 'package:flutter/services.dart';
 
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
+bool _isWholeNumberUnit(String unit) {
+  final u = unit.trim().toLowerCase();
+  return u == 'pcs' || u == 'box';
+}
 
 class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   static const String pageId = '/PurchaseEntryScreen';
@@ -421,46 +423,59 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               children: [
                 Icon(Icons.store, color: AppColors.tealColor),
                 SizedBox(width: 8),
-                Text(
-                  'Vendor Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                Expanded(
+                  child: RichText(
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Vendor Information',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.tealColor,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Text(
-                  ' *',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
-                ),
-                Spacer(),
                 Obx(() => !controller.isEditMode.value
-                    ? Row(
-                  children: [
-                    IconButton(
-                      onPressed: controller.refreshVendors,
-                      icon: Icon(Icons.refresh, color: AppColors.tealColor),
-                      tooltip: 'Refresh vendors list',
-                    ),
-                    IconButton(
-                      onPressed: controller.toggleVendorForm,
-                      icon: Icon(
-                        controller.showVendorForm.value
-                            ? Icons.store
-                            : Icons.add_business,
-                        color: AppColors.tealColor,
+                    ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: controller.refreshVendors,
+                        icon: Icon(Icons.refresh, color: AppColors.tealColor),
+                        tooltip: 'Refresh vendors list',
+                        visualDensity: VisualDensity.compact,
                       ),
-                      tooltip: controller.showVendorForm.value
-                          ? 'Select from existing customers'
-                          : 'Add new vendor manually',
-                    ),
-                  ],
+                      IconButton(
+                        onPressed: controller.toggleVendorForm,
+                        icon: Icon(
+                          controller.showVendorForm.value
+                              ? Icons.store
+                              : Icons.add_business,
+                          color: AppColors.tealColor,
+                        ),
+                        tooltip: controller.showVendorForm.value
+                            ? 'Select from existing customers'
+                            : 'Add new vendor manually',
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
                 )
-                    : SizedBox()),
+                    : SizedBox.shrink()),
               ],
             ),
             SizedBox(height: 16),
@@ -1003,60 +1018,74 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
               children: [
                 Icon(Icons.inventory_2, color: AppColors.tealColor),
                 SizedBox(width: 8),
-                Text(
-                  'Purchase Items',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
-                  ),
-                ),
-                Spacer(),
-                Obx(() => Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: controller.useItemMaster.value
-                        ? AppColors.tealColor.withOpacity(0.15)
-                        : Colors.orange.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: controller.useItemMaster.value
-                          ? AppColors.tealColor.withOpacity(0.3)
-                          : Colors.orange.withOpacity(0.3),
+                Expanded(
+                  child: Text(
+                    'Purchase Items',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.tealColor,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        controller.useItemMaster.value
-                            ? Icons.arrow_drop_down_circle
-                            : Icons.edit,
-                        size: 16,
-                        color: controller.useItemMaster.value
-                            ? AppColors.tealColor
-                            : Colors.orange,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        controller.useItemMaster.value ? 'List' : 'Manual',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: controller.useItemMaster.value
-                              ? AppColors.tealColor
-                              : Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
-                  onPressed: controller.toggleItemEntryMode,
-                  tooltip: 'Toggle between dropdown and manual entry',
                 ),
+                Obx(() {
+                  final isList = controller.useItemMaster.value;
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isList
+                                ? AppColors.tealColor.withOpacity(0.15)
+                                : Colors.orange.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isList
+                                  ? AppColors.tealColor.withOpacity(0.3)
+                                  : Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isList ? Icons.arrow_drop_down_circle : Icons.edit,
+                                size: 16,
+                                color: isList ? AppColors.tealColor : Colors.orange,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                isList ? 'List' : 'Manual',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isList ? AppColors.tealColor : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.refresh, color: AppColors.tealColor),
+                          onPressed: controller.refreshItems,
+                          tooltip: 'Refresh items list',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
+                          onPressed: controller.toggleItemEntryMode,
+                          tooltip: 'Toggle between dropdown and manual entry',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
             SizedBox(height: 16),
@@ -1225,18 +1254,33 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               Expanded(
                                 flex: 1,
                                 child: TextFormField(
+                                  controller: controller.getQtyController(index, initialValue: item.quantity),
                                   textAlign: TextAlign.center,
-                                  initialValue: item.quantity > 0 ? item.quantity.toString() : '',
                                   decoration: InputDecoration(
                                     hintText: 'Qty',
                                     contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
-                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType: _isWholeNumberUnit(item.unit)
+                                      ? TextInputType.number
+                                      : TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: _isWholeNumberUnit(item.unit)
+                                      ? [IntegerOnlyInputFormatter()]
+                                      : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                   onChanged: (value) {
-                                    double? qty = double.tryParse(value);
-                                    if (qty != null && qty > 0) {
-                                      controller.updateItem(index, quantity: qty);
+                                    if (value.trim().isEmpty) {
+                                      controller.updateItem(index, quantity: 0.0);
+                                      return;
+                                    }
+                                    if (_isWholeNumberUnit(item.unit)) {
+                                      final parsed = int.tryParse(value);
+                                      if (parsed == null || parsed < 0) return;
+                                      controller.updateItem(index, quantity: parsed.toDouble());
+                                    } else {
+                                      final qty = double.tryParse(value.replaceAll(',', '.'));
+                                      if (qty != null && qty >= 0) {
+                                        controller.updateItem(index, quantity: qty);
+                                      }
                                     }
                                   },
                                 ),
@@ -1483,22 +1527,34 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                         SizedBox(
                                           height: 40,
                                           child: TextFormField(
+                                            controller: controller.getQtyController(index, initialValue: item.quantity),
                                             textAlign: TextAlign.center,
-                                            initialValue: item.quantity > 0
-                                                ? item.quantity.toString()
-                                                : '',
                                             decoration: InputDecoration(
                                               contentPadding: EdgeInsets.symmetric(
                                                   horizontal: 8, vertical: 8),
                                               border: OutlineInputBorder(
                                                   borderRadius: BorderRadius.circular(8)),
                                             ),
-                                            keyboardType:
-                                            TextInputType.numberWithOptions(decimal: true),
+                                            keyboardType: _isWholeNumberUnit(item.unit)
+                                                ? TextInputType.number
+                                                : TextInputType.numberWithOptions(decimal: true),
+                                            inputFormatters: _isWholeNumberUnit(item.unit)
+                                                ? [IntegerOnlyInputFormatter()]
+                                                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                             onChanged: (value) {
-                                              double? qty = double.tryParse(value);
-                                              if (qty != null && qty > 0) {
-                                                controller.updateItem(index, quantity: qty);
+                                              if (value.trim().isEmpty) {
+                                                controller.updateItem(index, quantity: 0.0);
+                                                return;
+                                              }
+                                              if (_isWholeNumberUnit(item.unit)) {
+                                                final parsed = int.tryParse(value);
+                                                if (parsed == null || parsed < 0) return;
+                                                controller.updateItem(index, quantity: parsed.toDouble());
+                                              } else {
+                                                final qty = double.tryParse(value.replaceAll(',', '.'));
+                                                if (qty != null && qty >= 0) {
+                                                  controller.updateItem(index, quantity: qty);
+                                                }
                                               }
                                             },
                                           ),
