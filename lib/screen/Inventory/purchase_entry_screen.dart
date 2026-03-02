@@ -29,9 +29,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
         automaticallyImplyLeading: true,
         foregroundColor: Colors.white,
         backgroundColor: AppColors.tealColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-        ),
+       
         title: Row(
           children: [
             Obx(() => Text(

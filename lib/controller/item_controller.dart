@@ -185,7 +185,7 @@ class ItemController extends GetxController {
       final item = itemList.firstWhereOrNull((i) => i.itemId == itemId);
       if (item == null) throw Exception("Item not found");
 
-      final newStock = (item.currentStock == -1 ? 0 : item.currentStock) + quantity;
+      final newStock = (item.currentStock == -1 ? 0.0 : item.currentStock) + quantity;
 
       final transaction = InventoryTransaction(
         transactionId: "TXN-${DateTime.now().millisecondsSinceEpoch}",
@@ -210,7 +210,7 @@ class ItemController extends GetxController {
         sellPrice: item.sellPrice,
         gstPercent: item.gstPercent,
         unitOfMeasurement: item.unitOfMeasurement,
-        currentStock: newStock,
+        currentStock: newStock.toDouble(),
         detailRequirement: item.detailRequirement,
         isActive: item.isActive,
       );
@@ -251,7 +251,7 @@ class ItemController extends GetxController {
       final item = itemList.firstWhereOrNull((i) => i.itemId == itemId);
       if (item == null) throw Exception("Item not found");
 
-      final currentStock = item.currentStock == -1 ? 0 : item.currentStock;
+      final currentStock = item.currentStock == -1 ? 0.0 : item.currentStock;
       if (quantity > currentStock) {
         throw Exception("Insufficient stock. Available: $currentStock");
       }
@@ -281,7 +281,7 @@ class ItemController extends GetxController {
         sellPrice: item.sellPrice,
         gstPercent: item.gstPercent,
         unitOfMeasurement: item.unitOfMeasurement,
-        currentStock: newStock,
+        currentStock: newStock.toDouble(),
         detailRequirement: item.detailRequirement,
         isActive: item.isActive,
       );
@@ -314,7 +314,7 @@ class ItemController extends GetxController {
 
   Future<void> adjustInventory({
     required String itemId,
-    required int newQuantity,
+    required double newQuantity,
     String reason = 'Manual Adjustment',
     String notes = '',
   }) async {
@@ -322,14 +322,14 @@ class ItemController extends GetxController {
       final item = itemList.firstWhereOrNull((i) => i.itemId == itemId);
       if (item == null) throw Exception("Item not found");
 
-      final currentStock = item.currentStock == -1 ? 0 : item.currentStock;
+      final currentStock = item.currentStock == -1 ? 0.0 : item.currentStock;
       final difference = newQuantity - currentStock;
 
       final transaction = InventoryTransaction(
         transactionId: "TXN-${DateTime.now().millisecondsSinceEpoch}",
         itemId: itemId,
         itemName: item.itemName,
-        quantity: difference.abs(),
+        quantity: difference.abs().round(),
         type: 'adjustment',
         reason: reason,
         timestamp: DateTime.now(),
@@ -493,7 +493,7 @@ class ItemController extends GetxController {
     required double sellPrice,
     required double gstPercent,
     required String unitOfMeasurement,
-    required int currentStock,
+    required double currentStock,
     required String detailRequirement,
     required bool isActive,
   }) async {
@@ -537,7 +537,7 @@ class ItemController extends GetxController {
     required double newSellPrice,
     required double gstPercent,
     required String unitOfMeasurement,
-    required int currentStock,
+    required double currentStock,
     required String detailRequirement,
     required bool isActive,
   }) async {

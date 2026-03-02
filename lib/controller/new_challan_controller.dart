@@ -295,11 +295,27 @@ class NewChallanController extends BaseController {
 
       // Clear existing items and add the loaded ones
       challanItems.clear();
+      // Clear quantity and price controllers so edit screen gets fresh initial values
+      // (otherwise reused controllers keep old text and pcs qty shows as decimal e.g. 5.0)
+      for (var c in quantityControllers) {
+        c.dispose();
+      }
+      quantityControllers.clear();
+      for (var c in priceControllers) {
+        c.dispose();
+      }
+      priceControllers.clear();
+
       for (var item in existingItems) {
         print("📦 Loading item: ${item.itemName}");
         print("   - Price: ${item.price}");
         print("   - Quantity: ${item.quantity}");
         print("   - GST Rate: ${item.gstRate}");
+
+        final unit = (item.unit ?? 'pcs').toString().toLowerCase();
+        final isPcsOrBox = unit == 'pcs' || unit == 'box';
+        final rawQty = item.quantity ?? 1.0;
+        double finalQty = isPcsOrBox ? rawQty.roundToDouble() : rawQty;
 
         challanItems.add(ChallanItem(
           customerId: item.customerId ?? '',
@@ -307,9 +323,9 @@ class NewChallanController extends BaseController {
           challanId: editingChallanId.value,
           itemName: item.itemName ?? '',
           description: item.description ?? '',
-          quantity: item.quantity ?? 1.0,
+          quantity: finalQty,
           price: item.price ?? 0.0,
-          unit: item.unit ?? 'pcs',
+          unit: (item.unit != null && item.unit!.trim().isNotEmpty) ? item.unit! : 'pcs',
           totalPrice: item.totalPrice ?? 0.0,
           gstRate: item.gstRate ?? 0.0,
           gstAmount: item.gstAmount ?? 0.0,
@@ -317,6 +333,22 @@ class NewChallanController extends BaseController {
         ));
 
         print("✅ Loaded item with GST rate: ${challanItems.last.gstRate}");
+      }
+
+      // Pre-fill quantity controllers so edit screen shows correct value (no decimal for pcs/box)
+      for (int i = 0; i < challanItems.length; i++) {
+        final ci = challanItems[i];
+        final qty = ci.quantity;
+        final u = (ci.unit ?? '').toString().toLowerCase();
+        final isPcsOrBox = u == 'pcs' || u == 'box';
+        final qtyDisplay = qty <= 0
+            ? ''
+            : (isPcsOrBox ? qty.round().toString() : (qty % 1 == 0 ? qty.toInt().toString() : qty.toString()));
+        quantityControllers.add(TextEditingController(text: qtyDisplay));
+      }
+      // Pre-fill price controllers
+      for (int i = 0; i < challanItems.length; i++) {
+        priceControllers.add(TextEditingController(text: challanItems[i].price.toString()));
       }
 
       // Recalculate totals after loading all items
@@ -394,11 +426,12 @@ class NewChallanController extends BaseController {
 
   /// Keep quantityControllers in sync with challanItems.
   /// Sets initial value only when controller is empty (avoids cursor jump while typing).
+  /// In edit mode (after load), controllers are empty so we set immediately so first paint shows correct value.
   TextEditingController getQuantityController(int index, {double? initialValue}) {
+    // લિસ્ટ ની લંબાઈ મુજબ કન્ટ્રોલર્સ મેનેજ કરો
     while (quantityControllers.length < challanItems.length) {
       quantityControllers.add(TextEditingController());
     }
-
     while (quantityControllers.length > challanItems.length) {
       quantityControllers.removeLast().dispose();
     }
@@ -408,17 +441,30 @@ class NewChallanController extends BaseController {
     }
 
     final controller = quantityControllers[index];
+    final item = challanItems[index];
+
+    // ✅ ચેક કરો કે યુનિટ PCS કે BOX છે?
+    final unit = (item.unit ?? '').toLowerCase();
+    final isIntegerUnit = unit == 'pcs' || unit == 'box';
 
     if (initialValue != null && controller.text.isEmpty) {
-      String newText = (initialValue <= 0)
-          ? ''
-          : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
+      String newText;
+      if (initialValue <= 0) {
+        newText = '';
+      } else {
+        // ✅ જો PCS/BOX હોય તો ફરજિયાત Integer માં કન્વર્ટ કરો
+        if (isIntegerUnit) {
+          newText = initialValue.toInt().toString();
+        } else {
+          // અન્ય યુનિટ માટે જો પોઈન્ટ પછી 0 હોય તો કાઢી નાખો, નહીતર રહેવા દો
+          newText = initialValue % 1 == 0
+              ? initialValue.toInt().toString()
+              : initialValue.toString();
+        }
+      }
 
       if (controller.text != newText) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!controller.hasListeners) return;
-          controller.text = newText;
-        });
+        controller.text = newText;
       }
     }
 

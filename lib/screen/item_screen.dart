@@ -417,7 +417,7 @@ class ItemScreen extends GetView<ItemController> {
                     const SizedBox(height: 16),
 
                     Row(children: [Checkbox(value: isUnlimitedStock, onChanged: (value) => setState(() { isUnlimitedStock = value!; if (isUnlimitedStock) stockCtrl.clear(); })), const Text("Unlimited Stock")]),
-                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
+                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.numberWithOptions(decimal: true)),
                     const SizedBox(height: 16),
                     TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
                     const SizedBox(height: 16),
@@ -427,7 +427,7 @@ class ItemScreen extends GetView<ItemController> {
                       if (formKey.currentState!.validate()) {
                         setState(() => isAdding = true);
                         try {
-                          await controller.addNewItem(name: nameCtrl.text.trim(), price: double.parse(priceCtrl.text), sellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : int.parse(stockCtrl.text), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
+                          await controller.addNewItem(name: nameCtrl.text.trim(), price: double.parse(priceCtrl.text), sellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : (double.tryParse(stockCtrl.text.replaceAll(',', '.')) ?? 0), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
                           Navigator.pop(context);
                         } catch (e) { setState(() => isAdding = false); }
                       }
@@ -518,7 +518,7 @@ class ItemScreen extends GetView<ItemController> {
                     const SizedBox(height: 16),
 
                     Row(children: [Checkbox(value: isUnlimitedStock, onChanged: (value) => setState(() { isUnlimitedStock = value!; if (isUnlimitedStock) stockCtrl.clear(); })), const Text("Unlimited Stock")]),
-                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.number),
+                    if (!isUnlimitedStock) TextFormField(controller: stockCtrl, decoration: InputDecoration(labelText: "Current Stock *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), keyboardType: TextInputType.numberWithOptions(decimal: true)),
                     const SizedBox(height: 16),
                     TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
                     const SizedBox(height: 16),
@@ -528,7 +528,7 @@ class ItemScreen extends GetView<ItemController> {
                       if (formKey.currentState!.validate()) {
                         setState(() => isSaving = true);
                         try {
-                          await controller.editItem(itemId: item.itemId, newName: nameCtrl.text.trim(), newPrice: double.parse(priceCtrl.text), newSellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : int.parse(stockCtrl.text), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
+                          await controller.editItem(itemId: item.itemId, newName: nameCtrl.text.trim(), newPrice: double.parse(priceCtrl.text), newSellPrice: double.parse(sellPriceCtrl.text), gstPercent: selectedGst, unitOfMeasurement: selectedUnit, currentStock: isUnlimitedStock ? -1 : (double.tryParse(stockCtrl.text.replaceAll(',', '.')) ?? 0), detailRequirement: detailCtrl.text.trim(), isActive: isActive);
                           Navigator.pop(context);
                         } catch (e) { setState(() => isSaving = false); }
                       }

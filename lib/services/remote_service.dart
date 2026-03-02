@@ -2556,7 +2556,7 @@ class GoogleSheetService {
             unitOfMeasurement: ((rowMap['unitofmeasurement'] ?? '').toString().trim().isEmpty)
                 ? 'pcs'
                 : (rowMap['unitofmeasurement'] ?? 'pcs').toString(),
-            currentStock: int.tryParse(rowMap['currentstock'] ?? '0') ?? 0,
+            currentStock: double.tryParse((rowMap['currentstock'] ?? '0').toString().trim()) ?? 0.0,
             detailRequirement: rowMap['detailrequirement'] ?? '',
             isActive: isActive,
           );
@@ -3613,7 +3613,7 @@ class GoogleSheetService {
 
       for (var item in invoiceItems) {
         int? rowToUpdate;
-        int currentStock = 0;
+        double currentStock = 0.0;
 
         // Find row for this itemId + userId
         for (int i = 1; i < response.values!.length; i++) {
@@ -3623,7 +3623,7 @@ class GoogleSheetService {
               row[userIdIndex].toString() == AppConstants.userId) {
             rowToUpdate = i + 1; // rows are 1-based
             if (row.length > stockIndex) {
-              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+              currentStock = double.tryParse(row[stockIndex].toString().replaceAll(',', '.')) ?? 0.0;
             }
             break;
           }
@@ -4230,7 +4230,7 @@ class GoogleSheetService {
 
       for (var item in challanItems) {
         int? rowToUpdate;
-        int currentStock = 0;
+        double currentStock = 0.0;
 
         // Find row for this itemId + userId
         for (int i = 1; i < response.values!.length; i++) {
@@ -4240,7 +4240,7 @@ class GoogleSheetService {
               row[userIdIndex].toString() == AppConstants.userId) {
             rowToUpdate = i + 1; // rows are 1-based
             if (row.length > stockIndex) {
-              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+              currentStock = double.tryParse(row[stockIndex].toString().replaceAll(',', '.')) ?? 0.0;
             }
             break;
           }
@@ -6677,7 +6677,7 @@ class GoogleSheetService {
         }
 
         int? rowToUpdate;
-        int currentStock = 0;
+        double currentStock = 0.0;
 
         // Find row for this itemId + userId
         for (int i = 1; i < response.values!.length; i++) {
@@ -6687,7 +6687,7 @@ class GoogleSheetService {
               row[userIdIndex].toString() == AppConstants.userId) {
             rowToUpdate = i + 1; // rows are 1-based
             if (row.length > stockIndex) {
-              currentStock = int.tryParse(row[stockIndex].toString()) ?? 0;
+              currentStock = double.tryParse(row[stockIndex].toString().replaceAll(',', '.')) ?? 0.0;
             }
             break;
           }

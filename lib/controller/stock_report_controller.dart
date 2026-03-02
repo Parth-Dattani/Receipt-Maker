@@ -8,7 +8,7 @@
 import 'dart:io';
 
 import 'package:demo_prac_getx/controller/bash_controller.dart';
-import 'package:excel/excel.dart' show Sheet, Excel, TextCellValue, DoubleCellValue, IntCellValue;
+import 'package:excel/excel.dart' show Sheet, Excel, TextCellValue, DoubleCellValue;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -348,7 +348,7 @@ class StockReportController extends BaseController  {
           DoubleCellValue(item.price ?? 0),
           DoubleCellValue(item.gstPercent ?? 0),
           TextCellValue(item.unitOfMeasurement ?? '-'),
-          IntCellValue(item.currentStock ?? 0),
+          DoubleCellValue(item.currentStock ?? 0),
           DoubleCellValue(stockValue),
           TextCellValue(status),
         ]);

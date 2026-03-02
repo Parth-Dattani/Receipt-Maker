@@ -703,7 +703,8 @@ class InventoryManagementScreen extends GetView<ItemController> {
                             return;
                           }
 
-                          final quantity = int.parse(quantityCtrl.text);
+                          final quantity = int.tryParse(quantityCtrl.text) ?? 0;
+                          final quantityDouble = double.tryParse(quantityCtrl.text.replaceAll(',', '.')) ?? quantity.toDouble();
                           final reason = reasonCtrl.text;
                           final notes = notesCtrl.text;
 
@@ -725,7 +726,7 @@ class InventoryManagementScreen extends GetView<ItemController> {
                             } else if (type == 'adjust') {
                               await controller.adjustInventory(
                                 itemId: selectedItem!.itemId,
-                                newQuantity: quantity,
+                                newQuantity: quantityDouble,
                                 reason: reason,
                                 notes: notes,
                               );

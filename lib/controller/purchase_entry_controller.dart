@@ -1920,7 +1920,7 @@ class PurchaseEntryController extends BaseController {
           price: purchaseItem.purchasePrice,
           gstPercent: purchaseItem.gstRate,
           unitOfMeasurement: purchaseItem.unit,
-          currentStock: purchaseItem.quantity.toInt(),
+          currentStock: purchaseItem.quantity.toDouble(),
           detailRequirement: purchaseItem.description.isNotEmpty
               ? "Auto-created from purchase: ${purchaseItem.description}"
               : "Auto-created from purchase entry",

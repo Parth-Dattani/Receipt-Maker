@@ -1479,9 +1479,9 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        item.unit != null && item.unit!.isNotEmpty
+                                        (item.unit != null && item.unit!.trim().isNotEmpty)
                                             ? 'Qty (${item.unit})'
-                                            : 'Qty',
+                                            : 'Qty (pcs)',
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey.shade600,
@@ -1509,318 +1509,87 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           print("ℹ️ Stock check skipped - Business: $businessType, ItemID: ${item.itemId}");
                                         }
 
-                                        // ==========================================================
-                                        // 1. EDIT MODE SECTION
-                                        // ==========================================================
-                                        if (controller.isEditMode.value) {
-                                          return Container(
-                                            height: 40,
-                                            child: TextFormField(
-                                              key: ValueKey('qty_edit_${item.itemId}_$index'),
-                                              controller: controller.getQuantityController(index, initialValue: item.quantity,),
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              decoration: InputDecoration(
-                                                contentPadding: EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                suffixText: item.unit,
-                                                suffixStyle: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Colors.grey,
-                                                ),
-                                                // Show available stock hint
-                                                hintText: availableStock != null
-                                                    ? 'stocks: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
-                                                    : null,
-                                                hintStyle: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Colors.orange,
-                                                ),
-                                              ),
-                                              keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                                  ? TextInputType.number
-                                                  : TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                                  ? [IntegerOnlyInputFormatter()]
-                                                  : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                                              onChanged: (value) {
-                                                print("📝 Quantity input changed: $value");
+                                        // Single quantity field for both Create and Edit (same behavior)
+                                        final showQuantity = controller.isEditMode.value ||
+                                            (controller.createFromChallan.value && controller.selectedCustomerForInvoice.value.isNotEmpty) ||
+                                            controller.isFromQuotation.value;
+                                        final isPcsOrBox = item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box";
 
-                                                if (value.isEmpty) {
-                                                  // Allow clearing the field
-                                                  controller.itemsWithStockViolation.remove(index);
-                                                  controller.violationMessages.remove(index);
-                                                  return;
-                                                }
-
-                                                double? qty = double.tryParse(value);
-                                                print("🔢 Parsed quantity: $qty");
-
-
-                                                // Validate quantity
-                                                if (qty == null || qty <= 0) {
-                                                  Get.snackbar(
-                                                    "Invalid Quantity",
-                                                    "Please enter a valid quantity greater than 0",
-                                                    snackPosition: SnackPosition.BOTTOM,
-                                                    backgroundColor: Colors.orange.shade700,
-                                                    colorText: Colors.white,
-                                                    duration: Duration(seconds: 2),
-                                                  );
-                                                  controller.itemsWithStockViolation.add(index);
-                                                  controller.violationMessages[index] = "Invalid quantity";
-
-                                                  // ✅ Revert to previous valid quantity (blank when 0)
-                                                  Future.delayed(Duration(milliseconds: 100), () {
-                                                    final qtyController = controller.getQuantityController(index);
-                                                    qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
-                                                    qtyController.selection = TextSelection.fromPosition(
-                                                      TextPosition(offset: qtyController.text.length),
-                                                    );
-                                                  });
-
-                                                  return;
-                                                }
-
-                                                // Check for whole numbers for PCS/BOX units
-                                                if (item.unit?.toLowerCase() == "pcs" ||
-                                                    item.unit?.toLowerCase() == "box") {
-                                                  if (qty % 1 != 0) {
-                                                    Get.snackbar(
-                                                      "Invalid Quantity",
-                                                      "You can only enter whole numbers for ${item.unit} items.",
-                                                      snackPosition: SnackPosition.BOTTOM,
-                                                      backgroundColor: Colors.orange.shade700,
-                                                      colorText: Colors.white,
-                                                      duration: Duration(seconds: 2),
-                                                    );
-                                                    controller.itemsWithStockViolation.add(index);
-                                                    controller.violationMessages[index] = "Must be whole number";
-
-                                                    // ✅ Revert to previous valid quantity (blank when 0)
-                                                    Future.delayed(Duration(milliseconds: 100), () {
-                                                      final qtyController = controller.getQuantityController(index);
-                                                      qtyController.text = item.quantity > 0 ? item.quantity.toString() : '';
-                                                      qtyController.selection = TextSelection.fromPosition(
-                                                        TextPosition(offset: qtyController.text.length),
-                                                      );
-                                                    });
-                                                    return;
-                                                  }
-                                                }
-
-                                                // ✅ STOCK CHECK LOGIC (EDIT MODE)
-                                                print("🔍 Stock Check - Available: $availableStock, Entered: $qty");
-
-                                                if (availableStock != null && availableStock > 0) {
-                                                  if (qty > availableStock) {
-                                                    print("❌ STOCK EXCEEDED! Available: $availableStock, Entered: $qty");
-
-                                                    controller.itemsWithStockViolation.add(index);
-                                                    controller.violationMessages[index] =
-                                                    "${item.itemName}: Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available";
-
-                                                    Get.snackbar(
-                                                      "❌ Stock Limit Exceeded",
-                                                      "Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available in stock.\nYou entered: $qty ${item.unit ?? ''}",
-                                                      snackPosition: SnackPosition.TOP,
-                                                      backgroundColor: Colors.red.shade700,
-                                                      colorText: Colors.white,
-                                                      duration: Duration(seconds: 3),
-                                                      margin: EdgeInsets.all(10),
-                                                    );
-
-                                                    // ✅ Revert to maximum available stock
-                                                    Future.delayed(Duration(milliseconds: 100), () {
-                                                      final qtyController = controller.getQuantityController(index);
-                                                      String maxQty = availableStock! % 1 == 0
-                                                          ? availableStock.toInt().toString()
-                                                          : availableStock.toString();
-                                                      qtyController.text = maxQty;
-                                                      qtyController.selection = TextSelection.fromPosition(
-                                                        TextPosition(offset: qtyController.text.length),
-                                                      );
-                                                    });
-                                                    return; // IMPORTANT: Exit here to prevent update
-                                                  } else {
-                                                    print("✅ Stock check passed - Quantity within limit");
-                                                    controller.itemsWithStockViolation.remove(index);
-                                                    controller.violationMessages.remove(index);
-                                                  }
-                                                } else {
-                                                  print("⚠️ Stock check skipped - availableStock is null or zero");
-                                                  controller.itemsWithStockViolation.remove(index);
-                                                  controller.violationMessages.remove(index);
-                                                }
-
-                                                // Update if validation passes
-                                                print("✅ Updating item with quantity: $qty");
-                                                controller.updateItem(
-                                                  index,
-                                                  quantity: qty,
-                                                  rate: item.rate,
-                                                  unit: item.unit,
-                                                );
-                                              },
+                                        return Container(
+                                          height: 40,
+                                          child: TextFormField(
+                                            key: ValueKey('qty_${item.itemId}_${index}_${controller.invoiceItems.length}'),
+                                            controller: controller.getQuantityController(index, initialValue: showQuantity ? item.quantity : null),
+                                            readOnly: isFromChallan,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                            decoration: InputDecoration(
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                              suffixText: item.unit,
+                                              suffixStyle: TextStyle(fontSize: 10, color: Colors.grey),
+                                              hintText: availableStock != null
+                                                  ? 'Stocks: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
+                                                  : null,
+                                              hintStyle: TextStyle(fontSize: 10, color: Colors.orange),
+                                              filled: isFromChallan,
+                                              fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                             ),
-                                          );
-                                        }
-
-
-                                        // CREATE MODE SECTION
-                                        else {
-                                          final showQuantity = (controller.createFromChallan.value &&
-                                              controller.selectedCustomerForInvoice.value.isNotEmpty) ||
-                                              controller.isFromQuotation.value;
-
-                                          return Container(
-                                            height: 40,
-                                            child: TextFormField(
-                                              key: ValueKey('qty_create_$index'),
-                                              //key: ValueKey('qty_create_${item.itemId}_$index}_${controller.invoiceItems.length}'),
-                                              //initialValue: showQuantity ? item.quantity.toString() : null,
-                                              //controller: controller.getQuantityController(index),
-                                              controller: controller.getQuantityController(index, initialValue: showQuantity ? item.quantity : null,), // ✅ USE CONTROLLER
-                                              readOnly: isFromChallan,
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              decoration: InputDecoration(
-                                                contentPadding: EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 8,
-                                                ),
-                                                border: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                suffixText: item.unit,
-                                                suffixStyle: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Colors.grey,
-                                                ),
-                                                hintText: availableStock != null
-                                                    ? 'Stock: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
-                                                    : null,
-                                                hintStyle: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Colors.orange,
-                                                ),
-                                                filled: isFromChallan,
-                                                fillColor: isFromChallan ? Colors.grey.shade200 : null,
-                                              ),
-                                              keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                                  ? TextInputType.number
-                                                  : TextInputType.numberWithOptions(decimal: true),
-                                              inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                                  ? [IntegerOnlyInputFormatter()]
-                                                  : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                                              onChanged: (value) {
-                                                if (isFromChallan) return;
-                                                print("📝 Quantity input changed: $value for item index: $index");
-
-                                                if (value.isEmpty) {
-                                                  // ✅ Clear violation for this specific item
-                                                  controller.itemsWithStockViolation.remove(index);
-                                                  controller.violationMessages.remove(index);
-                                                  return;
-                                                }
-
-                                                double? qty = double.tryParse(value);
-                                                print("🔢 Parsed quantity: $qty");
-
-                                                // Validate quantity
-                                                if (qty == null || qty <= 0) {
-                                                  Get.snackbar(
-                                                    "Invalid Quantity",
-                                                    "Please enter a valid quantity greater than 0",
-                                                    snackPosition: SnackPosition.BOTTOM,
-                                                    backgroundColor: Colors.orange.shade700,
-                                                    colorText: Colors.white,
-                                                    duration: Duration(seconds: 2),
-                                                  );
-                                                  // ✅ Mark THIS item as having violation
-                                                  controller.itemsWithStockViolation.add(index);
-                                                  controller.violationMessages[index] = "Invalid quantity";
-                                                  return;
-                                                }
-
-                                                // Check for whole numbers for PCS units
-                                                if (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box") {
-                                                  if (qty % 1 != 0) {
-                                                    Get.snackbar(
-                                                      "Invalid Quantity",
-                                                      "You can only enter whole numbers for ${item.unit} items.",
-                                                      snackPosition: SnackPosition.BOTTOM,
-                                                      backgroundColor: Colors.orange.shade700,
-                                                      colorText: Colors.white,
-                                                      duration: Duration(seconds: 2),
-                                                    );
-                                                    // ✅ Mark THIS item as having violation
-                                                    controller.itemsWithStockViolation.add(index);
-                                                    controller.violationMessages[index] = "Must be whole number";
-                                                    return;
-                                                  }
-                                                }
-
-                                                // ✅ CRITICAL STOCK CHECK
-                                                print("🔍 Stock Check - Item $index - Available: $availableStock, Entered: $qty");
-
-                                                if (availableStock != null && availableStock > 0) {
-                                                  if (qty > availableStock) {
-                                                    print("❌ STOCK EXCEEDED! Item $index - Available: $availableStock, Entered: $qty");
-
-                                                    // ✅ Mark THIS item as having violation
-                                                    controller.itemsWithStockViolation.add(index);
-                                                    controller.violationMessages[index] =
-                                                    "${item.itemName}: Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available";
-
-                                                    Get.snackbar(
-                                                      "❌ Stock Limit Exceeded",
-                                                      "Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available in stock.\nYou entered: $qty ${item.unit ?? ''}",
-                                                      snackPosition: SnackPosition.TOP,
-                                                      backgroundColor: Colors.red.shade700,
-                                                      colorText: Colors.white,
-                                                      duration: Duration(seconds: 4),
-                                                      margin: EdgeInsets.all(10),
-                                                      icon: Icon(Icons.warning_amber_rounded, color: Colors.white),
-                                                    );
-
-                                                    return; // ✅ STOP - DO NOT UPDATE
-                                                  } else {
-                                                    print("✅ Stock check passed for item $index - Quantity within limit");
-                                                    // ✅ Clear violation for THIS item
-                                                    controller.itemsWithStockViolation.remove(index);
-                                                    controller.violationMessages.remove(index);
-                                                  }
-                                                } else {
-                                                  print("⚠️ Stock check skipped for item $index");
-                                                  // ✅ Clear violation for THIS item
-                                                  controller.itemsWithStockViolation.remove(index);
-                                                  controller.violationMessages.remove(index);
-                                                }
-
-                                                // Update if validation passes
-                                                print("✅ Updating item $index with quantity: $qty");
-                                                controller.updateItem(
-                                                  index,
-                                                  quantity: qty,
-                                                  rate: item.rate,
-                                                  unit: item.unit,
-                                                );
-                                              },
-                                            ),
-                                          );
-                                        }
+                                            keyboardType: isPcsOrBox
+                                                ? TextInputType.number
+                                                : TextInputType.numberWithOptions(decimal: true),
+                                            inputFormatters: isPcsOrBox
+                                                ? [IntegerOnlyInputFormatter()]
+                                                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                            onChanged: (value) {
+                                              if (isFromChallan) return;
+                                              if (value.isEmpty) {
+                                                controller.itemsWithStockViolation.remove(index);
+                                                controller.violationMessages.remove(index);
+                                                return;
+                                              }
+                                              double? qty = double.tryParse(value);
+                                              if (qty == null || qty <= 0) {
+                                                Get.snackbar("Invalid Quantity", "Please enter a valid quantity greater than 0", snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade700, colorText: Colors.white, duration: Duration(seconds: 2));
+                                                controller.itemsWithStockViolation.add(index);
+                                                controller.violationMessages[index] = "Invalid quantity";
+                                                Future.delayed(Duration(milliseconds: 100), () {
+                                                  final qtyController = controller.getQuantityController(index);
+                                                  final revertText = item.quantity <= 0 ? '' : (isPcsOrBox ? item.quantity.round().toString() : (item.quantity % 1 == 0 ? item.quantity.toInt().toString() : item.quantity.toString()));
+                                                  qtyController.text = revertText;
+                                                  qtyController.selection = TextSelection.fromPosition(TextPosition(offset: qtyController.text.length));
+                                                });
+                                                return;
+                                              }
+                                              if (isPcsOrBox && qty % 1 != 0) {
+                                                Get.snackbar("Invalid Quantity", "You can only enter whole numbers for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade700, colorText: Colors.white, duration: Duration(seconds: 2));
+                                                controller.itemsWithStockViolation.add(index);
+                                                controller.violationMessages[index] = "Must be whole number";
+                                                Future.delayed(Duration(milliseconds: 100), () {
+                                                  final qtyController = controller.getQuantityController(index);
+                                                  final revertText = item.quantity <= 0 ? '' : (isPcsOrBox ? item.quantity.round().toString() : (item.quantity % 1 == 0 ? item.quantity.toInt().toString() : item.quantity.toString()));
+                                                  qtyController.text = revertText;
+                                                  qtyController.selection = TextSelection.fromPosition(TextPosition(offset: qtyController.text.length));
+                                                });
+                                                return;
+                                              }
+                                              if (availableStock != null && availableStock > 0 && qty > availableStock) {
+                                                controller.itemsWithStockViolation.add(index);
+                                                controller.violationMessages[index] = "${item.itemName}: Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available";
+                                                Get.snackbar("Stock Limit Exceeded", "Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available.", snackPosition: SnackPosition.TOP, backgroundColor: Colors.red.shade700, colorText: Colors.white, duration: Duration(seconds: 3), margin: EdgeInsets.all(10));
+                                                Future.delayed(Duration(milliseconds: 100), () {
+                                                  final qtyController = controller.getQuantityController(index);
+                                                  qtyController.text = availableStock! % 1 == 0 ? availableStock.toInt().toString() : availableStock.toString();
+                                                  qtyController.selection = TextSelection.fromPosition(TextPosition(offset: qtyController.text.length));
+                                                });
+                                                return;
+                                              }
+                                              controller.itemsWithStockViolation.remove(index);
+                                              controller.violationMessages.remove(index);
+                                              controller.updateItem(index, quantity: qty, rate: item.rate, unit: item.unit);
+                                            },
+                                          ),
+                                        );
                                       }),
                                     ],
                                   ),
@@ -2128,7 +1897,15 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                           Expanded(
                             flex: 2,
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text(
+                                  (item.unit != null && item.unit!.trim().isNotEmpty)
+                                      ? 'Qty (${item.unit})'
+                                      : 'Qty (pcs)',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                                SizedBox(height: 4),
                                 Obx(() {
                                   // Stock logic
                                   double? availableStock;
@@ -2177,6 +1954,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                         controller.itemsWithStockViolation.add(index);
                                         controller.violationMessages[index] = "Invalid qty";
                                         return;
+                                      }
+                                      // Pcs/box: whole numbers only (same as New Invoice)
+                                      if (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box") {
+                                        if (qty % 1 != 0) {
+                                          Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
+                                          return;
+                                        }
                                       }
                                       // Stock check
                                       if (availableStock != null && qty > availableStock) {

@@ -937,6 +937,11 @@ class NewInvoiceController extends GetxController {
         // ✅ Create controller with existing description
         final descController = TextEditingController(text: item.description ?? '');
 
+        final unit = (item.unit ?? '').toString();
+        final unitLower = unit.toLowerCase();
+        final isPcsOrBox = unitLower == 'pcs' || unitLower == 'box';
+        final qty = item.quantity;
+        final normalizedQty = isPcsOrBox && qty % 1 != 0 ? qty.round().toDouble() : qty;
 
         final newItem = InvoiceItem(
           itemId: item.itemId ?? '',
@@ -944,14 +949,14 @@ class NewInvoiceController extends GetxController {
           customerId: item.customerId ?? _getValidCustomerId(),
           itemName: item.itemName ?? '',
           description: item.description ?? item.itemName ?? '',
-          quantity: item.quantity,
+          quantity: normalizedQty,
           rate: item.rate ?? 0.0,
           gstRate: item.gstRate ?? 0.0,
           gstAmount: item.gstAmount ?? 0.0,
           amountWithGst: item.amountWithGst ?? 0.0,
           totalPrice: item.totalPrice ?? 0.0,
           challanId: item.challanId,
-          unit: item.unit,
+          unit: (item.unit != null && (item.unit!.trim().isNotEmpty)) ? item.unit! : 'pcs',
           descriptionController: descController,
         );
 
@@ -962,11 +967,18 @@ class NewInvoiceController extends GetxController {
       priceControllers.clear();
 
       for (int i = 0; i < invoiceItems.length; i++) {
+        final invItem = invoiceItems[i];
+        final qty = invItem.quantity;
+        final unit = (invItem.unit ?? '').toString().toLowerCase();
+        final isPcsOrBox = unit == 'pcs' || unit == 'box';
+        final qtyDisplay = qty <= 0
+            ? ''
+            : (isPcsOrBox ? qty.round().toString() : (qty % 1 == 0 ? qty.toInt().toString() : qty.toString()));
         quantityControllers.add(
-            TextEditingController(text: invoiceItems[i].quantity > 0 ? invoiceItems[i].quantity.toString() : '')
+            TextEditingController(text: qtyDisplay)
         );
         priceControllers.add(
-            TextEditingController(text: invoiceItems[i].rate.toString())
+            TextEditingController(text: invItem.rate.toString())
         );
       }
 

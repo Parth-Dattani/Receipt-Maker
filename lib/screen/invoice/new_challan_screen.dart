@@ -1379,9 +1379,9 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                      item.unit != null && item.unit!.isNotEmpty
+                                      (item.unit != null && item.unit!.trim().isNotEmpty)
                                           ? 'Qty (${item.unit})'
-                                          : 'Qty',
+                                          : 'Qty (pcs)',
                                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                                   SizedBox(height: 4),
                                   // Obx((){
@@ -1454,6 +1454,9 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                   Obx(() {
                                     // Get available stock for this item
                                     double? availableStock;
+                                    final item = controller.challanItems[index];
+                                    final isPcsOrBox = item.unit != null &&
+                                        (item.unit!.toLowerCase() == "pcs" || item.unit!.toLowerCase() == "box");
 
                                     if (item.itemId != null && item.itemId!.isNotEmpty) {
                                       final masterItem = controller.itemList.firstWhereOrNull(
@@ -1464,103 +1467,54 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                       }
                                     }
 
-                                    // EDIT MODE
-                                    if (controller.isEditMode.value) {
-                                      return Container(
-                                        height: 40,
-                                        child:
-                                        TextFormField(
-                                          controller: controller.getQuantityController(index, initialValue: item.quantity),
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                          decoration: InputDecoration(
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                            suffixText: item.unit ?? '',
-                                            suffixStyle: const TextStyle(fontSize: 10, color: Colors.grey),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(8),
-                                              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
-                                            ),
+                                    // Single quantity field for both Create and Edit (same behavior)
+                                    return Container(
+                                      height: 40,
+                                      child: TextFormField(
+                                        key: ValueKey('qty_${item.itemId}_${index}_${controller.challanItems.length}'),
+                                        controller: controller.getQuantityController(index, initialValue: item.quantity),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                        decoration: InputDecoration(
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                          suffixText: item.unit ?? '',
+                                          suffixStyle: const TextStyle(fontSize: 10, color: Colors.grey),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: AppColors.tealColor, width: 2),
                                           ),
-                                          keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                              ? TextInputType.number
-                                              : TextInputType.numberWithOptions(decimal: true),
-                                          inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                              ? [IntegerOnlyInputFormatter()]
-                                              : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                                          onChanged: (value) {
-                                            if (value.isEmpty) {
-                                              controller.updateItem(index, quantity: 0.0, price: item.price, unit: item.unit);
+                                          hintText: availableStock != null
+                                              ? 'Stocks: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
+                                              : null,
+                                          hintStyle: TextStyle(fontSize: 10, color: Colors.orange),
+                                        ),
+                                        keyboardType: isPcsOrBox
+                                            ? TextInputType.number
+                                            : TextInputType.numberWithOptions(decimal: true),
+                                        inputFormatters: isPcsOrBox
+                                            ? [IntegerOnlyInputFormatter()]
+                                            : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                        onChanged: (value) {
+                                          if (value.isEmpty) {
+                                            controller.itemsWithStockViolation.remove(index);
+                                            controller.violationMessages.remove(index);
+                                            controller.updateItem(index, quantity: 0.0, price: item.price, unit: item.unit);
+                                            return;
+                                          }
+                                          double? qty = double.tryParse(value.replaceAll(',', '.'));
+                                          if (qty != null) {
+                                            if (isPcsOrBox && qty % 1 != 0) {
+                                              Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
                                               return;
                                             }
-                                            double? qty = double.tryParse(value.replaceAll(',', '.'));
-                                            if (qty != null) {
-                                              if (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box") {
-                                                if (qty % 1 != 0) {
-                                                  Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
-                                                  return;
-                                                }
-                                              }
-                                              controller.updateItem(index, quantity: qty, price: item.price, unit: item.unit);
-                                            }
-                                          },
-                                        ),
-                                      );
-                                    }
-
-                                    // CREATE MODE
-                                    else {
-                                      return Container(
-                                        height: 40,
-                                        child: TextFormField(
-                                          key: ValueKey('qty_create_${item.itemId}_$index}_${controller.challanItems.length}'),
-                                          controller: controller.getQuantityController(index, initialValue: item.quantity),
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                          decoration: InputDecoration(
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                            suffixText: item.unit ?? '',
-                                            suffixStyle: const TextStyle(fontSize: 10, color: Colors.grey),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(8),
-                                              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
-                                            ),
-                                            hintText: availableStock != null
-                                                ? 'Stocks: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
-                                                : null,
-                                            hintStyle: TextStyle(fontSize: 10, color: Colors.orange),
-                                          ),
-                                          keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                              ? TextInputType.number
-                                              : TextInputType.numberWithOptions(decimal: true),
-                                          inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                              ? [IntegerOnlyInputFormatter()]
-                                              : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                                          onChanged: (value) {
-                                            if (value.isEmpty) {
-                                              controller.itemsWithStockViolation.remove(index);
-                                              controller.violationMessages.remove(index);
-                                              controller.updateItem(index, quantity: 0.0, price: item.price, unit: item.unit);
-                                              return;
-                                            }
-                                            double? qty = double.tryParse(value.replaceAll(',', '.'));
-                                            if (qty != null) {
-                                              if (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box") {
-                                                if (qty % 1 != 0) {
-                                                  Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
-                                                  return;
-                                                }
-                                              }
-                                              controller.itemsWithStockViolation.remove(index);
-                                              controller.violationMessages.remove(index);
-                                              controller.updateItem(index, quantity: qty, price: item.price, unit: item.unit);
-                                            }
-                                          },
-                                        ),
-                                      );
-                                    }
+                                            controller.itemsWithStockViolation.remove(index);
+                                            controller.violationMessages.remove(index);
+                                            controller.updateItem(index, quantity: qty, price: item.price, unit: item.unit);
+                                          }
+                                        },
+                                      ),
+                                    );
                                   })
                                 ],
                               ),
@@ -1806,7 +1760,15 @@ class NewChallanScreen extends GetView<NewChallanController> {
                         Expanded(
                           flex: 2,
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text(
+                                (item.unit != null && item.unit!.trim().isNotEmpty)
+                                    ? 'Qty (${item.unit})'
+                                    : 'Qty (pcs)',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                              SizedBox(height: 4),
                               TextFormField(
                                 controller: controller.getQuantityController(index, initialValue: item.quantity),
                                 textAlign: TextAlign.center,

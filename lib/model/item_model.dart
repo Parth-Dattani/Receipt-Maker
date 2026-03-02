@@ -8,7 +8,7 @@ class Item {
   final double gstPercent;
 
   final String unitOfMeasurement;
-  final int currentStock;
+  final double currentStock;  // double to support decimal stock (e.g. 247.5 kg)
   final String detailRequirement;
   final bool isActive;
   final String userId;
@@ -21,7 +21,7 @@ class Item {
     this.gstPercent = 0.0,
 
     this.unitOfMeasurement = 'pcs',
-    this.currentStock = 0,
+    this.currentStock = 0.0,
     this.detailRequirement = '',
     this.isActive = true,
     this.userId = '0',
@@ -52,7 +52,7 @@ class Item {
       gstPercent: double.tryParse(map['gst']?.toString() ?? '0') ?? 0.0,
 
       unitOfMeasurement: map['unitOfMeasurement']?.toString() ?? 'pcs',
-      currentStock: int.tryParse(map['currentStock']?.toString() ?? '0') ?? 0,
+      currentStock: double.tryParse((map['currentStock']?.toString() ?? '0').trim()) ?? 0.0,
       detailRequirement: map['detailRequirement']?.toString() ?? '',
       isActive: _parseIsActive(map['isActive']),
       userId: map['userId']?.toString() ?? '',
@@ -98,7 +98,7 @@ class Item {
     double? price,
     double? gst,
     String? unitOfMeasurement,
-    int? currentStock,
+    double? currentStock,
     String? detailRequirement,
     bool? isActive,
   }) {
