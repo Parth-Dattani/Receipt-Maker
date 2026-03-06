@@ -1882,6 +1882,11 @@ class GoogleSheetService {
   static final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheValidDuration = Duration(minutes: 5);
 
+  /// Create a new Google Sheet for a user (stub: returns null; implement via Drive API if needed).
+  static Future<String?> createNewUserSpreadsheet(String uid) async {
+    // TODO: Implement via Google Drive API to create a new spreadsheet per user.
+    return null;
+  }
 
   /// Call this when app starts or when you need to ensure all sheets exist
   static Future<void> ensureSheetsExist() async {

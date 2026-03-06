@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 
 import '../constant/constant.dart';
 import '../screen/screen.dart';
+import '../services/remote_service.dart';
 import '../widgets/custom_snackbar.dart';
 
 
@@ -25,6 +26,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   final TextEditingController loginUsernameController = TextEditingController();
   final TextEditingController loginPasswordController = TextEditingController();
   var isPasswordHidden = true.obs;
+  var rememberMe = false.obs;
 
   // Registration form controllers
   final TextEditingController regUsernameController = TextEditingController();
@@ -534,8 +536,19 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (_isDisposed) return;
 
-      // Add retry logic for Firestore operations
-      await _saveUserDataWithRetry(userCred.user!.uid);
+      // Create Google Sheet for this user (client-side — no Cloud Functions, works on Spark plan)
+      String spreadsheetId = '';
+      try {
+        final id = await GoogleSheetService.createNewUserSpreadsheet(userCred.user!.uid);
+        spreadsheetId = id ?? '';
+      } catch (e) {
+        print('createNewUserSpreadsheet failed: $e');
+      }
+
+      if (_isDisposed) return;
+
+      // Save user data to Firestore including spreadsheetId
+      await _saveUserDataWithRetry(userCred.user!.uid, spreadsheetId: spreadsheetId);
 
       if (_isDisposed) return;
 
@@ -549,7 +562,10 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       //await sharedPreferencesHelper.storePrefData("userId", userCred.user!.uid);
       await sharedPreferencesHelper.storePrefData("email", email);
       await sharedPreferencesHelper.storePrefData("username", regUsernameController.text.trim());
-
+      if (spreadsheetId.isNotEmpty) {
+        await sharedPreferencesHelper.storePrefData("spreadsheetId", spreadsheetId);
+        AppConstants.spreadsheetId = spreadsheetId;
+      }
 
       AppConstants.userId = userCred.user!.uid  ;
       _clearRegistrationForm();
@@ -608,7 +624,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   }
 
 // Helper method to save user data with retry logic
-  Future<void> _saveUserDataWithRetry(String uid, {int maxRetries = 3}) async {
+  Future<void> _saveUserDataWithRetry(String uid, {int maxRetries = 3, String spreadsheetId = ''}) async {
     int attempts = 0;
 
     while (attempts < maxRetries) {
@@ -629,7 +645,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "createdAt": FieldValue.serverTimestamp(),
           "endDate": DateTime.now().add(const Duration(days: 5000)),
           "appId":"",
-          "spreadsheetId":"",
+          "spreadsheetId": spreadsheetId,
           "isDemo": isDemo.value,
         });
 
