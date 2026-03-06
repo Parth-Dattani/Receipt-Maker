@@ -315,7 +315,7 @@ class ChallanListController extends BaseController {
 
       List<Challan> challans = await GoogleSheetService.getChallansList();
       challanList.assignAll(challans);
-      filteredChallanList.assignAll(challans);
+      _applyFilters();
 
     } catch (e) {
       print("❌ Error loading challans: $e");
@@ -360,34 +360,52 @@ class ChallanListController extends BaseController {
   /// 🔹 Search challans by ID or customer name
   void filterChallans(String query) {
     searchQuery.value = query;
-
-    if (query.isEmpty) {
-      filteredChallanList.assignAll(challanList);
-      return;
-    }
-
-    final filtered = challanList.where((challan) {
-      return (challan.challanId?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
-          (challan.customerName?.toLowerCase().contains(query.toLowerCase()) ?? false);
-    }).toList();
-
-    filteredChallanList.assignAll(filtered);
+    _applyFilters();
   }
 
   /// 🔹 Filter challans by status
   void filterByStatus(String status) {
     selectedFilter.value = status;
+    _applyFilters();
+  }
 
-    if (status == 'All') {
-      filteredChallanList.assignAll(challanList);
-      return;
+  void _applyFilters() {
+    final q = searchQuery.value.trim().toLowerCase();
+    final filter = selectedFilter.value;
+
+    Iterable<Challan> results = challanList;
+
+    // 1) Status filter
+    if (filter != 'All') {
+      results = results.where((c) => _matchesStatusFilter(c, filter));
     }
 
-    final filtered = challanList.where((challan) {
-      return (challan.status?.toLowerCase() ?? '') == status.toLowerCase();
-    }).toList();
+    // 2) Search filter (applies on top of status filter)
+    if (q.isNotEmpty) {
+      results = results.where((challan) {
+        final id = (challan.challanId ?? '').toLowerCase();
+        final name = (challan.customerName ?? '').toLowerCase();
+        return id.contains(q) || name.contains(q);
+      });
+    }
 
-    filteredChallanList.assignAll(filtered);
+    filteredChallanList.assignAll(results.toList());
+  }
+
+  bool _matchesStatusFilter(Challan challan, String filter) {
+    final s = (challan.status ?? '').toString().trim().toLowerCase();
+
+    // Map your real sheet statuses to UI tabs
+    switch (filter) {
+      case 'Delivered':
+        return s == 'delivered' || s == 'completed';
+      case 'Pending':
+        return s == 'pending' || s == 'inprogress';
+      case 'In Transit':
+        return s == 'in transit' || s == 'intransit' || s == 'progress';
+      default:
+        return true;
+    }
   }
 
   /// 🔹 Actions for each challan
@@ -527,7 +545,7 @@ class ChallanListController extends BaseController {
 
   /// 🔹 Statistics
   int get totalChallans => challanList.length;
-  int get deliveredChallans => challanList.where((c) => c.status?.toLowerCase() == 'delivered').length;
-  int get pendingChallans => challanList.where((c) => c.status?.toLowerCase() == 'pending').length;
-  int get inTransitChallans => challanList.where((c) => c.status?.toLowerCase() == 'in transit').length;
+  int get deliveredChallans => challanList.where((c) => _matchesStatusFilter(c, 'Delivered')).length;
+  int get pendingChallans => challanList.where((c) => _matchesStatusFilter(c, 'Pending')).length;
+  int get inTransitChallans => challanList.where((c) => _matchesStatusFilter(c, 'In Transit')).length;
 }

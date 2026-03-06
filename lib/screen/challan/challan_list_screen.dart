@@ -282,13 +282,13 @@ class ChallanListScreen extends GetView<ChallanListController> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip('all'.tr, controller.selectedFilter.value == 'All'),
+                _buildFilterChip('all'.tr, controller.selectedFilter.value == 'All', 'All'),
                 const SizedBox(width: 8),
-                _buildFilterChip('delivered'.tr, controller.selectedFilter.value == 'Delivered'),
+                _buildFilterChip('delivered'.tr, controller.selectedFilter.value == 'Delivered', 'Delivered'),
                 const SizedBox(width: 8),
-                _buildFilterChip('pending'.tr, controller.selectedFilter.value == 'Pending'),
+                _buildFilterChip('pending'.tr, controller.selectedFilter.value == 'Pending', 'Pending'),
                 const SizedBox(width: 8),
-                _buildFilterChip('in_transit'.tr, controller.selectedFilter.value == 'In Transit'),
+                _buildFilterChip('in_transit'.tr, controller.selectedFilter.value == 'In Transit', 'In Transit'),
               ],
             ),
           )),
@@ -297,11 +297,11 @@ class ChallanListScreen extends GetView<ChallanListController> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected) {
+  Widget _buildFilterChip(String label, bool selected, String filterKey) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
-      onSelected: (_) => controller.filterByStatus(label),
+      onSelected: (_) => controller.filterByStatus(filterKey),
       selectedColor: AppColors.tealColor,
       backgroundColor: Colors.white,
       labelStyle: TextStyle(

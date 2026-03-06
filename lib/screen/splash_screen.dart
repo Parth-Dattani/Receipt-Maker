@@ -101,10 +101,10 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
               ),
             ),
             const SizedBox(height: 30),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              strokeWidth: 2,
-            ),
+            // const CircularProgressIndicator(
+            //   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            //   strokeWidth: 2,
+            // ),
           ],
         ),
       ),
