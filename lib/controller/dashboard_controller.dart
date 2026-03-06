@@ -155,13 +155,14 @@ class DashboardController extends BaseController {
       _isInitializing = true;
       isLoading.value = true;
       print("🔄 Starting dashboard initialization...");
-      await _loadUserData();
-      // Step 1: Load company first (await!)
-      await _loadCompanyData();
-
+      // Run user and company data in parallel (faster on web)
+      await Future.wait([
+        _loadUserData(),
+        _loadCompanyData(),
+      ]);
       await loadCompanySettings();
 
-      /// Step 2: Now load dashboard data
+      /// Load dashboard data (invoices + purchases in parallel inside loadDashboardData)
       await loadDashboardData();
 
       _hasInitialized = true;
@@ -509,13 +510,13 @@ class DashboardController extends BaseController {
 
       print("🔄 Loading dashboard data...");
 
+      // Load invoices and purchases in parallel (biggest win on web)
+      await Future.wait([
+        loadInvoices(),
+        loadPurchases(),
+      ]);
 
-      // 🔹 FIXED: Load invoices FIRST, then calculate everything once
-      await loadInvoices();
-
-      await loadPurchases();
-
-      // 🔹 Now load other data in parallel (no invoice dependencies)
+      // Then customer count and revenue chart in parallel
       await Future.wait([
         loadCustomerCount(),
         getMonthlyRevenueData(),

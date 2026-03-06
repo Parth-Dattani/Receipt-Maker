@@ -244,7 +244,7 @@ class AuthScreen extends GetView<AuthController> {
           const SizedBox(height: 6),
           Center(
             child: Text(
-              "Developed By Fluttrr",
+              "Developed By Intelligent Tech",
               style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
             ),
           ),

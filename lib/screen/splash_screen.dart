@@ -2,12 +2,8 @@ import 'package:demo_prac_getx/controller/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
-
-import '../constant/constant.dart';
-
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import '../../controller/splash_controller.dart';
 
 class SplashScreen extends GetView<SplashController> {
@@ -18,7 +14,7 @@ class SplashScreen extends GetView<SplashController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.appColor, // Company primary color
+      backgroundColor: const Color(0xFF004D40), // Teal (same as auth left panel)
       body: Center(
         child: _AnimatedLogo(),
       ),
@@ -76,16 +72,22 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.receipt_long_rounded,
-              size: 100,
-              color: Colors.white,
+            Image.asset(
+              'assets/images/app_logo.png',
+              height: 120,
+              width: 120,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.receipt_long_rounded,
+                size: 120,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Text(
               "Invoice Sathi",
               style: TextStyle(
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 1.5,
@@ -101,10 +103,6 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
               ),
             ),
             const SizedBox(height: 30),
-            // const CircularProgressIndicator(
-            //   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            //   strokeWidth: 2,
-            // ),
           ],
         ),
       ),
