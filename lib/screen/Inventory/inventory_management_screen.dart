@@ -28,7 +28,9 @@ class InventoryManagementScreen extends GetView<ItemController> {
             padding: const EdgeInsets.only(left: 12),
             child: IconButton(
               icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Get.back(),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              },
             ),
           ),
           title: const Text(

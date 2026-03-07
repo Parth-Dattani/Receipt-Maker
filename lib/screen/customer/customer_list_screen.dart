@@ -48,6 +48,12 @@ class CustomerListScreen extends GetView<CustomerListController> {
       foregroundColor: Colors.white,
       elevation: 0,
       backgroundColor: AppColors.tealColor,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        },
+      ),
       title: isWeb
           ? Row(
               children: [

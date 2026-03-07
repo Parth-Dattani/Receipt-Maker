@@ -1,6 +1,7 @@
 import 'package:demo_prac_getx/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../model/model.dart';
@@ -704,6 +705,7 @@ class InvoiceDetailsController extends GetxController {
         'status': selectedStatus.value,
         'profit': calculatedProfit,
         'invoiceType': 'invoice',
+        'updatedAt': DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now()),
       };
 
       await GoogleSheetService.updateInvoice(invoiceData, AppConstants.userId);

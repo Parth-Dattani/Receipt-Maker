@@ -34,7 +34,7 @@ class Invoice {
   final double? pendingAmount;
   final String? paymentMode; // ✅ NEW: Cash, UPI, Card, Bank Transfer, etc.
   final double? profit;
-
+  final DateTime? updatedAt; // when invoice was last updated (e.g. payment recorded)
 
   Invoice({
     required this.invoiceId,
@@ -66,6 +66,7 @@ class Invoice {
     this.pendingAmount,
     this.paymentMode,
     this.profit,
+    this.updatedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -97,6 +98,7 @@ class Invoice {
       'pendingAmount': pendingAmount,
       'paymentMode': paymentMode,
       'profit': profit,
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -153,6 +155,7 @@ class Invoice {
       pendingAmount: double.tryParse(map['pendingAmount']?.toString() ?? '0') ?? 0.0,
       paymentMode: map['paymentMode'] ?? map['payment_mode'],
       profit: double.tryParse(map['profit']?.toString() ?? map['Profit']?.toString() ?? '0') ?? 0.0,
+      updatedAt: _parseDateField(map['updatedAt'] ?? map['updated_at'] ?? map['Updated At']),
     );
   }
 
@@ -167,14 +170,16 @@ class Invoice {
 
     // If it's a String, try to parse it
     if (dateValue is String && dateValue.isNotEmpty) {
-      // Try ISO format first
-      DateTime? parsed = DateTime.tryParse(dateValue);
+      dateValue = dateValue.trim();
+      // Use date part only if string has "dd/MM/yyyy HH:mm:ss" form
+      final datePart = dateValue.contains(" ") ? dateValue.split(" ").first : dateValue;
+      DateTime? parsed = DateTime.tryParse(datePart);
       if (parsed != null) return parsed;
 
       // Try dd/MM/yyyy format
-      if (dateValue.contains("/")) {
+      if (datePart.contains("/")) {
         try {
-          final parts = dateValue.split("/");
+          final parts = datePart.split("/");
           if (parts.length == 3) {
             return DateTime(
               int.parse(parts[2]), // yyyy
@@ -217,6 +222,7 @@ class Invoice {
     double? receivedAmount,
     double? pendingAmount,
     String? paymentMode, // ✅ NEW
+    DateTime? updatedAt,
   }) {
     return Invoice(
       invoiceId: invoiceId ?? this.invoiceId,
@@ -244,6 +250,7 @@ class Invoice {
       receivedAmount: receivedAmount ?? this.receivedAmount,
       pendingAmount: pendingAmount ?? this.pendingAmount,
       paymentMode: paymentMode ?? this.paymentMode, // ✅ NEW
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 

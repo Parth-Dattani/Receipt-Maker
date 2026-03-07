@@ -30,6 +30,12 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
         title: Text('invoice_details'.tr),
         backgroundColor: AppColors.tealColor,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
+        ),
         actions: [
           // Edit button
           Obx(() {
@@ -62,7 +68,7 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
           }
 
           final inv = controller.invoice.value;
-          if (inv == null) return _buildErrorState();
+          if (inv == null) return _buildErrorState(context);
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -383,7 +389,7 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     }
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -393,7 +399,9 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
           Text('Invoice not found', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, foregroundColor: Colors.white),

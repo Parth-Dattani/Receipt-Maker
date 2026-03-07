@@ -68,7 +68,9 @@ class CompanySelectionScreen extends GetView<CompanySelectionController> {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Get.back(),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              },
             ),
           ),
           const Spacer(),

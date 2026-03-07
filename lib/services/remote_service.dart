@@ -2928,6 +2928,12 @@ class GoogleSheetService {
               } else {
                 rowData[headerKey] = null;
               }
+            } else if (headerKey.toLowerCase().replaceAll(' ', '').replaceAll('_', '') == 'updatedat') {
+              if (cellValue != null && cellValue.toString().trim().isNotEmpty) {
+                rowData['updatedAt'] = _parseDateOrDateTime(cellValue.toString());
+              } else {
+                rowData['updatedAt'] = null;
+              }
             } else {
               rowData[headerKey] = cellValue;
             }
@@ -2982,6 +2988,22 @@ class GoogleSheetService {
       print("❌ Error parsing date '$dateString': $e");
       return null;
     }
+  }
+
+  /// Parse date or datetime string (e.g. dd/MM/yyyy HH:mm:ss) for updatedAt
+  static DateTime? _parseDateOrDateTime(String value) {
+    if (value.trim().isEmpty) return null;
+    final s = value.trim();
+    final datePart = s.contains(" ") ? s.split(" ").first : s;
+    if (datePart.contains("/")) {
+      final parts = datePart.split("/");
+      if (parts.length == 3) {
+        try {
+          return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+        } catch (_) {}
+      }
+    }
+    return DateTime.tryParse(datePart) ?? _parseDate(s);
   }
 
 // Add invoice to Google Sheet
@@ -3364,6 +3386,8 @@ class GoogleSheetService {
           newValue = invoiceData['status']?.toString();
         } else if (headerLower.contains('paymentmode')) {
           newValue = invoiceData['paymentMode']?.toString();
+        } else if (headerLower.contains('updatedat')) {
+          newValue = invoiceData['updatedAt']?.toString();
         } else if (headerLower == 'notes') {
           newValue = invoiceData['notes']?.toString();
         } else if (headerLower.contains('userid')) {

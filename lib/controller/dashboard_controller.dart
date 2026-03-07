@@ -716,30 +716,50 @@ class DashboardController extends BaseController {
     double todayProf = 0.0;
 
     for (var invoice in invoiceList) {
-      if (invoice.issueDate == null) continue;
+      final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
+      final status = (invoice.status ?? "").toLowerCase().trim();
+      final received = invoice.receivedAmount ?? 0.0;
+      final total = invoice.totalAmount ?? 0.0;
 
-      final invoiceDate = DateTime(
-        invoice.issueDate!.year,
-        invoice.issueDate!.month,
-        invoice.issueDate!.day,
-      );
+      // 1) Payment received today: updatedAt = today and (Paid or Partial) with receivedAmount > 0
+      final updatedAt = invoice.updatedAt;
+      final updatedAtDate = updatedAt != null
+          ? DateTime(updatedAt.year, updatedAt.month, updatedAt.day)
+          : null;
+      final isPaidOrPartial = status == 'paid' || status == 'partial' || status == 'completed' || status == 'accepted';
+      final paymentReceivedToday = isPaidOrPartial && received > 0 && updatedAtDate != null && updatedAtDate.isAtSameMomentAs(today);
 
-      if (invoiceDate.isAtSameMomentAs(today)) {
-        final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
-        final amount = invoice.totalAmount ?? 0.0;
+      // 2) Issued today (backward compatibility: when no updatedAt, use issueDate for today's collection)
+      final issueDate = invoice.issueDate;
+      final issueDateOnly = issueDate != null
+          ? DateTime(issueDate.year, issueDate.month, issueDate.day)
+          : null;
+      final issuedToday = issueDateOnly != null && issueDateOnly.isAtSameMomentAs(today);
 
+      double amountToAdd = 0.0;
+      bool countToday = false;
+      if (paymentReceivedToday) {
+        amountToAdd = received;
+        countToday = true;
         todayProf += (invoice.profit ?? 0.0);
+      } else if (issuedToday && paymentMode.isNotEmpty) {
+        // Old behaviour: invoice issued today, use totalAmount by mode (when no updatedAt paid-today)
+        amountToAdd = total;
+        countToday = true;
+        todayProf += (invoice.profit ?? 0.0);
+      }
 
-        if (paymentMode == "cash") {
-          cashTotal += amount;
-          cashCount++;
-        } else if (paymentMode == "upi") {
-          upiTotal += amount;
-          upiCount++;
-        } else if (paymentMode == "card") {
-          cardTotal += amount;
-          cardCount++;
-        }
+      if (!countToday || amountToAdd <= 0) continue;
+
+      if (paymentMode == "cash") {
+        cashTotal += amountToAdd;
+        cashCount++;
+      } else if (paymentMode == "upi") {
+        upiTotal += amountToAdd;
+        upiCount++;
+      } else if (paymentMode == "card") {
+        cardTotal += amountToAdd;
+        cardCount++;
       }
     }
 

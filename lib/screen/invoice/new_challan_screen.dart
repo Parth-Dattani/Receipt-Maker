@@ -32,6 +32,12 @@ class NewChallanScreen extends GetView<NewChallanController> {
         return Scaffold(
           backgroundColor: Colors.grey.shade100,
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              },
+            ),
             title: Row(
               children: [
                 Obx(() => Text(

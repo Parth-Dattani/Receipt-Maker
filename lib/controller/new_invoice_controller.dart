@@ -2862,6 +2862,7 @@ class NewInvoiceController extends GetxController {
         'paymentMode': (paymentStatus.value == 'Paid' || paymentStatus.value == 'Partial')
             ? paymentMode.value
             : '',  // Empty if Pending
+        'updatedAt': DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now()),
       };
 
       if (isInEditMode) {
@@ -3196,6 +3197,7 @@ class NewInvoiceController extends GetxController {
         'invoiceType': invoiceType.value.name,
         'paymentMode': (paymentStatus.value == 'Paid' || paymentStatus.value == 'Partial') ? paymentMode.value : '',
         'profit': calculatedInvoiceProfit,
+        'updatedAt': DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now()),
       };
 
       // Save to Google Sheets

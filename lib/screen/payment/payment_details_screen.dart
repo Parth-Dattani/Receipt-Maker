@@ -746,7 +746,7 @@ import 'dart:io';
 //                           if (receivedAmount > alreadyPending) {
 //                             errorMessage = 'Cannot exceed pending ₹${AppUtil.formatCurrency(alreadyPending)}';
 //                             receivedAmount = alreadyPending;
-//                             receivedAmountController.text = alreadyPending.toStringAsFixed(0);
+//                             receivedAmountController.text = alreadyPending.toStringAsFixed(2);
 //                           } else if (receivedAmount < 0) {
 //                             errorMessage = 'Amount must be positive';
 //                             receivedAmount = 0;
@@ -1735,7 +1735,7 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
 
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFD),
-          appBar: _buildAppBar(isWeb),
+          appBar: _buildAppBar(context, isWeb),
           body: SafeArea(
             child: Obx(() {
               if (controller.isLoading.value) return _buildLoadingShimmer();
@@ -1761,7 +1761,7 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
     return content;
   }
 
-  AppBar _buildAppBar(bool isWeb) {
+  AppBar _buildAppBar(BuildContext context, bool isWeb) {
     return AppBar(
       elevation: 0,
       backgroundColor: AppColors.tealColor,
@@ -1784,7 +1784,11 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
       centerTitle: !isWeb,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Get.back(),
+        onPressed: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
       ),
     );
   }
@@ -2377,7 +2381,7 @@ class PaymentDetailsBottomSheet {
                           if (receivedAmount > alreadyPending) {
                             errorMessage = 'Cannot exceed pending amount';
                             receivedAmount = alreadyPending;
-                            receivedAmountController.text = alreadyPending.toStringAsFixed(0);
+                            receivedAmountController.text = alreadyPending.toStringAsFixed(2);
                           } else {
                             errorMessage = '';
                           }
@@ -2411,7 +2415,7 @@ class PaymentDetailsBottomSheet {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(color: isSelected ? AppColors.tealColor : Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
-                              child: Text("$recordId (${isPaid ? 'PAID' : 'Pending: ${recordPending.toStringAsFixed(0)}'})", style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontSize: 12)),
+                              child: Text("$recordId (${isPaid ? 'PAID' : 'Pending: ${recordPending.toStringAsFixed(2)}'})", style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontSize: 12)),
                             ),
                           ),
                         );
@@ -2497,6 +2501,9 @@ class PaymentDetailsBottomSheet {
       remainingAmount -= payment;
       String status = newPending <= 0.01 ? 'Paid' : 'Partial';
 
+      final now = DateTime.now();
+      final updatedAtStr = DateFormat('dd/MM/yyyy HH:mm:ss').format(now);
+
       final updateData = {
         'invoiceId': invoice.invoiceId,
         //'customerId': invoice.customerId ?? '',
@@ -2504,6 +2511,7 @@ class PaymentDetailsBottomSheet {
         'pendingAmount': newPending.toString(),
         'status': status,
         'paymentMode': paymentMode, // ✅ Save Mode
+        'updatedAt': updatedAtStr, // ✅ So "Today's Collection" shows payment date
         //'userId': AppConstants.userId,
       };
       await GoogleSheetService.updateInvoice(updateData, AppConstants.userId);
@@ -3533,7 +3541,7 @@ class PaymentDetailsBottomSheet {
 //                           if (receivedAmount > alreadyPending) {
 //                             errorMessage = 'Cannot exceed pending amount';
 //                             receivedAmount = alreadyPending;
-//                             receivedAmountController.text = alreadyPending.toStringAsFixed(0);
+//                             receivedAmountController.text = alreadyPending.toStringAsFixed(2);
 //                           } else {
 //                             errorMessage = '';
 //                           }

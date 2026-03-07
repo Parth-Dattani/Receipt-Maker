@@ -28,10 +28,16 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 4,
-        automaticallyImplyLeading: true,
+        automaticallyImplyLeading: false,
         foregroundColor: Colors.white,
         backgroundColor: AppColors.tealColor,
        
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
+        ),
         title: Row(
           children: [
             Obx(() => Text(

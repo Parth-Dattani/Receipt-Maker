@@ -23,7 +23,7 @@ class SettingsScreen extends GetView<SettingsController> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(context),
               Expanded(
                 child: Container(
                   margin: EdgeInsets.only(top: 20),
@@ -87,7 +87,7 @@ class SettingsScreen extends GetView<SettingsController> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
@@ -99,7 +99,9 @@ class SettingsScreen extends GetView<SettingsController> {
             ),
             child: IconButton(
               icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Get.back(),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+              },
             ),
           ),
           SizedBox(width: 16),
