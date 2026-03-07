@@ -1,5 +1,6 @@
 import 'package:demo_prac_getx/constant/app_constant.dart' show AppConstants;
 import 'package:demo_prac_getx/screen/dashboard/widgets/widgets.dart';
+import 'package:demo_prac_getx/widgets/web_app_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -23,11 +24,11 @@ class DashboardScreen extends GetView<DashboardController> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // If width is greater than 900, use Web/Desktop Layout
-        if (constraints.maxWidth > 900) {
+        // On website (kIsWeb): always use web layout so left drawer/sidebar is always visible
+        // On mobile app: use web layout only when width > 900
+        if (kIsWeb || constraints.maxWidth > 900) {
           return _buildWebLayout(context);
         }
-        // Otherwise use Mobile Layout
         return _buildMobileLayout(context);
       },
     );
@@ -175,11 +176,8 @@ class DashboardScreen extends GetView<DashboardController> {
       backgroundColor: Colors.grey[50],
       body: Row(
         children: [
-          // 1. Fixed Sidebar
-          SizedBox(
-            width: 250,
-            child: _buildWebSidebar(context),
-          ),
+          // 1. Shared sidebar (same on every web screen)
+          WebAppSidebar(currentRoute: DashboardScreen.pageId),
 
           // 2. Main Content
           Expanded(
@@ -2340,35 +2338,31 @@ class DashboardScreen extends GetView<DashboardController> {
                     _buildMenuItem(icon: Icons.swap_horiz, iconColor: Colors.indigo.shade600, title: "Switch Company", onTap: () { Get.back(); controller.showCompanySwitcher(); }),
                   _buildMenuItem(icon: Icons.business, iconColor: Colors.teal.shade600, title: "edit_company".tr, onTap: () { final data = controller.currentCompany.value; if (data != null && controller.companyId.value.isNotEmpty) { Get.back(); controller.navigateToEditCompany(data, controller.companyId.value); } else { Get.snackbar("Error", "No active company found to edit."); } }),
                   Divider(height: 32, thickness: 1),
+                  ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue.shade600.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.privacy_tip_outlined, color: Colors.blue.shade600, size: 22)),
+                    title: Text('Privacy Policy', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey.shade800)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    onTap: () async {
+                      Get.back();
+                      const url = 'https://drive.google.com/file/d/1hRCygh-bIP1rAJTgTI5cdmnt9eeZLtif/view?usp=drive_link';
+                      if (kIsWeb) {
+                        try {
+                          await launchUrl(Uri.parse(url), mode: LaunchMode.platformDefault);
+                        } catch (_) {
+                          Get.snackbar('Error', 'Could not open Privacy Policy');
+                        }
+                      } else {
+                        Get.to(() => InAppWebViewScreen(url: url, title: 'Privacy Policy'));
+                      }
+                    },
+                  ),
                   _buildMenuItem(icon: Icons.logout, iconColor: Colors.red.shade600, title: "logout".tr, titleStyle: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600), onTap: () { Get.dialog(AlertDialog(title: Row(children: [Icon(Icons.logout, color: Colors.red.shade600), SizedBox(width: 12), Text("confirm_logout".tr)]), content: Text("logout_message".tr), actions: [TextButton(child: Text("cancel".tr), onPressed: () => Get.back()), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600), onPressed: () async { Get.back(); await controller.logout(); }, child: Text("logout".tr))])); }),
                   SizedBox(height: 20),
                   Container(
                     decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1))),
                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        InkWell(
-                          onTap: () async {
-                            Get.back();
-                            const url = 'https://drive.google.com/file/d/1hRCygh-bIP1rAJTgTI5cdmnt9eeZLtif/view?usp=drive_link';
-                            if (kIsWeb) {
-                              final uri = Uri.parse(url);
-                              try {
-                                await launchUrl(uri, mode: LaunchMode.platformDefault);
-                              } catch (_) {
-                                Get.snackbar('Error', 'Could not open Privacy Policy');
-                              }
-                            } else {
-                              Get.to(() => InAppWebViewScreen(url: url, title: 'Privacy Policy'));
-                            }
-                          },
-                          child: Padding(padding: EdgeInsets.only(bottom: 10), child: Text('Privacy Policy', style: TextStyle(fontSize: 12))),
-                        ),
-                        Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
-                      ],
-                    ),
+                    child: Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
                   ),
                 ],
               ),

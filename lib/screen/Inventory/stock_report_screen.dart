@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -5,6 +6,7 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../utils/utils.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 
 
@@ -17,7 +19,7 @@ class StockReportScreen extends GetView<StockReportController> {
   @override
   Widget build(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width > 900;
-    return Scaffold(
+    final content = Scaffold(
     backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
         title: Row(
@@ -110,6 +112,8 @@ class StockReportScreen extends GetView<StockReportController> {
         );
       }),
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ===========================================================================
@@ -245,7 +249,7 @@ class StockReportScreen extends GetView<StockReportController> {
             height: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.green.shade50,
               border: Border(left: BorderSide(color: Colors.grey.shade300)),
             ),
             child: SingleChildScrollView(
@@ -446,8 +450,10 @@ class StockReportScreen extends GetView<StockReportController> {
 
   // ✅ OPTIMIZED Stock Item Card
   Widget _buildStockItemCard(Item item) {
-    final stock = item.currentStock ?? 0;
-    final stockValue = (item.price ?? 0) * stock;
+    final stock = item.currentStock;
+    final stockValue = (item.price) * stock;
+    final unit = item.unitOfMeasurement.trim().isEmpty ? 'pcs' : item.unitOfMeasurement;
+    final stockDisplay = _formatStockWithUnit(stock, unit);
 
     Color statusColor = stock == 0
         ? Colors.red
@@ -487,7 +493,7 @@ class StockReportScreen extends GetView<StockReportController> {
             children: [
               Expanded(
                 child: Text(
-                  item.itemName ?? 'N/A',
+                  item.itemName,
                   maxLines: 1, // ✅ Prevent wrap
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -524,13 +530,13 @@ class StockReportScreen extends GetView<StockReportController> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: _buildInfoColumn('Price', '₹${item.price?.toStringAsFixed(2) ?? "0.00"}')),
+              Expanded(child: _buildInfoColumn('Price', '₹${item.price.toStringAsFixed(2)}')),
               // Expanded(child: _buildInfoColumn('GST', '${item.gstPercent?.toStringAsFixed(0) ?? "0"}%')),
               // Expanded(child: _buildInfoColumn('Unit', item.unitOfMeasurement ?? '-')),
               Expanded(
                 child: _buildInfoColumn(
                   'Stock',
-                  '${item.currentStock ?? 0}',
+                  stockDisplay,
                   isHighlight: true,
                   highlightColor: Colors.blue.shade700,
                 ),
@@ -574,6 +580,19 @@ class StockReportScreen extends GetView<StockReportController> {
         ],
       ),
     );
+  }
+
+  /// Format stock value with unit (e.g. "243.5 kg", "39525 Pcs")
+  String _formatStockWithUnit(double stock, String unit) {
+    final u = (unit.trim().isEmpty ? 'pcs' : unit).trim().toLowerCase();
+    final isWhole = u == 'pcs' || u == 'box';
+    final value = isWhole && stock == stock.truncateToDouble()
+        ? stock.toInt().toString()
+        : stock == stock.truncateToDouble()
+            ? stock.toInt().toString()
+            : stock.toStringAsFixed(2);
+    final unitLabel = u.isEmpty ? 'Pcs' : (u.length == 1 ? u.toUpperCase() : u[0].toUpperCase() + u.substring(1));
+    return '$value $unitLabel';
   }
 
   Widget _buildInfoColumn(String label, String value, {bool isHighlight = false, Color? highlightColor}) {

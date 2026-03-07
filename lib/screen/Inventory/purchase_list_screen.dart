@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -7,13 +8,9 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../utils/utils.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 import '../screen.dart';
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
 
 
 class PurchaseListScreen extends GetView<PurchaseListController> {
@@ -24,7 +21,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
   @override
   Widget build(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width > 900;
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
         title: Row(
@@ -106,6 +103,8 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
       )
           : null,
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ===========================================================================

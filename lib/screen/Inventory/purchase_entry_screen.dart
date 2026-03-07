@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../constant/constant.dart';
@@ -6,6 +7,7 @@ import '../../model/model.dart';
 import '../../utils/utils.dart';
 import '../../utils/input_formatters.dart';
 import '../../widgets/widgets.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 import 'package:flutter/services.dart';
 
@@ -22,7 +24,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   @override
   Widget build(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width > 900;
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 4,
@@ -122,6 +124,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
         ),
       ),
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ===========================================================================
@@ -1264,7 +1268,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                       : TextInputType.numberWithOptions(decimal: true),
                                   inputFormatters: _isWholeNumberUnit(item.unit)
                                       ? [IntegerOnlyInputFormatter()]
-                                      : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                      : [DecimalQuantityInputFormatter()],
                                   onChanged: (value) {
                                     if (value.trim().isEmpty) {
                                       controller.updateItem(index, quantity: 0.0);
@@ -1275,7 +1279,10 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                       if (parsed == null || parsed < 0) return;
                                       controller.updateItem(index, quantity: parsed.toDouble());
                                     } else {
-                                      final qty = double.tryParse(value.replaceAll(',', '.'));
+                                      // Don't update on "0" or "0." so user can type 0.2 on mobile
+                                      final normalized = value.replaceAll(',', '.');
+                                      if (normalized == '0' || normalized == '0.') return;
+                                      final qty = double.tryParse(normalized);
                                       if (qty != null && qty >= 0) {
                                         controller.updateItem(index, quantity: qty);
                                       }
@@ -1538,7 +1545,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                                 : TextInputType.numberWithOptions(decimal: true),
                                             inputFormatters: _isWholeNumberUnit(item.unit)
                                                 ? [IntegerOnlyInputFormatter()]
-                                                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                                : [DecimalQuantityInputFormatter()],
                                             onChanged: (value) {
                                               if (value.trim().isEmpty) {
                                                 controller.updateItem(index, quantity: 0.0);
@@ -1549,7 +1556,10 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                                 if (parsed == null || parsed < 0) return;
                                                 controller.updateItem(index, quantity: parsed.toDouble());
                                               } else {
-                                                final qty = double.tryParse(value.replaceAll(',', '.'));
+                                                // Don't update on "0" or "0." so user can type 0.2 on mobile
+                                                final normalized = value.replaceAll(',', '.');
+                                                if (normalized == '0' || normalized == '0.') return;
+                                                final qty = double.tryParse(normalized);
                                                 if (qty != null && qty >= 0) {
                                                   controller.updateItem(index, quantity: qty);
                                                 }

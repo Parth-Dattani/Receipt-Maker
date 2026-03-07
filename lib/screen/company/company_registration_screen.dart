@@ -1,12 +1,14 @@
 import 'package:country_pickers/country.dart';
 import 'package:country_pickers/country_picker_dropdown.dart';
 import 'package:demo_prac_getx/constant/constant.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controller/controller.dart';
 import '../../utils/shared_preferences_helper.dart';
 import '../../widgets/widgets.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 import 'package:shimmer/shimmer.dart';
 
@@ -22,7 +24,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(context),
       body: SafeArea(
@@ -43,6 +45,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         }),
       ),
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   AppBar _buildAppBar(BuildContext context) {

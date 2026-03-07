@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
+import '../../widgets/web_screen_wrapper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 
 class CustomerListScreen extends GetView<CustomerListController> {
@@ -12,7 +14,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: _buildAppBar(context),
       body: SafeArea(
@@ -33,6 +35,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
         }),
       ),
     );
+    if (kIsWeb) {
+      return webScreenWrapper(currentRoute: pageId, child: content);
+    }
+    return content;
   }
 
   // Adaptive AppBar
@@ -42,10 +48,29 @@ class CustomerListScreen extends GetView<CustomerListController> {
       foregroundColor: Colors.white,
       elevation: 0,
       backgroundColor: AppColors.tealColor,
-      title: Text(
-        'customers'.tr,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
-      ),
+      title: isWeb
+          ? Row(
+              children: [
+                Text(
+                  'customers'.tr,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
+                ),
+                if (kIsWeb && Get.isRegistered<DashboardController>()) ...[
+                  const Spacer(),
+                  Obx(() {
+                    final dash = Get.find<DashboardController>();
+                    return Text(
+                      dash.companyName,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                    );
+                  }),
+                ],
+              ],
+            )
+          : Text(
+              'customers'.tr,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
+            ),
       centerTitle: !isWeb,
       actions: [
         if (!isWeb) ...[

@@ -6,20 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../controller/controller.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:demo_prac_getx/model/item_model.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../model/model.dart';
 import '../../widgets/widgets.dart';
-
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 
 class NewInvoiceScreen extends GetView<NewInvoiceController> {
@@ -32,7 +25,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.applyCustomerFromRouteIfNeeded(Get.arguments);
     });
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         // Check if it's web layout (width > 900)
         bool isWeb = constraints.maxWidth > 900;
@@ -165,6 +158,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
         );
       },
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ✅ MOBILE LAYOUT (Your original vertical stack)
@@ -1477,17 +1472,17 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                   flex: 2,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        (item.unit != null && item.unit!.trim().isNotEmpty)
-                                            ? 'Qty (${item.unit})'
-                                            : 'Qty (pcs)',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                      if (!kIsWeb) ...[
+                                        Text(
+                                          (item.unit != null && item.unit!.trim().isNotEmpty)
+                                              ? 'Qty (${item.unit})'
+                                              : 'Qty (pcs)',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                                         ),
-                                      ),
-                                      SizedBox(height: 4),
+                                        SizedBox(height: 4),
+                                      ],
                                       Obx(() {
                                         // Get available stock for this item
                                         double? availableStock;
@@ -1540,7 +1535,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                 : TextInputType.numberWithOptions(decimal: true),
                                             inputFormatters: isPcsOrBox
                                                 ? [IntegerOnlyInputFormatter()]
-                                                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                                : [DecimalQuantityInputFormatter()],
                                             onChanged: (value) {
                                               if (isFromChallan) return;
                                               if (value.isEmpty) {
@@ -1548,7 +1543,10 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                 controller.violationMessages.remove(index);
                                                 return;
                                               }
-                                              double? qty = double.tryParse(value);
+                                              final normalized = value.replaceAll(',', '.');
+                                              // Allow typing 0.2 on mobile: don't validate or revert on "0" or "0."
+                                              if (!isPcsOrBox && (normalized == '0' || normalized == '0.')) return;
+                                              double? qty = double.tryParse(normalized);
                                               if (qty == null || qty <= 0) {
                                                 Get.snackbar("Invalid Quantity", "Please enter a valid quantity greater than 0", snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade700, colorText: Colors.white, duration: Duration(seconds: 2));
                                                 controller.itemsWithStockViolation.add(index);
@@ -1898,14 +1896,17 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                             flex: 2,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  (item.unit != null && item.unit!.trim().isNotEmpty)
-                                      ? 'Qty (${item.unit})'
-                                      : 'Qty (pcs)',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                ),
-                                SizedBox(height: 4),
+                                if (!kIsWeb) ...[
+                                  Text(
+                                    (item.unit != null && item.unit!.trim().isNotEmpty)
+                                        ? 'Qty (${item.unit})'
+                                        : 'Qty (pcs)',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                  ),
+                                  SizedBox(height: 4),
+                                ],
                                 Obx(() {
                                   // Stock logic
                                   double? availableStock;
@@ -1940,7 +1941,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                             : TextInputType.numberWithOptions(decimal: true)),
                                     inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
                                         ? [IntegerOnlyInputFormatter()]
-                                        : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                                        : [DecimalQuantityInputFormatter()],
                                     onChanged: (value) {
                                       if (isFromChallan) return;
                                       // --- COPIED VALIDATION LOGIC START ---
@@ -1949,7 +1950,11 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                         controller.violationMessages.remove(index);
                                         return;
                                       }
-                                      double? qty = double.tryParse(value);
+                                      final normalized = value.replaceAll(',', '.');
+                                      final isPcsOrBox = item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box";
+                                      // Allow typing 0.2 on mobile: don't validate or update on "0" or "0."
+                                      if (!isPcsOrBox && (normalized == '0' || normalized == '0.')) return;
+                                      double? qty = double.tryParse(normalized);
                                       if (qty == null || qty <= 0) {
                                         controller.itemsWithStockViolation.add(index);
                                         controller.violationMessages[index] = "Invalid qty";

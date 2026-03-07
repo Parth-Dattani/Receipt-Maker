@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -7,14 +8,8 @@ import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../services/service.dart';
 import '../../utils/utils.dart';
+import '../../widgets/web_screen_wrapper.dart';
 import 'dart:io';
-
-
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 ///23/12
 // class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
@@ -1733,7 +1728,7 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         // Check if it's web layout (width > 900)
         bool isWeb = constraints.maxWidth > 900;
@@ -1762,6 +1757,8 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
         );
       },
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   AppBar _buildAppBar(bool isWeb) {
