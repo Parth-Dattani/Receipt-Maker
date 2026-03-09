@@ -70,6 +70,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '134369591951',
     projectId: 'getyourinvoice-8f128',
     storageBucket: 'getyourinvoice-8f128.firebasestorage.app',
+    iosClientId: '134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com',
     iosBundleId: 'com.example.GetYourInvoice',
   );
+
 }

@@ -1,4 +1,4 @@
-import 'package:demo_prac_getx/constant/app_colors.dart';
+import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -74,6 +74,20 @@ class LoginForm extends GetView<AuthController> {
                   isLoading: controller.isLoading.value,
                   onPressed: controller.handleLogin,
                 )),
+                const SizedBox(height: 20),
+                Row(children: [
+                  const Expanded(child: Divider(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text("or", style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  ),
+                  const Expanded(child: Divider(color: Colors.grey)),
+                ]),
+                const SizedBox(height: 20),
+                Obx(() => _buildGoogleSignInButton(
+                  isLoading: controller.isLoading.value,
+                  onPressed: controller.handleGoogleSignIn,
+                )),
               ] else ...[
                 // Mobile: unchanged
                 _buildTealTextField(
@@ -110,6 +124,20 @@ class LoginForm extends GetView<AuthController> {
                   text: "LOGIN",
                   isLoading: controller.isLoading.value,
                   onPressed: controller.handleLogin,
+                )),
+                const SizedBox(height: 20),
+                Row(children: [
+                  const Expanded(child: Divider(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text("or", style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  ),
+                  const Expanded(child: Divider(color: Colors.grey)),
+                ]),
+                const SizedBox(height: 20),
+                Obx(() => _buildGoogleSignInButton(
+                  isLoading: controller.isLoading.value,
+                  onPressed: controller.handleGoogleSignIn,
                 )),
               ],
             ],
@@ -204,8 +232,65 @@ class LoginForm extends GetView<AuthController> {
       ),
     );
   }
+
+  static Widget _buildGoogleSignInButton({
+    required bool isLoading,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: _buildGoogleLogo(),
+        label: const Text(
+          "Sign in with Google",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.black87,
+          side: BorderSide(color: Colors.grey.shade400),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Google "G" logo. Network image; on web if it fails (e.g. CORS) show colored "G".
+  static Widget _buildGoogleLogo() {
+    const double size = 22;
+    return Image.network(
+      'https://www.google.com/favicon.ico',
+      height: size,
+      width: size,
+      fit: BoxFit.contain,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return SizedBox(height: size, width: size, child: const Center(child: SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2))));
+      },
+      errorBuilder: (_, __, ___) => const _GoogleGIcon(),
+    );
+  }
 }
 
+/// Fallback when network image fails (e.g. on web CORS) – Google-style "G".
+class _GoogleGIcon extends StatelessWidget {
+  const _GoogleGIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'G',
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF4285F4), // Google blue
+        fontFamily: 'Roboto',
+      ),
+    );
+  }
+}
 
 // --- SHARED WIDGETS (તમારા જ વિજેટ્સ, Web માટે થોડા એડજસ્ટ કર્યા છે) ---
 

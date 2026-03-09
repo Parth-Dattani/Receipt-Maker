@@ -1,6 +1,6 @@
 {
-    "name": "demo_prac_getx",
-    "short_name": "demo_prac_getx",
+    "name": "GetYourInvoice",
+    "short_name": "GetYourInvoice",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",

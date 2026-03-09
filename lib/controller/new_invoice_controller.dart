@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:demo_prac_getx/screen/invoice/new_invoice_screen.dart';
+import 'package:GetYourInvoice/screen/invoice/new_invoice_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

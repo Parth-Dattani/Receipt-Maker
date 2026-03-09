@@ -1,7 +1,7 @@
-import 'package:demo_prac_getx/screen/payment/payment_details_screen.dart';
-import 'package:demo_prac_getx/screen/screen.dart';
-import 'package:demo_prac_getx/screen/setting/setting_screen.dart';
-import 'package:demo_prac_getx/screen/Inventory/inventory_management_screen.dart';
+import 'package:GetYourInvoice/screen/payment/payment_details_screen.dart';
+import 'package:GetYourInvoice/screen/screen.dart';
+import 'package:GetYourInvoice/screen/setting/setting_screen.dart';
+import 'package:GetYourInvoice/screen/Inventory/inventory_management_screen.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'binding/bindings.dart';
 

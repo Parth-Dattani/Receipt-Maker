@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:demo_prac_getx/constant/app_constant.dart';
-import 'package:demo_prac_getx/model/model.dart';
-import 'package:demo_prac_getx/services/remote_service.dart';
+import 'package:GetYourInvoice/constant/app_constant.dart';
+import 'package:GetYourInvoice/model/model.dart';
+import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

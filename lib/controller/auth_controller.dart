@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:demo_prac_getx/constant/app_colors.dart';
-import 'package:demo_prac_getx/controller/bash_controller.dart';
-import 'package:demo_prac_getx/utils/shared_preferences_helper.dart';
+import 'package:GetYourInvoice/constant/app_colors.dart';
+import 'package:GetYourInvoice/controller/bash_controller.dart';
+import 'package:GetYourInvoice/utils/shared_preferences_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../constant/constant.dart';
 import '../screen/screen.dart';
@@ -149,15 +152,16 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       showFormFields.value = !showFormFields.value;
       tapCount.value = 0;
       _tapTimer?.cancel();
-
-      // Show a subtle feedback (optional)
-      ScaffoldMessenger.of(Get.context!).showSnackBar(
-        SnackBar(
-          content: Text(showFormFields.value ? "Developer mode activated!" : "Developer mode deactivated!"),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Colors.deepPurple,
-        ),
-      );
+      final ctx = Get.context;
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(showFormFields.value ? "Developer mode activated!" : "Developer mode deactivated!"),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.deepPurple,
+          ),
+        );
+      }
     }
   }
 
@@ -407,6 +411,153 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     return true; // Validation Passed
   }
 
+  /// Sign in with Google – same post-login flow as email/password (current flow remains).
+  Future<void> handleGoogleSignIn() async {
+    try {
+      if (_isDisposed) return;
+      isLoading.value = true;
+
+      // Web: serverClientId required. Android: use Web client ID so Firebase accepts the idToken.
+      final String? serverClientId = AppConstants.googleWebClientId.isNotEmpty
+          ? AppConstants.googleWebClientId
+          : null;
+      if (kIsWeb && (serverClientId == null || serverClientId.isEmpty)) {
+        if (!_isDisposed) isLoading.value = false;
+        showNativeSnackbar(
+          title: "Setup required",
+          message: "Google Sign-In on web needs Web client ID in app_constant.dart",
+          isError: true,
+        );
+        return;
+      }
+
+      // Clear any previous sign-in state (helps on web and Android when login was cancelled or failed before)
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: [ 
+          'email',
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/spreadsheets',
+        ],
+        serverClientId: serverClientId,
+      );
+      await googleSignIn.signOut();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        if (!_isDisposed) isLoading.value = false;
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
+      if (idToken == null && accessToken == null) {
+        if (!_isDisposed) isLoading.value = false;
+        showNativeSnackbar(
+          title: "Google sign-in failed",
+          message: "No token received from Google. Try again or use email login.",
+          isError: true,
+        );
+        return;
+      }
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+      await _auth.signInWithCredential(credential);
+
+      if (_isDisposed) return;
+
+      final User? currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        if (!_isDisposed) {
+          showNativeSnackbar(
+            title: "Error",
+            message: "Sign-in completed but no user. Try again.",
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      showNativeSnackbar(
+        title: "Success",
+        message: "Signed in with Google successfully!",
+        isError: false,
+      );
+
+      await AppConstants.setUserId(currentUser.uid);
+      await sharedPreferencesHelper.storePrefData("email", currentUser.email ?? "");
+
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection("users")
+            .doc(currentUser.uid)
+            .get();
+
+        if (userDoc.exists) {
+          final userData = userDoc.data();
+          if (userData != null) {
+            final username = userData["username"]?.toString() ?? "";
+            final hasSpreadsheetId = userData.containsKey('spreadsheetId') && userData['spreadsheetId'] != null;
+            await sharedPreferencesHelper.storePrefData("username", username);
+            if (hasSpreadsheetId) {
+              await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
+              AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+            }
+          }
+        } else {
+          await _createUserDocument(currentUser);
+        }
+      } catch (e) {
+        print("Warning: Could not fetch user data from Firestore: $e");
+      }
+
+      await _checkAndNavigateAfterLogin();
+    } on FirebaseAuthException catch (e) {
+      if (!_isDisposed) {
+        showNativeSnackbar(
+          title: "Google sign-in failed",
+          message: e.message ?? e.code,
+          isError: true,
+        );
+      }
+      print("Google sign-in FirebaseAuthException: ${e.code} ${e.message}");
+    } catch (e, stack) {
+      print("Google sign-in error: $e\n$stack");
+      if (!_isDisposed) {
+        String displayMsg = "Could not sign in with Google. Try again.";
+        if (e is PlatformException) {
+          if (e.code == '10') {
+            displayMsg = "Error 10: Add Android client ID from other project in Firebase → Auth → Google → Whitelist client IDs.";
+          } else {
+            displayMsg = e.message ?? e.code;
+          }
+        } else {
+          final String msg = e.toString();
+          if (msg.contains("10") || msg.contains("DEVELOPER_ERROR") || msg.contains("ApiException")) {
+            displayMsg = "Error 10: Add Android client ID from other project in Firebase → Auth → Google → Whitelist client IDs.";
+          } else if (msg.contains("sign_in_failed") || msg.contains("SIGN_IN_FAILED")) {
+            displayMsg = "Sign-in failed. Add SHA-1 in Firebase Project settings → Your apps.";
+          } else {
+            final String raw = msg.replaceFirst("Exception: ", "").replaceFirst("PlatformException(", "");
+            displayMsg = raw.length > 100 ? "${raw.substring(0, 97)}..." : raw;
+          }
+        }
+        showNativeSnackbar(
+          title: "Error",
+          message: displayMsg,
+          isError: true,
+        );
+      }
+    } finally {
+      if (!_isDisposed) {
+        isLoading.value = false;
+      }
+    }
+  }
+
   Future<void> _createUserDocument(User user) async {
     try {
       await FirebaseFirestore.instance
@@ -429,10 +580,14 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   // 3. NEW HELPER: Native Snackbar (Guaranteed to show)
   // -----------------------------------------------------------------------
   void showNativeSnackbar({required String title, required String message, required bool isError}) {
-    // This uses Flutter's native ScaffoldMessenger, which works even if GetX context is lost
-    if (Get.context != null) {
-      ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar(); // Hide previous
-      ScaffoldMessenger.of(Get.context!).showSnackBar(
+    final BuildContext? ctx = Get.context;
+    if (ctx == null) {
+      print("⚠️ Context is null, cannot show snackbar: $message");
+      return;
+    }
+    try {
+      ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+      ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -463,8 +618,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           duration: const Duration(seconds: 3),
         ),
       );
-    } else {
-      print("⚠️ Context is null, cannot show snackbar: $message");
+    } catch (e) {
+      print("⚠️ Snackbar error: $e");
     }
   }
 

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:demo_prac_getx/controller/bash_controller.dart';
-import 'package:demo_prac_getx/screen/dashboard/dashboard_screen.dart';
-import 'package:demo_prac_getx/screen/screen.dart';
+import 'package:GetYourInvoice/controller/bash_controller.dart';
+import 'package:GetYourInvoice/screen/dashboard/dashboard_screen.dart';
+import 'package:GetYourInvoice/screen/screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

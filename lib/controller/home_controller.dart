@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:demo_prac_getx/controller/bash_controller.dart';
-import 'package:demo_prac_getx/model/comment_model.dart';
-import 'package:demo_prac_getx/services/service.dart';
+import 'package:GetYourInvoice/controller/bash_controller.dart';
+import 'package:GetYourInvoice/model/comment_model.dart';
+import 'package:GetYourInvoice/services/service.dart';
 import 'package:get/get.dart';
 
 class HomeController extends BaseController{

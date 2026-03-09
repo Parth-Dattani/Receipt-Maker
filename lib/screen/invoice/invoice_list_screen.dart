@@ -1,4 +1,4 @@
-import 'package:demo_prac_getx/utils/calculations.dart';
+import 'package:GetYourInvoice/utils/calculations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

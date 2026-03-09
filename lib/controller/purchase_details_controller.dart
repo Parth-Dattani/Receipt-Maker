@@ -1,6 +1,6 @@
-import 'package:demo_prac_getx/controller/bash_controller.dart';
-import 'package:demo_prac_getx/controller/controller.dart';
-import 'package:demo_prac_getx/screen/Inventory/purchase_entry_screen.dart';
+import 'package:GetYourInvoice/controller/bash_controller.dart';
+import 'package:GetYourInvoice/controller/controller.dart';
+import 'package:GetYourInvoice/screen/Inventory/purchase_entry_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';

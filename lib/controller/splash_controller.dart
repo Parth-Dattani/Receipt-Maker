@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:demo_prac_getx/constant/app_constant.dart';
-import 'package:demo_prac_getx/controller/controller.dart';
-import 'package:demo_prac_getx/screen/screen.dart';
-import 'package:demo_prac_getx/services/remote_service.dart';
+import 'package:GetYourInvoice/constant/app_constant.dart';
+import 'package:GetYourInvoice/controller/controller.dart';
+import 'package:GetYourInvoice/screen/screen.dart';
+import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 

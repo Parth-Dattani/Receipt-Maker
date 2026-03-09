@@ -1,5 +1,5 @@
-import 'package:demo_prac_getx/screen/auth/widgets/widget.dart';
-import 'package:demo_prac_getx/constant/app_colors.dart';
+import 'package:GetYourInvoice/screen/auth/widgets/widget.dart';
+import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controller/controller.dart';

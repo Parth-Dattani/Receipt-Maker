@@ -1,5 +1,5 @@
-import 'package:demo_prac_getx/screen/invoice/new_invoice_screen.dart' show NewInvoiceScreen;
-import 'package:demo_prac_getx/utils/calculations.dart';
+import 'package:GetYourInvoice/screen/invoice/new_invoice_screen.dart' show NewInvoiceScreen;
+import 'package:GetYourInvoice/utils/calculations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

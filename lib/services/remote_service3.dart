@@ -2,10 +2,10 @@
 // import 'dart:math';
 // import 'dart:math' as Math;
 //
-// import 'package:demo_prac_getx/constant/app_constant.dart';
-// import 'package:demo_prac_getx/model/comment_model.dart';
-// import 'package:demo_prac_getx/services/api.dart';
-// import 'package:demo_prac_getx/utils/shared_preferences_helper.dart';
+// import 'package:GetYourInvoice/constant/app_constant.dart';
+// import 'package:GetYourInvoice/model/comment_model.dart';
+// import 'package:GetYourInvoice/services/api.dart';
+// import 'package:GetYourInvoice/utils/shared_preferences_helper.dart';
 // import 'package:googleapis/drive/v3.dart' as drive;
 // import 'package:http/http.dart' as http;
 // import 'package:intl/intl.dart';

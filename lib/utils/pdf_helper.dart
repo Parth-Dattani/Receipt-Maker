@@ -1,6 +1,6 @@
 import 'dart:io' as io;
 import 'dart:ui';
-import 'package:demo_prac_getx/utils/calculations.dart';
+import 'package:GetYourInvoice/utils/calculations.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

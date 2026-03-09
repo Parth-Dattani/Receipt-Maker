@@ -12,6 +12,9 @@ class AppConstants{
    static String  companyName = "";
    static String appId = "";
    static String spreadsheetId = "";
+   /// Web-only: paste Firebase Authentication → Google → Web SDK configuration → Web client ID (for Google Sign-In on web).
+   /// On Android, same ID is used as serverClientId so Firebase accepts the token. Use your project's Web client ID.
+   static String googleWebClientId = "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com";
    static String accessKey = "";
    static String businessType = "Trading";
    static final isChallan = false.obs; //isChallanEnabled

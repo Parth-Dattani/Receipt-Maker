@@ -1,4 +1,4 @@
-import 'package:demo_prac_getx/constant/constant.dart';
+import 'package:GetYourInvoice/constant/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../controller/controller.dart';

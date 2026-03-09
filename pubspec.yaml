@@ -1,4 +1,4 @@
-name: demo_prac_getx
+name: GetYourInvoice
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -49,6 +49,7 @@ dependencies:
   printing: ^5.14.2
   firebase_core:
   firebase_auth:
+  google_sign_in: ^6.2.1
   supabase_flutter: ^2.10.0
   cloud_firestore:
   open_file:
@@ -74,6 +75,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons:
+  change_app_package_name:
 
 flutter_launcher_icons:
   android: "launcher_icon"

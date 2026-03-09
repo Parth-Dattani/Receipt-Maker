@@ -1,5 +1,5 @@
 
-import 'package:demo_prac_getx/controller/challan_list_controller.dart';
+import 'package:GetYourInvoice/controller/challan_list_controller.dart';
 import 'package:get/get.dart';
 
 class ChallanListBinding implements Bindings{

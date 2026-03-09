@@ -1,12 +1,12 @@
-import 'package:demo_prac_getx/constant/constant.dart';
-import 'package:demo_prac_getx/utils/calculations.dart';
-import 'package:demo_prac_getx/utils/input_formatters.dart';
+import 'package:GetYourInvoice/constant/constant.dart';
+import 'package:GetYourInvoice/utils/calculations.dart';
+import 'package:GetYourInvoice/utils/input_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../controller/controller.dart';
-import 'package:demo_prac_getx/model/item_model.dart';
+import 'package:GetYourInvoice/model/item_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

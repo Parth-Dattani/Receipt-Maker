@@ -12,7 +12,20 @@
           "package_name": "com.example.GetYourInvoice"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "134369591951-gsm283uk67jnqmogbbila3sv53re8oqi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.GetYourInvoice",
+            "certificate_hash": "3cea97c88a95ec43b53d37aa68779a60cd835a46"
+          }
+        },
+        {
+          "client_id": "134369591951-bof97o0hvnce5n2128bh4q8hfug45uul.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4"
@@ -20,7 +33,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.GetYourInvoice"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:134369591951:android:536ea25e6c2cfb69d8a6fa",
+        "android_client_info": {
+          "package_name": "com.example.invoice_sathi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "134369591951-bof97o0hvnce5n2128bh4q8hfug45uul.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.GetYourInvoice"
+              }
+            }
+          ]
         }
       }
     }

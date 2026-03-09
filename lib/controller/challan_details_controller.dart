@@ -1,4 +1,4 @@
-import 'package:demo_prac_getx/controller/bash_controller.dart';
+import 'package:GetYourInvoice/controller/bash_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';

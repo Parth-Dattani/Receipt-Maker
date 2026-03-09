@@ -1,5 +1,5 @@
-// import 'package:demo_prac_getx/model/model.dart';
-// import 'package:demo_prac_getx/services/remote_service.dart';
+// import 'package:GetYourInvoice/model/model.dart';
+// import 'package:GetYourInvoice/services/remote_service.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
 //

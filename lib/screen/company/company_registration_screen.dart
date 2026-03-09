@@ -1,6 +1,6 @@
 import 'package:country_pickers/country.dart';
 import 'package:country_pickers/country_picker_dropdown.dart';
-import 'package:demo_prac_getx/constant/constant.dart';
+import 'package:GetYourInvoice/constant/constant.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

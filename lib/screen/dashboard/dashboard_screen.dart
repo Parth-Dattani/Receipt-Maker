@@ -1,6 +1,6 @@
-import 'package:demo_prac_getx/constant/app_constant.dart' show AppConstants;
-import 'package:demo_prac_getx/screen/dashboard/widgets/widgets.dart';
-import 'package:demo_prac_getx/widgets/web_app_sidebar.dart';
+import 'package:GetYourInvoice/constant/app_constant.dart' show AppConstants;
+import 'package:GetYourInvoice/screen/dashboard/widgets/widgets.dart';
+import 'package:GetYourInvoice/widgets/web_app_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';

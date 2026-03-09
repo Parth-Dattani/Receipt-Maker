@@ -1,5 +1,5 @@
-import 'package:demo_prac_getx/controller/controller.dart';
-import 'package:demo_prac_getx/widgets/common_loader.dart';
+import 'package:GetYourInvoice/controller/controller.dart';
+import 'package:GetYourInvoice/widgets/common_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';

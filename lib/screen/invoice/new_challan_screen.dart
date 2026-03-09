@@ -1,6 +1,6 @@
-import 'package:demo_prac_getx/constant/constant.dart';
-import 'package:demo_prac_getx/utils/calculations.dart';
-import 'package:demo_prac_getx/utils/input_formatters.dart';
+import 'package:GetYourInvoice/constant/constant.dart';
+import 'package:GetYourInvoice/utils/calculations.dart';
+import 'package:GetYourInvoice/utils/input_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
