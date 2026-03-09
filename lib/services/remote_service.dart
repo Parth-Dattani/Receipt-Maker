@@ -14,6 +14,8 @@ import '../utils/pdf_helper.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis/sheets/v4.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:http/http.dart' as http;
 ///old Working
@@ -1860,8 +1862,8 @@ class RemoteService {
 
 
 class GoogleSheetService {
-  //static const spreadsheetId = "1mzdsQcY7dpUdVvktCK8Ocrtz1g5CehDOItcIzdjjRoQ"; // from Sheet URL
-  static String spreadsheetId = "${AppConstants.spreadsheetId}"; // from Sheet URL
+  // Always use current value so after login we use the right sheet
+  static String get spreadsheetId => AppConstants.spreadsheetId;
   static const itemSheetName = "Item"; // your sheet/tab name
   static const invoiceSheetName = "Invoice"; // your sheet/tab name
   static const invoiceItemSheetName = "InvoiceItems"; // your sheet/tab name
@@ -1882,10 +1884,200 @@ class GoogleSheetService {
   static final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheValidDuration = Duration(minutes: 5);
 
-  /// Create a new Google Sheet for a user (stub: returns null; implement via Drive API if needed).
-  static Future<String?> createNewUserSpreadsheet(String uid) async {
-    // TODO: Implement via Google Drive API to create a new spreadsheet per user.
-    return null;
+  /// True when error is "Project #XXX has been deleted" (GCP project deleted, SA key invalid).
+  static bool isProjectDeletedError(Object e) {
+    final msg = e.toString();
+    return msg.contains('403') && msg.contains('has been deleted');
+  }
+
+  /// User message when Service Account's Google Cloud project was deleted.
+  static String get projectDeletedUserMessage =>
+      'Google Cloud project was deleted. Create new project, new Service Account key, replace assets JSON. See docs/SERVICE_ACCOUNT_DELETED_PROJECT_FIX.md';
+
+  /// Create a new Google Sheet: with [accessToken] = in user's Drive (folder InvoiceSathi); with [userEmail] only = Service Account creates and shares with user (email/password flow).
+  /// Returns (spreadsheetId, folderId) on success. folderId empty for email/password flow.
+  static Future<(String spreadsheetId, String folderId)?> createNewUserSpreadsheet(
+    String uid, {
+    String? accessToken,
+    String? username,
+    String? existingFolderId,
+    String? userEmail,
+  }) async {
+    // Email/password flow: Service Account creates sheet and shares with user's email
+    if ((accessToken == null || accessToken.isEmpty) && userEmail != null && userEmail.trim().isNotEmpty) {
+      return await _createSheetWithServiceAccountAndShare(uid, userEmail.trim(), username ?? 'user');
+    }
+    if (accessToken == null || accessToken.isEmpty) return null;
+    try {
+      final baseUrl = 'https://www.googleapis.com/drive/v3/files';
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      };
+
+      String? folderId;
+      const folderName = 'InvoiceSathi';
+
+      if (existingFolderId != null && existingFolderId.isNotEmpty) {
+        folderId = existingFolderId;
+      } else {
+        final driveQuery = "name='$folderName' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false";
+        final listUrl = Uri.parse('$baseUrl?q=${Uri.encodeComponent(driveQuery)}&fields=files(id,name)');
+        final listRes = await http.get(listUrl, headers: headers);
+        if (listRes.statusCode == 200) {
+          final listData = jsonDecode(listRes.body) as Map<String, dynamic>;
+          final files = listData['files'] as List<dynamic>?;
+          if (files != null && files.isNotEmpty) {
+            folderId = (files.first as Map<String, dynamic>)['id'] as String?;
+          }
+        }
+        if (folderId == null || folderId.isEmpty) {
+          final createFolderRes = await http.post(
+            Uri.parse(baseUrl),
+            headers: headers,
+            body: jsonEncode({'name': folderName, 'mimeType': 'application/vnd.google-apps.folder'}),
+          );
+          if (createFolderRes.statusCode != 200) {
+            print('❌ Drive API create folder failed: ${createFolderRes.statusCode} ${createFolderRes.body}');
+            return null;
+          }
+          final folderData = jsonDecode(createFolderRes.body) as Map<String, dynamic>;
+          folderId = folderData['id'] as String?;
+          if (folderId == null || folderId.isEmpty) return null;
+          print('✅ Created folder "$folderName" in user Drive: $folderId');
+        }
+      }
+
+      final parentId = folderId!;
+      final now = DateTime.now();
+      final fyStart = now.month >= 4 ? now.year : now.year - 1;
+      final fyEnd = fyStart + 1;
+      final fyStr = '$fyStart-${fyEnd.toString().substring(2)}';
+      final safeName = (username ?? 'user').replaceAll(RegExp(r'[^\w\-.]'), '_');
+      final sheetName = '${safeName}_${uid}_$fyStr';
+
+      final sheetBody = jsonEncode({
+        'name': sheetName,
+        'mimeType': 'application/vnd.google-apps.spreadsheet',
+        'parents': [parentId],
+      });
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: headers,
+        body: sheetBody,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final id = data['id'] as String?;
+        if (id != null && id.isNotEmpty) {
+          print('✅ Created spreadsheet "$sheetName" in folder $folderName: $id');
+          try {
+            final credStr = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+            final credJson = jsonDecode(credStr) as Map<String, dynamic>;
+            final serviceAccountEmail = credJson['client_email'] as String?;
+            if (serviceAccountEmail != null && serviceAccountEmail.isNotEmpty) {
+              final permUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$id/permissions').replace(queryParameters: {'sendNotificationEmail': 'false'});
+              final permRes = await http.post(
+                permUrl,
+                headers: headers,
+                body: jsonEncode({
+                  'type': 'user',
+                  'role': 'writer',
+                  'emailAddress': serviceAccountEmail,
+                }),
+              );
+              if (permRes.statusCode >= 200 && permRes.statusCode < 300) {
+                print('✅ Shared spreadsheet with Service Account');
+              } else {
+                print('⚠️ Could not share sheet with Service Account: ${permRes.statusCode} ${permRes.body}');
+              }
+            }
+          } catch (shareErr) {
+            print('⚠️ Share with Service Account failed: $shareErr');
+          }
+          return (id, parentId);
+        }
+      }
+      print('❌ Drive API create sheet failed: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      print('❌ createNewUserSpreadsheet error: $e');
+      return null;
+    }
+  }
+
+  /// Share an existing spreadsheet with the Service Account so it can write Item, Customer, Invoice etc.
+  static Future<bool> shareSpreadsheetWithServiceAccount(String spreadsheetId, String accessToken) async {
+    try {
+      final credStr = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+      final credJson = jsonDecode(credStr) as Map<String, dynamic>;
+      final serviceAccountEmail = credJson['client_email'] as String?;
+      if (serviceAccountEmail == null || serviceAccountEmail.isEmpty) return false;
+      final permUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$spreadsheetId/permissions').replace(queryParameters: {'sendNotificationEmail': 'false'});
+      final permRes = await http.post(
+        permUrl,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'type': 'user',
+          'role': 'writer',
+          'emailAddress': serviceAccountEmail,
+        }),
+      );
+      if (permRes.statusCode >= 200 && permRes.statusCode < 300) {
+        print('✅ Shared existing spreadsheet with Service Account');
+        return true;
+      }
+      print('⚠️ Share existing sheet failed: ${permRes.statusCode} ${permRes.body}');
+      return false;
+    } catch (e) {
+      print('⚠️ shareSpreadsheetWithServiceAccount: $e');
+      return false;
+    }
+  }
+
+  /// Email/password flow: Service Account creates spreadsheet and shares with user's email.
+  static Future<(String spreadsheetId, String folderId)?> _createSheetWithServiceAccountAndShare(String uid, String userEmail, String username) async {
+    try {
+      final client = await _getAuthClientWithDrive();
+      final sheetsApi = SheetsApi(client);
+      final now = DateTime.now();
+      final fyStart = now.month >= 4 ? now.year : now.year - 1;
+      final fyEnd = fyStart + 1;
+      final fyStr = '$fyStart-${fyEnd.toString().substring(2)}';
+      final safeName = username.replaceAll(RegExp(r'[^\w\-.]'), '_');
+      final title = 'Invoice Sathi - ${safeName}_${uid}_$fyStr';
+      final request = Spreadsheet()
+        ..properties = (SpreadsheetProperties()..title = title);
+      final spreadsheet = await sheetsApi.spreadsheets.create(request);
+      final id = spreadsheet.spreadsheetId;
+      if (id == null || id.isEmpty) return null;
+      print('✅ Created spreadsheet via Service Account: $id');
+      final driveApi = drive.DriveApi(client);
+      await driveApi.permissions.create(
+        drive.Permission()
+          ..type = 'user'
+          ..role = 'writer'
+          ..emailAddress = userEmail,
+        id,
+        sendNotificationEmail: false,
+      );
+      print('✅ Shared spreadsheet with $userEmail');
+      return (id, '');
+    } catch (e) {
+      print('❌ _createSheetWithServiceAccountAndShare: $e');
+      return null;
+    }
+  }
+
+  /// Auth client with Sheets + Drive scopes (for creating sheet and sharing).
+  static Future<AuthClient> _getAuthClientWithDrive() async {
+    final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+    final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+    final scopes = [SheetsApi.spreadsheetsScope, drive.DriveApi.driveScope];
+    return await clientViaServiceAccount(accountCredentials, scopes);
   }
 
   /// Call this when app starts or when you need to ensure all sheets exist
@@ -1896,8 +2088,15 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // Check if main sheets exist
-      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      // Check if main sheets exist (retry once after delay for Drive permission propagation)
+      dynamic spreadsheet;
+      try {
+        spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      } catch (e) {
+        print("❌ First get failed (may be propagation delay): $e");
+        await Future.delayed(const Duration(seconds: 3));
+        spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      }
 
       bool needsInit = false;
       final requiredSheets = [
@@ -1914,7 +2113,7 @@ class GoogleSheetService {
 
       for (var requiredSheet in requiredSheets) {
         bool exists = false;
-        for (var sheet in spreadsheet.sheets ?? []) {
+        for (var sheet in (spreadsheet.sheets ?? [])) {
           if (sheet.properties?.title == requiredSheet) {
             exists = true;
             break;
@@ -1936,8 +2135,19 @@ class GoogleSheetService {
 
     } catch (e) {
       print("❌ Error checking sheets: $e");
-      // If error, try to initialize anyway
-      await initializeAllSheets();
+      if (isProjectDeletedError(e)) {
+        print("⚠️ FIX: Replace Service Account key - see docs/SERVICE_ACCOUNT_DELETED_PROJECT_FIX.md");
+        throw Exception(projectDeletedUserMessage);
+      }
+      try {
+        await initializeAllSheets();
+      } catch (e2) {
+        print("❌ initializeAllSheets also failed: $e2");
+        if (isProjectDeletedError(e2)) {
+          throw Exception(projectDeletedUserMessage);
+        }
+        rethrow;
+      }
     }
   }
 
@@ -2344,10 +2554,16 @@ class GoogleSheetService {
 
       if (errorCount == 0) {
         print("🎉 All sheets initialized successfully!");
+      } else if (errorCount == sheetsConfig.length) {
+        print("❌ All sheet initializations failed - Service Account may not have access.");
+        throw Exception('All sheet initializations failed - Service Account may not have access.');
       }
 
     } catch (e) {
       print("❌ Error in initializeAllSheets: $e");
+      if (isProjectDeletedError(e)) {
+        throw Exception(projectDeletedUserMessage);
+      }
       rethrow;
     }
   }

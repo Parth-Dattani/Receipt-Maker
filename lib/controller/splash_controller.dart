@@ -97,6 +97,13 @@ class SplashController extends BaseController {
 
         print("✅ Spreadsheet found → $spreadsheetId");
 
+        // Ensure Item, Customer, Invoice etc. tabs exist (auto-create if only Sheet1)
+        try {
+          await GoogleSheetService.ensureSheetsExist();
+        } catch (e) {
+          print("⚠️ ensureSheetsExist on splash: $e");
+        }
+
         // ✅ CRITICAL: Validate and print columns
         await _validateAndPrintColumns();
 

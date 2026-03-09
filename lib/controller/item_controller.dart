@@ -521,9 +521,12 @@ class ItemController extends GetxController {
       );
     } catch (e) {
       print("-----Error on addItems() in Controller,,,, ${e.toString()}");
+      final message = GoogleSheetService.isProjectDeletedError(e)
+          ? GoogleSheetService.projectDeletedUserMessage
+          : "Failed to save item: ${e.toString().length > 80 ? '${e.toString().substring(0, 77)}...' : e}";
       showCustomSnackbar(
         title: "Error",
-        message: "Failed to save item: $e",
+        message: message,
         baseColor: Colors.red.shade700,
         icon: Icons.error_outline,
       );

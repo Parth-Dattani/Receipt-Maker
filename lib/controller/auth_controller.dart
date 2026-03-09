@@ -339,6 +339,12 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
             await sharedPreferencesHelper.storePrefData(
                 "spreadsheetId", userData['spreadsheetId']);
             AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+            // Auto-create Item, Customer, Invoice etc. tabs if missing
+            try {
+              await GoogleSheetService.ensureSheetsExist();
+            } catch (e) {
+              print('ensureSheetsExist after email login: $e');
+            }
           }
           print("Username stored: $username");
         } else {
@@ -496,22 +502,105 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
             .doc(currentUser.uid)
             .get();
 
+        final userData = userDoc.data();
+        final hasSpreadsheetId = userData != null &&
+            userData['spreadsheetId'] != null &&
+            (userData['spreadsheetId'].toString().trim().isNotEmpty);
+
+        // Google login: if no sheet yet, create folder + sheet in user's Drive using accessToken
+        if (!hasSpreadsheetId &&
+            accessToken != null &&
+            accessToken.trim().isNotEmpty) {
+          try {
+            final result = await GoogleSheetService.createNewUserSpreadsheet(
+              currentUser.uid,
+              accessToken: accessToken,
+              username: currentUser.displayName ??
+                  currentUser.email?.split('@').first ??
+                  'user',
+            );
+            if (result != null && result.$1.isNotEmpty) {
+              final newSpreadsheetId = result.$1;
+              AppConstants.spreadsheetId = newSpreadsheetId;
+              await sharedPreferencesHelper.storePrefData(
+                  "spreadsheetId", newSpreadsheetId);
+              final googleUsername = currentUser.displayName ??
+                  currentUser.email?.split('@').first ??
+                  'user';
+              await sharedPreferencesHelper.storePrefData(
+                  "username", googleUsername);
+              if (userDoc.exists) {
+                await FirebaseFirestore.instance
+                    .collection("users")
+                    .doc(currentUser.uid)
+                    .update({"spreadsheetId": newSpreadsheetId});
+              } else {
+                await _createUserDocument(currentUser,
+                    spreadsheetId: newSpreadsheetId);
+              }
+              await Future.delayed(const Duration(seconds: 2));
+              try {
+                await GoogleSheetService.ensureSheetsExist();
+              } catch (e) {
+                print('ensureSheetsExist after Google sheet create: $e');
+              }
+            }
+          } catch (e) {
+            print('createNewUserSpreadsheet (Google) failed: $e');
+          }
+        }
+
         if (userDoc.exists) {
-          final userData = userDoc.data();
           if (userData != null) {
             final username = userData["username"]?.toString() ?? "";
-            final hasSpreadsheetId = userData.containsKey('spreadsheetId') && userData['spreadsheetId'] != null;
             await sharedPreferencesHelper.storePrefData("username", username);
             if (hasSpreadsheetId) {
-              await sharedPreferencesHelper.storePrefData("spreadsheetId", userData['spreadsheetId']);
-              AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
+              await sharedPreferencesHelper.storePrefData(
+                  "spreadsheetId", userData['spreadsheetId']);
+              AppConstants.spreadsheetId =
+                  userData['spreadsheetId'].toString();
+              await Future.delayed(const Duration(seconds: 3));
+              try {
+                await GoogleSheetService.ensureSheetsExist();
+              } catch (e) {
+                print('ensureSheetsExist (Google existing sheet) first try: $e');
+                await Future.delayed(const Duration(seconds: 3));
+                try {
+                  await GoogleSheetService.ensureSheetsExist();
+                } catch (e2) {
+                  print(
+                      'ensureSheetsExist (Google existing sheet) retry failed: $e2');
+                  if (!_isDisposed) {
+                    showNativeSnackbar(
+                      title: "Sheet tables not created",
+                      message: _sheetFailureMessage(e2),
+                      isError: true,
+                    );
+                  }
+                }
+              }
             }
           }
-        } else {
+        } else if (AppConstants.spreadsheetId.isEmpty) {
           await _createUserDocument(currentUser);
         }
       } catch (e) {
         print("Warning: Could not fetch user data from Firestore: $e");
+      }
+
+      if (AppConstants.spreadsheetId.isNotEmpty) {
+        try {
+          await GoogleSheetService.ensureSheetsExist();
+        } catch (e) {
+          print('ensureSheetsExist before navigate: $e');
+          if (!_isDisposed && GoogleSheetService.isProjectDeletedError(e)) {
+            showNativeSnackbar(
+              title: "Setup required",
+              message: GoogleSheetService.projectDeletedUserMessage,
+              isError: true,
+            );
+          }
+        }
       }
 
       await _checkAndNavigateAfterLogin();
@@ -558,18 +647,22 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     }
   }
 
-  Future<void> _createUserDocument(User user) async {
+  Future<void> _createUserDocument(User user, {String? spreadsheetId}) async {
     try {
+      final data = {
+        'userId': user.uid,
+        'email': user.email,
+        'username': user.displayName ?? user.email?.split('@').first ?? 'user',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
+        data['spreadsheetId'] = spreadsheetId;
+      }
       await FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
-          .set({
-        'userId': user.uid,
-        'email': user.email,
-        'username': user.email?.split('@').first ?? 'user',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+          .set(data);
       print("User document created for ${user.uid}");
     } catch (e) {
       print("Error creating user document: $e");
@@ -579,6 +672,13 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   // -----------------------------------------------------------------------
   // 3. NEW HELPER: Native Snackbar (Guaranteed to show)
   // -----------------------------------------------------------------------
+  String _sheetFailureMessage(Object e) {
+    if (GoogleSheetService.isProjectDeletedError(e)) {
+      return GoogleSheetService.projectDeletedUserMessage;
+    }
+    return "Open the sheet in Drive → Share → Add flutter-sheet-access@invoicesathi.iam.gserviceaccount.com as Editor, then sign in again.";
+  }
+
   void showNativeSnackbar({required String title, required String message, required bool isError}) {
     final BuildContext? ctx = Get.context;
     if (ctx == null) {
@@ -694,8 +794,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       // Create Google Sheet for this user (client-side — no Cloud Functions, works on Spark plan)
       String spreadsheetId = '';
       try {
-        final id = await GoogleSheetService.createNewUserSpreadsheet(userCred.user!.uid);
-        spreadsheetId = id ?? '';
+        final result = await GoogleSheetService.createNewUserSpreadsheet(userCred.user!.uid);
+        spreadsheetId = result != null ? result.$1 : '';
       } catch (e) {
         print('createNewUserSpreadsheet failed: $e');
       }
@@ -720,6 +820,12 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       if (spreadsheetId.isNotEmpty) {
         await sharedPreferencesHelper.storePrefData("spreadsheetId", spreadsheetId);
         AppConstants.spreadsheetId = spreadsheetId;
+        // Auto-create Item, Customer, Invoice etc. tabs if missing
+        try {
+          await GoogleSheetService.ensureSheetsExist();
+        } catch (e) {
+          print('ensureSheetsExist after registration: $e');
+        }
       }
 
       AppConstants.userId = userCred.user!.uid  ;
