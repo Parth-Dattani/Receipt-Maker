@@ -538,11 +538,29 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
                 await _createUserDocument(currentUser,
                     spreadsheetId: newSpreadsheetId);
               }
-              await Future.delayed(const Duration(seconds: 2));
+              await Future.delayed(const Duration(seconds: 3));
               try {
                 await GoogleSheetService.ensureSheetsExist();
               } catch (e) {
                 print('ensureSheetsExist after Google sheet create: $e');
+                // Retry: Drive permission to Service Account can take a few seconds to propagate
+                for (int i = 0; i < 3; i++) {
+                  await Future.delayed(const Duration(seconds: 4));
+                  try {
+                    await GoogleSheetService.ensureSheetsExist();
+                    print('ensureSheetsExist retry ${i + 1} succeeded');
+                    break;
+                  } catch (e2) {
+                    print('ensureSheetsExist retry ${i + 1} failed: $e2');
+                    if (i == 2 && !_isDisposed) {
+                      showNativeSnackbar(
+                        title: "Creating tables...",
+                        message: "If Item/Customer tabs don't appear, sign out and sign in again.",
+                        isError: false,
+                      );
+                    }
+                  }
+                }
               }
             }
           } catch (e) {
@@ -593,6 +611,13 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           await GoogleSheetService.ensureSheetsExist();
         } catch (e) {
           print('ensureSheetsExist before navigate: $e');
+          await Future.delayed(const Duration(seconds: 4));
+          try {
+            await GoogleSheetService.ensureSheetsExist();
+            print('ensureSheetsExist before navigate retry succeeded');
+          } catch (e2) {
+            print('ensureSheetsExist before navigate retry failed: $e2');
+          }
           if (!_isDisposed && GoogleSheetService.isProjectDeletedError(e)) {
             showNativeSnackbar(
               title: "Setup required",
@@ -676,7 +701,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     if (GoogleSheetService.isProjectDeletedError(e)) {
       return GoogleSheetService.projectDeletedUserMessage;
     }
-    return "Open the sheet in Drive → Share → Add flutter-sheet-access@invoicesathi.iam.gserviceaccount.com as Editor, then sign in again.";
+    return "Open the sheet in Drive → Share → Add ${AppConstants.serviceAccountEmailForDisplay} as Editor, then sign in again.";
   }
 
   void showNativeSnackbar({required String title, required String message, required bool isError}) {

@@ -48,6 +48,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Get.put(AuthController());
+    Get.put(SplashController()); // Required before SplashScreen so Timer in splash_screen can find it
     return GetMaterialApp(
       title: 'Invoice Sathi',
       theme: ThemeData(

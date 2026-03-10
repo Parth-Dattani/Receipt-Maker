@@ -12,6 +12,10 @@ class AppConstants{
    static String  companyName = "";
    static String appId = "";
    static String spreadsheetId = "";
+   /// Service Account JSON in assets/ — GetYourInvoice project key (Sheets/Drive).
+   static String serviceAccountJsonPath = "getyourinvoice-8f128-3dfb21843bde.json";
+   /// "Share sheet with" message માં દેખાડવાનો email — JSON ના client_email જેવો જ રાખો.
+   static String serviceAccountEmailForDisplay = "getyourinvoice-sheet-access@getyourinvoice-8f128.iam.gserviceaccount.com";
    /// Web-only: paste Firebase Authentication → Google → Web SDK configuration → Web client ID (for Google Sign-In on web).
    /// On Android, same ID is used as serverClientId so Firebase accepts the token. Use your project's Web client ID.
    static String googleWebClientId = "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com";

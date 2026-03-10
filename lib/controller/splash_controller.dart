@@ -138,7 +138,7 @@ class SplashController extends BaseController {
         print("=" * 70);
         print("1. Open: https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
         print("2. Click 'Share' button");
-        print("3. Add as Editor: invoicesathi@invoicesathi.iam.gserviceaccount.com");
+        print("3. Add as Editor: ${AppConstants.serviceAccountEmailForDisplay}");
         print("4. Restart app");
         print("=" * 70);
         print("");

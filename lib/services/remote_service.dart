@@ -1972,7 +1972,7 @@ class GoogleSheetService {
         if (id != null && id.isNotEmpty) {
           print('✅ Created spreadsheet "$sheetName" in folder $folderName: $id');
           try {
-            final credStr = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+            final credStr = await _loadServiceAccountJson();
             final credJson = jsonDecode(credStr) as Map<String, dynamic>;
             final serviceAccountEmail = credJson['client_email'] as String?;
             if (serviceAccountEmail != null && serviceAccountEmail.isNotEmpty) {
@@ -2009,7 +2009,7 @@ class GoogleSheetService {
   /// Share an existing spreadsheet with the Service Account so it can write Item, Customer, Invoice etc.
   static Future<bool> shareSpreadsheetWithServiceAccount(String spreadsheetId, String accessToken) async {
     try {
-      final credStr = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+      final credStr = await _loadServiceAccountJson();
       final credJson = jsonDecode(credStr) as Map<String, dynamic>;
       final serviceAccountEmail = credJson['client_email'] as String?;
       if (serviceAccountEmail == null || serviceAccountEmail.isEmpty) return false;
@@ -2074,7 +2074,7 @@ class GoogleSheetService {
 
   /// Auth client with Sheets + Drive scopes (for creating sheet and sharing).
   static Future<AuthClient> _getAuthClientWithDrive() async {
-    final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+    final credentialsJson = await _loadServiceAccountJson();
     final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
     final scopes = [SheetsApi.spreadsheetsScope, drive.DriveApi.driveScope];
     return await clientViaServiceAccount(accountCredentials, scopes);
@@ -2223,7 +2223,7 @@ class GoogleSheetService {
       } catch (e) {
         print("❌ Write permission denied: $e");
         print("   → Please give Editor access to:");
-        print("   → invoicesathi@invoicesathi.iam.gserviceaccount.com");
+        print("   → ${AppConstants.serviceAccountEmailForDisplay}");
         return false;
       }
 
@@ -2236,7 +2236,7 @@ class GoogleSheetService {
         print("   2. Service account has NO access");
         print("");
         print("🔧 Fix: Share spreadsheet with:");
-        print("   invoicesathi@invoicesathi.iam.gserviceaccount.com");
+        print("   ${AppConstants.serviceAccountEmailForDisplay}");
       }
 
       return false;
@@ -2611,8 +2611,20 @@ class GoogleSheetService {
 
 
   /// Load credentials from assets/credentials.json
+  static Future<String> _loadServiceAccountJson() async {
+    final path = "assets/${AppConstants.serviceAccountJsonPath}";
+    try {
+      return await rootBundle.loadString(path);
+    } catch (e) {
+      print("❌ Service account file NOT FOUND: $path");
+      print("   → Add the JSON file to assets/ folder.");
+      print("   → Then run: flutter clean && flutter pub get && flutter run");
+      rethrow;
+    }
+  }
+
   static Future<AuthClient> _getAuthClient() async {
-    final credentialsJson = await rootBundle.loadString('assets/invoicesathi-4ca968cb8212.json');
+    final credentialsJson = await _loadServiceAccountJson();
 
     print("------------Creddd-------------${credentialsJson}");
     final accountCredentials =
