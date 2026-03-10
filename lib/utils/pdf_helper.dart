@@ -394,85 +394,89 @@ class InvoiceHelper {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
 
-                          pw.Text('BANK DETAILS',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 11)),
-                          pw.SizedBox(height: 5),
-                          if (companyBank.isNotEmpty)
-                          pw.Text('Bank: $companyBank',
-                              style: pw.TextStyle(fontSize: 9)),
-                          if (companyAccount.isNotEmpty)
-                            pw.Text('A/C: $companyAccount',
-                                style: pw.TextStyle(fontSize: 9)),
-                          if (companyIfsc.isNotEmpty)
-                            pw.Text('IFSC: $companyIfsc',
-                                style: pw.TextStyle(fontSize: 9)),
-                          if (companyUpi.isNotEmpty)
-                            pw.Text('Upi: $companyUpi',
-                                style: pw.TextStyle(fontSize: 9)),
-
-                          pw.SizedBox(height: 15),
-                          pw.Text('NOTES',
-                              style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  fontSize: 11)),
-                          pw.SizedBox(height: 6),
-
-                            // Main invoice notes
-                          if (notes.isNotEmpty.toString().trim().isNotEmpty)
-
-                            pw.Text(notes, style: pw.TextStyle(fontSize: 7.5)),
-
-                          // 🆕 EXTRA NOTES - Only show if enabled
-                          if (companyData['isExtraNotesEnabled'] == true) ...[
-                            // Extra Note 1
-                            if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty) ...[
-                              pw.SizedBox(height: 3.5),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                                  pw.Expanded(
-                                    child: pw.Text(
-                                      companyData['extraNote1'].toString().trim(),
-                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                          // ✅ Show Bank Details only if any bank data exists
+                          if ((companyBank.toString().trim().isNotEmpty) ||
+                              (companyAccount.toString().trim().isNotEmpty) ||
+                              (companyIfsc.toString().trim().isNotEmpty) ||
+                              (companyUpi.toString().trim().isNotEmpty)) ...[
+                            pw.Text('BANK DETAILS',
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 11)),
+                            pw.SizedBox(height: 5),
+                            if (companyBank.isNotEmpty)
+                              pw.Text('Bank: $companyBank',
+                                  style: pw.TextStyle(fontSize: 9)),
+                            if (companyAccount.isNotEmpty)
+                              pw.Text('A/C: $companyAccount',
+                                  style: pw.TextStyle(fontSize: 9)),
+                            if (companyIfsc.isNotEmpty)
+                              pw.Text('IFSC: $companyIfsc',
+                                  style: pw.TextStyle(fontSize: 9)),
+                            if (companyUpi.isNotEmpty)
+                              pw.Text('Upi: $companyUpi',
+                                  style: pw.TextStyle(fontSize: 9)),
+                            pw.SizedBox(height: 15),
+                          ],
+                          // ✅ Show NOTES only when there is note content
+                          if ((notes.trim().isNotEmpty) ||
+                              (companyData['isExtraNotesEnabled'] == true &&
+                                  ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty ||
+                                      (companyData['extraNote2'] ?? '').toString().trim().isNotEmpty ||
+                                      (companyData['extraNote3'] ?? '').toString().trim().isNotEmpty))) ...[
+                            pw.Text('NOTES',
+                                style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 11)),
+                            pw.SizedBox(height: 6),
+                            if (notes.trim().isNotEmpty)
+                              pw.Text(notes, style: pw.TextStyle(fontSize: 7.5)),
+                            if (companyData['isExtraNotesEnabled'] == true) ...[
+                              if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty) ...[
+                                pw.SizedBox(height: 3.5),
+                                pw.Row(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                    pw.Expanded(
+                                      child: pw.Text(
+                                        companyData['extraNote1'].toString().trim(),
+                                        style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            // Extra Note 2
-                            if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty) ...[
-                              pw.SizedBox(height: 6),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                                  pw.Expanded(
-                                    child: pw.Text(
-                                      companyData['extraNote2'].toString().trim(),
-                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                  ],
+                                ),
+                              ],
+                              if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty) ...[
+                                pw.SizedBox(height: 6),
+                                pw.Row(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                    pw.Expanded(
+                                      child: pw.Text(
+                                        companyData['extraNote2'].toString().trim(),
+                                        style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            // Extra Note 3
-                            if ((companyData['extraNote3'] ?? '').toString().trim().isNotEmpty) ...[
-                              pw.SizedBox(height: 6),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
-                                  pw.Expanded(
-                                    child: pw.Text(
-                                      companyData['extraNote3'].toString().trim(),
-                                      style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                  ],
+                                ),
+                              ],
+                              if ((companyData['extraNote3'] ?? '').toString().trim().isNotEmpty) ...[
+                                pw.SizedBox(height: 6),
+                                pw.Row(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  children: [
+                                    pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                                    pw.Expanded(
+                                      child: pw.Text(
+                                        companyData['extraNote3'].toString().trim(),
+                                        style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey800),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ],
 
@@ -747,6 +751,560 @@ class InvoiceHelper {
 
     } catch (e) {
       print("❌ Error generating PDF: $e");
+    }
+  }
+
+  /// Same as [generateAndShareInvoice] but with teal/color theme (header, borders, table header, totals).
+  /// Use this for a colored PDF; keep [generateAndShareInvoice] for black & white.
+  /// All PDF style changes for the colored invoice should be made only in this method.
+  static Future<void> generateAndShareInvoiceColor(
+      List<Invoice> invoices,
+      String userName,
+      String phoneNumber,
+      String customerEmail,
+      String customerPAN,
+      String customerGST,
+      String customerAddress,
+      double subtotal,
+      String invoiceDate,
+      double totalAmount,
+      String notes,
+      Map<String, dynamic> companyData,
+      InvoiceType invoiceType,
+      double gstAmount,
+      String dueDate,
+      ) async {
+    try {
+      final pdf = pw.Document();
+
+      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final iconData = await rootBundle.load("assets/fonts/NotoEmoji-Regular.ttf");
+      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      final notoEmoji = pw.Font.ttf(iconData.buffer.asByteData());
+
+      final theme = pw.ThemeData.withFont(
+        base: customFont,
+        bold: customFont,
+        italic: customFont,
+        boldItalic: customFont,
+      );
+
+      final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
+
+      String companyName = companyData['companyName'] ?? 'Your Company Name';
+      String companyAddress = companyData['address'] ?? 'Company Address';
+      String companyCity = companyData['city'] ?? 'City';
+      String companyState = companyData['state'] ?? 'State';
+      String companyPin = companyData['pincode'] ?? 'PIN Code';
+      String companyPhone = companyData['phone'] ?? '+91 XXXXXXXXXX';
+      String companyEmail = companyData['userEmail'] ?? 'company@email.com';
+      String companyGst = companyData['gst'] ?? 'XXXXXXXXXXXXXXX';
+      String companyBank = companyData['bankName'] ?? 'Bank Name';
+      String companyAccount = companyData['accountNumber'] ?? 'Account Number';
+      String companyUpi = companyData['upiId'] ?? 'Upi Id';
+      String companyIfsc = companyData['ifsc'] ?? 'IFSC Code';
+      String companyPan = companyData['pan'] ?? 'PAN Number';
+
+      // Color theme similar to sample bill:
+      // - Brand text: deep red
+      // - Accent text / lines: green
+      final PdfColor brandColor = PdfColor.fromHex('#C62828');   // Vishal text style red
+      final PdfColor primaryColor = PdfColor.fromHex('#2E7D32'); // Accent green
+      final PdfColor headerBg = PdfColor.fromHex('#E8F5E9');     // light green background
+      final PdfColor borderColor = PdfColor.fromHex('#A5D6A7');  // green border
+      final PdfColor rowAlt = PdfColor.fromHex('#FFFDE7');       // soft alternate row
+      final PdfColor white = PdfColors.white;
+
+      final String documentTitle = getInvoiceDocumentTitle(
+          invoiceType,
+          invoices.isNotEmpty ? invoices.first.status : null);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          theme: theme,
+          margin: pw.EdgeInsets.all(25),
+          footer: (pw.Context ctx) => _buildFooterColored(ctx,
+              primaryColor: primaryColor,
+              borderColor: borderColor,
+              headerBg: headerBg),
+          build: (pw.Context context) {
+            return [
+              pw.Container(
+                width: double.infinity,
+                padding: pw.EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: pw.BoxDecoration(
+                  color: headerBg,
+                  borderRadius: pw.BorderRadius.circular(10),
+                  border: pw.Border.all(color: borderColor, width: 1),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(
+                      flex: 3,
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            companyName.toUpperCase(),
+                            style: pw.TextStyle(
+                              color: brandColor,
+                              fontSize: 20,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(companyAddress,
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
+                          pw.Text('$companyCity, $companyState - $companyPin',
+                              style: pw.TextStyle(color: primaryColor, fontSize: 8.5)),
+                          pw.SizedBox(height: 3),
+                          pw.Text("Phone: $companyPhone",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          pw.Text("Email: $companyEmail",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyPan.isNotEmpty)
+                            pw.Text("PAN: $companyPan",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                          if (companyGst.isNotEmpty)
+                            pw.Text("GST: $companyGst",
+                              style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                        ],
+                      ),
+                    ),
+                    pw.Container(
+                      padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      decoration: pw.BoxDecoration(
+                        color: white,
+                        borderRadius: pw.BorderRadius.circular(8),
+                        border: pw.Border.all(color: borderColor, width: 1),
+                      ),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(documentTitle,
+                              style: pw.TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 16,
+                                  fontWeight: pw.FontWeight.bold)),
+                          pw.SizedBox(height: 4),
+                          pw.Text('#$invoiceId',
+                              style: pw.TextStyle(
+                                  color: primaryColor, fontSize: 10)),
+                          pw.SizedBox(height: 6),
+                          pw.Row(
+                            children: [
+                              pw.Text('Date: ',
+                                  style: pw.TextStyle(
+                                      fontSize: 9,
+                                      color: primaryColor,
+                                      fontWeight: pw.FontWeight.bold)),
+                              pw.Text(invoiceDate,
+                                  style: pw.TextStyle(
+                                      color: primaryColor, fontSize: 9)),
+                            ],
+                          ),
+                          if (AppConstants.isDueDateEnabled.value) ...[
+                            pw.SizedBox(height: 2),
+                            pw.Row(
+                              children: [
+                                pw.Text('Due: ',
+                                    style: pw.TextStyle(
+                                        fontSize: 9,
+                                        color: primaryColor,
+                                        fontWeight: pw.FontWeight.bold)),
+                                pw.Text(dueDate,
+                                    style: pw.TextStyle(
+                                        color: PdfColors.red700,
+                                        fontSize: 9,
+                                        fontWeight: pw.FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                padding: pw.EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                decoration: pw.BoxDecoration(
+                  color: headerBg,
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: borderColor, width: 1),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('TO:',
+                        style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 12,
+                            color: primaryColor)),
+                    pw.SizedBox(height: 6),
+                    pw.Text(userName,
+                        style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold, fontSize: 12, color: primaryColor)),
+                    if (customerAddress.isNotEmpty)
+                      pw.Text(customerAddress, style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                    pw.SizedBox(height: 3),
+                    pw.Text('Phone: $phoneNumber',
+                        style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                    if (customerEmail.isNotEmpty)
+                      pw.Text('Email: $customerEmail',
+                          style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                    if (customerPAN.isNotEmpty)
+                      pw.Text('PAN: $customerPAN',
+                          style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                    if (customerGST.isNotEmpty)
+                      pw.Text('GST: $customerGST',
+                          style: pw.TextStyle(fontSize: 8.5, color: primaryColor)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(color: borderColor, width: 1),
+                ),
+                child: pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: borderColor, width: 0.5),
+                    verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
+                  ),
+                  columnWidths: AppConstants.withGST.value
+                      ? {
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FlexColumnWidth(3.5),
+                    2: pw.FixedColumnWidth(50),
+                    3: pw.FixedColumnWidth(70),
+                    4: pw.FixedColumnWidth(85),
+                    5: pw.FixedColumnWidth(70),
+                    6: pw.FixedColumnWidth(85),
+                  }
+                      : {
+                    0: pw.FixedColumnWidth(25),
+                    1: pw.FlexColumnWidth(4),
+                    2: pw.FixedColumnWidth(60),
+                    3: pw.FixedColumnWidth(85),
+                    4: pw.FixedColumnWidth(95),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: primaryColor),
+                      children: [
+                        _tableHeaderColored('#', bgColor: primaryColor, textColor: white, align: pw.TextAlign.center),
+                        _tableHeaderColored('DESCRIPTION', bgColor: primaryColor, textColor: white),
+                        _tableHeaderColored('QTY', bgColor: primaryColor, textColor: white, align: pw.TextAlign.right),
+                        _tableHeaderColored('PRICE', bgColor: primaryColor, textColor: white, align: pw.TextAlign.right),
+                        _tableHeaderColored('AMOUNT', bgColor: primaryColor, textColor: white, align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeaderColored('GST', bgColor: primaryColor, textColor: white, align: pw.TextAlign.right),
+                        if (AppConstants.withGST.value)
+                          _tableHeaderColored('NET', bgColor: primaryColor, textColor: white, align: pw.TextAlign.right),
+                      ],
+                    ),
+                    ...invoices.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      Invoice item = entry.value;
+                      final isEven = index % 2 == 0;
+                      double baseAmount = (item.price! * item.qty!);
+                      double gstValue = baseAmount * (item.gst ?? 0) / 100;
+                      double netAmount = baseAmount + gstValue;
+                      InvoiceItem? actualItem;
+                      if (item.items != null && item.items!.isNotEmpty) {
+                        actualItem = item.items!.first;
+                      }
+                      String displayItemName = actualItem?.itemName ?? item.itemName ?? '';
+                      bool hasServiceDescription = actualItem != null &&
+                          actualItem.description.isNotEmpty &&
+                          actualItem.description != actualItem.itemName &&
+                          actualItem.description.trim() != displayItemName.trim();
+                      return pw.TableRow(
+                        decoration: pw.BoxDecoration(
+                          color: isEven ? white : rowAlt,
+                        ),
+                        children: [
+                          _tableCellColored('${index + 1}', align: pw.TextAlign.center, textColor: primaryColor),
+                          pw.Padding(
+                            padding: pw.EdgeInsets.all(4),
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              children: [
+                                pw.Text(
+                                  displayItemName,
+                                  style: pw.TextStyle(
+                                    fontSize: 8.5,
+                                    color: primaryColor,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                                if (hasServiceDescription) ...[
+                                  pw.SizedBox(height: 3),
+                                  pw.Text(
+                                    actualItem!.description,
+                                    style: pw.TextStyle(
+                                      fontSize: 8,
+                                      color: primaryColor,
+                                      fontStyle: pw.FontStyle.italic,
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 3,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          _tableCellColored(item.qty!.toStringAsFixed(3), align: pw.TextAlign.right, textColor: primaryColor),
+                          _tableCellColored(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.right, textColor: primaryColor),
+                          _tableCellColored(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right, textColor: primaryColor),
+                          if (AppConstants.withGST.value)
+                            _tableCellColored(AppUtil.formatCurrency(gstValue), align: pw.TextAlign.right, textColor: primaryColor),
+                          if (AppConstants.withGST.value)
+                            _tableCellColored(AppUtil.formatCurrency(netAmount), align: pw.TextAlign.right, textColor: primaryColor),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              // 🔹 Notes + Totals row. Hide left container when no bank and no notes.
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: () {
+                  final bool hasBankDetails =
+                      companyBank.toString().trim().isNotEmpty ||
+                      companyAccount.toString().trim().isNotEmpty ||
+                      companyIfsc.toString().trim().isNotEmpty ||
+                      companyUpi.toString().trim().isNotEmpty;
+                  final bool hasAnyNotes =
+                      notes.trim().isNotEmpty ||
+                      (companyData['isExtraNotesEnabled'] == true &&
+                          ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty ||
+                              (companyData['extraNote2'] ?? '').toString().trim().isNotEmpty ||
+                              (companyData['extraNote3'] ?? '').toString().trim().isNotEmpty));
+                  final bool showLeftSection = hasBankDetails || hasAnyNotes;
+                  return <pw.Widget>[
+                    if (showLeftSection)
+                      pw.Expanded(
+                        flex: 3,
+                        child: pw.Container(
+                          padding: pw.EdgeInsets.all(15),
+                          decoration: pw.BoxDecoration(
+                            color: headerBg,
+                            borderRadius: pw.BorderRadius.circular(8),
+                            border: pw.Border.all(color: borderColor, width: 1),
+                          ),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              if (hasBankDetails) ...[
+                                pw.Text('BANK DETAILS',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 11,
+                                        color: primaryColor)),
+                                pw.SizedBox(height: 5),
+                                if (companyBank.isNotEmpty)
+                                  pw.Text('Bank: $companyBank',
+                                      style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                                if (companyAccount.isNotEmpty)
+                                  pw.Text('A/C: $companyAccount',
+                                      style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                                if (companyIfsc.isNotEmpty)
+                                  pw.Text('IFSC: $companyIfsc',
+                                      style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                                if (companyUpi.isNotEmpty)
+                                  pw.Text('Upi: $companyUpi',
+                                      style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                                pw.SizedBox(height: 15),
+                              ],
+                              if (hasAnyNotes) ...[
+                                pw.Text('NOTES',
+                                    style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 11,
+                                        color: primaryColor)),
+                                pw.SizedBox(height: 6),
+                                if (notes.trim().isNotEmpty)
+                                  pw.Text(notes, style: pw.TextStyle(fontSize: 7.5, color: primaryColor)),
+                                if (companyData['isExtraNotesEnabled'] == true) ...[
+                                  if ((companyData['extraNote1'] ?? '').toString().trim().isNotEmpty) ...[
+                                    pw.SizedBox(height: 3.5),
+                                    pw.Row(
+                                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                      children: [
+                                        pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                                        pw.Expanded(
+                                            child: pw.Text(
+                                                companyData['extraNote1'].toString().trim(),
+                                                style: pw.TextStyle(fontSize: 7.5, color: primaryColor))),
+                                      ],
+                                    ),
+                                  ],
+                                  if ((companyData['extraNote2'] ?? '').toString().trim().isNotEmpty) ...[
+                                    pw.SizedBox(height: 6),
+                                    pw.Row(
+                                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                      children: [
+                                        pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                                        pw.Expanded(
+                                            child: pw.Text(
+                                                companyData['extraNote2'].toString().trim(),
+                                                style: pw.TextStyle(fontSize: 7.5, color: primaryColor))),
+                                      ],
+                                    ),
+                                  ],
+                                  if ((companyData['extraNote3'] ?? '').toString().trim().isNotEmpty) ...[
+                                    pw.SizedBox(height: 6),
+                                    pw.Row(
+                                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                      children: [
+                                        pw.Text('• ', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                                        pw.Expanded(
+                                            child: pw.Text(
+                                                companyData['extraNote3'].toString().trim(),
+                                                style: pw.TextStyle(fontSize: 7.5, color: primaryColor))),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (showLeftSection) pw.SizedBox(width: 20),
+                    pw.Expanded(
+                      flex: 2,
+                      child: pw.Container(
+                        padding: pw.EdgeInsets.all(15),
+                        decoration: pw.BoxDecoration(
+                          color: headerBg,
+                          borderRadius: pw.BorderRadius.circular(8),
+                          border: pw.Border.all(color: borderColor, width: 1),
+                        ),
+                        child: pw.Column(
+                          children: [
+                            _buildTotalRow('Subtotal', subtotal, formatted: true, primaryColor: primaryColor),
+                            if (AppConstants.withGST.value)
+                              _buildTotalRow('CGST', gstAmount / 2, formatted: true, primaryColor: primaryColor),
+                            if (AppConstants.withGST.value)
+                              _buildTotalRow('SGST', gstAmount / 2, formatted: true, primaryColor: primaryColor),
+                            pw.Divider(color: borderColor, height: 20),
+                            _buildTotalRow('TOTAL', totalAmount,
+                                formatted: true,
+                                isTotal: true,
+                                isBold: true,
+                                primaryColor: primaryColor),
+                            pw.SizedBox(height: 10),
+                            pw.Container(
+                              width: double.infinity,
+                              padding: pw.EdgeInsets.all(8),
+                              decoration: pw.BoxDecoration(
+                                color: white,
+                                borderRadius: pw.BorderRadius.circular(5),
+                                border: pw.Border.all(color: borderColor, width: 1),
+                              ),
+                              child: pw.Text(
+                                'Amount in Words:\n${_numberToWords(totalAmount)}',
+                                style: pw.TextStyle(fontSize: 8, color: primaryColor),
+                                textAlign: pw.TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ];
+                }(),
+              ),
+              pw.SizedBox(height: 15),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Container(width: 150, height: 1, color: borderColor),
+                      pw.SizedBox(height: 5),
+                      pw.Text('Customer Signature',
+                          style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Container(width: 150, height: 1, color: borderColor),
+                      pw.SizedBox(height: 5),
+                      pw.Text('Authorized Signature',
+                          style: pw.TextStyle(fontSize: 9, color: primaryColor)),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 15),
+              pw.Center(
+                child: pw.Text(
+                  'Thank you for your business! • This is a computer generated invoice',
+                  style: pw.TextStyle(
+                      fontSize: 8,
+                      color: primaryColor,
+                      fontStyle: pw.FontStyle.italic),
+                ),
+              ),
+            ];
+          },
+        ),
+      );
+
+      final Uint8List bytes = await pdf.save();
+      final String filePrefix = invoiceType == InvoiceType.quotation ? 'Quotation' : 'Invoice';
+      String safeDate = invoiceDate.replaceAll('/', '_').replaceAll(' ', '_');
+      String safeName = userName.replaceAll(' ', '_').replaceAll('/', '-');
+      final String filename = '${filePrefix}_${invoiceId}_${safeName}_${safeDate}.pdf';
+
+      if (kIsWeb) {
+        try {
+          await Printing.layoutPdf(
+            onLayout: (PdfPageFormat format) async => bytes,
+            name: filename,
+          );
+          Get.snackbar(
+            'Ready to Print',
+            'Print dialog opened successfully',
+            backgroundColor: Colors.green.shade100,
+            colorText: Colors.green.shade800,
+            icon: Icon(Icons.print, color: Colors.green.shade700),
+          );
+        } catch (e) {
+          print("❌ Error opening print dialog: $e");
+          Get.snackbar(
+            'Print Error',
+            'Could not open print dialog: ${e.toString()}',
+            backgroundColor: Colors.red.shade100,
+            colorText: Colors.red.shade800,
+            icon: Icon(Icons.error_outline, color: Colors.red.shade700),
+          );
+        }
+        return;
+      }
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$filename';
+      final file = io.File(filePath);
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: '$documentTitle - $invoiceId',
+      );
+    } catch (e) {
+      print("❌ Error generating PDF (color): $e");
     }
   }
 
@@ -6516,6 +7074,49 @@ class InvoiceHelper {
     );
   }
 
+  /// Table header with custom bg and text color (for color PDF)
+  static pw.Widget _tableHeaderColored(
+    String text, {
+    pw.TextAlign align = pw.TextAlign.left,
+    required PdfColor bgColor,
+    required PdfColor textColor,
+  }) {
+    return pw.Container(
+      padding: pw.EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      color: bgColor,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontWeight: pw.FontWeight.bold,
+          fontSize: 9,
+          color: textColor,
+        ),
+        textAlign: align,
+      ),
+    );
+  }
+
+  /// Table cell with optional text color (for color PDF)
+  static pw.Widget _tableCellColored(
+    String text, {
+    pw.TextAlign align = pw.TextAlign.left,
+    PdfColor? textColor,
+  }) {
+    return pw.Container(
+      padding: pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          color: textColor ?? PdfColors.grey800,
+        ),
+        textAlign: align,
+        maxLines: 2,
+        overflow: pw.TextOverflow.clip,
+      ),
+    );
+  }
+
   static pw.Widget _buildTotalRow(
       String label,
       double amount, {
@@ -6715,9 +7316,74 @@ class InvoiceHelper {
       ),
     );
   }
+
+  /// Footer for color PDF only — uses theme primary/border/headerBg.
+  static pw.Widget _buildFooterColored(
+    pw.Context context, {
+    required PdfColor primaryColor,
+    required PdfColor borderColor,
+    required PdfColor headerBg,
+  }) {
+    return pw.Container(
+      padding: pw.EdgeInsets.symmetric(vertical: 4),
+      decoration: pw.BoxDecoration(
+        color: headerBg,
+        border: pw.Border(
+          top: pw.BorderSide(color: borderColor, width: 1),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                "Application By: iNTELLIGNT tECH",
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: primaryColor,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                "252, NEO Square, P.N.Marg Jamnagar",
+                style: pw.TextStyle(
+                  fontSize: 7,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                "www.intelligenttech.in",
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: primaryColor,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                "info@intelligenttech.in",
+                style: pw.TextStyle(
+                  fontSize: 8,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
-
-
 
 
 

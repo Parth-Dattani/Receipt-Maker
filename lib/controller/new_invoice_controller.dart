@@ -3365,7 +3365,7 @@ class NewInvoiceController extends GetxController {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
               icon: Icon(Icons.picture_as_pdf),
-              label: Text("Save as PDF "),
+              label: Text("A4 Print "),
               onPressed: () async {
                 Get.back(); // Close Dialog
 
@@ -3376,7 +3376,7 @@ class NewInvoiceController extends GetxController {
                 // If you don't have a separate method, use the same one but maybe pass a flag?
                 // Or call the specific A4 method if you have it.
 
-                await InvoiceHelper.generateAndShareInvoice(
+                await InvoiceHelper.generateAndShareInvoiceColor(
                   invoiceModels,
                   customerNameController.text.trim(),
                   customerMobileController.text.trim(),
