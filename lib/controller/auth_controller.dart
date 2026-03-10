@@ -438,13 +438,16 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       }
 
       // Clear any previous sign-in state (helps on web and Android when login was cancelled or failed before)
+      // On web, clientId is required so the account picker opens; otherwise plugin can throw null check.
+      final String? webClientId = kIsWeb ? (AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null) : null;
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: [ 
+        scopes: [
           'email',
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/spreadsheets',
         ],
         serverClientId: serverClientId,
+        clientId: webClientId, // Required on web for account picker / sign-in flow
       );
       await googleSignIn.signOut();
 

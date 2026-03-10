@@ -1,9 +1,11 @@
 import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:GetYourInvoice/constant/app_constant.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controller/controller.dart';
 import 'package:flutter/services.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 
 class CustomerRegistrationScreen extends GetView<CustomerRegistrationController> {
@@ -16,7 +18,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(context),
       body: LayoutBuilder(
@@ -29,6 +31,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         },
       ),
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   AppBar _buildAppBar(BuildContext context) {

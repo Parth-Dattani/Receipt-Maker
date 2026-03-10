@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../constant/constant.dart';
+import '../utils/shared_preferences_helper.dart';
 import '../widgets/custom_snackbar.dart';
 import 'controller.dart';
 
@@ -354,13 +355,16 @@ class CompanyController extends BaseController {
       );
       await AppConstants.setExtraNotesEnabled(isExtraNotesEnabled.value);
 
-      Get.toNamed(
-        CustomerRegistrationScreen.pageId,
-        arguments: {
-          'companyId': companyRef.id,
-          'companyData': companyData,
-        },
-      );
+      // Persist active company context (some controllers read "CompanyId")
+      await AppConstants.setCompanyId(companyRef.id);
+      await sharedPreferencesHelper.storePrefData("CompanyId", companyRef.id);
+      final String savedCompanyName = companyNameController.text.trim();
+      if (savedCompanyName.isNotEmpty) {
+        await AppConstants.setCompanyName(savedCompanyName);
+      }
+
+      // After company registration, go to Dashboard (not Customer Registration)
+      Get.offAllNamed(DashboardScreen.pageId);
 
     } catch (e) {
       showCustomSnackbar(

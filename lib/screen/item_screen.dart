@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:GetYourInvoice/constant/constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/item_controller.dart';
@@ -10,6 +11,7 @@ import '../model/model.dart';
 import '../utils/pdf_helper.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../widgets/widgets.dart';
+import '../widgets/web_screen_wrapper.dart';
 import 'package:shimmer/shimmer.dart';
 
 
@@ -22,7 +24,7 @@ class ItemScreen extends GetView<ItemController> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 900) {
           return _buildMobileScaffold(context);
@@ -31,6 +33,8 @@ class ItemScreen extends GetView<ItemController> {
         }
       },
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ===========================================================================
