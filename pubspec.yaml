@@ -60,9 +60,10 @@ dependencies:
   country_pickers:
   gsheets:
   excel: ^4.0.6
-  local_auth:
+  local_auth: ^3.0.0
   package_info_plus:
   universal_html:
+  image_picker: ^1.2.1
 
 dev_dependencies:
   flutter_test:

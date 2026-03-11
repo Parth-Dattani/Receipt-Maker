@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/controller/bash_controller.dart';
 import 'package:GetYourInvoice/screen/dashboard/dashboard_screen.dart';
@@ -5,10 +7,12 @@ import 'package:GetYourInvoice/screen/screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../constant/constant.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../widgets/custom_snackbar.dart';
+import '../services/service.dart';
 import 'controller.dart';
 
 class CompanyController extends BaseController {
@@ -58,6 +62,9 @@ class CompanyController extends BaseController {
   var selectedBusinessType = ''.obs;
   final List<String> businessTypes = ['Trading', 'Service', 'Client'];
 
+  /// Logo: URL or data URL (base64). Used for preview in registration screen.
+  var logoPreviewUrl = Rxn<String>();
+
 
   // Firebase instances
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -70,6 +77,11 @@ class CompanyController extends BaseController {
     selectedCountry.value = 'India';
     selectedState.value = 'Gujarat';
     cityController.text = 'Jamnagar';
+
+    logoController.addListener(() {
+      final t = logoController.text.trim();
+      logoPreviewUrl.value = t.isEmpty ? null : t;
+    });
 
     final args = Get.arguments;
     print('Arguments received: $args');
@@ -132,6 +144,7 @@ class CompanyController extends BaseController {
     cityController.text = companyData['city'] ?? 'Jamnagar';
     pincodeController.text = companyData['pincode'] ?? '';
     logoController.text = companyData['logo'] ?? '';
+    logoPreviewUrl.value = companyData['logo']?.toString().trim().isNotEmpty == true ? companyData['logo'].toString() : null;
     businessCategoryController.text = companyData['businessCategory'] ?? '';
     selectedBusinessType.value = companyData['businessType'] ?? '';
     gstController.text = companyData['gst'] ?? '';
@@ -173,6 +186,38 @@ class CompanyController extends BaseController {
     } else {
       selectedCountry.value = 'India';
       selectedState.value = 'Gujarat';
+    }
+  }
+
+  void clearLogo() {
+    logoController.clear();
+    logoPreviewUrl.value = null;
+  }
+
+  /// Picks an image from gallery and sets logo as base64 data URL.
+  Future<void> pickLogoImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 800,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      final base64 = base64Encode(bytes);
+      final mime = image.mimeType ?? 'image/jpeg';
+      final dataUrl = 'data:$mime;base64,$base64';
+      logoController.text = dataUrl;
+      logoPreviewUrl.value = dataUrl;
+    } catch (e) {
+      print('Error picking logo image: $e');
+      showCustomSnackbar(
+        title: "Error",
+        message: "Could not pick image. Try using a logo URL instead.",
+        icon: Icons.error,
+        baseColor: AppColors.errorColor,
+      );
     }
   }
 
@@ -329,6 +374,16 @@ class CompanyController extends BaseController {
 
       await companyRef.set(companyData);
 
+      // Store logo URL in Google Sheet only when it's a normal URL (not base64 data URL)
+      final logoUrl = logoController.text.trim();
+      if (logoUrl.isNotEmpty && (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'))) {
+        GoogleSheetService.addOrUpdateCompanyLogo(
+          companyRef.id,
+          companyNameController.text.trim(),
+          logoUrl,
+        );
+      }
+
       isCompanyRegistered.value = true;
       currentCompany.value = companyData;
 
@@ -461,6 +516,16 @@ class CompanyController extends BaseController {
           .collection("companies")
           .doc(existingCompanyId)
           .set(updateData, SetOptions(merge: true));
+
+      // Store logo URL in Google Sheet only when it's a normal URL (not base64 data URL)
+      final logoUrl = logoController.text.trim();
+      if (logoUrl.isNotEmpty && existingCompanyId != null && (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'))) {
+        GoogleSheetService.addOrUpdateCompanyLogo(
+          existingCompanyId!,
+          companyNameController.text.trim(),
+          logoUrl,
+        );
+      }
 
       // Fetch the updated document from Firebase
       final updatedDoc = await _firestore

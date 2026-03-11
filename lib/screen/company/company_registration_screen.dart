@@ -4,6 +4,7 @@ import 'package:GetYourInvoice/constant/constant.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
 
 import '../../controller/controller.dart';
 import '../../utils/shared_preferences_helper.dart';
@@ -183,6 +184,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         child: Column(
           children: [
             _sectionTitle("Company Info", Icons.business),
+            _buildLogoPickerSection(),
+            const SizedBox(height: 12),
             // Row 1: Company Code + Company Name
             Row(
               children: [
@@ -508,6 +511,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         child: Column(
           children: [
             _sectionTitle("Company Info", Icons.business),
+            _buildLogoPickerSection(),
+            const SizedBox(height: 12),
             Obx(() => CustomTextFormField(
               controller: controller.companyCodeController,
               label: "Company Code *",
@@ -887,6 +892,85 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         ],
       ),
     );
+  }
+
+  Widget _buildLogoPickerSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text("Company Logo (URL or pick image)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        ),
+        // Row 1: Image preview full row
+        Obx(() {
+          final url = controller.logoPreviewUrl.value ?? controller.logoController.text.trim();
+          return Container(
+            width: double.infinity,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.tealColor.withOpacity(0.5)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: url.isEmpty
+                ? Icon(Icons.image_not_supported_outlined, size: 48, color: Colors.grey.shade500)
+                : _buildLogoPreview(url),
+          );
+        }),
+        const SizedBox(height: 12),
+        // Next line: Logo URL text field (full width)
+        CustomTextFormField(
+          controller: controller.logoController,
+          label: "Logo URL",
+          hintText: "https://example.com/logo.png",
+          prefixIcon: Icons.link,
+          validator: (value) {
+            final t = value?.trim() ?? '';
+            if (t.isEmpty) return null;
+            if (t.startsWith('data:')) return null; // base64 from image picker
+            if (!t.startsWith('http://') && !t.startsWith('https://')) {
+              return 'Enter a valid URL (e.g. https://example.com/logo.png)';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 8),
+        // Next line: Row with Pick image and Clear logo (wraps on narrow screens)
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => controller.pickLogoImage(),
+              icon: const Icon(Icons.image, size: 18),
+              label: const Text("Pick image"),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => controller.clearLogo(),
+              icon: const Icon(Icons.clear, size: 18),
+              label: const Text("Clear logo"),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.grey.shade700),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogoPreview(String url) {
+    if (url.startsWith('data:')) {
+      try {
+        final base64 = url.replaceFirst(RegExp(r'data:image/[^;]+;base64,'), '');
+        final bytes = base64Decode(base64);
+        return Image.memory(bytes, fit: BoxFit.cover);
+      } catch (_) {
+        return Icon(Icons.broken_image, size: 40, color: Colors.grey.shade500);
+      }
+    }
+    return Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.broken_image, size: 40, color: Colors.grey.shade500));
   }
 
   Widget _customDropdown({

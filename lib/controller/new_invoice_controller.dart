@@ -1543,6 +1543,16 @@ class NewInvoiceController extends GetxController {
 
       if (companyDoc.exists) {
         companyData.value = companyDoc.data() ?? {};
+        // If logo not in Firebase, try CompanyLogo sheet (URL) so PDF can show logo
+        if (companyData.value!['logo'] == null ||
+            companyData.value!['logo'].toString().trim().isEmpty) {
+          try {
+            final url = await GoogleSheetService.getCompanyLogoUrl(companyId);
+            if (url != null && url.isNotEmpty) {
+              companyData.value!['logo'] = url;
+            }
+          } catch (_) {}
+        }
       }
     } catch (e) {
       print("Error loading company data: $e");

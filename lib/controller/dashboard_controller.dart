@@ -485,6 +485,16 @@ class DashboardController extends BaseController {
         currentCompany.value!['id'] = doc.id;
         companyId.value = doc.id;
 
+        // If logo not in Firebase, try CompanyLogo sheet (URL stored there on free plan)
+        if (data['logo'] == null || data['logo'].toString().trim().isEmpty) {
+          try {
+            final url = await GoogleSheetService.getCompanyLogoUrl(doc.id);
+            if (url != null && url.isNotEmpty) {
+              currentCompany.value!['logo'] = url;
+            }
+          } catch (_) {}
+        }
+
         String fetchedName = data['companyName'] ?? '';
         if (fetchedName.isNotEmpty) {
           await AppConstants.setCompanyName(fetchedName);

@@ -10,6 +10,7 @@ class CustomTextFormField extends StatelessWidget {
   final bool readOnly;
   final int? maxLines; // ✅ NEW: number of lines to display
   final int? minLines; // ✅ NEW: minimum lines
+  final String? Function(String?)? validator; // optional custom validator
 
   const CustomTextFormField({
     Key? key,
@@ -22,6 +23,7 @@ class CustomTextFormField extends StatelessWidget {
     this.readOnly = false,
     this.maxLines = 1, // ✅ default is single line
     this.minLines, // ✅ optional minimum lines
+    this.validator,
   }) : super(key: key);
 
   @override
@@ -42,7 +44,7 @@ class CustomTextFormField extends StatelessWidget {
           alignLabelWithHint: maxLines != null && maxLines! > 1,
         ),
           readOnly: readOnly,
-        validator: (value) {
+        validator: validator ?? (value) {
           if (isRequired && (value == null || value.isEmpty)) {
             return "$label is required";
           }

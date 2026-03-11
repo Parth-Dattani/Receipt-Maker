@@ -1875,6 +1875,9 @@ class GoogleSheetService {
   static const purchaseItemSheetName = "PurchaseItems";
   static const customerSheetName = "Customer";
 
+  /// Company logo URL per company (store in sheet - Firebase free plan)
+  static const companyLogoSheetName = "CompanyLogo";
+
   static List<String>? _cachedHeaders;
   static final Map<String, List<ChallanItem>> _challanCache = {};
   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
@@ -2109,6 +2112,7 @@ class GoogleSheetService {
         purchaseItemSheetName,
         inventoryTransactionSheetName,
         customerSheetName,
+        companyLogoSheetName,
       ];
 
       for (var requiredSheet in requiredSheets) {
@@ -2524,6 +2528,11 @@ class GoogleSheetService {
           'createdBy',
           'createdByEmail',
         ],
+        companyLogoSheetName: [
+          'companyId',
+          'companyName',
+          'logoUrl',
+        ],
       };
 
       int successCount = 0;
@@ -2632,6 +2641,88 @@ class GoogleSheetService {
     final scopes = [SheetsApi.spreadsheetsScope];
 
     return await clientViaServiceAccount(accountCredentials, scopes);
+  }
+
+  /// Get company logo URL from CompanyLogo sheet (by companyId). Returns null if not found or sheet empty.
+  static Future<String?> getCompanyLogoUrl(String companyId) async {
+    if (companyId.isEmpty) return null;
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+      final exists = await _sheetExists(sheetsApi, companyLogoSheetName);
+      if (!exists) return null;
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$companyLogoSheetName!A:C",
+      );
+      final rows = response.values ?? [];
+      if (rows.length < 2) return null;
+      final header = (rows.first).map((e) => e.toString().toLowerCase().trim()).toList();
+      final companyIdIdx = header.indexOf('companyid');
+      final logoUrlIdx = header.indexOf('logourl');
+      if (companyIdIdx < 0 || logoUrlIdx < 0) return null;
+      for (var i = 1; i < rows.length; i++) {
+        final row = rows[i];
+        if (row.length > companyIdIdx && row.length > logoUrlIdx) {
+          final cid = row[companyIdIdx].toString().trim();
+          final url = row[logoUrlIdx].toString().trim();
+          if (cid == companyId && url.isNotEmpty) return url;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("⚠️ getCompanyLogoUrl: $e");
+      return null;
+    }
+  }
+
+  /// Add or update company logo URL in CompanyLogo sheet (companyId is key; updates row if exists).
+  static Future<void> addOrUpdateCompanyLogo(String companyId, String companyName, String logoUrl) async {
+    if (companyId.isEmpty) return;
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+      final headers = await _getOrCreateSheetAndHeaders(
+        sheetsApi,
+        companyLogoSheetName,
+        ['companyId', 'companyName', 'logoUrl'],
+      );
+      final response = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$companyLogoSheetName!A:C",
+      );
+      final rows = response.values ?? [];
+      final header = rows.isNotEmpty ? (rows.first).map((e) => e.toString().toLowerCase().trim()).toList() : <String>[];
+      final companyIdIdx = header.indexOf('companyid');
+      if (companyIdIdx < 0) return;
+      int rowIndex = -1;
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i].length > companyIdIdx && rows[i][companyIdIdx].toString().trim() == companyId) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+      final rowData = [companyId, companyName, logoUrl];
+      if (rowIndex > 0) {
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange.fromJson({"values": [rowData]}),
+          spreadsheetId,
+          "$companyLogoSheetName!A$rowIndex:C$rowIndex",
+          valueInputOption: "USER_ENTERED",
+        );
+        print("✅ Company logo updated in sheet for $companyId");
+      } else {
+        await sheetsApi.spreadsheets.values.append(
+          ValueRange.fromJson({"values": [rowData]}),
+          spreadsheetId,
+          "$companyLogoSheetName!A:C",
+          valueInputOption: "USER_ENTERED",
+        );
+        print("✅ Company logo added to sheet for $companyId");
+      }
+    } catch (e) {
+      print("⚠️ addOrUpdateCompanyLogo: $e");
+    }
   }
 
   /// Add a new item row to Google Sheet

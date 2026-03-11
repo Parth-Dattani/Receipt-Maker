@@ -31,11 +31,10 @@ class BiometricAuthService {
     }
   }
 
-  // Authenticate using biometrics
+  // Authenticate using biometrics (local_auth 3.x API)
   Future<bool> authenticate({
     String reason = 'Please authenticate to continue',
-    bool useErrorDialogs = true,
-    bool stickyAuth = true,
+    bool persistAcrossBackgrounding = true,
   }) async {
     try {
       bool isAuthenticated = await _localAuth.authenticate(
@@ -44,17 +43,11 @@ class BiometricAuthService {
           AndroidAuthMessages(
             signInTitle: 'Biometric Authentication',
             cancelButton: 'Cancel',
-            biometricHint: 'Verify identity',
+            signInHint: 'Verify identity',
           ),
-          // IOSAuthMessages(
-          //   cancelButton: 'Cancel',
-          // ),
         ],
-        options: AuthenticationOptions(
-          useErrorDialogs: useErrorDialogs,
-          stickyAuth: stickyAuth,
-          biometricOnly: true,
-        ),
+        biometricOnly: true,
+        persistAcrossBackgrounding: persistAcrossBackgrounding,
       );
       return isAuthenticated;
     } catch (e) {
