@@ -70,9 +70,9 @@ class DashboardScreen extends GetView<DashboardController> {
           )),
         ],
       ),
-      body: SafeArea(
+        body: SafeArea(
         child: Obx(() {
-          if (controller.isLoading.value && controller.invoiceList.isEmpty) {
+          if (controller.showInitialShimmer) {
             return const DashboardShimmer();
           }
           return RefreshIndicator(
@@ -191,7 +191,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 0),
                     child: Obx(() {
-                      if (controller.isLoading.value && controller.invoiceList.isEmpty) {
+                      if (controller.showInitialShimmer) {
                         return const DashboardShimmer(isWeb: true);
                       }
 

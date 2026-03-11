@@ -6,7 +6,6 @@ import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
-import '../screen/auth/ConnectAppSheetScreen.dart';
 import '../utils/utils.dart';
 
 class SplashController extends BaseController {
@@ -37,58 +36,59 @@ class SplashController extends BaseController {
     print("Logged-in User: ${user.uid} | Email: ${user.email}");
 
     try {
-      // ✅ Step 1.5: Check and load demo status
-      await _checkAndLoadDemoStatus(user.uid);
+      // ✅ Fetch user doc and companies in parallel (one less round trip)
+      final results = await Future.wait([
+        _firestore.collection("users").doc(user.uid).get(),
+        _firestore
+            .collection("users")
+            .doc(user.uid)
+            .collection("companies")
+            .where('isActive', isEqualTo: true)
+            .limit(1)
+            .get(),
+      ]);
+
+      final userDoc = results[0] as DocumentSnapshot;
+      final companiesQuery = results[1] as QuerySnapshot;
+
+      // Demo status from user doc
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+        await AppConstants.setDemoMode(userData['isDemo'] == true);
+      } else {
+        await AppConstants.setDemoMode(false);
+      }
 
       // ✅ Step 2: Check if company exists
-      final companies = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .where('isActive', isEqualTo: true)
-          .limit(1)
-          .get();
-
-      if (companies.docs.isEmpty) {
+      if (companiesQuery.docs.isEmpty) {
         print("No company found → CompanyRegistrationScreen");
         Get.offAllNamed(CompanyRegistrationScreen.pageId);
         return;
       }
 
-      final companyDoc = companies.docs.first;
+      final companyDoc = companiesQuery.docs.first;
       final companyId = companyDoc.id;
-      final companyData = companyDoc.data();
+      final companyData = companyDoc.data() as Map<String, dynamic>;
 
       await AppConstants.setCompanyId(companyId);
       print("Company found → ID: $companyId");
 
-      // ============================================================
-      // ✅ NEW: GET, PRINT AND SAVE COMPANY NAME
-      // ============================================================
       String fetchedCompanyName = companyData['companyName'] ?? "";
-
-      print("🏢-----------------------------------");
-      print("🏢 FETCHED COMPANY NAME: $fetchedCompanyName");
-      print("🏢-----------------------------------");
-
       if (fetchedCompanyName.isNotEmpty) {
         await AppConstants.setCompanyName(fetchedCompanyName);
       }
-      // ============================================================
 
-      // ✅ Load company settings
+      // ✅ Load company settings from already fetched data
       await loadCompanySettingsFromData(companyData);
 
-      // ✅ Step 3: Check spreadsheet
-      final userDoc = await _firestore.collection("users").doc(user.uid).get();
-
+      // ✅ Step 3: Check spreadsheet (from same user doc we already have)
       if (!userDoc.exists) {
         print("User document missing → CompanyRegistrationScreen");
         Get.offAllNamed(CompanyRegistrationScreen.pageId);
         return;
       }
 
-      final userData = userDoc.data() ?? {};
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
       final spreadsheetId = userData['spreadsheetId'] as String?;
 
       if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
@@ -97,21 +97,27 @@ class SplashController extends BaseController {
 
         print("✅ Spreadsheet found → $spreadsheetId");
 
-        // Ensure Item, Customer, Invoice etc. tabs exist (auto-create if only Sheet1)
+        // Ensure Item, Customer, Invoice etc. tabs exist (required before Dashboard)
         try {
           await GoogleSheetService.ensureSheetsExist();
         } catch (e) {
           print("⚠️ ensureSheetsExist on splash: $e");
         }
 
-        // ✅ CRITICAL: Validate and print columns
-        await _validateAndPrintColumns();
+        // Only test access before navigate; heavy validation runs in background
+        final hasAccess = await GoogleSheetService.testSpreadsheetAccess();
+        if (!hasAccess) {
+          _printSheetsAccessInstructions();
+          return;
+        }
 
-        // Go to dashboard
+        // Run full validation in background (don't block opening Dashboard)
+        _runSheetValidationInBackground();
+
+        // Go to dashboard immediately
         print("✅ Navigating to Dashboard");
         Get.offAllNamed(DashboardScreen.pageId);
-      }
-      else {
+      } else {
         print("Company exists but no Spreadsheet → CompanyRegistrationScreen");
         Get.offAllNamed(CompanyRegistrationScreen.pageId);
       }
@@ -122,78 +128,31 @@ class SplashController extends BaseController {
     }
   }
 
-  // ✅ NEW: Validate and print all Invoice columns
-  Future<void> _validateAndPrintColumns() async {
-    try {
-      print("");
-      print("🔧 Starting sheet validation and column check...");
-
-      // Test access first
-      bool hasAccess = await GoogleSheetService.testSpreadsheetAccess();
-
-      if (!hasAccess) {
-        print("");
-        print("=" * 70);
-        print("⚠️ SETUP REQUIRED - GOOGLE SHEETS ACCESS");
-        print("=" * 70);
-        print("1. Open: https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
-        print("2. Click 'Share' button");
-        print("3. Add as Editor: ${AppConstants.serviceAccountEmailForDisplay}");
-        print("4. Restart app");
-        print("=" * 70);
-        print("");
-        return;
-      }
-
-      print("✅ Google Sheets access confirmed");
-
-      // ✅ STEP 1: Print current columns
-      print("");
-      print("📋 STEP 1: Checking current Invoice sheet columns...");
-      await GoogleSheetService.printInvoiceSheetColumns();
-
-      // ✅ STEP 2: Run validation and add missing columns
-      print("");
-      print("📋 STEP 2: Running validation to add missing columns...");
-      await GoogleSheetService.validateAndUpdateAllSheets();
-
-      // ✅ STEP 3: Print columns again to verify
-      print("");
-      print("📋 STEP 3: Verifying columns after validation...");
-      await GoogleSheetService.printInvoiceSheetColumns();
-
-      print("✅ Sheet validation completed successfully");
-
-    } catch (e, stackTrace) {
-      print("⚠️ Error during sheet validation: $e");
-      print("Stack trace: $stackTrace");
-    }
+  void _printSheetsAccessInstructions() {
+    print("");
+    print("=" * 70);
+    print("⚠️ SETUP REQUIRED - GOOGLE SHEETS ACCESS");
+    print("=" * 70);
+    print("1. Open: https://docs.google.com/spreadsheets/d/${AppConstants.spreadsheetId}/edit");
+    print("2. Click 'Share' button");
+    print("3. Add as Editor: ${AppConstants.serviceAccountEmailForDisplay}");
+    print("4. Restart app");
+    print("=" * 70);
+    print("");
   }
 
-  // 🆕 Check and load demo status
-  Future<void> _checkAndLoadDemoStatus(String userId) async {
-    try {
-      final userDoc = await _firestore
-          .collection("users")
-          .doc(userId)
-          .get();
-
-      if (userDoc.exists) {
-        final userData = userDoc.data() ?? {};
-        final isDemoUser = userData['isDemo'] == true;
-
-        await AppConstants.setDemoMode(isDemoUser);
-
-        if (isDemoUser) {
-          print("🔒 Demo mode activated for user");
-        } else {
-          print("✅ Regular user mode");
-        }
+  /// Runs validateAndUpdateAllSheets + printInvoiceSheetColumns in background so first open is faster.
+  void _runSheetValidationInBackground() {
+    Future(() async {
+      try {
+        await GoogleSheetService.validateAndUpdateAllSheets();
+        await GoogleSheetService.printInvoiceSheetColumns();
+        print("✅ Background sheet validation completed");
+      } catch (e, st) {
+        print("⚠️ Background sheet validation error: $e");
+        print("$st");
       }
-    } catch (e) {
-      print("Error checking demo status: $e");
-      await AppConstants.setDemoMode(false);
-    }
+    });
   }
 
   // ✅ Load settings from company data

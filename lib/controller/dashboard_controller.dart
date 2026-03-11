@@ -71,6 +71,12 @@ class DashboardController extends BaseController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _isInitializing = true;
   bool _hasInitialized = false;
+  /// Once first load is done, never show full-page shimmer again (only first open).
+  final _shimmerAlreadyShown = false.obs;
+
+  /// True only when we should show the full-page shimmer (first load, loading, empty list).
+  bool get showInitialShimmer =>
+      isLoading.value && invoiceList.isEmpty && !_shimmerAlreadyShown.value;
 
   // Method to check if company is registered
   bool get isCompanyRegistered => companyId.value.isNotEmpty;
@@ -135,8 +141,8 @@ class DashboardController extends BaseController {
       _DashboardLifecycleObserver(
         onResumed: () {
           if (_hasInitialized) {
-            print("🔄 App resumed, refreshing dashboard...");
-            refreshDashboard();
+            print("🔄 App resumed, refreshing dashboard silently...");
+            refreshDataSilently();
           }
         },
       ),
@@ -173,6 +179,7 @@ class DashboardController extends BaseController {
     }finally {
       _isInitializing = false;
       isLoading.value = false;
+      _shimmerAlreadyShown.value = true; // Never show full shimmer again
     }
   }
 
@@ -513,10 +520,10 @@ class DashboardController extends BaseController {
 
   Future<void> loadDashboardData() async {
     try {
-      // 🆕 Don't show loading spinner if already initialized
-      if (!_hasInitialized) {
-        isLoading.value = true;
-      }
+      // Shimmer only from _initializeDashboard(); don't set here to avoid double shimmer
+      // if (!_hasInitialized) {
+      //   isLoading.value = true;
+      // }
 
       print("🔄 Loading dashboard data...");
 
@@ -1334,7 +1341,8 @@ class DashboardController extends BaseController {
 
     try {
       print("🔄 Refreshing dashboard...");
-      isLoading.value = true;
+      // Don't show full shimmer on refresh - only first load shows shimmer
+      // isLoading.value = true;
 
       // ✅ Load company data
       await _loadCompanyData();
@@ -1356,7 +1364,7 @@ class DashboardController extends BaseController {
     } catch (e) {
       print("❌ Error refreshing dashboard: $e");
     } finally {
-      isLoading.value = false;
+      // isLoading.value = false;
     }
   }
 
