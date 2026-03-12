@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 
 import '../../constant/app_colors.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../utils/financial_year_helper.dart';
+import '../../widgets/web_screen_wrapper.dart';
 
 class SettingsScreen extends GetView<SettingsController> {
   static const String pageId = '/SettingsScreen';
@@ -13,7 +15,7 @@ class SettingsScreen extends GetView<SettingsController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final content = Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -47,6 +49,10 @@ class SettingsScreen extends GetView<SettingsController> {
         ),
       ),
     );
+    if (kIsWeb) {
+      return webScreenWrapper(currentRoute: SettingsScreen.pageId, child: content);
+    }
+    return content;
   }
 
   Widget _buildHeader(BuildContext context) {
