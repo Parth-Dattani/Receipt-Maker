@@ -6,6 +6,7 @@ import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 
+import '../utils/financial_year_helper.dart';
 import '../utils/utils.dart';
 
 class SplashController extends BaseController {
@@ -89,13 +90,43 @@ class SplashController extends BaseController {
       }
 
       final userData = userDoc.data() as Map<String, dynamic>? ?? {};
-      final spreadsheetId = userData['spreadsheetId'] as String?;
+      // Resolve spreadsheet for active financial year (each FY has separate sheet)
+      String? resolvedSpreadsheetId = userData['spreadsheetId'] as String?;
+      String? activeFy = userData['activeFy'] as String?;
+      final spreadsheetIdsByFy = userData['spreadsheetIdsByFy'];
+      Map<String, String>? fyMap;
+      if (spreadsheetIdsByFy is Map) {
+        fyMap = Map<String, String>.from(
+          spreadsheetIdsByFy.map((k, v) => MapEntry(k.toString(), v?.toString() ?? '')),
+        );
+      }
+      if (fyMap != null && fyMap.isNotEmpty && activeFy != null && activeFy.isNotEmpty) {
+        resolvedSpreadsheetId = fyMap[activeFy] ?? resolvedSpreadsheetId;
+      }
+      // Migrate: if we have sheet but no FY data, set current FY and one entry
+      if (resolvedSpreadsheetId != null &&
+          resolvedSpreadsheetId.isNotEmpty &&
+          (activeFy == null || activeFy.isEmpty || fyMap == null || fyMap.isEmpty)) {
+        final currentFy = FinancialYearHelper.currentFy();
+        activeFy = currentFy;
+        fyMap = {currentFy: resolvedSpreadsheetId};
+        try {
+          await _firestore.collection('users').doc(user.uid).update({
+            'activeFy': currentFy,
+            'spreadsheetIdsByFy': {currentFy: resolvedSpreadsheetId},
+          });
+        } catch (_) {}
+      }
+
+      final spreadsheetId = resolvedSpreadsheetId;
 
       if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
-        await sharedPreferencesHelper.storePrefData("spreadsheetId", spreadsheetId);
-        AppConstants.spreadsheetId = spreadsheetId;
+        await AppConstants.setSpreadsheetId(spreadsheetId);
+        if (activeFy != null && activeFy.isNotEmpty) {
+          await AppConstants.setActiveFy(activeFy);
+        }
 
-        print("✅ Spreadsheet found → $spreadsheetId");
+        print("✅ Spreadsheet found → $spreadsheetId${activeFy != null ? " (FY $activeFy)" : ""}");
 
         // Ensure Item, Customer, Invoice etc. tabs exist (required before Dashboard)
         try {

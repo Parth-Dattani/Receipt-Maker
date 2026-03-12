@@ -639,17 +639,6 @@ class TemplatePreviewScreen extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(height: 16),
-        Center(
-          child: Text(
-            'Thank you for your business!',
-            style: TextStyle(
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              color: template['primaryColor'],
-            ),
-          ),
-        ),
       ],
     );
   }

@@ -21,14 +21,65 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     final content = Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(context),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 1000) {
-            return _buildWebLayout(context);
-          } else {
-            return _buildMobileLayout(context);
-          }
-        },
+      body: Stack(
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 1000) {
+                return _buildWebLayout(context);
+              } else {
+                return _buildMobileLayout(context);
+              }
+            },
+          ),
+          // Nice loading overlay when saving customer
+          Obx(() {
+            if (!controller.isLoading.value) return const SizedBox.shrink();
+            return Container(
+              color: Colors.black26,
+              child: Center(
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          controller.isEditMode.value ? "Updating customer..." : "Saving customer...",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Please wait",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
     if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
@@ -898,8 +949,20 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               foregroundColor: isWeb ? Colors.white : _themeColor,
               elevation: 8,
             ),
-            icon: controller.isLoading.value ? const SizedBox() : Icon(controller.isEditMode.value ? Icons.update : Icons.person_add),
-            label: Text(controller.isEditMode.value ? "Update Customer" : "Register Customer", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            icon: controller.isLoading.value
+                ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(isWeb ? Colors.white : _themeColor),
+                    ),
+                  )
+                : Icon(controller.isEditMode.value ? Icons.update : Icons.person_add),
+            label: Text(
+              controller.isEditMode.value ? "Update Customer" : "Register Customer",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           )),
         ),
         const SizedBox(height: 12),

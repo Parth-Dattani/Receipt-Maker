@@ -3318,6 +3318,8 @@ class NewInvoiceController extends GetxController {
               label: Text("Thermal Print "),
               onPressed: () async {
                 Get.back(); // Close Dialog
+                // Brief delay so dialog closes fully — then share sheet (WhatsApp, Telegram, Mail, Print...) opens properly
+                await Future.delayed(const Duration(milliseconds: 500));
 
                 if (hasChallan) {
                   await InvoiceHelper.generateAndShareInvoiceFromChallan(
@@ -3343,7 +3345,6 @@ class NewInvoiceController extends GetxController {
                     paymentStatus: paymentStatus.value,
                   );
                 } else {
-                  // ✅ Using Standard Print Method
                   await InvoiceHelper.generateAndShareInvoicePrint(
                     invoiceModels,
                     customerNameController.text.trim(),
@@ -3362,6 +3363,8 @@ class NewInvoiceController extends GetxController {
                     _formatDate(paymentDueDate.value),
                   );
                 }
+                // Delay so share sheet opens before we navigate away (otherwise share option may not show)
+                await Future.delayed(const Duration(milliseconds: 800));
                 _finishAndClose();
               },
             ),
@@ -3378,13 +3381,8 @@ class NewInvoiceController extends GetxController {
               label: Text("A4 Print "),
               onPressed: () async {
                 Get.back(); // Close Dialog
-
-                // ✅ Standard A4 PDF Generation (Existing Method)
-                // NOTE: Use your existing A4 method here.
-                // Assuming 'generateAndShareInvoice' exists for A4.
-
-                // If you don't have a separate method, use the same one but maybe pass a flag?
-                // Or call the specific A4 method if you have it.
+                // Brief delay so dialog closes fully — then share sheet (WhatsApp, Telegram, Mail, Print...) opens properly
+                await Future.delayed(const Duration(milliseconds: 500));
 
                 await InvoiceHelper.generateAndShareInvoiceColor(
                   invoiceModels,
@@ -3403,7 +3401,8 @@ class NewInvoiceController extends GetxController {
                   gstAmount.value,
                   _formatDate(paymentDueDate.value),
                 );
-
+                // Delay so share sheet opens before we navigate away (otherwise share option may not show)
+                await Future.delayed(const Duration(milliseconds: 800));
                 _finishAndClose();
               },
             ),
@@ -3427,29 +3426,23 @@ class NewInvoiceController extends GetxController {
 
 // ✅ Correct Navigation
   void _finishAndClose() {
-    clearForm();
+    clearForm(reinitialize: false);
     Get.until((route) => route.settings.name == DashboardScreen.pageId);
 
-    // 🔄 REFRESH DATA SILENTLY (Optional but Recommended)
-    try {
-      if (Get.isRegistered<DashboardController>()) {
-        Get.find<DashboardController>().refreshDataSilently();
+    // 🔄 REFRESH DATA SILENTLY after navigation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        if (Get.isRegistered<DashboardController>()) {
+          Get.find<DashboardController>().refreshDataSilently();
+        }
+        if (Get.isRegistered<InvoiceListController>()) {
+          print("🔄 Refreshing Invoice List...");
+          Get.find<InvoiceListController>().loadInvoices();
+        }
+      } catch (e) {
+        print("Error refreshing dashboard: $e");
       }
-
-      if (Get.isRegistered<InvoiceListController>()) {
-        print("🔄 Refreshing Invoice List...");
-        Get.find<InvoiceListController>().loadInvoices();
-      }
-    } catch (e) {
-      print("Error refreshing dashboard: $e");
-    }
-
-    showCustomSnackbar(
-      title: "Success",
-      message: "Invoice saved successfully!",
-      baseColor: Colors.green.shade700,
-      icon: Icons.check_circle_outline,
-    );
+    });
   }
 
   void updatePaymentMode(String mode) {
@@ -3457,7 +3450,7 @@ class NewInvoiceController extends GetxController {
     print("Payment mode updated to: $mode");
   }
 
-  void clearForm() {
+  void clearForm({bool reinitialize = true}) {
     formKey.currentState?.reset();
     // ✅ Dispose description controllers before clearing items
     for (var item in invoiceItems) {
@@ -3487,7 +3480,9 @@ class NewInvoiceController extends GetxController {
     }
     quantityControllers.clear();
 
-    initializeInvoice();
+    if (reinitialize) {
+      initializeInvoice();
+    }
   }
 
   void showCustomSnackbar({

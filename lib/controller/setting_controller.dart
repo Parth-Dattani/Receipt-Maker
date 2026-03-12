@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../controller/controller.dart';
 import '../screen/setting/widgets/widgets.dart';
 
 class SettingsController extends GetxController {
@@ -89,6 +90,14 @@ class SettingsController extends GetxController {
         isBankDetailEnabled.value = true;
       }
     });
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    try {
+      Get.find<AuthController>().loadUserFyData();
+    } catch (_) {}
   }
 
   void loadSettings() async {

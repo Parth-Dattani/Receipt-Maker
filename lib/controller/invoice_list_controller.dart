@@ -2,10 +2,12 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:GetYourInvoice/screen/screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import '../model/model.dart';
@@ -13,6 +15,7 @@ import '../services/service.dart';
 import '../utils/utils.dart';
 import '../widgets/custom_snackbar.dart';
 import 'controller.dart';
+import 'new_invoice_controller.dart' show InvoiceType;
 
 
 ///8-10
@@ -594,7 +597,17 @@ class InvoiceListController extends BaseController {
       print("Fetching invoice items for PDF: ${invoice.invoiceId}");
       List<InvoiceItem> fetchedInvoiceItems = await GoogleSheetService.getInvoiceItemsByInvoiceId(invoice.invoiceId);
 
-      print("Fettttttt----ITem======= :${fetchedInvoiceItems[0].gstAmount}");
+      if (fetchedInvoiceItems.isEmpty) {
+        isLoading.value = false;
+        Get.snackbar(
+          'Error',
+          'No items found for this invoice',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
 
       final cleanedItems = fetchedInvoiceItems.map((item) {
         final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
@@ -614,11 +627,6 @@ class InvoiceListController extends BaseController {
         );
       }).toList();
 
-      print("Found ${cleanedItems.length} items for challan ${invoice.invoiceId}");
-      for (var item in cleanedItems) {
-        print("PDF Item -> name: ${item.itemName}, desc: ${item.description}, qty: ${item.quantity}, price: ${item.rate}-----GSt: ${item.gstAmount}---tot: ${item.totalPrice}");
-      }
-
       final subtotal = cleanedItems.fold<double>(0, (s, it) {
         final qty = (it.quantity ?? 0).toDouble();
         final rate = it.rate ?? 0.0;
@@ -635,30 +643,126 @@ class InvoiceListController extends BaseController {
       final discount = invoice.discountAmount ?? 0.0;
       final grandTotal = subtotal + gstTotal - discount;
 
-      final pdfFile = await InvoiceHelper.generateDocumentPrint(
-        isChallan: false,
-        invoice: invoice,
-        invoiceItems: cleanedItems,
-        companyData: companyData.value,
-      );
-
-      if (pdfFile != null) {
-        await Share.shareXFiles(
-            [XFile(pdfFile.path)],
-            text: 'Invoice - ${invoice.invoiceId}'
+      final invoiceModels = cleanedItems.map((item) {
+        return Invoice(
+          invoiceId: invoice.invoiceId ?? '',
+          itemId: item.itemId,
+          itemName: item.itemName,
+          qty: item.quantity,
+          price: item.rate,
+          gst: item.gstRate ?? 0.0,
+          mobile: invoice.mobile ?? '',
+          customerName: invoice.customerName ?? '',
+          customerId: invoice.customerId ?? '',
+          customerEmail: invoice.customerEmail,
+          customerPan: invoice.customerPan,
+          customerGst: invoice.customerGst,
+          customerAddress: invoice.customerAddress,
+          issueDate: invoice.issueDate,
+          dueDate: invoice.dueDate,
+          subtotal: subtotal,
+          gstAmount: gstTotal,
+          totalAmount: grandTotal,
+          notes: invoice.notes,
+          status: invoice.status,
+          items: [item],
         );
-      } else {
-        print("Web download triggered automatically");
-      }
-      Get.snackbar(
-        'Success',
-        'Invoice exported as PDF',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+      }).toList();
+
+      isLoading.value = false;
+
+      String formatDate(DateTime? d) => d != null ? DateFormat('dd/MM/yyyy').format(d) : '';
+      final Map<String, dynamic> company = Map<String, dynamic>.from(companyData.value);
+
+      await Get.defaultDialog(
+        title: "Export PDF",
+        titleStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Select format:", style: TextStyle(fontSize: 14)),
+            SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, foregroundColor: Colors.white),
+                icon: Icon(Icons.print),
+                label: Text("Thermal Print"),
+                onPressed: () async {
+                  Get.back();
+                  try {
+                    await InvoiceHelper.generateAndShareInvoicePrint(
+                      invoiceModels,
+                      invoice.customerName ?? '',
+                      invoice.mobile ?? '',
+                      invoice.customerEmail ?? '',
+                      invoice.customerPan ?? '',
+                      invoice.customerGst ?? '',
+                      invoice.customerAddress ?? '',
+                      subtotal,
+                      formatDate(invoice.issueDate),
+                      grandTotal,
+                      invoice.notes ?? '',
+                      company,
+                      InvoiceType.invoice,
+                      gstTotal,
+                      formatDate(invoice.dueDate),
+                    );
+                    Get.snackbar('Success', 'Thermal print ready', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
+                  } catch (e) {
+                    print("Thermal print error: $e");
+                    Get.snackbar('Error', 'Failed: ${e.toString()}', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  }
+                },
+              ),
+            ),
+            SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
+                icon: Icon(Icons.picture_as_pdf),
+                label: Text("A4 Print"),
+                onPressed: () async {
+                  Get.back();
+                  try {
+                    await InvoiceHelper.generateAndShareInvoiceColor(
+                      invoiceModels,
+                      invoice.customerName ?? '',
+                      invoice.mobile ?? '',
+                      invoice.customerEmail ?? '',
+                      invoice.customerPan ?? '',
+                      invoice.customerGst ?? '',
+                      invoice.customerAddress ?? '',
+                      subtotal,
+                      formatDate(invoice.issueDate),
+                      grandTotal,
+                      invoice.notes ?? '',
+                      company,
+                      InvoiceType.invoice,
+                      gstTotal,
+                      formatDate(invoice.dueDate),
+                    );
+                    Get.snackbar('Success', 'A4 PDF ready', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
+                  } catch (e) {
+                    print("A4 print error: $e");
+                    Get.snackbar('Error', 'Failed: ${e.toString()}', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                  }
+                },
+              ),
+            ),
+            SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
+        barrierDismissible: true,
       );
     } catch (e) {
       print("Error exporting PDF: $e");
+      isLoading.value = false;
       Get.snackbar(
         'Error',
         'Failed to export PDF: ${e.toString()}',
@@ -666,8 +770,6 @@ class InvoiceListController extends BaseController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
-    } finally {
-      isLoading.value = false;
     }
   }
 

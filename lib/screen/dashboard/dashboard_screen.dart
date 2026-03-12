@@ -8,6 +8,7 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../utils/calculations.dart';
 import '../screen.dart';
+import '../setting/setting_screen.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
@@ -2329,6 +2330,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   _buildMenuItem(icon: Icons.account_balance_wallet, iconColor: Colors.indigo.shade600, title: "payment".tr, onTap: () { Get.back(); controller.navigateToPaymentDetails(); }),
                   Divider(height: 32, thickness: 1),
                   _buildSectionHeader("settings".tr),
+                  _buildMenuItem(icon: Icons.settings, iconColor: Colors.grey.shade700, title: "Settings", onTap: () { Get.back(); Get.toNamed(SettingsScreen.pageId); }),
                   if (AppConstants.businessType == "Trading")
                     Obx(() => _buildSwitchTile(icon: Icons.list_alt, iconColor: Colors.green.shade600, title: "enable_challan".tr, value: AppConstants.isChallan.value, activeColor: Colors.green.shade600, onChanged: (value) async { await controller.updateCompanyPreference('isChallanEnabled', value); })),
                   Obx(() => _buildSwitchTile(icon: Icons.language, iconColor: Colors.deepPurple.shade600, title: 'enable_gujarati'.tr, value: AppConstants.isGujarati.value, activeColor: Colors.deepPurple.shade600, onChanged: (value) async { await controller.updateLanguagePreference(value); })),

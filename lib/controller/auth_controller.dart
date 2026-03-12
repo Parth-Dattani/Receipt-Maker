@@ -12,6 +12,8 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../constant/constant.dart';
+import '../utils/financial_year_helper.dart';
+import 'dashboard_controller.dart';
 import '../screen/screen.dart';
 import '../services/remote_service.dart';
 import '../widgets/custom_snackbar.dart';
@@ -47,6 +49,11 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   var selectedCountry = ''.obs;
   var selectedState = ''.obs;
   var isDemo = false.obs;
+
+  /// Financial year list and active FY (for Settings screen).
+  var fyList = <String>[].obs;
+  var activeFyValue = ''.obs;
+  var isLoadingFy = false.obs;
 
   final RxInt tapCount = 0.obs;
   final RxBool showFormFields = false.obs;
@@ -417,6 +424,25 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     return true; // Validation Passed
   }
 
+  /// Get current Google access token if user has an active Google session (for creating FY sheet in user's Drive).
+  Future<String?> _getGoogleAccessToken() async {
+    try {
+      final String? serverClientId = AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
+      final String? webClientId = kIsWeb ? (AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null) : null;
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets'],
+        serverClientId: serverClientId,
+        clientId: webClientId,
+      );
+      final GoogleSignInAccount? account = await googleSignIn.signInSilently();
+      if (account == null) return null;
+      final GoogleSignInAuthentication auth = await account.authentication;
+      return auth.accessToken;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Sign in with Google – same post-login flow as email/password (current flow remains).
   Future<void> handleGoogleSignIn() async {
     try {
@@ -533,10 +559,15 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
               await sharedPreferencesHelper.storePrefData(
                   "username", googleUsername);
               if (userDoc.exists) {
+                final fy = FinancialYearHelper.currentFy();
                 await FirebaseFirestore.instance
                     .collection("users")
                     .doc(currentUser.uid)
-                    .update({"spreadsheetId": newSpreadsheetId});
+                    .update({
+                  "spreadsheetId": newSpreadsheetId,
+                  "activeFy": fy,
+                  "spreadsheetIdsByFy": {fy: newSpreadsheetId},
+                });
               } else {
                 await _createUserDocument(currentUser,
                     spreadsheetId: newSpreadsheetId);
@@ -686,6 +717,9 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       };
       if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
         data['spreadsheetId'] = spreadsheetId;
+        final fy = FinancialYearHelper.currentFy();
+        data['activeFy'] = fy;
+        data['spreadsheetIdsByFy'] = {fy: spreadsheetId};
       }
       await FirebaseFirestore.instance
           .collection("users")
@@ -936,6 +970,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "appId":"",
           "spreadsheetId": spreadsheetId,
           "isDemo": isDemo.value,
+          if (spreadsheetId.isNotEmpty) "activeFy": FinancialYearHelper.currentFy(),
+          if (spreadsheetId.isNotEmpty) "spreadsheetIdsByFy": {FinancialYearHelper.currentFy(): spreadsheetId},
         });
 
         // If successful, break out of retry loop
@@ -1426,6 +1462,159 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       if (!_isDisposed) {
         isLoading.value = false;
       }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Financial Year (each FY has separate Google Sheet)
+  // ---------------------------------------------------------------------------
+
+  /// Show snackbar after next frame so overlay is available (avoids crash when coming from dialog).
+  void _safeSnackbar({required String title, required String message, required bool isError}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isDisposed) return;
+      try {
+        if (Get.overlayContext != null) {
+          showCustomSnackbar(
+            title: title,
+            message: message,
+            baseColor: isError ? AppColors.errorColor : AppColors.greenColor2,
+            icon: isError ? Icons.error : Icons.check_circle,
+          );
+        } else {
+          Get.snackbar(title, message, snackPosition: SnackPosition.BOTTOM, backgroundColor: isError ? Colors.red : Colors.green);
+        }
+      } catch (_) {
+        print('$title: $message');
+      }
+    });
+  }
+
+  Future<void> loadUserFyData() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (!doc.exists) return;
+      final data = doc.data() ?? {};
+      activeFyValue.value = (data['activeFy'] as String?) ?? AppConstants.activeFy;
+      final byFy = data['spreadsheetIdsByFy'];
+      if (byFy is Map) {
+        fyList.assignAll(byFy.keys.map((k) => k.toString()).toList()..sort());
+      } else if (activeFyValue.value.isNotEmpty) {
+        fyList.assignAll([activeFyValue.value]);
+      }
+    } catch (e) {
+      print('loadUserFyData: $e');
+    }
+  }
+
+  Future<bool> addNewFinancialYear() async {
+    final currentFy = AppConstants.activeFy.isNotEmpty ? AppConstants.activeFy : FinancialYearHelper.currentFy();
+    final nextFy = FinancialYearHelper.nextFy(currentFy);
+    return addNewFinancialYearForFy(nextFy);
+  }
+
+  /// Create a new Google Sheet for the given [fy] and set it as active.
+  /// Uses Google token when available (same as first sheet) so previous-year sheet creation works without Drive API for Service Account.
+  Future<bool> addNewFinancialYearForFy(String fy) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final email = user.email ?? '';
+    if (email.isEmpty) return false;
+    isLoadingFy.value = true;
+    try {
+      // Prefer user's Google token (creates in their Drive, same as first sheet) to avoid 403
+      String? accessToken = await _getGoogleAccessToken();
+      final result = await GoogleSheetService.createNewSpreadsheetForFy(
+        user.uid,
+        email,
+        user.displayName ?? email.split('@').first,
+        fy: fy,
+        accessToken: accessToken,
+      );
+      if (result == null || result.$1.isEmpty) {
+        if (!_isDisposed) {
+          _safeSnackbar(title: 'Error', message: 'Could not create new sheet for FY $fy', isError: true);
+        }
+        return false;
+      }
+      final newId = result.$1;
+      await AppConstants.setSpreadsheetId(newId);
+      await AppConstants.setActiveFy(fy);
+      try {
+        await GoogleSheetService.ensureSheetsExist();
+      } catch (e) {
+        print('ensureSheetsExist for new FY: $e');
+      }
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final data = doc.data() ?? {};
+      Map<String, String> byFy = {};
+      final existing = data['spreadsheetIdsByFy'];
+      if (existing is Map) {
+        for (final e in existing.entries) {
+          byFy[e.key.toString()] = e.value?.toString() ?? '';
+        }
+      }
+      byFy[fy] = newId;
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'spreadsheetId': newId,
+        'activeFy': fy,
+        'spreadsheetIdsByFy': byFy,
+      });
+      fyList.assignAll(byFy.keys.toList()..sort());
+      activeFyValue.value = fy;
+      try {
+        await Get.find<DashboardController>().refreshDashboard();
+      } catch (_) {}
+      if (!_isDisposed) {
+        _safeSnackbar(title: 'Success', message: 'FY $fy sheet created and set active', isError: false);
+      }
+      return true;
+    } catch (e) {
+      print('addNewFinancialYearForFy: $e');
+      if (!_isDisposed) {
+        final is403 = e.toString().contains('403') || e.toString().toLowerCase().contains('permission');
+        final msg = is403
+            ? 'Permission denied. Enable Drive API in Google Cloud Console for your project and ensure the Service Account can create files. Then try again.'
+            : e.toString();
+        _safeSnackbar(title: 'Error', message: msg, isError: true);
+      }
+      return false;
+    } finally {
+      isLoadingFy.value = false;
+    }
+  }
+
+  Future<void> switchFinancialYear(String fy) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    isLoadingFy.value = true;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (!doc.exists) return;
+      final data = doc.data() ?? {};
+      final byFy = data['spreadsheetIdsByFy'];
+      if (byFy is! Map) return;
+      final id = byFy[fy]?.toString();
+      if (id == null || id.isEmpty) return;
+      await AppConstants.setSpreadsheetId(id);
+      await AppConstants.setActiveFy(fy);
+      activeFyValue.value = fy;
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({'activeFy': fy, 'spreadsheetId': id});
+      try {
+        await Get.find<DashboardController>().refreshDashboard();
+      } catch (_) {}
+      if (!_isDisposed) {
+        _safeSnackbar(title: 'Switched', message: 'Now using FY $fy', isError: false);
+      }
+    } catch (e) {
+      print('switchFinancialYear: $e');
+      if (!_isDisposed) {
+        _safeSnackbar(title: 'Error', message: e.toString(), isError: true);
+      }
+    } finally {
+      isLoadingFy.value = false;
     }
   }
 

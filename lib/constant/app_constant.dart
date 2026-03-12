@@ -12,6 +12,8 @@ class AppConstants{
    static String  companyName = "";
    static String appId = "";
    static String spreadsheetId = "";
+   /// Active financial year (e.g. "2024-25"). Each FY has its own Google Sheet.
+   static String activeFy = "";
    /// Service Account JSON in assets/ — GetYourInvoice project key (Sheets/Drive).
    static String serviceAccountJsonPath = "getyourinvoice-8f128-3dfb21843bde.json";
    /// "Share sheet with" message માં દેખાડવાનો email — JSON ના client_email જેવો જ રાખો.
@@ -37,6 +39,7 @@ class AppConstants{
       companyName = await sharedPreferencesHelper.getPrefData("companyName") ?? ""; // ✅ Load Company Name
       appId = await sharedPreferencesHelper.getPrefData("appId") ?? "";
       spreadsheetId = await sharedPreferencesHelper.getPrefData("spreadsheetId") ?? "";
+      activeFy = await sharedPreferencesHelper.getPrefData("activeFy") ?? "";
       accessKey = await sharedPreferencesHelper.getPrefData("accessKey") ?? "";
       businessType = await sharedPreferencesHelper.getPrefData("businessType") ?? "Trading"; // 🆕 Load businessType
 
@@ -76,6 +79,18 @@ class AppConstants{
    static Future<void> setUserId(String id) async {
       userId = id;
       await sharedPreferencesHelper.storePrefData("userId", id);
+   }
+
+   /// 🔹 Update + persist spreadsheetId (used for current FY sheet)
+   static Future<void> setSpreadsheetId(String id) async {
+      spreadsheetId = id;
+      await sharedPreferencesHelper.storePrefData("spreadsheetId", id);
+   }
+
+   /// 🔹 Update + persist activeFy (e.g. "2024-25")
+   static Future<void> setActiveFy(String fy) async {
+      activeFy = fy;
+      await sharedPreferencesHelper.storePrefData("activeFy", fy);
    }
 
    /// 🔹 Update + persist companyId

@@ -2075,6 +2075,139 @@ class GoogleSheetService {
     }
   }
 
+  /// Create a new Google Spreadsheet for a specific financial year (separate sheet per FY).
+  /// When [accessToken] is provided (e.g. from Google Sign-In), creates in user's Drive (same as first sheet) to avoid 403.
+  /// When [accessToken] is null, uses Service Account (requires Drive API enabled in Cloud Console).
+  /// Returns (spreadsheetId, folderId) on success. Caller should then ensureSheetsExist() and save to Firestore.
+  static Future<(String spreadsheetId, String folderId)?> createNewSpreadsheetForFy(
+    String uid,
+    String userEmail,
+    String username, {
+    required String fy,
+    String? accessToken,
+  }) async {
+    // Same path as first sheet: create in user's Drive with their token (no 403)
+    if (accessToken != null && accessToken.trim().isNotEmpty) {
+      final result = await _createFySheetInUserDrive(uid, username, fy, accessToken);
+      if (result != null) return result;
+      print('❌ createNewSpreadsheetForFy (Drive API) failed, falling back to Service Account');
+    }
+    // Email/password or token failed: Service Account creates and shares with user
+    try {
+      final client = await _getAuthClientWithDrive();
+      final sheetsApi = SheetsApi(client);
+      final safeName = username.replaceAll(RegExp(r'[^\w\-.]'), '_');
+      final title = 'Invoice Sathi - ${safeName}_${uid}_$fy';
+      final request = Spreadsheet()
+        ..properties = (SpreadsheetProperties()..title = title);
+      final spreadsheet = await sheetsApi.spreadsheets.create(request);
+      final id = spreadsheet.spreadsheetId;
+      if (id == null || id.isEmpty) return null;
+      print('✅ Created FY spreadsheet "$title": $id');
+      final driveApi = drive.DriveApi(client);
+      await driveApi.permissions.create(
+        drive.Permission()
+          ..type = 'user'
+          ..role = 'writer'
+          ..emailAddress = userEmail,
+        id,
+        sendNotificationEmail: false,
+      );
+      print('✅ Shared FY spreadsheet with $userEmail');
+      return (id, '');
+    } catch (e) {
+      print('❌ createNewSpreadsheetForFy: $e');
+      return null;
+    }
+  }
+
+  /// Create FY sheet in user's Drive using their access token (same flow as first sheet).
+  static Future<(String spreadsheetId, String folderId)?> _createFySheetInUserDrive(String uid, String username, String fy, String accessToken) async {
+    try {
+      final baseUrl = 'https://www.googleapis.com/drive/v3/files';
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      };
+      const folderName = 'InvoiceSathi';
+      String? folderId;
+      final driveQuery = "name='$folderName' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false";
+      final listUrl = Uri.parse('$baseUrl?q=${Uri.encodeComponent(driveQuery)}&fields=files(id,name)');
+      final listRes = await http.get(listUrl, headers: headers);
+      if (listRes.statusCode == 200) {
+        final listData = jsonDecode(listRes.body) as Map<String, dynamic>;
+        final files = listData['files'] as List<dynamic>?;
+        if (files != null && files.isNotEmpty) {
+          folderId = (files.first as Map<String, dynamic>)['id'] as String?;
+        }
+      }
+      if (folderId == null || folderId.isEmpty) {
+        final createFolderRes = await http.post(
+          Uri.parse(baseUrl),
+          headers: headers,
+          body: jsonEncode({'name': folderName, 'mimeType': 'application/vnd.google-apps.folder'}),
+        );
+        if (createFolderRes.statusCode != 200) {
+          print('❌ Drive API create folder failed: ${createFolderRes.statusCode} ${createFolderRes.body}');
+          return null;
+        }
+        final folderData = jsonDecode(createFolderRes.body) as Map<String, dynamic>;
+        folderId = folderData['id'] as String?;
+        if (folderId == null || folderId.isEmpty) return null;
+        print('✅ Created folder "$folderName" in user Drive: $folderId');
+      }
+      final parentId = folderId!;
+      final safeName = username.replaceAll(RegExp(r'[^\w\-.]'), '_');
+      final sheetName = '${safeName}_${uid}_$fy';
+      final sheetBody = jsonEncode({
+        'name': sheetName,
+        'mimeType': 'application/vnd.google-apps.spreadsheet',
+        'parents': [parentId],
+      });
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: headers,
+        body: sheetBody,
+      );
+      if (response.statusCode != 200) {
+        print('❌ Drive API create FY sheet failed: ${response.statusCode} ${response.body}');
+        return null;
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final id = data['id'] as String?;
+      if (id == null || id.isEmpty) return null;
+      print('✅ Created FY spreadsheet "$sheetName" in folder $folderName: $id');
+      try {
+        final credStr = await _loadServiceAccountJson();
+        final credJson = jsonDecode(credStr) as Map<String, dynamic>;
+        final serviceAccountEmail = credJson['client_email'] as String?;
+        if (serviceAccountEmail != null && serviceAccountEmail.isNotEmpty) {
+          final permUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$id/permissions').replace(queryParameters: {'sendNotificationEmail': 'false'});
+          final permRes = await http.post(
+            permUrl,
+            headers: headers,
+            body: jsonEncode({
+              'type': 'user',
+              'role': 'writer',
+              'emailAddress': serviceAccountEmail,
+            }),
+          );
+          if (permRes.statusCode >= 200 && permRes.statusCode < 300) {
+            print('✅ Shared FY spreadsheet with Service Account');
+          } else {
+            print('⚠️ Could not share FY sheet with Service Account: ${permRes.statusCode} ${permRes.body}');
+          }
+        }
+      } catch (shareErr) {
+        print('⚠️ Share FY sheet with Service Account failed: $shareErr');
+      }
+      return (id, parentId);
+    } catch (e) {
+      print('❌ _createFySheetInUserDrive: $e');
+      return null;
+    }
+  }
+
   /// Auth client with Sheets + Drive scopes (for creating sheet and sharing).
   static Future<AuthClient> _getAuthClientWithDrive() async {
     final credentialsJson = await _loadServiceAccountJson();
@@ -2389,12 +2522,15 @@ class GoogleSheetService {
           'itemId',
           'itemName',
           'price',
+          'sellPrice',
           'gstPercent',
           'unitOfMeasurement',
           'currentStock',
           'detailRequirement',
           'isActive',
           'userId',
+          'createdAt',
+          'updatedAt',
         ],
         invoiceSheetName: [
           'invoiceId',
