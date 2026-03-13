@@ -62,6 +62,10 @@ class InvoiceHelper {
     return null;
   }
 
+  /// Format quantity using the same decimalPlaces setting as amounts.
+  static String _formatQty(num qty) =>
+      qty.toStringAsFixed(AppConstants.decimalPlaces);
+
   static Future<void> generateAndShareInvoice(
       List<Invoice> invoices,
       String userName,
@@ -398,7 +402,7 @@ class InvoiceHelper {
                             ),
                           ),
                           //_tableCell(item.itemName ?? '', align: pw.TextAlign.left),
-                          _tableCell(item.qty!.toStringAsFixed(3), align: pw.TextAlign.right),
+                          _tableCell(_formatQty(item.qty ?? 0), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
@@ -857,6 +861,11 @@ class InvoiceHelper {
       final String documentTitle = getInvoiceDocumentTitle(
           invoiceType, invoices.isNotEmpty ? invoices.first.status : null);
 
+      // ── CHANGE 1: Badge title — "Invoice" → "Tax Invoice", બાકી same ──
+      final String badgeTitle = (documentTitle.toLowerCase() == 'invoice')
+          ? 'Tax Invoice'
+          : documentTitle;
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -1055,7 +1064,7 @@ class InvoiceHelper {
                 pw.Container(height: 2, width: double.infinity, color: green),
                 pw.SizedBox(height: 10),
 
-                // ── TO + Invoice badge ──
+                // ── Info Box: TO (left) + Invoice Badge (right) ──
                 pw.Container(
                   width: double.infinity,
                   padding: pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1067,6 +1076,7 @@ class InvoiceHelper {
                   child: pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
+                      // LEFT: TO
                       pw.Expanded(
                         flex: 3,
                         child: pw.Column(
@@ -1084,16 +1094,9 @@ class InvoiceHelper {
                           ],
                         ),
                       ),
-                      pw.Expanded(
-                        flex: 2,
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text("Tax Invoice", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: darkBrown)),
 
-                          ],
-                        ),
-                      ),
+                      // RIGHT: Invoice Badge
+                      // CHANGE 2: documentTitle "Invoice"/"invoice" → "Tax Invoice" show karo
                       pw.Expanded(
                         flex: 2,
                         child: pw.Container(
@@ -1106,9 +1109,12 @@ class InvoiceHelper {
                           child: pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
-                              pw.Text(documentTitle, style: pw.TextStyle(color: darkRed, fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                              pw.Text(
+                                badgeTitle, // ← "Tax Invoice" if Invoice, else Quotation/Credit Note etc.
+                                style: pw.TextStyle(color: darkRed, fontSize: 14, fontWeight: pw.FontWeight.bold),
+                              ),
                               pw.SizedBox(height: 6),
-                              pw.Text('#$invoiceId', style: pw.TextStyle(color: textMuted, fontSize: 11)),
+                              pw.Text('#$invoiceId', style: pw.TextStyle(color: textMuted, fontSize: 10)),
                               pw.SizedBox(height: 4),
                               pw.Text('Date: $invoiceDate', style: pw.TextStyle(color: textMuted, fontSize: 9)),
                               if (AppConstants.isDueDateEnabled.value) ...[
@@ -1125,7 +1131,7 @@ class InvoiceHelper {
 
                 pw.SizedBox(height: 8),
 
-                // ── Items Table header + data rows ──
+                // ── Items Table ──
                 pw.Container(
                   decoration: pw.BoxDecoration(
                     borderRadius: pw.BorderRadius.circular(8),
@@ -1161,15 +1167,15 @@ class InvoiceHelper {
                       pw.TableRow(
                         decoration: pw.BoxDecoration(color: darkBlue),
                         children: [
-                          _tableHeaderColored('#', bgColor: darkBlue, textColor: white, align: pw.TextAlign.left),
-                          _tableHeaderColored('DESCRIPTION', bgColor: darkBlue, textColor: white),
-                          _tableHeaderColored('QTY', bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
-                          _tableHeaderColored('PRICE', bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
-                          _tableHeaderColored('AMOUNT', bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
+                          _tableHeaderColored('#',           bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
+                          _tableHeaderColored('DESCRIPTION', bgColor: darkBlue, textColor: white, align: pw.TextAlign.left),
+                          _tableHeaderColored('QTY',         bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored('PRICE',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored('AMOUNT',      bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('GST', bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
+                            _tableHeaderColored('GST',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('NET', bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                            _tableHeaderColored('NET',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
                         ],
                       ),
                       ...List<pw.TableRow>.generate(shownItemRows, (int index) {
@@ -1187,7 +1193,7 @@ class InvoiceHelper {
                         return pw.TableRow(
                           decoration: pw.BoxDecoration(color: white),
                           children: [
-                            _tableCellColored('${index + 1}', align: pw.TextAlign.left, textColor: textMuted),
+                            _tableCellColored('${index + 1}',                        align: pw.TextAlign.center, textColor: textMuted),
                             pw.Padding(
                               padding: pw.EdgeInsets.all(4),
                               child: pw.Column(
@@ -1204,13 +1210,13 @@ class InvoiceHelper {
                                 ],
                               ),
                             ),
-                            _tableCellColored(item.qty!.toStringAsFixed(3), align: pw.TextAlign.center, textColor: textMuted),
-                            _tableCellColored(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.center, textColor: textMuted),
-                            _tableCellColored(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.center, textColor: textMuted),
+                            _tableCellColored(_formatQty(item.qty ?? 0),             align: pw.TextAlign.right, textColor: textMuted),
+                            _tableCellColored(AppUtil.formatCurrency(item.price!),   align: pw.TextAlign.right, textColor: textMuted),
+                            _tableCellColored(AppUtil.formatCurrency(baseAmount),    align: pw.TextAlign.right, textColor: textMuted),
                             if (AppConstants.withGST.value)
-                              _tableCellColored(AppUtil.formatCurrency(gstValue), align: pw.TextAlign.center, textColor: textMuted),
+                              _tableCellColored(AppUtil.formatCurrency(gstValue),    align: pw.TextAlign.right, textColor: textMuted),
                             if (AppConstants.withGST.value)
-                              _tableCellColored(AppUtil.formatCurrency(netAmount), align: pw.TextAlign.right, textColor: textMuted),
+                              _tableCellColored(AppUtil.formatCurrency(netAmount),   align: pw.TextAlign.right, textColor: textMuted),
                           ],
                         );
                       }),
@@ -1528,7 +1534,7 @@ class InvoiceHelper {
                             padding: const pw.EdgeInsets.only(bottom: 2),
                             child: pw.Text(displayItemName, style: pw.TextStyle(fontSize: 10), maxLines: 2), // Increased to 10
                           ),
-                          pw.Text(item.qty!.toStringAsFixed(0), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                          pw.Text(_formatQty(item.qty ?? 0), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                           pw.Text(AppUtil.formatCurrency(item.price!), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                         ],
                       );
@@ -2040,7 +2046,7 @@ class InvoiceHelper {
                           _tableCell(challanId.isNotEmpty ? challanId : '-',
                               align: pw.TextAlign.center),
                           _tableCell(itemName, align: pw.TextAlign.left),
-                          _tableCell(qty.toStringAsFixed(3), align: pw.TextAlign.right),
+                          _tableCell(_formatQty(qty), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(rate),
                               align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(amount),
@@ -2671,7 +2677,7 @@ class InvoiceHelper {
                         children: [
                           _tableCell('${index + 1}', align: pw.TextAlign.center),
                           _tableCell(item.itemName ?? '', align: pw.TextAlign.left),
-                          _tableCell(item.qty!.toStringAsFixed(3), align: pw.TextAlign.right),
+                          _tableCell(_formatQty(item.qty ?? 0), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(item.price!), align: pw.TextAlign.right),
                           _tableCell(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
@@ -3123,7 +3129,7 @@ class InvoiceHelper {
                             padding: const pw.EdgeInsets.only(bottom: 2),
                             child: pw.Text(displayItemName, style: pw.TextStyle(fontSize: 10), maxLines: 2), // 8 -> 10
                           ),
-                          pw.Text(qty.toStringAsFixed(0), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                          pw.Text(_formatQty(qty), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                           pw.Text(AppUtil.formatCurrency(price), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                         ],
                       );
@@ -3430,7 +3436,7 @@ class InvoiceHelper {
                             padding: const pw.EdgeInsets.only(bottom: 2),
                             child: pw.Text(displayItemName, style: pw.TextStyle(fontSize: 10), maxLines: 2),
                           ),
-                          pw.Text(qty.toStringAsFixed(0), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
+                          pw.Text(_formatQty(qty), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                           pw.Text(AppUtil.formatCurrency(price), style: pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.right),
                         ],
                       );
@@ -5498,7 +5504,7 @@ class InvoiceHelper {
                       children: [
                         _tableCell('${index + 1}', align: pw.TextAlign.center),
                         _tableCell(itemName, align: pw.TextAlign.left),
-                        _tableCell(qty.toStringAsFixed(1), align: pw.TextAlign.right),
+                        _tableCell(_formatQty(qty), align: pw.TextAlign.right),
                         _tableCell(AppUtil.formatCurrency(price), align: pw.TextAlign.right),
                         _tableCell(AppUtil.formatCurrency(baseAmount), align: pw.TextAlign.right),
                         if (AppConstants.withGST.value)
@@ -5962,7 +5968,7 @@ class InvoiceHelper {
                             padding: const pw.EdgeInsets.only(bottom: 2),
                             child: pw.Text(itemName, style: pw.TextStyle(fontSize: 11), maxLines: 2),
                           ),
-                          pw.Text(qty.toStringAsFixed(0), style: pw.TextStyle(fontSize: 11), textAlign: pw.TextAlign.right),
+                          pw.Text(_formatQty(qty), style: pw.TextStyle(fontSize: 11), textAlign: pw.TextAlign.right),
                           pw.Text(AppUtil.formatCurrency(price), style: pw.TextStyle(fontSize: 11), textAlign: pw.TextAlign.right),
                         ],
                       );

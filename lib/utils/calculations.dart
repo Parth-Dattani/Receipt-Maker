@@ -24,6 +24,7 @@ class AppUtil {
     final formatter = NumberFormat.currency(
       locale: 'en_IN',   // Indian format (12,34,567.89)
       symbol: '',        // Remove ₹ symbol (since you already add text)
+      decimalDigits: AppConstants.decimalPlaces,
     );
     return formatter.format(amount);
   }
