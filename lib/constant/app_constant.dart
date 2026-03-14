@@ -32,6 +32,12 @@ class AppConstants{
    static int dueDateDays = 0;
    static final RxBool isExtraNotesEnabled = false.obs;
 
+   /// Digits after decimal point for amounts (e.g. 2 → 350.00, 0 → 350).
+   static int decimalPlaces = 2;
+
+   /// Format amount with company's decimal places.
+   static String formatAmount(double amount) => amount.toStringAsFixed(decimalPlaces);
+
    /// 🔹 Load everything from SharedPreferences into memory
    static Future<void> loadFromPrefs() async {
       userId = await sharedPreferencesHelper.getPrefData("userId") ?? "";
@@ -58,8 +64,13 @@ class AppConstants{
 
       isDueDateEnabled.value = await sharedPreferencesHelper.retrievePrefBoolData("isDueDateEnabled") ?? false;
       dueDateDays = int.tryParse(await sharedPreferencesHelper.getPrefData("dueDateDays") ?? "0") ?? 0;
+      decimalPlaces = int.tryParse(await sharedPreferencesHelper.getPrefData("decimalPlaces") ?? "2") ?? 2;
+   }
 
-
+   /// 🔹 Update + persist decimalPlaces (digits after decimal point)
+   static Future<void> setDecimalPlaces(int value) async {
+      decimalPlaces = value.clamp(0, 6);
+      await sharedPreferencesHelper.storePrefData("decimalPlaces", decimalPlaces.toString());
    }
 
    /// Toggle and persist language
