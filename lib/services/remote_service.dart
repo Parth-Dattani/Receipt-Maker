@@ -2336,12 +2336,17 @@ class GoogleSheetService {
       print("   Name: ${spreadsheet.properties?.title}");
       print("   Sheets: ${spreadsheet.sheets?.length ?? 0}");
 
+      // Use FIRST sheet's actual name (not hardcoded "Sheet1" - locale may differ)
+      final firstSheetName = spreadsheet.sheets?.isNotEmpty == true
+          ? (spreadsheet.sheets!.first.properties?.title ?? "Sheet1")
+          : "Sheet1";
+
       // Try to read a cell (tests read permission)
       try {
-        await sheetsApi.spreadsheets.values.get(spreadsheetId, "Sheet1!A1");
+        await sheetsApi.spreadsheets.values.get(spreadsheetId, "$firstSheetName!A1");
         print("✅ Read permission confirmed");
       } catch (e) {
-        print("⚠️ Existing Sheet1 not found (this is OK for new spreadsheet)");
+        print("⚠️ Could not read $firstSheetName!A1 (this is OK for new spreadsheet)");
       }
 
       // Try to write (tests write permission)
@@ -2352,7 +2357,7 @@ class GoogleSheetService {
         await sheetsApi.spreadsheets.values.update(
           testData,
           spreadsheetId,
-          "Sheet1!A1",
+          "$firstSheetName!A1",
           valueInputOption: "RAW",
         );
         print("✅ Write permission confirmed");
@@ -2550,6 +2555,7 @@ class GoogleSheetService {
           'status',
           'notes',
           'userId',
+          'isDeleted',
         ],
         invoiceItemSheetName: [
           'invoiceId',
@@ -2771,7 +2777,6 @@ class GoogleSheetService {
   static Future<AuthClient> _getAuthClient() async {
     final credentialsJson = await _loadServiceAccountJson();
 
-    print("------------Creddd-------------${credentialsJson}");
     final accountCredentials =
     ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
     final scopes = [SheetsApi.spreadsheetsScope];
@@ -3396,6 +3401,9 @@ class GoogleSheetService {
 
           final invoice = Invoice.fromMap(rowData);
 
+          // Skip soft-deleted invoices
+          if (invoice.isDeleted == 1) continue;
+
           if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
           if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
 
@@ -3574,6 +3582,7 @@ class GoogleSheetService {
     normalized['createdat'] ??= _formatDate(now);
     normalized['updatedat'] ??= _formatDate(now);
     normalized['userid'] ??= userId;
+    normalized['isdeleted'] ??= '0'; // Soft delete: 0=active, 1=deleted
 
     // Fill data in header order
     List<dynamic> row = [];
@@ -5583,7 +5592,7 @@ class GoogleSheetService {
     }
   }
 
-  /// Delete the Invoice row from the Invoice sheet by invoiceId.
+  /// Soft delete the Invoice row: set isDeleted=1 and apply light red background.
   static Future<void> deleteInvoiceFromSheet(String invoiceId) async {
     try {
       final client = await _getAuthClient();
@@ -5600,32 +5609,104 @@ class GoogleSheetService {
       final invoiceIdIndex = headers.indexWhere((h) => h.toLowerCase() == 'invoiceid');
       if (invoiceIdIndex == -1) return;
 
-      List<List<Object?>> filteredData = [response.values![0]];
+      // Find row index (1-based for sheet)
+      int targetRowIndex = -1;
       for (int i = 1; i < response.values!.length; i++) {
         final row = response.values![i];
-        if (row.length <= invoiceIdIndex || row[invoiceIdIndex].toString().trim() != invoiceId) {
-          filteredData.add(row);
+        if (row.length > invoiceIdIndex && row[invoiceIdIndex].toString().trim() == invoiceId) {
+          targetRowIndex = i + 1; // 1-based row number
+          break;
         }
       }
+      if (targetRowIndex == -1) {
+        print("⚠️ Invoice $invoiceId not found in sheet");
+        return;
+      }
 
-      await sheetsApi.spreadsheets.values.clear(
-        ClearValuesRequest(),
-        spreadsheetId,
-        "$invoiceSheetName!A:Z",
-      );
-      if (filteredData.length > 1) {
+      // Ensure isDeleted column exists
+      int isDeletedColIndex = headers.indexWhere((h) => h.toLowerCase() == 'isdeleted');
+      List<List<Object?>> allData = response.values!.map((r) => r.toList()).toList();
+
+      if (isDeletedColIndex == -1) {
+        // Add isDeleted column
+        headers.add('isDeleted');
+        allData[0] = headers;
+        for (int i = 1; i < allData.length; i++) {
+          if (allData[i].length < headers.length) {
+            allData[i].add((i + 1 == targetRowIndex) ? '1' : '0');
+          }
+        }
         await sheetsApi.spreadsheets.values.update(
-          ValueRange(values: filteredData),
+          ValueRange(values: allData),
           spreadsheetId,
           "$invoiceSheetName!A1",
           valueInputOption: "USER_ENTERED",
         );
+        isDeletedColIndex = headers.length - 1;
+      } else {
+        // Update isDeleted cell to 1
+        final rowIndex = targetRowIndex;
+        final colLetter = _columnIndexToLetter(isDeletedColIndex);
+        final range = "$invoiceSheetName!$colLetter$rowIndex";
+        await sheetsApi.spreadsheets.values.update(
+          ValueRange.fromJson({"values": [["1"]]}),
+          spreadsheetId,
+          range,
+          valueInputOption: "USER_ENTERED",
+        );
       }
-      print("🗑️ Deleted invoice $invoiceId from Invoice sheet");
+
+      // Apply light red background to the row
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      int? invoiceSheetId;
+      for (var sheet in spreadsheet.sheets ?? []) {
+        if (sheet.properties?.title == invoiceSheetName) {
+          invoiceSheetId = sheet.properties?.sheetId ?? 0;
+          break;
+        }
+      }
+      if (invoiceSheetId != null) {
+        final cellData = CellData()
+          ..userEnteredFormat = (CellFormat()
+            ..backgroundColor = (Color()
+              ..red = 1.0
+              ..green = 0.86
+              ..blue = 0.86));
+        final repeatCellRequest = RepeatCellRequest()
+          ..range = (GridRange()
+            ..sheetId = invoiceSheetId
+            ..startRowIndex = targetRowIndex - 1
+            ..endRowIndex = targetRowIndex
+            ..startColumnIndex = 0
+            ..endColumnIndex = 26)
+          ..cell = cellData
+          ..fields = "userEnteredFormat.backgroundColor";
+
+        final batchRequest = BatchUpdateSpreadsheetRequest()
+          ..requests = [Request()..repeatCell = repeatCellRequest];
+
+        await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+      }
+
+      // Clear caches so invoice list refreshes
+      _invoiceItemCache.remove(invoiceId);
+      _cacheTimestamps.remove(invoiceSheetName);
+
+      print("✅ Soft deleted invoice $invoiceId (isDeleted=1, light red row)");
     } catch (e) {
-      print("❌ Error deleting invoice from sheet: $e");
+      print("❌ Error soft deleting invoice from sheet: $e");
       rethrow;
     }
+  }
+
+  static String _columnIndexToLetter(int index) {
+    String result = '';
+    int n = index;
+    while (n >= 0) {
+      result = String.fromCharCode(65 + (n % 26)) + result;
+      n = n ~/ 26 - 1;
+    }
+    return result.isEmpty ? 'A' : result;
   }
 
   // Add to your GoogleSheetService class:
@@ -8225,6 +8306,7 @@ class GoogleSheetService {
           'notes',
           'profit',
           'userId',
+          'isDeleted',
           // 'createdAt',
           // 'updatedAt',
         ],

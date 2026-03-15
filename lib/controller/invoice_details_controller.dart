@@ -204,17 +204,17 @@ class InvoiceDetailsController extends GetxController {
 
   @override
   void onClose() {
-    customerNameCtrl.dispose();
-    customerEmailCtrl.dispose();
-    customerPanCtrl.dispose();
-    customerGstCtrl.dispose();
-    customerPhoneCtrl.dispose();
-    customerAddressCtrl.dispose();
+    _safeDisposeController(customerNameCtrl);
+    _safeDisposeController(customerEmailCtrl);
+    _safeDisposeController(customerPanCtrl);
+    _safeDisposeController(customerGstCtrl);
+    _safeDisposeController(customerPhoneCtrl);
+    _safeDisposeController(customerAddressCtrl);
 
     for (var m in editableItems) {
-      m['itemName']?.dispose();
-      m['qty']?.dispose();
-      m['rate']?.dispose();
+      _safeDisposeController(m['itemName']);
+      _safeDisposeController(m['qty']);
+      _safeDisposeController(m['rate']);
     }
     super.onClose();
   }
@@ -523,12 +523,22 @@ class InvoiceDetailsController extends GetxController {
     }
   }
 
+  /// Safely dispose a TextEditingController (handles already-disposed case).
+  void _safeDisposeController(TextEditingController? c) {
+    if (c == null) return;
+    try {
+      c.dispose();
+    } catch (_) {
+      // Already disposed - ignore
+    }
+  }
+
   void _setupEditableItemsFromLoaded(List<InvoiceItem> items) {
-    // dispose old
+    // Safely dispose old controllers (may already be disposed when returning from edit screen)
     for (var m in editableItems) {
-      m['itemName']?.dispose();
-      m['qty']?.dispose();
-      m['rate']?.dispose();
+      _safeDisposeController(m['itemName']);
+      _safeDisposeController(m['qty']);
+      _safeDisposeController(m['rate']);
     }
 
     final newList = <Map<String, TextEditingController>>[];
@@ -581,9 +591,9 @@ class InvoiceDetailsController extends GetxController {
 
   void removeItem(int index) {
     if (index >= 0 && index < editableItems.length) {
-      editableItems[index]['itemName']?.dispose();
-      editableItems[index]['qty']?.dispose();
-      editableItems[index]['rate']?.dispose();
+      _safeDisposeController(editableItems[index]['itemName']);
+      _safeDisposeController(editableItems[index]['qty']);
+      _safeDisposeController(editableItems[index]['rate']);
       editableItems.removeAt(index);
       if (editableItems.isEmpty) addNewItem();
       editableItems.refresh();

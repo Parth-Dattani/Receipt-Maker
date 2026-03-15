@@ -577,7 +577,7 @@ class NewInvoiceController extends GetxController {
     update();
   }
 
-  /// Delete the current invoice from Google Sheet (edit mode only). Removes InvoiceItems rows then Invoice row.
+  /// Soft delete the current invoice from Google Sheet (edit mode only). Sets isDeleted=1, keeps items, applies light red row.
   Future<void> deleteInvoice() async {
     if (!isEditMode.value || editingInvoiceId.value.isEmpty) {
       Get.snackbar('Error', 'No invoice to delete', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100, colorText: Colors.red.shade800);
@@ -586,19 +586,28 @@ class NewInvoiceController extends GetxController {
     try {
       isLoading.value = true;
       final invoiceId = editingInvoiceId.value;
-      await GoogleSheetService.deleteInvoiceItemsFromSheet(invoiceId);
+      // Soft delete: set isDeleted=1 and light red row; do NOT remove invoice items
       await GoogleSheetService.deleteInvoiceFromSheet(invoiceId);
       if (Get.isRegistered<InvoiceListController>()) {
         await Get.find<InvoiceListController>().loadInvoices();
       }
-      Get.until((route) => route.settings.name == InvoiceListScreen.pageId);
-      Get.snackbar(
-        'Delete Invoice',
-        'Invoice removed from sheet.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade100,
-        colorText: Colors.green.shade800,
-      );
+      // Close snackbars first to avoid LateInitializationError
+      try {
+        Get.closeAllSnackbars();
+      } catch (_) {}
+      Get.offAllNamed(DashboardScreen.pageId); // Navigate to Dashboard after delete
+      // Show snackbar after navigation settles
+      Future.delayed(const Duration(milliseconds: 400), () {
+        try {
+          Get.snackbar(
+            'Delete Invoice',
+            'Invoice soft deleted (row marked in sheet).',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade100,
+            colorText: Colors.green.shade800,
+          );
+        } catch (_) {}
+      });
     } catch (e) {
       print("❌ Error deleting invoice: $e");
       Get.snackbar(

@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
-import 'package:flutter/material.dart';
-
 class Invoice {
   final String invoiceId;
   final String? itemId;
@@ -35,8 +31,10 @@ class Invoice {
   final String? paymentMode; // ✅ NEW: Cash, UPI, Card, Bank Transfer, etc.
   final double? profit;
   final DateTime? updatedAt; // when invoice was last updated (e.g. payment recorded)
+  final int isDeleted; // 0 = active, 1 = soft deleted
 
   Invoice({
+    this.isDeleted = 0,
     required this.invoiceId,
     this.itemId,
     this.itemName,
@@ -99,6 +97,7 @@ class Invoice {
       'paymentMode': paymentMode,
       'profit': profit,
       'updatedAt': updatedAt?.toIso8601String(),
+      'isDeleted': isDeleted,
     };
   }
 
@@ -156,6 +155,7 @@ class Invoice {
       paymentMode: map['paymentMode'] ?? map['payment_mode'],
       profit: double.tryParse(map['profit']?.toString() ?? map['Profit']?.toString() ?? '0') ?? 0.0,
       updatedAt: _parseDateField(map['updatedAt'] ?? map['updated_at'] ?? map['Updated At']),
+      isDeleted: int.tryParse(map['isDeleted']?.toString() ?? map['IsDeleted']?.toString() ?? '0') ?? 0,
     );
   }
 
@@ -223,6 +223,7 @@ class Invoice {
     double? pendingAmount,
     String? paymentMode, // ✅ NEW
     DateTime? updatedAt,
+    int? isDeleted,
   }) {
     return Invoice(
       invoiceId: invoiceId ?? this.invoiceId,
@@ -251,6 +252,7 @@ class Invoice {
       pendingAmount: pendingAmount ?? this.pendingAmount,
       paymentMode: paymentMode ?? this.paymentMode, // ✅ NEW
       updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 

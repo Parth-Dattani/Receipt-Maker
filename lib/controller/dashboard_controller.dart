@@ -74,7 +74,7 @@ class DashboardController extends BaseController {
   /// Once first load is done, never show full-page shimmer again (only first open).
   final _shimmerAlreadyShown = false.obs;
 
-  /// True only when we should show the full-page shimmer (first load, loading, empty list).
+  /// True when we should show shimmer (initial load, loading, empty list). Content shows after shimmer.
   bool get showInitialShimmer =>
       isLoading.value && invoiceList.isEmpty && !_shimmerAlreadyShown.value;
 

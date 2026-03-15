@@ -7,15 +7,6 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 
-
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
-
-
-
 class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
   static const String pageId = '/invoiceDetails';
 
@@ -389,6 +380,27 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     }
   }
 
+  // Shimmer loading (kept for Invoice Detail - only Dashboard has no shimmer)
+  Widget _buildShimmerLayout(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildShimmerInvoiceHeader(),
+          const SizedBox(height: 24),
+          _buildShimmerCustomerInfo(),
+          const SizedBox(height: 24),
+          _buildShimmerInvoiceItems(),
+        ],
+      ),
+    );
+  }
+  Widget _buildShimmerInvoiceHeader() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 150, color: Colors.white));
+  Widget _buildShimmerCustomerInfo() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 120, color: Colors.white));
+  Widget _buildShimmerInvoiceItems() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 200, color: Colors.white));
+  Widget _buildShimmerPaymentSummary() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 100, color: Colors.white));
+  Widget _buildShimmerItemsList() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 100, color: Colors.white));
+
   Widget _buildErrorState(BuildContext context) {
     return Center(
       child: Column(
@@ -411,30 +423,6 @@ class InvoiceDetailsScreen extends GetView<InvoiceDetailsController> {
     );
   }
 
-  // ===========================================================================
-  // 🌫️ SHIMMER LOADING (Simplified)
-  // ===========================================================================
-  Widget _buildShimmerLayout(BuildContext context) {
-    // Simple placeholder layout while loading
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildShimmerInvoiceHeader(),
-          const SizedBox(height: 24),
-          _buildShimmerCustomerInfo(),
-          const SizedBox(height: 24),
-          _buildShimmerInvoiceItems(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShimmerInvoiceHeader() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 150, color: Colors.white));
-  Widget _buildShimmerCustomerInfo() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 120, color: Colors.white));
-  Widget _buildShimmerInvoiceItems() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 200, color: Colors.white));
-  Widget _buildShimmerPaymentSummary() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 100, color: Colors.white));
-  Widget _buildShimmerItemsList() => Shimmer.fromColors(baseColor: Colors.grey.shade300, highlightColor: Colors.grey.shade100, child: Container(height: 100, color: Colors.white));
 }
 
 
