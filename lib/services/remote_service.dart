@@ -1885,7 +1885,9 @@ class GoogleSheetService {
 
   static final Map<String, List<dynamic>> _itemCache = {};
   static final Map<String, DateTime> _cacheTimestamps = {};
+  static final Map<String, List<Invoice>> _invoiceListCache = {};
   static const Duration _cacheValidDuration = Duration(minutes: 5);
+  static const Duration _invoiceListCacheDuration = Duration(minutes: 2);
 
   /// True when error is "Project #XXX has been deleted" (GCP project deleted, SA key invalid).
   static bool isProjectDeletedError(Object e) {
@@ -2268,6 +2270,8 @@ class GoogleSheetService {
         await initializeAllSheets();
       } else {
         print("✅ All required sheets already exist");
+        // Re-apply header format (blue + white text) so existing sheets get white header text
+        await _applyHeaderFormatToAllSheets(sheetsApi);
       }
 
     } catch (e) {
@@ -2495,10 +2499,77 @@ class GoogleSheetService {
         print("✅ Headers created for $sheetName: $headers");
       }
 
+      // Apply blue background to header row (row 0) in all sheets
+      await _applyHeaderRowBlueBackground(sheetsApi, sheetName, (headers as List).length);
+
       return headers;
     } catch (e) {
       print("❌ Error in _getOrCreateSheetAndHeaders for $sheetName: $e");
       rethrow;
+    }
+  }
+
+  /// Apply blue background to the first row (header) of a sheet
+  static Future<void> _applyHeaderRowBlueBackground(SheetsApi sheetsApi, String sheetName, [int columnCount = 26]) async {
+    try {
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      int? targetSheetId;
+      for (var sheet in spreadsheet.sheets ?? []) {
+        if (sheet.properties?.title == sheetName) {
+          targetSheetId = sheet.properties?.sheetId ?? 0;
+          break;
+        }
+      }
+      if (targetSheetId == null) return;
+      final endCol = columnCount > 0 ? columnCount : 26;
+      final cellData = CellData()
+        ..userEnteredFormat = (CellFormat()
+          ..backgroundColor = (Color()
+            ..red = 0.22
+            ..green = 0.45
+            ..blue = 0.82)
+          ..textFormat = (TextFormat()
+            ..foregroundColor = (Color()
+              ..red = 1.0
+              ..green = 1.0
+              ..blue = 1.0)
+            ..bold = true
+            ..fontSize = 14));
+      final repeatCellRequest = RepeatCellRequest()
+        ..range = (GridRange()
+          ..sheetId = targetSheetId
+          ..startRowIndex = 0
+          ..endRowIndex = 1
+          ..startColumnIndex = 0
+          ..endColumnIndex = endCol)
+        ..cell = cellData
+        ..fields = "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat";
+      final batchRequest = BatchUpdateSpreadsheetRequest()
+        ..requests = [Request()..repeatCell = repeatCellRequest];
+      await sheetsApi.spreadsheets.batchUpdate(batchRequest, spreadsheetId);
+    } catch (e) {
+      print("⚠️ Could not apply header blue background for $sheetName: $e");
+    }
+  }
+
+  /// Apply blue background + white bold text to header row of all standard sheets (e.g. when sheets already exist).
+  static Future<void> _applyHeaderFormatToAllSheets(SheetsApi sheetsApi) async {
+    final sheetNames = [
+      itemSheetName,
+      invoiceSheetName,
+      invoiceItemSheetName,
+      challanSheetName,
+      challanItemSheetName,
+      purchaseSheetName,
+      purchaseItemSheetName,
+      inventoryTransactionSheetName,
+      customerSheetName,
+      companyLogoSheetName,
+    ];
+    for (var sheetName in sheetNames) {
+      try {
+        await _applyHeaderRowBlueBackground(sheetsApi, sheetName, 26);
+      } catch (_) {}
     }
   }
 
@@ -2647,7 +2718,6 @@ class GoogleSheetService {
         customerSheetName: [
           'customerId',
           'companyId',
-          'companyName',
           'name',
           'address',
           'city',
@@ -2667,8 +2737,6 @@ class GoogleSheetService {
           'isActive',
           'createdAt',
           'updatedAt',
-          'createdBy',
-          'createdByEmail',
         ],
         companyLogoSheetName: [
           'companyId',
@@ -3331,96 +3399,127 @@ class GoogleSheetService {
   //   }
   // }
 
+  static const String _invoiceListCacheKeyPrefix = 'invoices_';
+
+  static void _clearInvoiceListCache() {
+    _invoiceListCache.clear();
+    _cacheTimestamps.removeWhere((k, _) => k.startsWith(_invoiceListCacheKeyPrefix));
+    print("🗑️ Cleared invoice list cache");
+  }
+
   static Future<List<Invoice>> getInvoices({String? type}) async {
-    print("🔄 Fetching invoices from Google Sheet...");
+    final cacheKey = '${_invoiceListCacheKeyPrefix}${type ?? 'all'}';
+    final now = DateTime.now();
+    if (_invoiceListCache.containsKey(cacheKey) && _cacheTimestamps.containsKey(cacheKey)) {
+      final age = now.difference(_cacheTimestamps[cacheKey]!);
+      if (age < _invoiceListCacheDuration) {
+        print("⚡ Returning cached invoices ($type) (${age.inSeconds}s old)");
+        return _invoiceListCache[cacheKey]!;
+      }
+    }
 
     try {
-      final client = await _getAuthClient();
-      final sheetsApi = SheetsApi(client);
-
-      // Get header row
-      final headerResponse = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        "$invoiceSheetName!1:1",
-      );
-
-      if (headerResponse.values == null || headerResponse.values!.isEmpty) {
-        print("No header row found in sheet");
-        return <Invoice>[];
-      }
-
-      final headers = headerResponse.values![0];
-      final columnIndices = {
-        for (int i = 0; i < headers.length; i++) headers[i].toString().toLowerCase(): i,
-      };
-
-      // Get all data
-      final response = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        "$invoiceSheetName!A:Z",
-      );
-
-      if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
-        print("No invoice data found in sheet");
-        return <Invoice>[];
-      }
-
-      List<Invoice> invoices = [];
-      const int yieldEvery = 100;
-
-      for (int i = 1; i < response.values!.length; i++) {
-        if (i > 1 && (i - 1) % yieldEvery == 0) {
-          await Future.delayed(Duration.zero);
-        }
-        final row = response.values![i];
-        if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
-
-        try {
-          Map<String, dynamic> rowData = {};
-          for (int j = 0; j < min(row.length, headers.length); j++) {
-            final headerKey = headers[j].toString();
-            final cellValue = row[j];
-
-            if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
-              if (cellValue != null && cellValue.toString().isNotEmpty) {
-                final parsedDate = _parseDate(cellValue.toString());
-                rowData[headerKey] = parsedDate;
-              } else {
-                rowData[headerKey] = null;
-              }
-            } else if (headerKey.toLowerCase().replaceAll(' ', '').replaceAll('_', '') == 'updatedat') {
-              if (cellValue != null && cellValue.toString().trim().isNotEmpty) {
-                rowData['updatedAt'] = _parseDateOrDateTime(cellValue.toString());
-              } else {
-                rowData['updatedAt'] = null;
-              }
-            } else {
-              rowData[headerKey] = cellValue;
-            }
-          }
-
-          final invoice = Invoice.fromMap(rowData);
-
-          // Skip soft-deleted invoices
-          if (invoice.isDeleted == 1) continue;
-
-          if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
-          if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
-
-          invoices.add(invoice);
-
-        } catch (e) {
-          continue;
-        }
-      }
-
-      print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
-      return invoices;
-
+      return await _getInvoicesFromSheet(type: type, cacheKey: cacheKey);
     } catch (e) {
+      final is429 = e.toString().contains('429') || e.toString().toLowerCase().contains('quota exceeded');
+      if (is429) {
+        print("⚠️ Quota exceeded (429), retrying after 60s...");
+        await Future.delayed(const Duration(seconds: 60));
+        try {
+          return await _getInvoicesFromSheet(type: type, cacheKey: cacheKey);
+        } catch (e2) {
+          print("❌ Error in getInvoices (after retry): $e2");
+          rethrow;
+        }
+      }
       print("❌ Error in getInvoices: $e");
       rethrow;
     }
+  }
+
+  static Future<List<Invoice>> _getInvoicesFromSheet({String? type, required String cacheKey}) async {
+    print("🔄 Fetching invoices from Google Sheet...");
+
+    final client = await _getAuthClient();
+    final sheetsApi = SheetsApi(client);
+
+    // Get header row
+    final headerResponse = await sheetsApi.spreadsheets.values.get(
+      spreadsheetId,
+      "$invoiceSheetName!1:1",
+    );
+
+    if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+      print("No header row found in sheet");
+      return <Invoice>[];
+    }
+
+    final headers = headerResponse.values![0];
+
+    // Get all data
+    final response = await sheetsApi.spreadsheets.values.get(
+      spreadsheetId,
+      "$invoiceSheetName!A:Z",
+    );
+
+    if (response.values == null || response.values!.isEmpty || response.values!.length <= 1) {
+      print("No invoice data found in sheet");
+      return <Invoice>[];
+    }
+
+    List<Invoice> invoices = [];
+    const int yieldEvery = 100;
+
+    for (int i = 1; i < response.values!.length; i++) {
+      if (i > 1 && (i - 1) % yieldEvery == 0) {
+        await Future.delayed(Duration.zero);
+      }
+      final row = response.values![i];
+      if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+
+      try {
+        Map<String, dynamic> rowData = {};
+        for (int j = 0; j < min(row.length, headers.length); j++) {
+          final headerKey = headers[j].toString();
+          final cellValue = row[j];
+
+          if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+            if (cellValue != null && cellValue.toString().isNotEmpty) {
+              final parsedDate = _parseDate(cellValue.toString());
+              rowData[headerKey] = parsedDate;
+            } else {
+              rowData[headerKey] = null;
+            }
+          } else if (headerKey.toLowerCase().replaceAll(' ', '').replaceAll('_', '') == 'updatedat') {
+            if (cellValue != null && cellValue.toString().trim().isNotEmpty) {
+              rowData['updatedAt'] = _parseDateOrDateTime(cellValue.toString());
+            } else {
+              rowData['updatedAt'] = null;
+            }
+          } else {
+            rowData[headerKey] = cellValue;
+          }
+        }
+
+        final invoice = Invoice.fromMap(rowData);
+
+        // Skip soft-deleted invoices
+        if (invoice.isDeleted == 1) continue;
+
+        if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+        if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+
+        invoices.add(invoice);
+
+      } catch (e) {
+        continue;
+      }
+    }
+
+    _invoiceListCache[cacheKey] = invoices;
+    _cacheTimestamps[cacheKey] = DateTime.now();
+    print("✅ Retrieved ${invoices.length} invoices from Google Sheet (filter: $type)");
+    return invoices;
   }
 
 // 🔹 Helper method to parse dates from Google Sheets
@@ -3477,7 +3576,7 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // ✅ Define expected headers for the Invoice sheet
+      // ✅ Define expected headers for the Invoice sheet (paymentMethod, paymentStatus removed per user request)
       final expectedHeaders = [
         'invoiceId',
         'customerId',
@@ -3495,8 +3594,6 @@ class GoogleSheetService {
         'status',
         'paymentMode',
         'notes',
-        'paymentMethod',
-        'paymentStatus',
         'profit',
         'invoiceType',
         'userId',
@@ -3560,6 +3657,7 @@ class GoogleSheetService {
       );
 
       print("✅ Invoice(s) added successfully to Google Sheet");
+      _clearInvoiceListCache();
     } catch (e) {
       print("❌ Error adding invoice: $e");
       throw Exception("Failed to add invoice: ${e.toString()}");
@@ -3892,6 +3990,7 @@ class GoogleSheetService {
       );
 
       print("✅ Invoice merged & updated successfully at row $rowIndex");
+      _clearInvoiceListCache();
     } catch (e, st) {
       print("❌ Error updating invoice: $e\n$st");
       throw Exception("Failed to update invoice: ${e.toString()}");
@@ -4377,6 +4476,7 @@ class GoogleSheetService {
       );
 
       print("✅ Updated status for invoice '$invoiceId' -> '$newStatus' at $statusRange");
+      _clearInvoiceListCache();
       return true;
     } catch (e, st) {
       print("❌ Error updating invoice status: $e\n$st");
@@ -5691,6 +5791,7 @@ class GoogleSheetService {
       // Clear caches so invoice list refreshes
       _invoiceItemCache.remove(invoiceId);
       _cacheTimestamps.remove(invoiceSheetName);
+      _clearInvoiceListCache();
 
       print("✅ Soft deleted invoice $invoiceId (isDeleted=1, light red row)");
     } catch (e) {
@@ -7843,11 +7944,10 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // Define expected headers
+      // Define expected headers (companyName, createdBy, createdByEmail removed per user request)
       final expectedHeaders = [
         'customerId',
         'companyId',
-        'companyName',
         'name',
         'address',
         'city',
@@ -7867,8 +7967,6 @@ class GoogleSheetService {
         'isActive',
         'createdAt',
         'updatedAt',
-        'createdBy',
-        'createdByEmail',
       ];
 
       // Get or create headers
@@ -7892,9 +7990,6 @@ class GoogleSheetService {
             break;
           case 'companyid':
             rowData.add(customerData['companyId'] ?? '');
-            break;
-          case 'companyname':
-            rowData.add(customerData['companyName'] ?? '');
             break;
           case 'name':
             rowData.add(customerData['name'] ?? '');
@@ -7952,12 +8047,6 @@ class GoogleSheetService {
             break;
           case 'updatedat':
             rowData.add(_dateFormatter.format(DateTime.now()));
-            break;
-          case 'createdby':
-            rowData.add(customerData['createdBy'] ?? userId);
-            break;
-          case 'createdbyemail':
-            rowData.add(customerData['createdByEmail'] ?? '');
             break;
           default:
             rowData.add(customerData[header.toString()] ?? '');
@@ -8032,10 +8121,6 @@ class GoogleSheetService {
             continue;
           }
 
-          if (userId != null && customerMap['createdBy']?.toString() != userId) {
-            continue;
-          }
-
           customers.add(customerMap);
           print("✅ Added customer: ${customerMap['name']}");
         } catch (e) {
@@ -8107,9 +8192,6 @@ class GoogleSheetService {
             break;
           case 'companyid':
             rowData.add(customerData['companyId'] ?? '');
-            break;
-          case 'companyname':
-            rowData.add(customerData['companyName'] ?? '');
             break;
           case 'name':
             rowData.add(customerData['name'] ?? '');
@@ -8406,7 +8488,6 @@ class GoogleSheetService {
         customerSheetName: [
           'customerId',
           'companyId',
-          'companyName',
           'name',
           'address',
           'city',
@@ -8426,8 +8507,6 @@ class GoogleSheetService {
           'isActive',
           'createdAt',
           'updatedAt',
-          'createdBy',
-          'createdByEmail',
         ],
       };
 

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../utils/calculations.dart';
+import '../../widgets/account_status_wrapper.dart';
 import '../screen.dart';
 import '../setting/setting_screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -22,16 +23,17 @@ class DashboardScreen extends GetView<DashboardController> {
 
   @override
   Widget build(BuildContext context) {
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // On website (kIsWeb): always use web layout so left drawer/sidebar is always visible
-        // On mobile app: use web layout only when width > 900
-        if (kIsWeb || constraints.maxWidth > 900) {
-          return _buildWebLayout(context);
-        }
-        return _buildMobileLayout(context);
-      },
+    return AccountStatusWrapper(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // On website (kIsWeb): always use web layout so left drawer/sidebar is always visible
+          // On mobile app: use web layout only when width > 900
+          if (kIsWeb || constraints.maxWidth > 900) {
+            return _buildWebLayout(context);
+          }
+          return _buildMobileLayout(context);
+        },
+      ),
     );
   }
 

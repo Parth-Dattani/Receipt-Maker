@@ -758,7 +758,10 @@ class DashboardController extends BaseController {
       if (paymentReceivedToday) {
         amountToAdd = received;
         countToday = true;
-        todayProf += (invoice.profit ?? 0.0);
+        // Profit proportional to received amount (partial payment = only that share of profit for today)
+        final invProfit = invoice.profit ?? 0.0;
+        final ratio = (total > 0) ? (received / total).clamp(0.0, 1.0) : 0.0;
+        todayProf += invProfit * ratio;
       } else if (issuedToday && paymentMode.isNotEmpty) {
         // Old behaviour: invoice issued today, use totalAmount by mode (when no updatedAt paid-today)
         amountToAdd = total;
@@ -2487,37 +2490,7 @@ class DashboardController extends BaseController {
   }
 
   Future<void> logout() async {
-    try {
-      // 🔹 Sign out from Firebase
-      await FirebaseAuth.instance.signOut();
-
-      // 🔹 Clear SharedPreferences
-      await sharedPreferencesHelper.clearPrefData();
-
-      // 🔹 Reset AppConstants
-      AppConstants.userId = "";
-      AppConstants.companyId = "";
-      AppConstants.appId = "";
-      AppConstants.spreadsheetId = "";
-      AppConstants.accessKey = "";
-      AppConstants.isChallan.value = false;
-      AppConstants.isCashMemo.value = false;
-      AppConstants.withGST.value = false;
-
-      // 🔹 (Optional) Clear any controller states if needed
-      Get.deleteAll(force: true); // removes all GetX controllers
-
-      // 🔹 Navigate back to Auth screen
-      Get.offAllNamed(AuthScreen.pageId);
-
-      print("✅ Logout completed. State cleared.");
-    } catch (e) {
-      print("❌ Logout failed: $e");
-      Get.snackbar("Error", "Logout failed, please try again.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade100,
-      );
-    }
+    await Get.find<AuthController>().logout();
   }
 
   final List<RevenueData> revenueData = [

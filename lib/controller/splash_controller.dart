@@ -172,14 +172,26 @@ class SplashController extends BaseController {
     print("");
   }
 
-  /// Runs validateAndUpdateAllSheets + printInvoiceSheetColumns in background so first open is faster.
+  /// Runs validateAndUpdateAllSheets in background so first open is faster.
+  /// printInvoiceSheetColumns is skipped here to avoid extra read quota (429).
   void _runSheetValidationInBackground() {
     Future(() async {
       try {
         await GoogleSheetService.validateAndUpdateAllSheets();
-        await GoogleSheetService.printInvoiceSheetColumns();
         print("✅ Background sheet validation completed");
       } catch (e, st) {
+        final is429 = e.toString().contains('429') || e.toString().toLowerCase().contains('quota exceeded');
+        if (is429) {
+          print("⚠️ Sheet validation quota exceeded; retrying once after 60s...");
+          await Future.delayed(const Duration(seconds: 60));
+          try {
+            await GoogleSheetService.validateAndUpdateAllSheets();
+            print("✅ Background sheet validation completed (after retry)");
+          } catch (e2) {
+            print("⚠️ Sheet validation skipped (quota); will retry on next app open.");
+          }
+          return;
+        }
         print("⚠️ Background sheet validation error: $e");
         print("$st");
       }

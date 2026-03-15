@@ -714,6 +714,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         'username': user.displayName ?? user.email?.split('@').first ?? 'user',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': false,
       };
       if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
         data['spreadsheetId'] = spreadsheetId;
@@ -970,6 +971,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
           "appId":"",
           "spreadsheetId": spreadsheetId,
           "isDemo": isDemo.value,
+          "isActive": false,
           if (spreadsheetId.isNotEmpty) "activeFy": FinancialYearHelper.currentFy(),
           if (spreadsheetId.isNotEmpty) "spreadsheetIdsByFy": {FinancialYearHelper.currentFy(): spreadsheetId},
         });
@@ -1618,4 +1620,28 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     }
   }
 
+  /// Central logout: sign out, clear prefs/constants, navigate to Auth. Used by Dashboard and Account Inactive dialog.
+  Future<void> logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await sharedPreferencesHelper.clearPrefData();
+      AppConstants.userId = "";
+      AppConstants.companyId = "";
+      AppConstants.appId = "";
+      AppConstants.spreadsheetId = "";
+      AppConstants.accessKey = "";
+      AppConstants.isChallan.value = false;
+      AppConstants.isCashMemo.value = false;
+      AppConstants.withGST.value = false;
+      Get.deleteAll(force: true);
+      Get.offAllNamed(AuthScreen.pageId);
+      print("✅ Logout completed.");
+    } catch (e) {
+      print("❌ Logout failed: $e");
+      Get.snackbar("Error", "Logout failed, please try again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+      );
+    }
+  }
 }
