@@ -18,3 +18,4 @@ export 'Inventory/purchase_entry_screen.dart';
 export 'Inventory/purchase_list_screen.dart';
 export 'Inventory/purchase_details_screen.dart';
 export 'Inventory/stock_report_screen.dart';
+export 'admin/admin_panel_screen.dart';

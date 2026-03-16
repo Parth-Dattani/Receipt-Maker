@@ -1,6 +1,8 @@
 import 'package:GetYourInvoice/constant/app_constant.dart' show AppConstants;
 import 'package:GetYourInvoice/screen/dashboard/widgets/widgets.dart';
 import 'package:GetYourInvoice/widgets/web_app_sidebar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -2333,6 +2335,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   Divider(height: 32, thickness: 1),
                   _buildSectionHeader("settings".tr),
                   _buildMenuItem(icon: Icons.settings, iconColor: Colors.grey.shade700, title: "Settings", onTap: () { Get.back(); Get.toNamed(SettingsScreen.pageId); }),
+                  _buildAdminPanelDrawerTile(),
                   if (AppConstants.businessType == "Trading")
                     Obx(() => _buildSwitchTile(icon: Icons.list_alt, iconColor: Colors.green.shade600, title: "enable_challan".tr, value: AppConstants.isChallan.value, activeColor: Colors.green.shade600, onChanged: (value) async { await controller.updateCompanyPreference('isChallanEnabled', value); })),
                   Obx(() => _buildSwitchTile(icon: Icons.language, iconColor: Colors.deepPurple.shade600, title: 'enable_gujarati'.tr, value: AppConstants.isGujarati.value, activeColor: Colors.deepPurple.shade600, onChanged: (value) async { await controller.updateLanguagePreference(value); })),
@@ -2434,6 +2437,29 @@ class DashboardScreen extends GetView<DashboardController> {
 
   Widget _buildSubMenuItem({required IconData icon, required Color iconColor, required String title, required VoidCallback onTap}) {
     return ListTile(contentPadding: EdgeInsets.only(left: 60, right: 16), leading: Icon(icon, color: iconColor, size: 20), title: Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade700)), dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), onTap: onTap);
+  }
+
+  /// Shows "Admin Panel" tile only when current user's Firestore document has isAdmin == true.
+  Widget _buildAdminPanelDrawerTile() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) return const SizedBox.shrink();
+        final isAdmin = snapshot.data!.data()?['isAdmin'] == true;
+        if (!isAdmin) return const SizedBox.shrink();
+        return _buildMenuItem(
+          icon: Icons.security,
+          iconColor: Colors.amber.shade700,
+          title: 'Admin Panel',
+          onTap: () {
+            Get.back();
+            Get.to(() => AdminPanelScreen());
+          },
+        );
+      },
+    );
   }
 
   Widget _buildMenuItem({required IconData icon, required Color iconColor, required String title, required VoidCallback onTap, TextStyle? titleStyle}) {

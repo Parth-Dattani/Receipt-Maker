@@ -371,10 +371,7 @@ class AuthScreen extends GetView<AuthController> {
         dividerColor: Colors.transparent,
         tabs: [
           const Tab(text: "Login"),
-          GestureDetector(
-            onTap: controller.handleRegisterTabTap, // આ તારું 7-Tap લોજિક છે
-            child: const Tab(text: "Register"),
-          ),
+          const Tab(text: "Register"),
         ],
       ),
     );

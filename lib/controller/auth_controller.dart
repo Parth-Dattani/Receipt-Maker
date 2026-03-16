@@ -144,32 +144,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   String _verificationId = "";
 
   void handleRegisterTabTap() {
-    tapCount.value++;
-
-    // Reset timer if it's already running
-    _tapTimer?.cancel();
-
-    // Set timer to reset tap count after 2 seconds
-    _tapTimer = Timer(const Duration(seconds: 2), () {
-      tapCount.value = 0;
-    });
-
-    // Check if 7 taps reached
-    if (tapCount.value >= 7) {
-      showFormFields.value = !showFormFields.value;
-      tapCount.value = 0;
-      _tapTimer?.cancel();
-      final ctx = Get.context;
-      if (ctx != null) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-            content: Text(showFormFields.value ? "Developer mode activated!" : "Developer mode deactivated!"),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.deepPurple,
-          ),
-        );
-      }
-    }
+    tabController.animateTo(1);
   }
 
   void togglePasswordVisibility() {

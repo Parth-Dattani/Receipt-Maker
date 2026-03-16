@@ -32,7 +32,7 @@ class RegistrationForm extends GetView<AuthController> {
           ),
           const SizedBox(height: 20),
 
-          if (showFormFields) _buildFormFields(),
+          _buildFormFields(),
 
           const SizedBox(height: 30),
           Obx(() => _buildPrimaryButton(
