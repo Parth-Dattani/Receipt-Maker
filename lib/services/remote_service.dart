@@ -2237,18 +2237,29 @@ class GoogleSheetService {
       }
 
       bool needsInit = false;
-      final requiredSheets = [
-        itemSheetName,
-        invoiceSheetName,
-        invoiceItemSheetName,
-        challanSheetName,
-        challanItemSheetName,
-        purchaseSheetName,
-        purchaseItemSheetName,
-        inventoryTransactionSheetName,
-        customerSheetName,
-        companyLogoSheetName,
-      ];
+      List<String> requiredSheets = [];
+      if (AppConstants.businessType == 'Trading') {
+        requiredSheets = [
+          itemSheetName,
+          invoiceSheetName,
+          invoiceItemSheetName,
+          challanSheetName,
+          challanItemSheetName,
+          purchaseSheetName,
+          purchaseItemSheetName,
+          inventoryTransactionSheetName,
+          customerSheetName,
+          companyLogoSheetName,
+        ];
+      } else {
+        // Limited sheets for non-Trading businesses
+        requiredSheets = [
+          itemSheetName,
+          invoiceSheetName,
+          invoiceItemSheetName,
+          customerSheetName,
+        ];
+      }
 
       for (var requiredSheet in requiredSheets) {
         bool exists = false;
@@ -2554,18 +2565,30 @@ class GoogleSheetService {
 
   /// Apply blue background + white bold text to header row of all standard sheets (e.g. when sheets already exist).
   static Future<void> _applyHeaderFormatToAllSheets(SheetsApi sheetsApi) async {
-    final sheetNames = [
-      itemSheetName,
-      invoiceSheetName,
-      invoiceItemSheetName,
-      challanSheetName,
-      challanItemSheetName,
-      purchaseSheetName,
-      purchaseItemSheetName,
-      inventoryTransactionSheetName,
-      customerSheetName,
-      companyLogoSheetName,
-    ];
+    List<String> sheetNames = [];
+    if (AppConstants.businessType == 'Trading') {
+      sheetNames = [
+        itemSheetName,
+        invoiceSheetName,
+        invoiceItemSheetName,
+        challanSheetName,
+        challanItemSheetName,
+        purchaseSheetName,
+        purchaseItemSheetName,
+        inventoryTransactionSheetName,
+        customerSheetName,
+        companyLogoSheetName,
+      ];
+    } else {
+      // Limited sheets for non-Trading businesses
+      sheetNames = [
+        itemSheetName,
+        invoiceSheetName,
+        invoiceItemSheetName,
+        customerSheetName,
+      ];
+    }
+    
     for (var sheetName in sheetNames) {
       try {
         await _applyHeaderRowBlueBackground(sheetsApi, sheetName, 26);
@@ -2748,8 +2771,25 @@ class GoogleSheetService {
       int successCount = 0;
       int errorCount = 0;
 
+      // Filter sheetsConfig based on businessType
+      Map<String, List<String>> activeSheetsConfig = {};
+      if (AppConstants.businessType == 'Trading') {
+        activeSheetsConfig = sheetsConfig;
+      } else {
+        // Only include limited sheets for non-Trading businesses
+        final allowedSheets = [
+          itemSheetName,
+          invoiceSheetName,
+          invoiceItemSheetName,
+          customerSheetName,
+        ];
+        activeSheetsConfig = Map.fromEntries(
+          sheetsConfig.entries.where((entry) => allowedSheets.contains(entry.key))
+        );
+      }
+
       // Create all sheets with headers
-      for (var entry in sheetsConfig.entries) {
+      for (var entry in activeSheetsConfig.entries) {
         final sheetName = entry.key;
         final headers = entry.value;
 
@@ -2795,16 +2835,25 @@ class GoogleSheetService {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      final sheetNames = [
-        itemSheetName,
-        invoiceSheetName,
-        invoiceItemSheetName,
-        challanSheetName,
-        challanItemSheetName,
-        purchaseSheetName,
-        purchaseItemSheetName,
-        inventoryTransactionSheetName,
-      ];
+      List<String> sheetNames = [];
+      if (AppConstants.businessType == 'Trading') {
+        sheetNames = [
+          itemSheetName,
+          invoiceSheetName,
+          invoiceItemSheetName,
+          challanSheetName,
+          challanItemSheetName,
+          purchaseSheetName,
+          purchaseItemSheetName,
+          inventoryTransactionSheetName,
+        ];
+      } else {
+        sheetNames = [
+          itemSheetName,
+          invoiceSheetName,
+          invoiceItemSheetName,
+        ];
+      }
 
       Map<String, bool> status = {};
 

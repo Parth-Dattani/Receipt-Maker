@@ -400,7 +400,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   }
 
   /// Get current Google access token if user has an active Google session (for creating FY sheet in user's Drive).
-  Future<String?> _getGoogleAccessToken() async {
+  Future<String?> getGoogleAccessToken() async {
     try {
       final String? serverClientId = AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
       final String? webClientId = kIsWeb ? (AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null) : null;
@@ -511,71 +511,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
             userData['spreadsheetId'] != null &&
             (userData['spreadsheetId'].toString().trim().isNotEmpty);
 
-        // Google login: if no sheet yet, create folder + sheet in user's Drive using accessToken
-        if (!hasSpreadsheetId &&
-            accessToken != null &&
-            accessToken.trim().isNotEmpty) {
-          try {
-            final result = await GoogleSheetService.createNewUserSpreadsheet(
-              currentUser.uid,
-              accessToken: accessToken,
-              username: currentUser.displayName ??
-                  currentUser.email?.split('@').first ??
-                  'user',
-            );
-            if (result != null && result.$1.isNotEmpty) {
-              final newSpreadsheetId = result.$1;
-              AppConstants.spreadsheetId = newSpreadsheetId;
-              await sharedPreferencesHelper.storePrefData(
-                  "spreadsheetId", newSpreadsheetId);
-              final googleUsername = currentUser.displayName ??
-                  currentUser.email?.split('@').first ??
-                  'user';
-              await sharedPreferencesHelper.storePrefData(
-                  "username", googleUsername);
-              if (userDoc.exists) {
-                final fy = FinancialYearHelper.currentFy();
-                await FirebaseFirestore.instance
-                    .collection("users")
-                    .doc(currentUser.uid)
-                    .update({
-                  "spreadsheetId": newSpreadsheetId,
-                  "activeFy": fy,
-                  "spreadsheetIdsByFy": {fy: newSpreadsheetId},
-                });
-              } else {
-                await _createUserDocument(currentUser,
-                    spreadsheetId: newSpreadsheetId);
-              }
-              await Future.delayed(const Duration(seconds: 3));
-              try {
-                await GoogleSheetService.ensureSheetsExist();
-              } catch (e) {
-                print('ensureSheetsExist after Google sheet create: $e');
-                // Retry: Drive permission to Service Account can take a few seconds to propagate
-                for (int i = 0; i < 3; i++) {
-                  await Future.delayed(const Duration(seconds: 4));
-                  try {
-                    await GoogleSheetService.ensureSheetsExist();
-                    print('ensureSheetsExist retry ${i + 1} succeeded');
-                    break;
-                  } catch (e2) {
-                    print('ensureSheetsExist retry ${i + 1} failed: $e2');
-                    if (i == 2 && !_isDisposed) {
-                      showNativeSnackbar(
-                        title: "Creating tables...",
-                        message: "If Item/Customer tabs don't appear, sign out and sign in again.",
-                        isError: false,
-                      );
-                    }
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            print('createNewUserSpreadsheet (Google) failed: $e');
-          }
-        }
+        // Google login: no sheet is created here anymore. It's moved to Company Registration.
 
         if (userDoc.exists) {
           if (userData != null) {
@@ -587,6 +523,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
               AppConstants.spreadsheetId =
                   userData['spreadsheetId'].toString();
               await Future.delayed(const Duration(seconds: 3));
+
               try {
                 await GoogleSheetService.ensureSheetsExist();
               } catch (e) {
@@ -613,28 +550,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         }
       } catch (e) {
         print("Warning: Could not fetch user data from Firestore: $e");
-      }
-
-      if (AppConstants.spreadsheetId.isNotEmpty) {
-        try {
-          await GoogleSheetService.ensureSheetsExist();
-        } catch (e) {
-          print('ensureSheetsExist before navigate: $e');
-          await Future.delayed(const Duration(seconds: 4));
-          try {
-            await GoogleSheetService.ensureSheetsExist();
-            print('ensureSheetsExist before navigate retry succeeded');
-          } catch (e2) {
-            print('ensureSheetsExist before navigate retry failed: $e2');
-          }
-          if (!_isDisposed && GoogleSheetService.isProjectDeletedError(e)) {
-            showNativeSnackbar(
-              title: "Setup required",
-              message: GoogleSheetService.projectDeletedUserMessage,
-              isError: true,
-            );
-          }
-        }
       }
 
       await _checkAndNavigateAfterLogin();
@@ -829,19 +744,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (_isDisposed) return;
 
-      // Create Google Sheet for this user (client-side — no Cloud Functions, works on Spark plan)
-      String spreadsheetId = '';
-      try {
-        final result = await GoogleSheetService.createNewUserSpreadsheet(userCred.user!.uid);
-        spreadsheetId = result != null ? result.$1 : '';
-      } catch (e) {
-        print('createNewUserSpreadsheet failed: $e');
-      }
-
-      if (_isDisposed) return;
-
-      // Save user data to Firestore including spreadsheetId
-      await _saveUserDataWithRetry(userCred.user!.uid, spreadsheetId: spreadsheetId);
+      // Save user data to Firestore
+      await _saveUserDataWithRetry(userCred.user!.uid, spreadsheetId: '');
 
       if (_isDisposed) return;
 
@@ -855,16 +759,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       //await sharedPreferencesHelper.storePrefData("userId", userCred.user!.uid);
       await sharedPreferencesHelper.storePrefData("email", email);
       await sharedPreferencesHelper.storePrefData("username", regUsernameController.text.trim());
-      if (spreadsheetId.isNotEmpty) {
-        await sharedPreferencesHelper.storePrefData("spreadsheetId", spreadsheetId);
-        AppConstants.spreadsheetId = spreadsheetId;
-        // Auto-create Item, Customer, Invoice etc. tabs if missing
-        try {
-          await GoogleSheetService.ensureSheetsExist();
-        } catch (e) {
-          print('ensureSheetsExist after registration: $e');
-        }
-      }
 
       AppConstants.userId = userCred.user!.uid  ;
       _clearRegistrationForm();
@@ -1502,7 +1396,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     isLoadingFy.value = true;
     try {
       // Prefer user's Google token (creates in their Drive, same as first sheet) to avoid 403
-      String? accessToken = await _getGoogleAccessToken();
+      String? accessToken = await getGoogleAccessToken();
       final result = await GoogleSheetService.createNewSpreadsheetForFy(
         user.uid,
         email,

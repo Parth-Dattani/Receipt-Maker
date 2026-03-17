@@ -93,9 +93,15 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             const SizedBox(height: 12),
             _buildAuthorisationCard(),
             const SizedBox(height: 12),
-            _buildFeaturesCard(),
-            const SizedBox(height: 12),
-            _buildGstCard(),
+            Obx(() => controller.selectedBusinessType.value == 'Trading'
+                ? _buildFeaturesCard()
+                : const SizedBox.shrink()),
+            Obx(() => controller.selectedBusinessType.value == 'Trading'
+                ? const SizedBox(height: 12)
+                : const SizedBox.shrink()),
+            Obx(() => controller.selectedBusinessType.value == 'Trading'
+                ? _buildGstCard()
+                : const SizedBox.shrink()),
             const SizedBox(height: 30),
             _buildRegisterButton(),
             const SizedBox(height: 30),
@@ -149,9 +155,15 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                               const SizedBox(height: 16),
                               _buildAuthorisationCard(),
                               const SizedBox(height: 16),
-                              _buildFeaturesCard(),
-                              const SizedBox(height: 16),
-                              _buildGstCard(),
+                              Obx(() => controller.selectedBusinessType.value == 'Trading'
+                                  ? _buildFeaturesCard()
+                                  : const SizedBox.shrink()),
+                              Obx(() => controller.selectedBusinessType.value == 'Trading'
+                                  ? const SizedBox(height: 16)
+                                  : const SizedBox.shrink()),
+                              Obx(() => controller.selectedBusinessType.value == 'Trading'
+                                  ? _buildGstCard()
+                                  : const SizedBox.shrink()),
                             ],
                           ),
                         ),

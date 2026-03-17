@@ -354,7 +354,7 @@ class ItemScreen extends GetView<ItemController> {
     final formKey = GlobalKey<FormState>();
 
     String selectedUnit = controller.unitOptions.first;
-    double selectedGst = 5.0;
+    double selectedGst = 0.0;
     bool isActive = true;
     bool isUnlimitedStock = false;
 

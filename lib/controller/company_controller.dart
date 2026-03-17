@@ -4,14 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/controller/bash_controller.dart';
 import 'package:GetYourInvoice/screen/dashboard/dashboard_screen.dart';
 import 'package:GetYourInvoice/screen/screen.dart';
+import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../constant/app_colors.dart';
+import '../constant/app_constant.dart';
 import '../constant/constant.dart';
-import '../utils/shared_preferences_helper.dart';
 import '../widgets/custom_snackbar.dart';
+import '../utils/shared_preferences_helper.dart';
+import '../utils/financial_year_helper.dart';
 import '../services/service.dart';
 import 'controller.dart';
 
@@ -419,6 +423,48 @@ class CompanyController extends BaseController {
       }
 
       // After company registration, go to Dashboard (not Customer Registration)
+
+      // 🆕 Create Google Sheet using Service Account flow since it's missing (or user Drive if Google Token exists)
+      if (AppConstants.spreadsheetId.isEmpty) {
+        try {
+          String? accessToken;
+          try {
+            accessToken = await Get.find<AuthController>().getGoogleAccessToken();
+          } catch (_) {}
+
+          final result = await GoogleSheetService.createNewUserSpreadsheet(
+            user.uid,
+            accessToken: accessToken,
+            userEmail: user.email,
+            username: user.displayName ?? user.email?.split('@').first ?? 'user',
+          );
+          
+          if (result != null && result.$1.isNotEmpty) {
+            final newSpreadsheetId = result.$1;
+            AppConstants.spreadsheetId = newSpreadsheetId;
+            await sharedPreferencesHelper.storePrefData("spreadsheetId", newSpreadsheetId);
+            
+            final fy = FinancialYearHelper.currentFy();
+            await AppConstants.setActiveFy(fy);
+            
+            await _firestore.collection("users").doc(user.uid).update({
+              "spreadsheetId": newSpreadsheetId,
+              "activeFy": fy,
+              "spreadsheetIdsByFy": {fy: newSpreadsheetId},
+            });
+            
+            // Also update the company document with the spreadsheet ID
+            await companyRef.update({
+              "spreadsheetId": newSpreadsheetId,
+            });
+
+            await GoogleSheetService.ensureSheetsExist();
+          }
+        } catch (e) {
+          print('createNewUserSpreadsheet during company registration failed: $e');
+        }
+      }
+
       Get.offAllNamed(DashboardScreen.pageId);
 
     } catch (e) {
