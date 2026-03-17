@@ -1224,8 +1224,13 @@ class NewInvoiceController extends GetxController {
     }
   }
 
-  Future<T> _loadWithCache<T>(String cacheKey, Future<T> Function() loader) async {
-    if (_cache.containsKey(cacheKey) &&
+  Future<T> _loadWithCache<T>(
+    String cacheKey,
+    Future<T> Function() loader, {
+    bool forceReload = false,
+  }) async {
+    if (!forceReload &&
+        _cache.containsKey(cacheKey) &&
         _cacheTimestamps.containsKey(cacheKey) &&
         DateTime.now().difference(_cacheTimestamps[cacheKey]!) < _cacheDuration) {
       return _cache[cacheKey] as T;
@@ -1681,10 +1686,12 @@ class NewInvoiceController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Force reload: item list must be fresh for invoice creation,
+      // and empty cached results can otherwise block new data from showing.
       await _loadWithCache('items', () async {
-        final userId = AppConstants.userId;
-
-        List<Item> items = await GoogleSheetService.getItems(userId: userId);
+        // Spreadsheet is already scoped per user/FY, so filtering by userId can
+        // incorrectly hide items if the sheet has different/legacy userId values.
+        final List<Item> items = await GoogleSheetService.getItems(userId: null);
 
         itemList.assignAll(items);
 
@@ -1707,7 +1714,7 @@ class NewInvoiceController extends GetxController {
         }
 
         return null;
-      });
+      }, forceReload: true);
 
     } catch (e) {
       print("❌ Failed to load items: $e");

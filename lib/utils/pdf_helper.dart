@@ -868,9 +868,9 @@ class InvoiceHelper {
           ? 'Tax Invoice'
           : documentTitle;
 
-      // ── Fetch selected PDF template and logo position from Firestore (company document)
+      // ── Fetch selected PDF template from Firestore (company document)
+      // Logo layout is controlled by the template ID (Center is default).
       String selectedPdfTemplate = 'Classic';
-      String logoPosition = 'Center';
       try {
         final user = FirebaseAuth.instance.currentUser;
         final companyId = AppConstants.companyId;
@@ -883,17 +883,26 @@ class InvoiceHelper {
               .get();
           final data = doc.data();
           final t = data?['selectedPdfTemplate']?.toString();
-          if (t == 'Modern' || t == 'Classic' || t == 'Minimal' || t == 'Professional' || t == 'Elegant') {
+          if (t == 'Modern' ||
+              t == 'Classic' ||
+              t == 'ClassicLeftLogo' ||
+              t == 'ClassicRightLogo' ||
+              t == 'Minimal' ||
+              t == 'Professional' ||
+              t == 'Elegant') {
             selectedPdfTemplate = t!;
-          }
-          final pos = data?['companyLogoPosition']?.toString();
-          if (pos == 'Left' || pos == 'Center' || pos == 'Right' || pos == 'TopLeft' || pos == 'TopCenter') {
-            logoPosition = pos!;
           }
         }
       } catch (_) {}
 
-      // ── Theme colors by template only (logo position is separate)
+      // Logo layout derived from selectedPdfTemplate (no separate setting).
+      final String logoPosition = (selectedPdfTemplate == 'ClassicLeftLogo')
+          ? 'Left'
+          : (selectedPdfTemplate == 'ClassicRightLogo')
+              ? 'Right'
+              : 'Center';
+
+      // ── Theme colors by template only
       final PdfColor primaryColor;
       final PdfColor headerBgColor;
       final PdfColor tableHeaderBg;
@@ -923,6 +932,8 @@ class InvoiceHelper {
           tableHeaderBg = PdfColor.fromHex('#4527A0');
           dividerColor = PdfColor.fromHex('#4527A0');
           break;
+        case 'ClassicLeftLogo':
+        case 'ClassicRightLogo':
         default: // Classic
           primaryColor = maroon;
           headerBgColor = beigeBox;
@@ -7222,82 +7233,117 @@ class InvoiceHelper {
       if (companyPan.isNotEmpty && companyPan != 'PAN Number') 'PAN: $companyPan',
     ].join(' - ');
 
+    pw.Widget logoBox({
+      required double width,
+      required double height,
+      pw.EdgeInsets? margin,
+    }) {
+      if (logoBytes == null) return pw.SizedBox.shrink();
+      return pw.Container(
+        width: width,
+        height: height,
+        margin: margin,
+        padding: const pw.EdgeInsets.all(3),
+        child: pw.Image(
+          pw.MemoryImage(logoBytes),
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    }
+
     switch (logoPosition) {
       case 'Left':
+        // Left: larger logo (140x100) so it's visible like Center; details in Expanded.
         return pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            if (logoBytes != null)
-              pw.Container(
-                width: 80,
-                height: 60,
-                margin: pw.EdgeInsets.only(right: 12),
-                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.SizedBox(
+                width: 140,
+                height: 100,
+                child: logoBytes == null
+                    ? pw.SizedBox.shrink()
+                    : pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
               ),
-            pw.Expanded(child: companyInfoColumn()),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(child: companyInfoColumn(align: pw.CrossAxisAlignment.start)),
           ],
         );
       case 'Right':
+        // Right: larger logo (140x100); details Expanded on left.
         return pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Expanded(child: companyInfoColumn()),
-            if (logoBytes != null)
-              pw.Container(
-                width: 80,
-                height: 60,
-                margin: pw.EdgeInsets.only(left: 12),
-                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
-              ),
-          ],
-        );
-      case 'TopLeft':
-        return pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            if (logoBytes != null)
-              pw.Container(
-                width: 48,
-                height: 48,
-                margin: pw.EdgeInsets.only(right: 10),
-                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
-              ),
-            pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                mainAxisSize: pw.MainAxisSize.min,
-                children: [
-                  pw.Text(companyName.toUpperCase(),
-                      style: pw.TextStyle(color: primaryColor, fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 2),
-                  if (addressLine.trim().isNotEmpty)
-                    pw.Text(addressLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
-                  if (contactLine.isNotEmpty)
-                    pw.Text(contactLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
-                  if (gstPanLine.isNotEmpty)
-                    pw.Text(gstPanLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
-                ],
+            pw.Expanded(child: companyInfoColumn(align: pw.CrossAxisAlignment.start)),
+            pw.SizedBox(width: 12),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.SizedBox(
+                width: 140,
+                height: 100,
+                child: logoBytes == null
+                    ? pw.SizedBox.shrink()
+                    : pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
               ),
             ),
           ],
         );
+      case 'TopLeft':
+        // TopLeft: larger logo (100x100) so it's not too small; space below for TO section.
+        return pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                logoBox(
+                  width: 100,
+                  height: 100,
+                  margin: const pw.EdgeInsets.only(right: 16),
+                ),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        companyName.toUpperCase(),
+                        style: pw.TextStyle(color: primaryColor, fontSize: 14, fontWeight: pw.FontWeight.bold),
+                        textAlign: pw.TextAlign.left,
+                      ),
+                      pw.SizedBox(height: 2),
+                      if (addressLine.trim().isNotEmpty)
+                        pw.Text(addressLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                      if (contactLine.isNotEmpty)
+                        pw.Text(contactLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                      if (gstPanLine.isNotEmpty)
+                        pw.Text(gstPanLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+          ],
+        );
       case 'TopCenter':
+        // TopCenter: larger logo (120x100) so it's visible; space below for TO section.
         return pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
           children: [
             if (logoBytes != null)
-              pw.Center(
-                child: pw.Container(
-                  width: 70,
-                  height: 70,
-                  child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
-                ),
-              )
+              pw.Center(child: logoBox(width: 120, height: 100))
             else
               pw.Center(
-                child: pw.Text(companyName.toUpperCase(),
-                    style: pw.TextStyle(color: primaryColor, fontSize: 20, fontWeight: pw.FontWeight.bold),
-                    textAlign: pw.TextAlign.center),
+                child: pw.Text(
+                  companyName.toUpperCase(),
+                  style: pw.TextStyle(color: primaryColor, fontSize: 20, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center,
+                ),
               ),
             pw.SizedBox(height: 6),
             pw.Center(
@@ -7307,9 +7353,11 @@ class InvoiceHelper {
                 textAlign: pw.TextAlign.center,
               ),
             ),
+            pw.SizedBox(height: 10),
           ],
         );
       default: // Center
+        // Restore original Center layout (full-width centered logo + address block).
         return pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
           children: [
@@ -7323,9 +7371,11 @@ class InvoiceHelper {
               )
             else
               pw.Center(
-                child: pw.Text(companyName.toUpperCase(),
-                    style: pw.TextStyle(color: primaryColor, fontSize: 22, fontWeight: pw.FontWeight.bold),
-                    textAlign: pw.TextAlign.center),
+                child: pw.Text(
+                  companyName.toUpperCase(),
+                  style: pw.TextStyle(color: primaryColor, fontSize: 22, fontWeight: pw.FontWeight.bold),
+                  textAlign: pw.TextAlign.center,
+                ),
               ),
             pw.SizedBox(height: 6),
             pw.Center(

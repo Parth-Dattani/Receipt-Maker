@@ -43,8 +43,6 @@ class SettingsScreen extends GetView<SettingsController> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildLogoPosition(),
-                        SizedBox(height: 20),
                         _buildInvoiceThemes(),
                         SizedBox(height: 20),
                         _buildFinancialYearSettings(),
@@ -109,96 +107,13 @@ class SettingsScreen extends GetView<SettingsController> {
     );
   }
 
-  Widget _buildLogoPosition() {
-    final settings = Get.find<SettingsController>();
-    const positions = [
-      {'id': 'Left', 'label': 'Left', 'subtitle': 'Logo on left, details right', 'icon': Icons.format_align_left},
-      {'id': 'Center', 'label': 'Center', 'subtitle': 'Logo & details centered', 'icon': Icons.format_align_center},
-      {'id': 'Right', 'label': 'Right', 'subtitle': 'Logo on right, details left', 'icon': Icons.format_align_right},
-      {'id': 'TopLeft', 'label': 'Top Left', 'subtitle': 'Small logo top-left', 'icon': Icons.crop_square},
-      {'id': 'TopCenter', 'label': 'Top Center', 'subtitle': 'Logo centered at top', 'icon': Icons.vertical_align_top},
-    ];
-    return _buildSettingsCard(
-      icon: Icons.image_outlined,
-      title: 'Company Logo Position',
-      children: [
-        Text(
-          'Where to show your company logo on the invoice PDF.',
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-        ),
-        SizedBox(height: 16),
-        Obx(() {
-          if (settings.isLoadingLogoPosition.value) {
-            return Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()));
-          }
-          return Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: positions.map((p) {
-              final id = p['id'] as String;
-              final isSelected = settings.selectedLogoPosition.value == id;
-              return InkWell(
-                onTap: () => settings.updateLogoPosition(id),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 100,
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.tealColor.withOpacity(0.12) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? AppColors.tealColor : Colors.grey.shade300,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(p['icon'] as IconData, size: 32, color: isSelected ? AppColors.tealColor : Colors.grey.shade600),
-                          if (isSelected)
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Container(
-                                padding: EdgeInsets.all(3),
-                                decoration: BoxDecoration(color: AppColors.tealColor, shape: BoxShape.circle),
-                                child: Icon(Icons.check, size: 12, color: Colors.white),
-                              ),
-                            ),
-                        ],
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        p['label'] as String,
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.grey.shade800),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        p['subtitle'] as String,
-                        style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          );
-        }),
-      ],
-    );
-  }
-
   Widget _buildInvoiceThemes() {
     final settings = Get.find<SettingsController>();
     const themes = [
       {'id': 'Modern', 'label': 'Modern', 'subtitle': 'Teal, clean lines', 'icon': Icons.dashboard_rounded, 'color': Color(0xFF00897B)},
-      {'id': 'Classic', 'label': 'Classic', 'subtitle': 'Maroon & beige', 'icon': Icons.receipt_long, 'color': Color(0xFF8B0000)},
+      {'id': 'Classic', 'label': 'Classic', 'subtitle': 'Maroon & beige (Center logo)', 'icon': Icons.receipt_long, 'color': Color(0xFF8B0000)},
+      {'id': 'ClassicLeftLogo', 'label': 'Classic (Logo Left)', 'subtitle': 'Maroon & beige', 'icon': Icons.format_align_left, 'color': Color(0xFF8B0000)},
+      {'id': 'ClassicRightLogo', 'label': 'Classic (Logo Right)', 'subtitle': 'Maroon & beige', 'icon': Icons.format_align_right, 'color': Color(0xFF8B0000)},
       {'id': 'Minimal', 'label': 'Minimal', 'subtitle': 'Grey, simple', 'icon': Icons.filter_b_and_w, 'color': Color(0xFF424242)},
       {'id': 'Professional', 'label': 'Professional', 'subtitle': 'Blue, corporate', 'icon': Icons.business_center, 'color': Color(0xFF1565C0)},
       {'id': 'Elegant', 'label': 'Elegant', 'subtitle': 'Deep purple', 'icon': Icons.auto_awesome, 'color': Color(0xFF4527A0)},
@@ -208,7 +123,7 @@ class SettingsScreen extends GetView<SettingsController> {
       title: 'Invoice Themes',
       children: [
         Text(
-          'Choose how your invoice PDF looks. This applies when you print or share.',
+          'Choose how your invoice PDF looks. Logo layout is controlled here (default is Center).',
           style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         SizedBox(height: 16),

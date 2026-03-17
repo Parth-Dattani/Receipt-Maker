@@ -10,16 +10,12 @@ import '../screen/setting/widgets/widgets.dart';
 /// PDF template IDs stored in Firestore company document (selectedPdfTemplate).
 const String kPdfTemplateModern = 'Modern';
 const String kPdfTemplateClassic = 'Classic';
+/// Classic variants that also control logo layout (replaces Logo Position setting).
+const String kPdfTemplateClassicLeftLogo = 'ClassicLeftLogo';
+const String kPdfTemplateClassicRightLogo = 'ClassicRightLogo';
 const String kPdfTemplateMinimal = 'Minimal';
 const String kPdfTemplateProfessional = 'Professional';
 const String kPdfTemplateElegant = 'Elegant';
-
-/// Logo position on invoice PDF (companyLogoPosition).
-const String kLogoPositionLeft = 'Left';
-const String kLogoPositionCenter = 'Center';
-const String kLogoPositionRight = 'Right';
-const String kLogoPositionTopLeft = 'TopLeft';
-const String kLogoPositionTopCenter = 'TopCenter';
 
 class SettingsController extends GetxController {
   // Observable variables
@@ -37,10 +33,6 @@ class SettingsController extends GetxController {
   /// Invoice PDF theme (5 options). Saved in Firestore company doc.
   var selectedPdfTemplate = kPdfTemplateClassic.obs;
   var isLoadingPdfTemplate = false.obs;
-
-  /// Company logo position on invoice: Left, Center, Right, TopLeft, TopCenter.
-  var selectedLogoPosition = kLogoPositionCenter.obs;
-  var isLoadingLogoPosition = false.obs;
 
   // Form controllers
   final currencyController = TextEditingController();
@@ -129,13 +121,10 @@ class SettingsController extends GetxController {
   static const _validTemplates = [
     kPdfTemplateModern, kPdfTemplateClassic, kPdfTemplateMinimal,
     kPdfTemplateProfessional, kPdfTemplateElegant,
-  ];
-  static const _validLogoPositions = [
-    kLogoPositionLeft, kLogoPositionCenter, kLogoPositionRight,
-    kLogoPositionTopLeft, kLogoPositionTopCenter,
+    kPdfTemplateClassicLeftLogo, kPdfTemplateClassicRightLogo,
   ];
 
-  /// Load selectedPdfTemplate and companyLogoPosition from Firestore company document.
+  /// Load selectedPdfTemplate from Firestore company document.
   Future<void> loadPdfTemplateFromFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     final companyId = AppConstants.companyId;
@@ -152,10 +141,6 @@ class SettingsController extends GetxController {
         final v = data?['selectedPdfTemplate']?.toString();
         if (v != null && _validTemplates.contains(v)) {
           selectedPdfTemplate.value = v;
-        }
-        final pos = data?['companyLogoPosition']?.toString();
-        if (pos != null && _validLogoPositions.contains(pos)) {
-          selectedLogoPosition.value = pos;
         }
       }
     } catch (e) {
@@ -190,36 +175,6 @@ class SettingsController extends GetxController {
       Get.snackbar('Error', 'Could not save theme', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
     } finally {
       isLoadingPdfTemplate.value = false;
-    }
-  }
-
-  /// Save company logo position to Firestore company document.
-  Future<void> updateLogoPosition(String position) async {
-    if (!_validLogoPositions.contains(position)) return;
-    final user = FirebaseAuth.instance.currentUser;
-    final companyId = AppConstants.companyId;
-    if (user == null || companyId.isEmpty) return;
-    isLoadingLogoPosition.value = true;
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('companies')
-          .doc(companyId)
-          .update({'companyLogoPosition': position});
-      selectedLogoPosition.value = position;
-      Get.snackbar(
-        'Logo position',
-        'Set to $position',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade100,
-        colorText: Colors.green.shade800,
-      );
-    } catch (e) {
-      print('updateLogoPosition: $e');
-      Get.snackbar('Error', 'Could not save logo position', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
-    } finally {
-      isLoadingLogoPosition.value = false;
     }
   }
 

@@ -1883,6 +1883,12 @@ class GoogleSheetService {
   static final Map<String, List<InvoiceItem>> _invoiceItemCache = {};
   static final Map<String, List<PurchaseItem>> _purchaseItemCache = {};
 
+  // Cache sheet titles to avoid frequent spreadsheets.get (quota heavy).
+  static String? _sheetTitlesForSpreadsheetId;
+  static Set<String> _cachedSheetTitles = <String>{};
+  static DateTime? _sheetTitlesFetchedAt;
+  static const Duration _sheetTitlesCacheDuration = Duration(minutes: 10);
+
   static final Map<String, List<dynamic>> _itemCache = {};
   static final Map<String, DateTime> _cacheTimestamps = {};
   static final Map<String, List<Invoice>> _invoiceListCache = {};
@@ -2308,21 +2314,45 @@ class GoogleSheetService {
     try {
       print("🔍 Checking if sheet '$sheetName' exists in spreadsheet: $spreadsheetId");
 
+      // Reset cache if spreadsheet changed.
+      if (_sheetTitlesForSpreadsheetId != spreadsheetId) {
+        _sheetTitlesForSpreadsheetId = spreadsheetId;
+        _cachedSheetTitles = <String>{};
+        _sheetTitlesFetchedAt = null;
+      }
+
+      // Use cached titles when fresh (cuts quota usage a lot).
+      final now = DateTime.now();
+      if (_sheetTitlesFetchedAt != null &&
+          now.difference(_sheetTitlesFetchedAt!) < _sheetTitlesCacheDuration &&
+          _cachedSheetTitles.isNotEmpty) {
+        final exists = _cachedSheetTitles.contains(sheetName);
+        print("⚡ Sheet title cache hit: '$sheetName' exists=$exists");
+        return exists;
+      }
+
       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
 
       print("📊 Spreadsheet access successful!");
       print("   Title: ${spreadsheet.properties?.title}");
       print("   Total sheets: ${spreadsheet.sheets?.length ?? 0}");
 
+      _cachedSheetTitles = <String>{};
       for (var sheet in spreadsheet.sheets ?? []) {
         print("   - Sheet found: ${sheet.properties?.title}");
+        final title = sheet.properties?.title;
+        if (title != null && title.trim().isNotEmpty) {
+          _cachedSheetTitles.add(title);
+        }
         if (sheet.properties?.title == sheetName) {
           print("✅ Sheet '$sheetName' exists");
+          _sheetTitlesFetchedAt = DateTime.now();
           return true;
         }
       }
 
       print("⚠️ Sheet '$sheetName' does not exist");
+      _sheetTitlesFetchedAt = DateTime.now();
       return false;
     } catch (e) {
       if (e.toString().contains('404')) {
@@ -2419,9 +2449,64 @@ class GoogleSheetService {
       await sheetsApi.spreadsheets.batchUpdate(request, spreadsheetId);
 
       print("✅ Sheet '$sheetName' created successfully");
+      if (_sheetTitlesForSpreadsheetId == spreadsheetId) {
+        _cachedSheetTitles.add(sheetName);
+        _sheetTitlesFetchedAt ??= DateTime.now();
+      }
     } catch (e) {
+      // Sheets API returns 400 if a sheet with the same title already exists.
+      // Treat that case as success to make sheet creation idempotent.
+      final msg = e.toString();
+      if (msg.contains('already exists') &&
+          msg.contains('addSheet') &&
+          msg.contains(sheetName)) {
+        print("ℹ️ Sheet '$sheetName' already exists. Skipping creation.");
+        if (_sheetTitlesForSpreadsheetId == spreadsheetId) {
+          _cachedSheetTitles.add(sheetName);
+          _sheetTitlesFetchedAt ??= DateTime.now();
+        }
+        return;
+      }
       print("❌ Error creating sheet '$sheetName': $e");
       rethrow;
+    }
+  }
+
+  static bool _isQuotaOrRateLimitError(Object e) {
+    final s = e.toString().toLowerCase();
+    return s.contains(' 429') ||
+        s.contains('status: 429') ||
+        s.contains('quota exceeded') ||
+        s.contains('rate limit') ||
+        s.contains('user-rate limit') ||
+        s.contains('ratelimitexceeded');
+  }
+
+  static bool _isServiceUnavailableError(Object e) {
+    final s = e.toString().toLowerCase();
+    return s.contains(' 503') || s.contains('status: 503') || s.contains('service unavailable');
+  }
+
+  static Future<T> _withSheetsRetry<T>(
+    Future<T> Function() op, {
+    String? opName,
+    int maxAttempts = 5,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        return await op();
+      } catch (e) {
+        final retriable = _isQuotaOrRateLimitError(e) || _isServiceUnavailableError(e);
+        if (!retriable || attempt >= maxAttempts) rethrow;
+
+        // Exponential backoff with a small cap to avoid long UI freezes.
+        final delayMs = (500 * (1 << (attempt - 1))).clamp(500, 8000);
+        print("⚠️ Sheets API throttled${opName != null ? ' ($opName)' : ''}. "
+            "Retrying in ${delayMs}ms (attempt $attempt/$maxAttempts)...");
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
     }
   }
 
@@ -2461,10 +2546,19 @@ class GoogleSheetService {
       ) async {
     try {
       // Step 1: Check if sheet exists, if not create it
-      final sheetExists = await _sheetExists(sheetsApi, sheetName);
+      final sheetExists = await _withSheetsRetry(
+        () => _sheetExists(sheetsApi, sheetName),
+        opName: "sheetExists:$sheetName",
+      );
+      bool createdSheet = false;
+      bool createdOrUpdatedHeaders = false;
 
       if (!sheetExists) {
-        await _createSheet(sheetsApi, sheetName);
+        await _withSheetsRetry(
+          () => _createSheet(sheetsApi, sheetName),
+          opName: "createSheet:$sheetName",
+        );
+        createdSheet = true;
         // Wait a moment for sheet creation to propagate
         await Future.delayed(Duration(milliseconds: 500));
       }
@@ -2473,21 +2567,25 @@ class GoogleSheetService {
       List<dynamic> headers = [];
 
       try {
-        final headerResponse = await sheetsApi.spreadsheets.values.get(
-          spreadsheetId,
-          "$sheetName!1:1",
+        final headerResponse = await _withSheetsRetry(
+          () => sheetsApi.spreadsheets.values.get(spreadsheetId, "$sheetName!1:1"),
+          opName: "getHeaders:$sheetName",
         );
 
         if (headerResponse.values == null || headerResponse.values!.isEmpty) {
           print("⚠️ Creating headers for $sheetName sheet...");
           headers = expectedHeaders;
+          createdOrUpdatedHeaders = true;
 
           // Create header row
-          await sheetsApi.spreadsheets.values.update(
-            ValueRange.fromJson({"values": [headers]}),
-            spreadsheetId,
-            "$sheetName!A1",
-            valueInputOption: "USER_ENTERED",
+          await _withSheetsRetry(
+            () => sheetsApi.spreadsheets.values.update(
+              ValueRange.fromJson({"values": [headers]}),
+              spreadsheetId,
+              "$sheetName!A1",
+              valueInputOption: "USER_ENTERED",
+            ),
+            opName: "updateHeaders:$sheetName",
           );
 
           print("✅ Headers created for $sheetName: $headers");
@@ -2499,19 +2597,30 @@ class GoogleSheetService {
         // If error reading headers, create them
         print("⚠️ Error reading headers, creating new ones: $e");
         headers = expectedHeaders;
+        createdOrUpdatedHeaders = true;
 
-        await sheetsApi.spreadsheets.values.update(
-          ValueRange.fromJson({"values": [headers]}),
-          spreadsheetId,
-          "$sheetName!A1",
-          valueInputOption: "USER_ENTERED",
+        await _withSheetsRetry(
+          () => sheetsApi.spreadsheets.values.update(
+            ValueRange.fromJson({"values": [headers]}),
+            spreadsheetId,
+            "$sheetName!A1",
+            valueInputOption: "USER_ENTERED",
+          ),
+          opName: "updateHeadersCatch:$sheetName",
         );
 
         print("✅ Headers created for $sheetName: $headers");
       }
 
-      // Apply blue background to header row (row 0) in all sheets
-      await _applyHeaderRowBlueBackground(sheetsApi, sheetName, (headers as List).length);
+      // Applying formatting requires extra spreadsheet metadata calls. Do it only when
+      // we actually created the sheet or created/updated headers to reduce quota usage.
+      if (createdSheet || createdOrUpdatedHeaders) {
+        await _withSheetsRetry(
+          () => _applyHeaderRowBlueBackground(sheetsApi, sheetName, (headers as List).length),
+          opName: "formatHeaders:$sheetName",
+          maxAttempts: 3,
+        );
+      }
 
       return headers;
     } catch (e) {
@@ -3076,12 +3185,51 @@ class GoogleSheetService {
       final sheetsApi = SheetsApi(client);
 
       print("---------========Sheets API Get Items...........-----");
+      print("📋 Spreadsheet ID: $spreadsheetId | Sheet: $itemSheetName | Filter userId: '${userId ?? ''}'");
+
+      // Ensure sheet + headers exist (and auto-create if missing) so we don't read empty/missing sheets.
+      final expectedHeaders = [
+        'itemId',
+        'itemName',
+        'price',
+        'sellPrice',
+        'gstPercent',
+        'unitOfMeasurement',
+        'currentStock',
+        'detailRequirement',
+        'isActive',
+        'userId',
+        'createdAt',
+        'updatedAt',
+      ];
+      await _withSheetsRetry(
+        () => _getOrCreateSheetAndHeaders(sheetsApi, itemSheetName, expectedHeaders),
+        opName: "ensureItemSheetAndHeaders",
+      );
 
       // 1. Get Headers first to map columns dynamically
-      final headerResponse = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        "$itemSheetName!1:1",
-      );
+      String activeSheetName = itemSheetName;
+      ValueRange headerResponse;
+      try {
+        headerResponse = await _withSheetsRetry(
+          () => sheetsApi.spreadsheets.values.get(spreadsheetId, "$itemSheetName!1:1"),
+          opName: "getItemHeaders",
+        );
+      } catch (e) {
+        // Fallback: some older sheets may have tab named "Items".
+        if (e.toString().toLowerCase().contains('unable to parse range') ||
+            e.toString().toLowerCase().contains('notfound')) {
+          const altName = "Items";
+          print("⚠️ Could not read '$itemSheetName' headers. Trying fallback sheet '$altName'...");
+          activeSheetName = altName;
+          headerResponse = await _withSheetsRetry(
+            () => sheetsApi.spreadsheets.values.get(spreadsheetId, "$altName!1:1"),
+            opName: "getItemHeadersFallback",
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       if (headerResponse.values == null || headerResponse.values!.isEmpty) {
         print("No headers found in Item sheet");
@@ -3093,10 +3241,28 @@ class GoogleSheetService {
           .toList();
 
       // 2. Get Data (Start from Row 2)
-      final response = await sheetsApi.spreadsheets.values.get(
-        spreadsheetId,
-        "$itemSheetName!A2:Z",
+      ValueRange response = await _withSheetsRetry(
+        () => sheetsApi.spreadsheets.values.get(spreadsheetId, "$activeSheetName!A2:Z"),
+        opName: "getItemRows:$activeSheetName",
       );
+
+      // If the "Item" tab exists but has no rows, older workbooks may store data in "Items".
+      if ((response.values == null || response.values!.isEmpty) && activeSheetName == itemSheetName) {
+        const altName = "Items";
+        print("⚠️ '$activeSheetName' has no rows. Trying data fallback sheet '$altName'...");
+        try {
+          final alt = await _withSheetsRetry(
+            () => sheetsApi.spreadsheets.values.get(spreadsheetId, "$altName!A2:Z"),
+            opName: "getItemRowsFallback:$altName",
+            maxAttempts: 3,
+          );
+          if (alt.values != null && alt.values!.isNotEmpty) {
+            activeSheetName = altName;
+            response = alt;
+            print("✅ Using '$activeSheetName' for item rows (fallback worked).");
+          }
+        } catch (_) {}
+      }
 
       print("Response values length: ${response.values?.length ?? 0}");
 
@@ -3105,7 +3271,13 @@ class GoogleSheetService {
         return <Item>[];
       }
 
+      // Parse all rows first, then filter (helps debug + avoids over-filtering).
+      List<Item> allItems = [];
       List<Item> items = [];
+      int totalParsed = 0;
+      int matchedByUser = 0;
+      int includedEmptyUserId = 0;
+      int mismatchedUserId = 0;
 
       for (int i = 0; i < response.values!.length; i++) {
         final row = response.values![i];
@@ -3143,11 +3315,22 @@ class GoogleSheetService {
             isActive: isActive,
           );
 
+          totalParsed++;
+          allItems.add(item);
+
           // Filter by userId if provided (trim both to avoid mismatch from spaces)
           if (userId != null && userId.isNotEmpty) {
             String rowUserId = (rowMap['userid'] ?? '').toString().trim();
             if (rowUserId == userId.trim()) {
               items.add(item);
+              matchedByUser++;
+            } else if (rowUserId.isEmpty) {
+              // Backward-compat: older rows might not have userId populated.
+              // In that case, include them for the currently logged-in user.
+              items.add(item);
+              includedEmptyUserId++;
+            } else {
+              mismatchedUserId++;
             }
           } else {
             // No filter, add all items
@@ -3161,7 +3344,19 @@ class GoogleSheetService {
         }
       }
 
-      print("✅ Retrieved ${items.length} items from Google Sheet");
+      // If we parsed rows but userId filter removed everything, show all items instead.
+      if ((userId != null && userId.isNotEmpty) && items.isEmpty && allItems.isNotEmpty) {
+        print("⚠️ Items parsed ($totalParsed) but 0 after userId filter. "
+            "Returning all items (likely userId mismatch in sheet).");
+        items = allItems;
+      }
+
+      if (userId != null && userId.isNotEmpty) {
+        print("✅ Retrieved ${items.length} items from Google Sheet "
+            "(sheet=$activeSheetName, totalParsed=$totalParsed, matchedByUser=$matchedByUser, includedEmptyUserId=$includedEmptyUserId, mismatchedUserId=$mismatchedUserId)");
+      } else {
+        print("✅ Retrieved ${items.length} items from Google Sheet (sheet=$activeSheetName, totalParsed=$totalParsed)");
+      }
       return items;
 
     } catch (e) {
@@ -3657,10 +3852,9 @@ class GoogleSheetService {
       ];
 
       // ✅ Ensure sheet and headers exist (auto-create if missing)
-      final headers = await _getOrCreateHeaders(
-        sheetsApi,
-        invoiceSheetName,
-        expectedHeaders,
+      final headers = await _withSheetsRetry(
+        () => _getOrCreateHeaders(sheetsApi, invoiceSheetName, expectedHeaders),
+        opName: "ensureInvoiceSheetAndHeaders",
       );
 
       final DateFormat _dateFormatter = DateFormat('dd/MM/yyyy HH:mm:ss');
@@ -3703,11 +3897,14 @@ class GoogleSheetService {
       // Append to Google Sheet
       final valueRange = ValueRange.fromJson({"values": rowsToAdd});
 
-      await sheetsApi.spreadsheets.values.append(
-        valueRange,
-        spreadsheetId,
-        "$invoiceSheetName!A:Z",
-        valueInputOption: "USER_ENTERED",
+      await _withSheetsRetry(
+        () => sheetsApi.spreadsheets.values.append(
+          valueRange,
+          spreadsheetId,
+          "$invoiceSheetName!A:Z",
+          valueInputOption: "USER_ENTERED",
+        ),
+        opName: "appendInvoiceRows",
       );
 
       print("✅ Invoice(s) added successfully to Google Sheet");
