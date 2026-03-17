@@ -3456,6 +3456,11 @@ class GoogleSheetService {
     print("🗑️ Cleared invoice list cache");
   }
 
+  /// Call when switching financial year so dashboard and lists load data from the new sheet instead of cached data.
+  static void clearInvoiceListCacheForNewFy() {
+    _clearInvoiceListCache();
+  }
+
   static Future<List<Invoice>> getInvoices({String? type}) async {
     final cacheKey = '${_invoiceListCacheKeyPrefix}${type ?? 'all'}';
     final now = DateTime.now();

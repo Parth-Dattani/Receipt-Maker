@@ -1,8 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../constant/constant.dart';
 import '../controller/controller.dart';
 import '../screen/setting/widgets/widgets.dart';
+
+/// PDF template IDs stored in Firestore company document (selectedPdfTemplate).
+const String kPdfTemplateModern = 'Modern';
+const String kPdfTemplateClassic = 'Classic';
+const String kPdfTemplateMinimal = 'Minimal';
+const String kPdfTemplateProfessional = 'Professional';
+const String kPdfTemplateElegant = 'Elegant';
+
+/// Logo position on invoice PDF (companyLogoPosition).
+const String kLogoPositionLeft = 'Left';
+const String kLogoPositionCenter = 'Center';
+const String kLogoPositionRight = 'Right';
+const String kLogoPositionTopLeft = 'TopLeft';
+const String kLogoPositionTopCenter = 'TopCenter';
 
 class SettingsController extends GetxController {
   // Observable variables
@@ -16,6 +33,14 @@ class SettingsController extends GetxController {
   var selectedLanguage = 'English'.obs;
   var termsAndConditions = ''.obs;
   var selectedTemplate = 1.obs;
+
+  /// Invoice PDF theme (5 options). Saved in Firestore company doc.
+  var selectedPdfTemplate = kPdfTemplateClassic.obs;
+  var isLoadingPdfTemplate = false.obs;
+
+  /// Company logo position on invoice: Left, Center, Right, TopLeft, TopCenter.
+  var selectedLogoPosition = kLogoPositionCenter.obs;
+  var isLoadingLogoPosition = false.obs;
 
   // Form controllers
   final currencyController = TextEditingController();
@@ -98,6 +123,104 @@ class SettingsController extends GetxController {
     try {
       Get.find<AuthController>().loadUserFyData();
     } catch (_) {}
+    loadPdfTemplateFromFirestore();
+  }
+
+  static const _validTemplates = [
+    kPdfTemplateModern, kPdfTemplateClassic, kPdfTemplateMinimal,
+    kPdfTemplateProfessional, kPdfTemplateElegant,
+  ];
+  static const _validLogoPositions = [
+    kLogoPositionLeft, kLogoPositionCenter, kLogoPositionRight,
+    kLogoPositionTopLeft, kLogoPositionTopCenter,
+  ];
+
+  /// Load selectedPdfTemplate and companyLogoPosition from Firestore company document.
+  Future<void> loadPdfTemplateFromFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data();
+        final v = data?['selectedPdfTemplate']?.toString();
+        if (v != null && _validTemplates.contains(v)) {
+          selectedPdfTemplate.value = v;
+        }
+        final pos = data?['companyLogoPosition']?.toString();
+        if (pos != null && _validLogoPositions.contains(pos)) {
+          selectedLogoPosition.value = pos;
+        }
+      }
+    } catch (e) {
+      print('loadPdfTemplateFromFirestore: $e');
+    }
+  }
+
+  /// Save selected PDF theme to Firestore company document.
+  Future<void> updatePdfTemplate(String template) async {
+    if (!_validTemplates.contains(template)) return;
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    isLoadingPdfTemplate.value = true;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .update({'selectedPdfTemplate': template});
+      selectedPdfTemplate.value = template;
+      Get.snackbar(
+        'Invoice theme',
+        'Set to $template',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+      );
+    } catch (e) {
+      print('updatePdfTemplate: $e');
+      Get.snackbar('Error', 'Could not save theme', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+    } finally {
+      isLoadingPdfTemplate.value = false;
+    }
+  }
+
+  /// Save company logo position to Firestore company document.
+  Future<void> updateLogoPosition(String position) async {
+    if (!_validLogoPositions.contains(position)) return;
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    isLoadingLogoPosition.value = true;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .update({'companyLogoPosition': position});
+      selectedLogoPosition.value = position;
+      Get.snackbar(
+        'Logo position',
+        'Set to $position',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+      );
+    } catch (e) {
+      print('updateLogoPosition: $e');
+      Get.snackbar('Error', 'Could not save logo position', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+    } finally {
+      isLoadingLogoPosition.value = false;
+    }
   }
 
   void loadSettings() async {

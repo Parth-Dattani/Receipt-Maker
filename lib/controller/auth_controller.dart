@@ -1435,6 +1435,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       });
       fyList.assignAll(byFy.keys.toList()..sort());
       activeFyValue.value = fy;
+      GoogleSheetService.clearInvoiceListCacheForNewFy();
       try {
         await Get.find<DashboardController>().refreshDashboard();
       } catch (_) {}
@@ -1473,6 +1474,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       await AppConstants.setActiveFy(fy);
       activeFyValue.value = fy;
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({'activeFy': fy, 'spreadsheetId': id});
+      // Clear invoice cache so dashboard loads data from the new FY sheet, not old cached data.
+      GoogleSheetService.clearInvoiceListCacheForNewFy();
       try {
         await Get.find<DashboardController>().refreshDashboard();
       } catch (_) {}

@@ -1,5 +1,3 @@
-import 'package:country_pickers/country.dart';
-import 'package:country_pickers/country_picker_dropdown.dart';
 import 'package:GetYourInvoice/constant/constant.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -7,7 +5,6 @@ import 'package:get/get.dart';
 import 'dart:convert';
 
 import '../../controller/controller.dart';
-import '../../utils/shared_preferences_helper.dart';
 import '../../widgets/widgets.dart';
 import '../../widgets/web_screen_wrapper.dart';
 

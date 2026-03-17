@@ -2,6 +2,8 @@ import 'dart:io' as io;
 import 'dart:convert';
 import 'dart:ui';
 import 'package:GetYourInvoice/utils/calculations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -866,6 +868,69 @@ class InvoiceHelper {
           ? 'Tax Invoice'
           : documentTitle;
 
+      // ── Fetch selected PDF template and logo position from Firestore (company document)
+      String selectedPdfTemplate = 'Classic';
+      String logoPosition = 'Center';
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        final companyId = AppConstants.companyId;
+        if (user != null && companyId.isNotEmpty) {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('companies')
+              .doc(companyId)
+              .get();
+          final data = doc.data();
+          final t = data?['selectedPdfTemplate']?.toString();
+          if (t == 'Modern' || t == 'Classic' || t == 'Minimal' || t == 'Professional' || t == 'Elegant') {
+            selectedPdfTemplate = t!;
+          }
+          final pos = data?['companyLogoPosition']?.toString();
+          if (pos == 'Left' || pos == 'Center' || pos == 'Right' || pos == 'TopLeft' || pos == 'TopCenter') {
+            logoPosition = pos!;
+          }
+        }
+      } catch (_) {}
+
+      // ── Theme colors by template only (logo position is separate)
+      final PdfColor primaryColor;
+      final PdfColor headerBgColor;
+      final PdfColor tableHeaderBg;
+      final PdfColor dividerColor;
+      switch (selectedPdfTemplate) {
+        case 'Modern':
+          primaryColor = PdfColor.fromHex('#00897B');
+          headerBgColor = PdfColors.white;
+          tableHeaderBg = PdfColor.fromHex('#00897B');
+          dividerColor = PdfColor.fromHex('#00897B');
+          break;
+        case 'Minimal':
+          primaryColor = PdfColor.fromHex('#424242');
+          headerBgColor = PdfColors.grey100;
+          tableHeaderBg = PdfColor.fromHex('#616161');
+          dividerColor = PdfColor.fromHex('#9E9E9E');
+          break;
+        case 'Professional':
+          primaryColor = PdfColor.fromHex('#1565C0');
+          headerBgColor = PdfColors.white;
+          tableHeaderBg = PdfColor.fromHex('#1565C0');
+          dividerColor = PdfColor.fromHex('#1565C0');
+          break;
+        case 'Elegant':
+          primaryColor = PdfColor.fromHex('#4527A0');
+          headerBgColor = PdfColor.fromHex('#EDE7F6');
+          tableHeaderBg = PdfColor.fromHex('#4527A0');
+          dividerColor = PdfColor.fromHex('#4527A0');
+          break;
+        default: // Classic
+          primaryColor = maroon;
+          headerBgColor = beigeBox;
+          tableHeaderBg = darkBlue;
+          dividerColor = maroon;
+          break;
+      }
+
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -874,21 +939,21 @@ class InvoiceHelper {
           build: (pw.Context context) {
             final int shownItemRows = invoices.length > 16 ? 16 : invoices.length;
 
-            // ── Footer widget ──
+            // ── Footer widget (theme colors) ──
             pw.Widget footerWidget() => pw.Column(
               mainAxisSize: pw.MainAxisSize.min,
               children: [
                 pw.Center(
                   child: pw.Text(
                     'Application By: Intelligent Tech, 252, NEO Square, P.N.Marg Jamnagar, 7383915985',
-                    style: pw.TextStyle(fontSize: 8, color: blackBorder, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(fontSize: 8, color: primaryColor, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
                 pw.SizedBox(height: 4),
-                pw.Container(height: 2, width: double.infinity, color: maroon),
-                pw.Container(height: 2, width: double.infinity, color: beigeBox),
-                pw.Container(height: 2, width: double.infinity, color: maroon),
+                pw.Container(height: 2, width: double.infinity, color: primaryColor),
+                pw.Container(height: 2, width: double.infinity, color: headerBgColor),
+                pw.Container(height: 2, width: double.infinity, color: primaryColor),
               ],
             );
 
@@ -918,7 +983,7 @@ class InvoiceHelper {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('• ', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: darkBrown)),
+                  pw.Text('• ', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   pw.Expanded(child: pw.Text(text, style: pw.TextStyle(fontSize: 7, color: textMuted))),
                 ],
               ),
@@ -947,7 +1012,7 @@ class InvoiceHelper {
               mainAxisSize: pw.MainAxisSize.min,
               children: [
                 if (hasBankDetails) ...[
-                  pw.Text('BANK DETAILS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: darkRed)),
+                  pw.Text('BANK DETAILS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: primaryColor)),
                   pw.SizedBox(height: 2),
                   if (companyBank.isNotEmpty) pw.Text('Bank: $companyBank', style: pw.TextStyle(fontSize: 7, color: textMuted)),
                   if (companyAccount.isNotEmpty) pw.Text('A/C: $companyAccount', style: pw.TextStyle(fontSize: 7, color: textMuted)),
@@ -956,7 +1021,7 @@ class InvoiceHelper {
                   pw.SizedBox(height: 4),
                 ],
                 if (allNoteItems.isNotEmpty) ...[
-                  pw.Text('NOTES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: darkRed)),
+                  pw.Text('NOTES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: primaryColor)),
                   pw.SizedBox(height: 2),
                   buildZigzagNotes(),
                 ],
@@ -967,15 +1032,15 @@ class InvoiceHelper {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               mainAxisSize: pw.MainAxisSize.min,
               children: [
-                pw.Text('TOTALS SUMMARY:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: darkRed)),
+                pw.Text('TOTALS SUMMARY:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: primaryColor)),
                 pw.SizedBox(height: 4),
-                _buildTotalRow('Subtotal', subtotal, formatted: true, primaryColor: darkBrown),
+                _buildTotalRow('Subtotal', subtotal, formatted: true, primaryColor: primaryColor),
                 if (AppConstants.withGST.value)
-                  _buildTotalRow('CGST', gstAmount / 2, formatted: true, primaryColor: darkBrown),
+                  _buildTotalRow('CGST', gstAmount / 2, formatted: true, primaryColor: primaryColor),
                 if (AppConstants.withGST.value)
-                  _buildTotalRow('SGST', gstAmount / 2, formatted: true, primaryColor: darkBrown),
+                  _buildTotalRow('SGST', gstAmount / 2, formatted: true, primaryColor: primaryColor),
                 pw.Divider(color: borderColor, height: 10),
-                _buildTotalRow('TOTAL', totalAmount, formatted: true, isTotal: true, isBold: true, primaryColor: darkBrown),
+                _buildTotalRow('TOTAL', totalAmount, formatted: true, isTotal: true, isBold: true, primaryColor: primaryColor),
                 pw.SizedBox(height: 4),
                 pw.Container(
                   width: double.infinity,
@@ -999,69 +1064,31 @@ class InvoiceHelper {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // ── Top striped border ──
-                pw.Container(height: 2, width: double.infinity, color: maroon),
-                pw.Container(height: 2, width: double.infinity, color: beigeBox),
-                pw.Container(height: 2, width: double.infinity, color: maroon),
+                // ── Top striped border (theme) ──
+                pw.Container(height: 2, width: double.infinity, color: primaryColor),
+                pw.Container(height: 2, width: double.infinity, color: headerBgColor),
+                pw.Container(height: 2, width: double.infinity, color: primaryColor),
                 pw.SizedBox(height: 8),
 
-                // ── Logo OR Company Name ──
-                if (logoBytes != null)
-                  pw.Center(
-                    child: pw.Container(
-                      width: double.infinity,
-                      constraints: pw.BoxConstraints(maxHeight: 100),
-                      child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
-                    ),
-                  )
-                else
-                  pw.Center(
-                    child: pw.Text(companyName.toUpperCase(),
-                        style: pw.TextStyle(color: darkRed, fontSize: 22, fontWeight: pw.FontWeight.bold),
-                        textAlign: pw.TextAlign.center),
-                  ),
-
-                pw.SizedBox(height: 6),
-
-                // ── Address line ──
-                pw.Center(
-                  child: pw.Text(
-                        () {
-                      final addrBlock = [
-                        if (companyAddress.toString().trim().isNotEmpty) companyAddress.toString().trim(),
-                        if (companyCity.toString().trim().isNotEmpty) companyCity.toString().trim(),
-                        if (companyState.toString().trim().isNotEmpty) companyState.toString().trim(),
-                        if (companyPin.toString().trim().isNotEmpty) companyPin.toString().trim(),
-                      ].join(' ');
-                      final parts = <String>[];
-                      if (addrBlock.trim().isNotEmpty) parts.add(addrBlock.trim());
-                      if (companyPhone.toString().trim().isNotEmpty) parts.add(companyPhone.toString().trim());
-                      if (companyEmail.toString().trim().isNotEmpty) parts.add(companyEmail.toString().trim());
-                      return parts.join(' - ');
-                    }(),
-                    style: pw.TextStyle(fontSize: 9, color: textMuted),
-                    textAlign: pw.TextAlign.center,
-                  ),
+                // ── Header by logo position: Left, Center, Right, TopLeft, TopCenter ──
+                _buildColorInvoiceHeader(
+                  logoPosition: logoPosition,
+                  logoBytes: logoBytes,
+                  companyName: companyName,
+                  companyAddress: companyAddress,
+                  companyCity: companyCity,
+                  companyState: companyState,
+                  companyPin: companyPin,
+                  companyPhone: companyPhone,
+                  companyEmail: companyEmail,
+                  companyGst: companyGst,
+                  companyPan: companyPan,
+                  primaryColor: primaryColor,
+                  textMuted: textMuted,
                 ),
 
-                // ── GST - PAN ──
-                if ((companyGst.isNotEmpty && companyGst != 'XXXXXXXXXXXXXXX') ||
-                    (companyPan.isNotEmpty && companyPan != 'PAN Number')) ...[
-                  pw.SizedBox(height: 4),
-                  pw.Center(
-                    child: pw.Text(
-                      [
-                        if (companyGst.isNotEmpty && companyGst != 'XXXXXXXXXXXXXXX') 'GST: $companyGst',
-                        if (companyPan.isNotEmpty && companyPan != 'PAN Number') 'PAN: $companyPan',
-                      ].join(' - '),
-                      style: pw.TextStyle(fontSize: 9, color: textMuted),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                ],
-
                 pw.SizedBox(height: 8),
-                pw.Container(height: 2, width: double.infinity, color: green),
+                pw.Container(height: 2, width: double.infinity, color: dividerColor),
                 pw.SizedBox(height: 10),
 
                 // ── Info Box: TO (left) + Invoice Badge (right) ──
@@ -1082,9 +1109,9 @@ class InvoiceHelper {
                         child: pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text('TO:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12, color: darkBrown)),
+                            pw.Text('TO:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12, color: primaryColor)),
                             pw.SizedBox(height: 4),
-                            pw.Text(userName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: darkBrown)),
+                            pw.Text(userName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: primaryColor)),
                             if (customerAddress.isNotEmpty) pw.Text(customerAddress, style: pw.TextStyle(fontSize: 9, color: textMuted)),
                             pw.SizedBox(height: 2),
                             if (phoneNumber.toString().trim().isNotEmpty) pw.Text('Phone: $phoneNumber', style: pw.TextStyle(fontSize: 9, color: textMuted)),
@@ -1102,7 +1129,7 @@ class InvoiceHelper {
                         child: pw.Container(
                           padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: pw.BoxDecoration(
-                            color: beigeBox,
+                            color: headerBgColor,
                             borderRadius: pw.BorderRadius.circular(6),
                             border: pw.Border.all(color: blackBorder, width: 1),
                           ),
@@ -1111,7 +1138,7 @@ class InvoiceHelper {
                             children: [
                               pw.Text(
                                 badgeTitle, // ← "Tax Invoice" if Invoice, else Quotation/Credit Note etc.
-                                style: pw.TextStyle(color: darkRed, fontSize: 14, fontWeight: pw.FontWeight.bold),
+                                style: pw.TextStyle(color: primaryColor, fontSize: 14, fontWeight: pw.FontWeight.bold),
                               ),
                               pw.SizedBox(height: 6),
                               pw.Text('#$invoiceId', style: pw.TextStyle(color: textMuted, fontSize: 10)),
@@ -1165,17 +1192,17 @@ class InvoiceHelper {
                     },
                     children: [
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(color: darkBlue),
+                        decoration: pw.BoxDecoration(color: tableHeaderBg),
                         children: [
-                          _tableHeaderColored('#',           bgColor: darkBlue, textColor: white, align: pw.TextAlign.center),
-                          _tableHeaderColored('DESCRIPTION', bgColor: darkBlue, textColor: white, align: pw.TextAlign.left),
-                          _tableHeaderColored('QTY',         bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
-                          _tableHeaderColored('PRICE',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
-                          _tableHeaderColored('AMOUNT',      bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored('#',           bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.center),
+                          _tableHeaderColored('DESCRIPTION', bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.left),
+                          _tableHeaderColored('QTY',         bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored('PRICE',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored('AMOUNT',      bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('GST',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                            _tableHeaderColored('GST',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('NET',       bgColor: darkBlue, textColor: white, align: pw.TextAlign.right),
+                            _tableHeaderColored('NET',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                         ],
                       ),
                       ...List<pw.TableRow>.generate(shownItemRows, (int index) {
@@ -1200,7 +1227,7 @@ class InvoiceHelper {
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                                 children: [
                                   pw.Text(displayItemName,
-                                      style: pw.TextStyle(fontSize: 8.5, color: darkBrown, fontWeight: pw.FontWeight.bold)),
+                                      style: pw.TextStyle(fontSize: 8.5, color: primaryColor, fontWeight: pw.FontWeight.bold)),
                                   if (hasServiceDescription) ...[
                                     pw.SizedBox(height: 3),
                                     pw.Text(actualItem!.description,
@@ -1311,12 +1338,12 @@ class InvoiceHelper {
                     pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
                       pw.Container(width: 150, height: 1, color: borderColor),
                       pw.SizedBox(height: 5),
-                      pw.Text('Customer Signature', style: pw.TextStyle(fontSize: 9, color: darkBrown)),
+                      pw.Text('Customer Signature', style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                     ]),
                     pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
                       pw.Container(width: 150, height: 1, color: borderColor),
                       pw.SizedBox(height: 5),
-                      pw.Text('Authorized Signature', style: pw.TextStyle(fontSize: 9, color: darkBrown)),
+                      pw.Text('Authorized Signature', style: pw.TextStyle(fontSize: 9, color: primaryColor)),
                     ]),
                   ],
                 ),
@@ -7134,6 +7161,183 @@ class InvoiceHelper {
         overflow: pw.TextOverflow.clip,
       ),
     );
+  }
+
+  /// Build invoice header by logo position (Left, Center, Right, TopLeft, TopCenter).
+  static pw.Widget _buildColorInvoiceHeader({
+    required String logoPosition,
+    required Uint8List? logoBytes,
+    required String companyName,
+    required String companyAddress,
+    required String companyCity,
+    required String companyState,
+    required String companyPin,
+    required String companyPhone,
+    required String companyEmail,
+    required String companyGst,
+    required String companyPan,
+    required PdfColor primaryColor,
+    required PdfColor textMuted,
+  }) {
+    pw.Widget companyInfoColumn({pw.CrossAxisAlignment align = pw.CrossAxisAlignment.start}) => pw.Column(
+      crossAxisAlignment: align,
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Text(companyName.toUpperCase(),
+            style: pw.TextStyle(color: primaryColor, fontSize: align == pw.CrossAxisAlignment.center ? 22 : 18, fontWeight: pw.FontWeight.bold),
+            textAlign: align == pw.CrossAxisAlignment.center ? pw.TextAlign.center : pw.TextAlign.left),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          [companyAddress, companyCity, companyState, companyPin].where((s) => s.toString().trim().isNotEmpty).join(', '),
+          style: pw.TextStyle(fontSize: 8, color: textMuted),
+          textAlign: align == pw.CrossAxisAlignment.center ? pw.TextAlign.center : pw.TextAlign.left,
+        ),
+        if (companyPhone.toString().trim().isNotEmpty)
+          pw.Text('Phone: $companyPhone', style: pw.TextStyle(fontSize: 8, color: textMuted)),
+        if (companyEmail.toString().trim().isNotEmpty)
+          pw.Text('Email: $companyEmail', style: pw.TextStyle(fontSize: 8, color: textMuted)),
+        if ((companyGst.isNotEmpty && companyGst != 'XXXXXXXXXXXXXXX') || (companyPan.isNotEmpty && companyPan != 'PAN Number'))
+          pw.Text(
+            [
+              if (companyGst.isNotEmpty && companyGst != 'XXXXXXXXXXXXXXX') 'GST: $companyGst',
+              if (companyPan.isNotEmpty && companyPan != 'PAN Number') ' PAN: $companyPan',
+            ].join(' - '),
+            style: pw.TextStyle(fontSize: 8, color: textMuted),
+          ),
+      ],
+    );
+
+    final addressLine = [
+      if (companyAddress.toString().trim().isNotEmpty) companyAddress.toString().trim(),
+      if (companyCity.toString().trim().isNotEmpty) companyCity.toString().trim(),
+      if (companyState.toString().trim().isNotEmpty) companyState.toString().trim(),
+      if (companyPin.toString().trim().isNotEmpty) companyPin.toString().trim(),
+    ].join(' ');
+    final contactLine = [
+      if (companyPhone.toString().trim().isNotEmpty) 'Phone: $companyPhone',
+      if (companyEmail.toString().trim().isNotEmpty) 'Email: $companyEmail',
+    ].join(' - ');
+    final gstPanLine = [
+      if (companyGst.isNotEmpty && companyGst != 'XXXXXXXXXXXXXXX') 'GST: $companyGst',
+      if (companyPan.isNotEmpty && companyPan != 'PAN Number') 'PAN: $companyPan',
+    ].join(' - ');
+
+    switch (logoPosition) {
+      case 'Left':
+        return pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (logoBytes != null)
+              pw.Container(
+                width: 80,
+                height: 60,
+                margin: pw.EdgeInsets.only(right: 12),
+                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+              ),
+            pw.Expanded(child: companyInfoColumn()),
+          ],
+        );
+      case 'Right':
+        return pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(child: companyInfoColumn()),
+            if (logoBytes != null)
+              pw.Container(
+                width: 80,
+                height: 60,
+                margin: pw.EdgeInsets.only(left: 12),
+                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+              ),
+          ],
+        );
+      case 'TopLeft':
+        return pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (logoBytes != null)
+              pw.Container(
+                width: 48,
+                height: 48,
+                margin: pw.EdgeInsets.only(right: 10),
+                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+              ),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Text(companyName.toUpperCase(),
+                      style: pw.TextStyle(color: primaryColor, fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 2),
+                  if (addressLine.trim().isNotEmpty)
+                    pw.Text(addressLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                  if (contactLine.isNotEmpty)
+                    pw.Text(contactLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                  if (gstPanLine.isNotEmpty)
+                    pw.Text(gstPanLine, style: pw.TextStyle(fontSize: 7, color: textMuted)),
+                ],
+              ),
+            ),
+          ],
+        );
+      case 'TopCenter':
+        return pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            if (logoBytes != null)
+              pw.Center(
+                child: pw.Container(
+                  width: 70,
+                  height: 70,
+                  child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+                ),
+              )
+            else
+              pw.Center(
+                child: pw.Text(companyName.toUpperCase(),
+                    style: pw.TextStyle(color: primaryColor, fontSize: 20, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center),
+              ),
+            pw.SizedBox(height: 6),
+            pw.Center(
+              child: pw.Text(
+                [addressLine.trim(), contactLine, gstPanLine].where((s) => s.isNotEmpty).join(' • '),
+                style: pw.TextStyle(fontSize: 8, color: textMuted),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        );
+      default: // Center
+        return pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            if (logoBytes != null)
+              pw.Center(
+                child: pw.Container(
+                  width: double.infinity,
+                  constraints: pw.BoxConstraints(maxHeight: 100),
+                  child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+                ),
+              )
+            else
+              pw.Center(
+                child: pw.Text(companyName.toUpperCase(),
+                    style: pw.TextStyle(color: primaryColor, fontSize: 22, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center),
+              ),
+            pw.SizedBox(height: 6),
+            pw.Center(
+              child: pw.Text(
+                [addressLine.trim(), contactLine, gstPanLine].where((s) => s.isNotEmpty).join(' - '),
+                style: pw.TextStyle(fontSize: 9, color: textMuted),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        );
+    }
   }
 
   /// Table header with custom bg and text color (for color PDF)
