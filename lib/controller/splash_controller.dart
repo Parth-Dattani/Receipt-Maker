@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/constant/app_constant.dart';
 import 'package:GetYourInvoice/controller/controller.dart';
 import 'package:GetYourInvoice/screen/screen.dart';
+import 'package:GetYourInvoice/screen/order/order_screen.dart';
 import 'package:GetYourInvoice/services/remote_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 
 import '../utils/financial_year_helper.dart';
@@ -22,6 +24,16 @@ class SplashController extends BaseController {
   void goToNext() async {
     // Show splash for minimum 2 seconds
     await Future.delayed(const Duration(seconds: 2));
+
+    // ✅ Public route bypass: allow /order on web without login
+    if (kIsWeb) {
+      final frag = Uri.base.fragment;
+      if (frag.contains('/order')) {
+        print("Public order route detected → OrderScreen (no auth)");
+        Get.offAllNamed(OrderScreen.pageId);
+        return;
+      }
+    }
 
     final user = _auth.currentUser;
 

@@ -5,6 +5,12 @@ import 'package:GetYourInvoice/screen/Inventory/inventory_management_screen.dart
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import 'binding/bindings.dart';
 
+import 'package:GetYourInvoice/screen/order/order_screen.dart';
+import 'package:GetYourInvoice/screen/order/order_success_screen.dart' hide OrderSuccessScreen;
+import 'package:GetYourInvoice/binding/order_binding.dart';
+
+import 'controller/controller.dart';
+
 List<GetPage> appPages = [
 
   GetPage(
@@ -136,5 +142,16 @@ List<GetPage> appPages = [
     name: PurchaseEntryScreen.pageId,
     page: () =>  PurchaseEntryScreen(),
     binding: PurchaseEntryBinding(),
+  ),
+
+  GetPage(
+    name: OrderScreen.pageId,
+    page: () => const OrderScreen(),
+    binding: OrderBinding(),
+  ),
+
+  GetPage(
+    name: OrderSuccessScreen.pageId,
+    page: () => const OrderSuccessScreen(),
   ),
 ];

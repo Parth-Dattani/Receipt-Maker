@@ -48,13 +48,26 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Get.put(AuthController());
-    Get.put(SplashController()); // Required before SplashScreen so Timer in splash_screen can find it
+    
+    // Check if we are handling a web URL that should bypass Splash
+    String initialRoute = SplashScreen.pageId;
+    if (kIsWeb) {
+      final currentUri = Uri.base;
+      if (currentUri.fragment.contains('/order')) {
+        initialRoute = '/order';
+      }
+    }
+    
+    if (initialRoute == SplashScreen.pageId) {
+      Get.put(SplashController()); // Required before SplashScreen
+    }
+
     return GetMaterialApp(
       title: 'Invoice Sathi',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: SplashScreen.pageId,
+      initialRoute: initialRoute,
       getPages: appPages,
       translations: Messages(),
       locale: AppConstants.isGujarati.value

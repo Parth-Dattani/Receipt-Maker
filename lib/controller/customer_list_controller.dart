@@ -2,1221 +2,350 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../constant/constant.dart';
 import '../screen/screen.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
+import '../widgets/web_screen_wrapper.dart';
 import '../widgets/widgets.dart';
 import 'controller.dart';
 
-// class CustomerListController extends BaseController {
-//   var customers = <Map<String, dynamic>>[].obs;
-//   var filteredCustomers = <Map<String, dynamic>>[].obs;
-//   var customerCount = 0.obs;
-//   var searchQuery = ''.obs;
-//   var showInactiveCustomers = false.obs;
-//
-//   // Pagination variables
-//   var currentPage = 1.obs;
-//   var itemsPerPage = 20;
-//   var totalPages = 1.obs;
-//   var isLoadingMore = false.obs;
-//   DocumentSnapshot? lastDocument;
-//   var hasMore = true.obs;
-//
-//   final FirebaseAuth _auth = FirebaseAuth.instance;
-//   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-//
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     loadCustomers();
-//   }
-//
-//   /// Computed getter for filtered customers based on active/inactive filter
-//   List<Map<String, dynamic>> get filteredCustomerList {
-//     if (showInactiveCustomers.value) {
-//       return filteredCustomers;
-//     }
-//     return filteredCustomers.where((customer) => customer['isActive'] ?? true).toList();
-//   }
-//
-//
-//
-//   Future<void> loadCustomers({bool loadMore = false}) async {
-//     try {
-//       if (loadMore) {
-//         if (!hasMore.value || isLoadingMore.value) return;
-//         isLoadingMore.value = true;
-//       } else {
-//         isLoading.value = true;
-//         customers.clear();
-//         lastDocument = null;
-//         hasMore.value = true;
-//         currentPage.value = 1;
-//       }
-//
-//       final user = _auth.currentUser;
-//       if (user == null) return;
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//       print("Company ID: $companyId");
-//
-//       if (companyId.isEmpty) {
-//         Get.snackbar(
-//           'Company Required',
-//           'Please register a company first',
-//           snackPosition: SnackPosition.BOTTOM,
-//           backgroundColor: Colors.orange,
-//           colorText: Colors.white,
-//         );
-//         return;
-//       }
-//
-//       // Build query with pagination
-//       Query query = _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers")
-//           .orderBy('createdAt', descending: true)
-//           .limit(itemsPerPage);
-//
-//       // If loading more, start after last document
-//       if (loadMore && lastDocument != null) {
-//         query = query.startAfterDocument(lastDocument!);
-//       }
-//
-//       final customersSnapshot = await query.get();
-//
-//       if (customersSnapshot.docs.isEmpty) {
-//         hasMore.value = false;
-//         if (loadMore) {
-//           Get.snackbar(
-//             'End of List',
-//             'No more customers to load',
-//             snackPosition: SnackPosition.BOTTOM,
-//             duration: Duration(seconds: 2),
-//           );
-//         }
-//         return;
-//       }
-//
-//       // Store last document for next pagination
-//       if (customersSnapshot.docs.isNotEmpty) {
-//         lastDocument = customersSnapshot.docs.last;
-//       }
-//
-//       // Check if there are more documents
-//       if (customersSnapshot.docs.length < itemsPerPage) {
-//         hasMore.value = false;
-//       }
-//
-//       for (var doc in customersSnapshot.docs) {
-//         final customerData = doc.data() as Map<String, dynamic>;
-//         customerData['id'] = doc.id;
-//         customers.add(customerData);
-//       }
-//
-//       // Get total count (only on first load)
-//       if (!loadMore) {
-//         final countSnapshot = await _firestore
-//             .collection("users")
-//             .doc(user.uid)
-//             .collection("companies")
-//             .doc(companyId)
-//             .collection("customers")
-//             .count()
-//             .get();
-//
-//         customerCount.value = countSnapshot.count ?? 0;
-//         totalPages.value = (customerCount.value / itemsPerPage).ceil();
-//       }
-//
-//       filteredCustomers.value = customers;
-//
-//       if (loadMore) {
-//         currentPage.value++;
-//       }
-//
-//     } catch (e) {
-//       print("Error loading customers: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to load customers',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     } finally {
-//       isLoading.value = false;
-//       isLoadingMore.value = false;
-//     }
-//   }
-//
-//   Future<void> loadMoreCustomers() async {
-//     await loadCustomers(loadMore: true);
-//   }
-//
-//   Future<void> refreshCustomers() async {
-//     await loadCustomers(loadMore: false);
-//   }
-//
-//   void searchCustomers(String query) {
-//     searchQuery.value = query;
-//
-//     if (query.isEmpty) {
-//       filteredCustomers.value = customers;
-//       return;
-//     }
-//
-//     final lowercaseQuery = query.toLowerCase();
-//     filteredCustomers.value = customers.where((customer) {
-//       final name = (customer['name'] ?? '').toLowerCase();
-//       final mobile = (customer['mobile1'] ?? '').toLowerCase();
-//       final email = (customer['email'] ?? '').toLowerCase();
-//       final city = (customer['city'] ?? '').toLowerCase();
-//       final businessName = (customer['businessName'] ?? '').toLowerCase();
-//
-//       return name.contains(lowercaseQuery) ||
-//           mobile.contains(lowercaseQuery) ||
-//           email.contains(lowercaseQuery) ||
-//           city.contains(lowercaseQuery) ||
-//           businessName.contains(lowercaseQuery);
-//     }).toList();
-//   }
-//
-//   void clearSearch() {
-//     searchQuery.value = '';
-//     filteredCustomers.value = customers;
-//   }
-//
-//   void sortCustomers(String sortType) {
-//     List<Map<String, dynamic>> sortedList = List.from(filteredCustomers);
-//
-//     switch (sortType) {
-//       case 'name_asc':
-//         sortedList.sort((a, b) {
-//           final nameA = (a['name'] ?? '').toString().toLowerCase();
-//           final nameB = (b['name'] ?? '').toString().toLowerCase();
-//           return nameA.compareTo(nameB);
-//         });
-//         Get.snackbar(
-//           'Sorted',
-//           'Customers sorted A-Z',
-//           snackPosition: SnackPosition.BOTTOM,
-//           duration: Duration(seconds: 1),
-//         );
-//         break;
-//
-//       case 'name_desc':
-//         sortedList.sort((a, b) {
-//           final nameA = (a['name'] ?? '').toString().toLowerCase();
-//           final nameB = (b['name'] ?? '').toString().toLowerCase();
-//           return nameB.compareTo(nameA);
-//         });
-//         Get.snackbar(
-//           'Sorted',
-//           'Customers sorted Z-A',
-//           snackPosition: SnackPosition.BOTTOM,
-//           duration: Duration(seconds: 1),
-//         );
-//         break;
-//
-//       case 'recent':
-//         sortedList.sort((a, b) {
-//           final dateA = a['createdAt'] as Timestamp?;
-//           final dateB = b['createdAt'] as Timestamp?;
-//           if (dateA == null || dateB == null) return 0;
-//           return dateB.compareTo(dateA);
-//         });
-//         Get.snackbar(
-//           'Sorted',
-//           'Showing recently added first',
-//           snackPosition: SnackPosition.BOTTOM,
-//           duration: Duration(seconds: 1),
-//         );
-//         break;
-//     }
-//
-//     filteredCustomers.value = sortedList;
-//   }
-//
-//   void navigateToAddNewCustomer() {
-//
-//     //Get.toNamed(CompanySelectionScreen.pageId);
-//     Get.toNamed(CustomerRegistrationScreen.pageId);
-//   }
-//
-//   void viewCustomerDetails(Map<String, dynamic> customer) {
-//     Get.dialog(
-//       Dialog(
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(16),
-//         ),
-//         child: Container(
-//           padding: EdgeInsets.all(24),
-//           child: SingleChildScrollView(
-//             child: Column(
-//               mainAxisSize: MainAxisSize.min,
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Row(
-//                   children: [
-//                     CircleAvatar(
-//                       radius: 30,
-//                       backgroundColor: AppColors.tealColor.withOpacity(0.15),
-//                       child: Text(
-//                         (customer['name'] ?? 'U')[0].toUpperCase(),
-//                         style: TextStyle(
-//                           color: AppColors.tealColor,
-//                           fontWeight: FontWeight.bold,
-//                           fontSize: 24,
-//                         ),
-//                       ),
-//                     ),
-//                     SizedBox(width: 16),
-//                     Expanded(
-//                       child: Column(
-//                         crossAxisAlignment: CrossAxisAlignment.start,
-//                         children: [
-//                           Text(
-//                             customer['name'] ?? 'Unknown',
-//                             style: TextStyle(
-//                               fontSize: 20,
-//                               fontWeight: FontWeight.bold,
-//                             ),
-//                           ),
-//                           if (customer['businessName'] != null &&
-//                               customer['businessName'].isNotEmpty)
-//                             Text(
-//                               customer['businessName'],
-//                               style: TextStyle(
-//                                 fontSize: 14,
-//                                 color: Colors.grey.shade600,
-//                               ),
-//                             ),
-//                         ],
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//                 Divider(height: 32),
-//
-//                 _buildDetailSection('Contact Information', [
-//                   _buildDetailRow(Icons.phone, 'Mobile', customer['mobile1']),
-//                   if (customer['mobile2'] != null && customer['mobile2'].isNotEmpty)
-//                     _buildDetailRow(Icons.phone_android, 'Secondary', customer['mobile2']),
-//                   if (customer['email'] != null && customer['email'].isNotEmpty)
-//                     _buildDetailRow(Icons.email, 'Email', customer['email']),
-//                   if (customer['website'] != null && customer['website'].isNotEmpty)
-//                     _buildDetailRow(Icons.language, 'Website', customer['website']),
-//                 ]),
-//
-//                 if (customer['address'] != null && customer['address'].isNotEmpty)
-//                   _buildDetailSection('Address', [
-//                     _buildDetailRow(Icons.home, 'Address', customer['address']),
-//                     _buildDetailRow(Icons.location_city, 'City', customer['city']),
-//                     _buildDetailRow(Icons.map, 'State', customer['state']),
-//                     _buildDetailRow(Icons.flag, 'Country', customer['country']),
-//                     _buildDetailRow(Icons.pin_drop, 'Pincode', customer['pincode']),
-//                   ]),
-//
-//                 if ((customer['gst'] != null && customer['gst'].isNotEmpty) ||
-//                     (customer['pan'] != null && customer['pan'].isNotEmpty))
-//                   _buildDetailSection('Business Information', [
-//                     if (customer['gst'] != null && customer['gst'].isNotEmpty)
-//                       _buildDetailRow(Icons.receipt_long, 'GST', customer['gst']),
-//                     if (customer['pan'] != null && customer['pan'].isNotEmpty)
-//                       _buildDetailRow(Icons.badge, 'PAN', customer['pan']),
-//                     if (customer['businessType'] != null && customer['businessType'].isNotEmpty)
-//                       _buildDetailRow(Icons.category, 'Business Type', customer['businessType']),
-//                   ]),
-//
-//                 if (customer['notes'] != null && customer['notes'].isNotEmpty)
-//                   _buildDetailSection('Notes', [
-//                     Container(
-//                       padding: EdgeInsets.all(12),
-//                       decoration: BoxDecoration(
-//                         color: Colors.grey.shade100,
-//                         borderRadius: BorderRadius.circular(8),
-//                       ),
-//                       child: Text(
-//                         customer['notes'],
-//                         style: TextStyle(fontSize: 14),
-//                       ),
-//                     ),
-//                   ]),
-//
-//                 SizedBox(height: 16),
-//                 Row(
-//                   mainAxisAlignment: MainAxisAlignment.end,
-//                   children: [
-//                     TextButton(
-//                       onPressed: () => Get.back(),
-//                       child: Text('Close'),
-//                     ),
-//                     SizedBox(width: 8),
-//                     ElevatedButton.icon(
-//                       onPressed: () {
-//                         Get.back();
-//                         editCustomer(customer);
-//                       },
-//                       icon: Icon(Icons.edit, size: 18),
-//                       label: Text('Edit'),
-//                       style: ElevatedButton.styleFrom(
-//                         backgroundColor: AppColors.tealColor,
-//                         foregroundColor: Colors.white,
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildDetailSection(String title, List<Widget> children) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(
-//           title,
-//           style: TextStyle(
-//             fontSize: 16,
-//             fontWeight: FontWeight.bold,
-//             color: AppColors.tealColor,
-//           ),
-//         ),
-//         SizedBox(height: 12),
-//         ...children,
-//         SizedBox(height: 20),
-//       ],
-//     );
-//   }
-//
-//   Widget _buildDetailRow(IconData icon, String label, String? value) {
-//     if (value == null || value.isEmpty) return SizedBox.shrink();
-//
-//     return Padding(
-//       padding: EdgeInsets.only(bottom: 8),
-//       child: Row(
-//         children: [
-//           Icon(icon, size: 18, color: Colors.grey.shade600),
-//           SizedBox(width: 12),
-//           Expanded(
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text(
-//                   label,
-//                   style: TextStyle(
-//                     fontSize: 12,
-//                     color: Colors.grey.shade600,
-//                   ),
-//                 ),
-//                 Text(
-//                   value,
-//                   style: TextStyle(
-//                     fontSize: 14,
-//                     fontWeight: FontWeight.w500,
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   void editCustomer(Map<String, dynamic> customer) async {
-//     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//
-//     final user = _auth.currentUser;
-//     Map<String, dynamic>? companyData;
-//
-//     if (user != null && companyId.isNotEmpty) {
-//       final companyDoc = await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .get();
-//
-//       if (companyDoc.exists) {
-//         companyData = companyDoc.data();
-//       }
-//     }
-//
-//     final result = await Get.toNamed(
-//       CustomerRegistrationScreen.pageId,
-//       arguments: {
-//         'isEdit': true,
-//         'customerData': customer,
-//         'companyId': companyId,
-//         'companyData': companyData,
-//       },
-//     );
-//
-//     if (result == true) {
-//       await refreshCustomers();
-//     }
-//   }
-//
-//   void createInvoiceForCustomer(Map<String, dynamic> customer) {
-//     Get.toNamed(NewInvoiceScreen.pageId, arguments: {'customerId': customer['id']});
-//   }
-//
-//   void deleteCustomer(Map<String, dynamic> customer) {
-//     Get.dialog(
-//       AlertDialog(
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(16),
-//         ),
-//         title: Row(
-//           children: [
-//             Icon(Icons.warning, color: Colors.orange),
-//             SizedBox(width: 8),
-//             Text('Delete Customer'),
-//           ],
-//         ),
-//         content: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text('Are you sure you want to delete this customer?'),
-//             SizedBox(height: 8),
-//             Container(
-//               padding: EdgeInsets.all(12),
-//               decoration: BoxDecoration(
-//                 color: Colors.grey.shade100,
-//                 borderRadius: BorderRadius.circular(8),
-//               ),
-//               child: Row(
-//                 children: [
-//                   CircleAvatar(
-//                     radius: 20,
-//                     backgroundColor: AppColors.tealColor.withOpacity(0.15),
-//                     child: Text(
-//                       (customer['name'] ?? 'U')[0].toUpperCase(),
-//                       style: TextStyle(
-//                         color: AppColors.tealColor,
-//                         fontWeight: FontWeight.bold,
-//                       ),
-//                     ),
-//                   ),
-//                   SizedBox(width: 12),
-//                   Expanded(
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text(
-//                           customer['name'] ?? 'Unknown',
-//                           style: TextStyle(fontWeight: FontWeight.w600),
-//                         ),
-//                         if (customer['mobile1'] != null)
-//                           Text(
-//                             customer['mobile1'],
-//                             style: TextStyle(
-//                               fontSize: 12,
-//                               color: Colors.grey.shade600,
-//                             ),
-//                           ),
-//                       ],
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//             SizedBox(height: 12),
-//             Text(
-//               'This will mark the customer as inactive. You can restore it later.',
-//               style: TextStyle(
-//                 color: Colors.orange.shade700,
-//                 fontSize: 12,
-//               ),
-//             ),
-//           ],
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Get.back(),
-//             child: Text('Cancel'),
-//           ),
-//           ElevatedButton(
-//             onPressed: () async {
-//               Get.back();
-//               await _performDeleteCustomer(customer);
-//             },
-//             style: ElevatedButton.styleFrom(
-//               backgroundColor: Colors.red,
-//               foregroundColor: Colors.white,
-//             ),
-//             child: Text('Delete'),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
-//     try {
-//       isLoading.value = true;
-//
-//       final user = _auth.currentUser;
-//       if (user == null) {
-//         Get.snackbar(
-//           'Error',
-//           'User not authenticated',
-//           snackPosition: SnackPosition.BOTTOM,
-//           backgroundColor: Colors.red,
-//           colorText: Colors.white,
-//           icon: Icon(Icons.error, color: Colors.white),
-//         );
-//         return;
-//       }
-//
-//       String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//
-//       if (companyId.isEmpty) {
-//         Get.snackbar(
-//           'Error',
-//           'Company ID not found',
-//           snackPosition: SnackPosition.BOTTOM,
-//           backgroundColor: Colors.red,
-//           colorText: Colors.white,
-//           icon: Icon(Icons.error, color: Colors.white),
-//         );
-//         return;
-//       }
-//
-//       // PERMANENTLY DELETE from Firebase
-//       await _firestore
-//           .collection("users")
-//           .doc(user.uid)
-//           .collection("companies")
-//           .doc(companyId)
-//           .collection("customers")
-//           .doc(customer['id'])
-//           .delete();
-//
-//       // Remove from local lists
-//       customers.removeWhere((c) => c['id'] == customer['id']);
-//       filteredCustomers.removeWhere((c) => c['id'] == customer['id']);
-//
-//       // Update customer count
-//       customerCount.value = customers.length;
-//
-//       // Trigger UI update
-//       customers.refresh();
-//       filteredCustomers.refresh();
-//
-//       Get.snackbar(
-//         'Customer Deleted',
-//         '${customer['name']} has been permanently deleted',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.green,
-//         colorText: Colors.white,
-//         icon: Icon(Icons.check_circle, color: Colors.white),
-//         duration: Duration(seconds: 3),
-//       );
-//
-//     } catch (e) {
-//       print("Error deleting customer: $e");
-//       Get.snackbar(
-//         'Error',
-//         'Failed to delete customer: ${e.toString()}',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//         icon: Icon(Icons.error, color: Colors.white),
-//         duration: Duration(seconds: 4),
-//       );
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   ///its temp Delete customer Iable TO restore Customer
-//   // Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
-//   //   try {
-//   //     final user = _auth.currentUser;
-//   //     if (user == null) return;
-//   //
-//   //     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//   //
-//   //     await _firestore
-//   //         .collection("users")
-//   //         .doc(user.uid)
-//   //         .collection("companies")
-//   //         .doc(companyId)
-//   //         .collection("customers")
-//   //         .doc(customer['id'])
-//   //         .update({'isActive': false});
-//   //
-//   //     // Update local data
-//   //     final index = customers.indexWhere((c) => c['id'] == customer['id']);
-//   //     if (index != -1) {
-//   //       customers[index]['isActive'] = false;
-//   //     }
-//   //
-//   //     final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
-//   //     if (filteredIndex != -1) {
-//   //       filteredCustomers[filteredIndex]['isActive'] = false;
-//   //     }
-//   //
-//   //     // Trigger UI update
-//   //     filteredCustomers.refresh();
-//   //     customers.refresh();
-//   //
-//   //     Get.snackbar(
-//   //       'Customer Deleted',
-//   //       'Customer marked as inactive',
-//   //       snackPosition: SnackPosition.BOTTOM,
-//   //       backgroundColor: Colors.orange,
-//   //       colorText: Colors.white,
-//   //       icon: Icon(Icons.info, color: Colors.white),
-//   //       duration: Duration(seconds: 4),
-//   //       mainButton: TextButton(
-//   //         onPressed: () {
-//   //           Get.back(); // Close snackbar
-//   //           restoreCustomer(customer);
-//   //         },
-//   //         child: Text(
-//   //           'RESTORE',
-//   //           style: TextStyle(
-//   //             color: Colors.white,
-//   //             fontWeight: FontWeight.bold,
-//   //           ),
-//   //         ),
-//   //       ),
-//   //     );
-//   //   } catch (e) {
-//   //     print("Error deleting customer: $e");
-//   //     Get.snackbar(
-//   //       'Error',
-//   //       'Failed to delete customer',
-//   //       snackPosition: SnackPosition.BOTTOM,
-//   //       backgroundColor: Colors.red,
-//   //       colorText: Colors.white,
-//   //       icon: Icon(Icons.error, color: Colors.white),
-//   //     );
-//   //   }
-//   // }
-//
-//   // Future<void> restoreCustomer(Map<String, dynamic> customer) async {
-//   //   try {
-//   //     final user = _auth.currentUser;
-//   //     if (user == null) return;
-//   //
-//   //     String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-//   //
-//   //     await _firestore
-//   //         .collection("users")
-//   //         .doc(user.uid)
-//   //         .collection("companies")
-//   //         .doc(companyId)
-//   //         .collection("customers")
-//   //         .doc(customer['id'])
-//   //         .update({'isActive': true});
-//   //
-//   //     // Update local data
-//   //     final index = customers.indexWhere((c) => c['id'] == customer['id']);
-//   //     if (index != -1) {
-//   //       customers[index]['isActive'] = true;
-//   //     }
-//   //
-//   //     final filteredIndex = filteredCustomers.indexWhere((c) => c['id'] == customer['id']);
-//   //     if (filteredIndex != -1) {
-//   //       filteredCustomers[filteredIndex]['isActive'] = true;
-//   //     }
-//   //
-//   //     // Trigger UI update
-//   //     filteredCustomers.refresh();
-//   //     customers.refresh();
-//   //
-//   //     Get.snackbar(
-//   //       'Success',
-//   //       'Customer restored successfully',
-//   //       snackPosition: SnackPosition.BOTTOM,
-//   //       backgroundColor: Colors.green,
-//   //       colorText: Colors.white,
-//   //       icon: Icon(Icons.check_circle, color: Colors.white),
-//   //     );
-//   //   } catch (e) {
-//   //     print("Error restoring customer: $e");
-//   //     Get.snackbar(
-//   //       'Error',
-//   //       'Failed to restore customer',
-//   //       snackPosition: SnackPosition.BOTTOM,
-//   //       backgroundColor: Colors.red,
-//   //       colorText: Colors.white,
-//   //       icon: Icon(Icons.error, color: Colors.white),
-//   //     );
-//   //   }
-//   // }
-//
-//   // void toggleShowInactive() {
-//   //   showInactiveCustomers.value = !showInactiveCustomers.value;
-//   //   Get.snackbar(
-//   //     showInactiveCustomers.value ? 'Showing All' : 'Showing Active Only',
-//   //     showInactiveCustomers.value
-//   //         ? 'Inactive customers are now visible'
-//   //         : 'Inactive customers are hidden',
-//   //     snackPosition: SnackPosition.BOTTOM,
-//   //     duration: Duration(seconds: 2),
-//   //     backgroundColor: AppColors.tealColor,
-//   //     colorText: Colors.white,
-//   //   );
-//   // }
-// }
+class CustomerListScreen extends GetView<CustomerListController> {
+  static const String pageId = '/CustomerListScreen';
 
-class CustomerListController extends BaseController {
-  var customers = <Map<String, dynamic>>[].obs;
-  var filteredCustomers = <Map<String, dynamic>>[].obs;
-  var customerCount = 0.obs;
-  var searchQuery = ''.obs;
-  var showInactiveCustomers = false.obs;
-
-  // Pagination variables
-  var currentPage = 1.obs;
-  var itemsPerPage = 20;
-  var totalPages = 1.obs;
-  var isLoadingMore = false.obs;
-  var hasMore = true.obs;
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  const CustomerListScreen({super.key});
 
   @override
-  void onInit() {
-    super.onInit();
-    loadCustomers();
-  }
-
-  /// Computed getter for filtered customers based on active/inactive filter
-  List<Map<String, dynamic>> get filteredCustomerList {
-    if (showInactiveCustomers.value) {
-      return filteredCustomers;
-    }
-    return filteredCustomers.where((customer) =>
-    customer['isActive']?.toString().toLowerCase() == 'true'
-    ).toList();
-  }
-
-  /// ✅ FIXED: Load customers from Google Sheets instead of Firebase
-  Future<void> loadCustomers({bool loadMore = false}) async {
-    try {
-      if (loadMore) {
-        if (!hasMore.value || isLoadingMore.value) return;
-        isLoadingMore.value = true;
-      } else {
-        isLoading.value = true;
-        customers.clear();
-        hasMore.value = true;
-        currentPage.value = 1;
-      }
-
-      final user = _auth.currentUser;
-      if (user == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "Please login first!",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
-        return;
-      }
-
-      String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-      print("Company ID: $companyId");
-
-      if (companyId.isEmpty) {
-        Get.snackbar(
-          'Company Required',
-          'Please register a company first',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-        );
-        return;
-      }
-
-      // ✅ Fetch customers from Google Sheets
-      final allCustomers = await GoogleSheetService.getCustomers(
-        companyId: companyId,
-        userId: user.uid,
-      );
-
-      print("✅ Loaded ${allCustomers.length} customers from Google Sheets");
-
-      if (allCustomers.isEmpty) {
-        hasMore.value = false;
-        customers.clear();
-        filteredCustomers.clear();
-        customerCount.value = 0;
-        return;
-      }
-
-      // ✅ Sort by createdAt (most recent first)
-      allCustomers.sort((a, b) {
-        try {
-          final dateA = _parseDate(a['createdAt']?.toString() ?? '');
-          final dateB = _parseDate(b['createdAt']?.toString() ?? '');
-          return dateB.compareTo(dateA);
-        } catch (e) {
-          return 0;
-        }
-      });
-
-      // ✅ Handle pagination
-      if (!loadMore) {
-        // First load
-        customers.value = allCustomers.take(itemsPerPage).toList();
-        customerCount.value = allCustomers.length;
-        totalPages.value = (allCustomers.length / itemsPerPage).ceil();
-        hasMore.value = allCustomers.length > itemsPerPage;
-      } else {
-        // Load more
-        final startIndex = customers.length;
-        final endIndex = (startIndex + itemsPerPage).clamp(0, allCustomers.length);
-
-        customers.addAll(allCustomers.sublist(startIndex, endIndex));
-        hasMore.value = endIndex < allCustomers.length;
-        currentPage.value++;
-      }
-
-      filteredCustomers.value = customers;
-
-      print("✅ Displayed ${customers.length} of ${allCustomers.length} customers");
-
-    } catch (e) {
-      print("Error loading customers: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to load customers: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-      isLoadingMore.value = false;
-    }
-  }
-
-  /// Helper to parse dates from Google Sheets
-  DateTime _parseDate(String dateString) {
-    if (dateString.isEmpty) return DateTime.now();
-
-    try {
-      // Try dd/MM/yyyy HH:mm:ss
-      if (dateString.contains('/')) {
-        return DateFormat('dd/MM/yyyy HH:mm:ss').parse(dateString);
-      }
-      // Try ISO format
-      return DateTime.parse(dateString);
-    } catch (e) {
-      return DateTime.now();
-    }
-  }
-
-  Future<void> loadMoreCustomers() async {
-    await loadCustomers(loadMore: true);
-  }
-
-  Future<void> refreshCustomers() async {
-    await loadCustomers(loadMore: false);
-  }
-
-  void searchCustomers(String query) {
-    searchQuery.value = query;
-
-    if (query.isEmpty) {
-      filteredCustomers.value = customers;
-      return;
-    }
-
-    final lowercaseQuery = query.toLowerCase();
-    filteredCustomers.value = customers.where((customer) {
-      final name = (customer['name'] ?? '').toString().toLowerCase();
-      final mobile = (customer['mobile1'] ?? '').toString().toLowerCase();
-      final email = (customer['email'] ?? '').toString().toLowerCase();
-      final city = (customer['city'] ?? '').toString().toLowerCase();
-      final businessName = (customer['businessName'] ?? '').toString().toLowerCase();
-
-      return name.contains(lowercaseQuery) ||
-          mobile.contains(lowercaseQuery) ||
-          email.contains(lowercaseQuery) ||
-          city.contains(lowercaseQuery) ||
-          businessName.contains(lowercaseQuery);
-    }).toList();
-  }
-
-  void clearSearch() {
-    searchQuery.value = '';
-    filteredCustomers.value = customers;
-  }
-
-  void sortCustomers(String sortType) {
-    List<Map<String, dynamic>> sortedList = List.from(filteredCustomers);
-
-    switch (sortType) {
-      case 'name_asc':
-        sortedList.sort((a, b) {
-          final nameA = (a['name'] ?? '').toString().toLowerCase();
-          final nameB = (b['name'] ?? '').toString().toLowerCase();
-          return nameA.compareTo(nameB);
-        });
-        Get.snackbar(
-          'Sorted',
-          'Customers sorted A-Z',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 1),
-        );
-        break;
-
-      case 'name_desc':
-        sortedList.sort((a, b) {
-          final nameA = (a['name'] ?? '').toString().toLowerCase();
-          final nameB = (b['name'] ?? '').toString().toLowerCase();
-          return nameB.compareTo(nameA);
-        });
-        Get.snackbar(
-          'Sorted',
-          'Customers sorted Z-A',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 1),
-        );
-        break;
-
-      case 'recent':
-        sortedList.sort((a, b) {
-          try {
-            final dateA = _parseDate(a['createdAt']?.toString() ?? '');
-            final dateB = _parseDate(b['createdAt']?.toString() ?? '');
-            return dateB.compareTo(dateA);
-          } catch (e) {
-            return 0;
+  Widget build(BuildContext context) {
+    final content = Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: _buildAppBar(context),
+      body: SafeArea(
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return _buildShimmerLoader(context);
           }
-        });
-        Get.snackbar(
-          'Sorted',
-          'Showing recently added first',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: Duration(seconds: 1),
-        );
-        break;
-    }
-
-    filteredCustomers.value = sortedList;
-  }
-
-  Future<void> navigateToAddNewCustomer() async {
-    // ✅ Wait for result from navigation
-    final result = await Get.toNamed(CustomerRegistrationScreen.pageId);
-
-    // ✅ If customer was added/updated, refresh the list
-    if (result == true) {
-      print("🔄 Customer added/updated, refreshing list...");
-      await loadCustomers();
-
-      Get.snackbar(
-        'Success',
-        'Customer list updated',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade600,
-        colorText: Colors.white,
-        duration: Duration(seconds: 2),
-      );
-    }
-  }
-
-  void viewCustomerDetails(Map<String, dynamic> customer) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: AppColors.tealColor.withOpacity(0.15),
-                      child: Text(
-                        (customer['name'] ?? 'U')[0].toUpperCase(),
-                        style: TextStyle(
-                          color: AppColors.tealColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            customer['name'] ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (customer['businessName'] != null &&
-                              customer['businessName'].toString().isNotEmpty)
-                            Text(
-                              customer['businessName'].toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Divider(height: 32),
-
-                _buildDetailSection('Contact Information', [
-                  _buildDetailRow(Icons.phone, 'Mobile', customer['mobile1']?.toString()),
-                  if (customer['mobile2'] != null && customer['mobile2'].toString().isNotEmpty)
-                    _buildDetailRow(Icons.phone_android, 'Secondary', customer['mobile2'].toString()),
-                  if (customer['email'] != null && customer['email'].toString().isNotEmpty)
-                    _buildDetailRow(Icons.email, 'Email', customer['email'].toString()),
-                  if (customer['website'] != null && customer['website'].toString().isNotEmpty)
-                    _buildDetailRow(Icons.language, 'Website', customer['website'].toString()),
-                ]),
-
-                if (customer['address'] != null && customer['address'].toString().isNotEmpty)
-                  _buildDetailSection('Address', [
-                    _buildDetailRow(Icons.home, 'Address', customer['address']?.toString()),
-                    _buildDetailRow(Icons.location_city, 'City', customer['city']?.toString()),
-                    _buildDetailRow(Icons.map, 'State', customer['state']?.toString()),
-                    _buildDetailRow(Icons.flag, 'Country', customer['country']?.toString()),
-                    _buildDetailRow(Icons.pin_drop, 'Pincode', customer['pincode']?.toString()),
-                  ]),
-
-                if ((customer['gst'] != null && customer['gst'].toString().isNotEmpty) ||
-                    (customer['pan'] != null && customer['pan'].toString().isNotEmpty))
-                  _buildDetailSection('Business Information', [
-                    if (customer['gst'] != null && customer['gst'].toString().isNotEmpty)
-                      _buildDetailRow(Icons.receipt_long, 'GST', customer['gst'].toString()),
-                    if (customer['pan'] != null && customer['pan'].toString().isNotEmpty)
-                      _buildDetailRow(Icons.badge, 'PAN', customer['pan'].toString()),
-                    if (customer['businessType'] != null && customer['businessType'].toString().isNotEmpty)
-                      _buildDetailRow(Icons.category, 'Business Type', customer['businessType'].toString()),
-                  ]),
-
-                if (customer['notes'] != null && customer['notes'].toString().isNotEmpty)
-                  _buildDetailSection('Notes', [
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        customer['notes'].toString(),
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ]),
-
-                SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      child: Text('Close'),
-                    ),
-                    SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Get.back();
-                        editCustomer(customer);
-                      },
-                      icon: Icon(Icons.edit, size: 18),
-                      label: Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.tealColor,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 900) {
+                return _buildWebLayout(context);
+              } else {
+                return _buildMobileLayout(context);
+              }
+            },
+          );
+        }),
       ),
     );
+    if (kIsWeb) {
+      return webScreenWrapper(currentRoute: pageId, child: content);
+    }
+    return content;
   }
 
-  Widget _buildDetailSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.tealColor,
+  AppBar _buildAppBar(BuildContext context) {
+    bool isWeb = MediaQuery.of(context).size.width > 900;
+    return AppBar(
+      foregroundColor: Colors.white,
+      elevation: 0,
+      backgroundColor: AppColors.tealColor,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () { if (Navigator.of(context).canPop()) Navigator.of(context).pop(); },
+      ),
+      title: isWeb
+          ? Row(children: [
+        Text('customers'.tr,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
+        if (kIsWeb && Get.isRegistered<DashboardController>()) ...[
+          const Spacer(),
+          Obx(() {
+            final dash = Get.find<DashboardController>();
+            return Text(dash.companyName,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white));
+          }),
+        ],
+      ])
+          : Text('customers'.tr,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
+      centerTitle: !isWeb,
+      actions: [
+        if (!isWeb) ...[
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort, color: Colors.white),
+            onSelected: (value) => controller.sortCustomers(value),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'name_asc', child: _buildSortItemMobile(Icons.sort_by_alpha, 'Name (A-Z)')),
+              PopupMenuItem(value: 'name_desc', child: _buildSortItemMobile(Icons.sort_by_alpha, 'Name (Z-A)')),
+              PopupMenuItem(value: 'recent', child: _buildSortItemMobile(Icons.access_time, 'Recently Added')),
+            ],
           ),
-        ),
-        SizedBox(height: 12),
-        ...children,
-        SizedBox(height: 20),
+          const SizedBox(width: 12),
+        ]
       ],
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String? value) {
-    if (value == null || value.isEmpty) return SizedBox.shrink();
+  Widget _buildSortItemMobile(IconData icon, String text) {
+    return Row(children: [
+      Icon(icon, size: 20, color: AppColors.tealColor),
+      const SizedBox(width: 8),
+      Text(text),
+    ]);
+  }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8),
+  // ===========================================================================
+  // 📱 MOBILE LAYOUT
+  // ===========================================================================
+  Widget _buildMobileLayout(BuildContext context) {
+    return Column(
+      children: [
+        _buildSearchBar(isWeb: false),
+        _buildCustomerCountHeaderMobile(),
+        _buildAddButtonMobile(),
+        _buildPriceToggleBanner(),   // ← Price toggle banner
+        const SizedBox(height: 8),
+        Expanded(child: _buildCustomerListMobile(context)),
+      ],
+    );
+  }
+
+  // ── Price Toggle Banner ──
+  Widget _buildPriceToggleBanner() {
+    return Obx(() => Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: controller.showPriceToCustomer.value
+            ? Colors.green.shade50
+            : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: controller.showPriceToCustomer.value
+              ? Colors.green.shade200
+              : Colors.orange.shade200,
+        ),
+      ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
-          SizedBox(width: 12),
+          Icon(
+            controller.showPriceToCustomer.value
+                ? Icons.visibility
+                : Icons.visibility_off,
+            color: controller.showPriceToCustomer.value
+                ? Colors.green.shade700
+                : Colors.orange.shade700,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
+                  'Order Portal Price',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: controller.showPriceToCustomer.value
+                        ? Colors.green.shade800
+                        : Colors.orange.shade800,
                   ),
                 ),
                 Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  controller.showPriceToCustomer.value
+                      ? 'Customers can see prices'
+                      : 'Prices hidden from customers',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              value: controller.showPriceToCustomer.value,
+              onChanged: (_) => controller.toggleShowPriceToCustomer(),
+              activeColor: Colors.green.shade600,
+              inactiveThumbColor: Colors.orange.shade400,
+              inactiveTrackColor: Colors.orange.shade100,
+            ),
+          ),
+        ],
+      ),
+    ));
+  }
+
+  // ===========================================================================
+  // 💻 WEB LAYOUT
+  // ===========================================================================
+  Widget _buildWebLayout(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 300,
+          color: Colors.white,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.tealColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: AppColors.tealColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.people, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('total_customers'.tr, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      Obx(() => Text('${controller.filteredCustomerList.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold))),
+                    ]),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Web Price Toggle ──
+              _buildPriceToggleBanner(),
+
+              const SizedBox(height: 20),
+              const Text("Search & Filter", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 12),
+              _buildSearchBar(isWeb: true),
+              const SizedBox(height: 32),
+              const Text("Sort By", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 12),
+              _buildWebSortOption('name_asc', Icons.sort_by_alpha, "Name (A-Z)"),
+              _buildWebSortOption('name_desc', Icons.sort_by_alpha, "Name (Z-A)"),
+              _buildWebSortOption('recent', Icons.access_time, "Recently Added"),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Customer Directory",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 20),
+                Expanded(child: _buildCustomerGridWeb(context)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCustomerDetailsDialog(BuildContext context, Map<String, dynamic> customer) {
+    final name = customer['name'] ?? 'Unknown';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: MediaQuery.of(context).size.width > 900 ? 600 : double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
+                    child: Text(initial,
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.tealColor)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text(name,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
+                ]),
+                const Divider(height: 40),
+                _buildSectionTitle("Contact Information"),
+                const SizedBox(height: 16),
+                _buildDetailRow(Icons.phone, "Mobile", customer['mobile1']),
+                _buildDetailRow(Icons.email, "Email", customer['email']),
+                const SizedBox(height: 24),
+                _buildSectionTitle("Address"),
+                const SizedBox(height: 16),
+                _buildDetailRow(Icons.home, "Address", customer['address'] ?? customer['customerAddress']),
+                _buildDetailRow(Icons.location_city, "City", customer['city']),
+                _buildDetailRow(Icons.map, "State", customer['state']),
+                _buildDetailRow(Icons.flag, "Country", "India"),
+                _buildDetailRow(Icons.pin_drop, "Pincode", customer['pincode']),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Get.back(),
+                        child: const Text("Close", style: TextStyle(color: Colors.grey))),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () { Get.back(); controller.editCustomer(customer); },
+                      icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+                      label: const Text("Edit", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.tealColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(title,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.tealColor));
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String? value) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                Text(value,
+                    style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -1225,201 +354,325 @@ class CustomerListController extends BaseController {
     );
   }
 
-  Future<void> editCustomer(Map<String, dynamic> customer) async {
-    String companyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-
-    print("🔧 Editing customer: ${customer['customerId']}");
-    print("🔧 Customer data keys: ${customer.keys.toList()}");
-
-    // ✅ Wait for result
-    final result = await Get.toNamed(
-      CustomerRegistrationScreen.pageId,
-      arguments: {
-        'isEdit': true,
-        'customerData': customer,
-        'companyId': companyId,
-      },
+  Widget _buildWebSortOption(String sortKey, IconData icon, String label) {
+    return InkWell(
+      onTap: () => controller.sortCustomers(sortKey),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+        ]),
+      ),
     );
-
-    // ✅ If customer was updated, refresh the list
-    if (result == true) {
-      print("🔄 Customer updated, refreshing list...");
-      await loadCustomers();
-    }
   }
 
-  void createInvoiceForCustomer(Map<String, dynamic> customer) {
-    if (Get.isRegistered<NewInvoiceController>()) {
-      Get.delete<NewInvoiceController>(force: true);
-    }
-    Get.toNamed(NewInvoiceScreen.pageId, arguments: {
-      'customerId': customer['customerId'],
-      'customerData': customer,
+  Widget _buildCustomerGridWeb(BuildContext context) {
+    return Obx(() {
+      if (controller.filteredCustomerList.isEmpty) return _buildEmptyState();
+      return GridView.builder(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 350, childAspectRatio: 1.6,
+          crossAxisSpacing: 12, mainAxisSpacing: 12,
+        ),
+        itemCount: controller.filteredCustomerList.length,
+        itemBuilder: (context, index) {
+          final customer = controller.filteredCustomerList[index];
+          return _buildWebCustomerCard(context, customer);
+        },
+      );
     });
   }
 
-  /// ✅ FIXED: Delete from Google Sheets
-  void deleteCustomer(Map<String, dynamic> customer) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(
+  Widget _buildWebCustomerCard(BuildContext context, Map<String, dynamic> customer) {
+    final isActive = (customer['isActive']?.toString() ?? 'true').toLowerCase() == 'true';
+    final name = customer['name'] ?? 'Unknown';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 3))],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Delete Customer'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Are you sure you want to delete this customer?'),
-            SizedBox(height: 8),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
+          onTap: isActive ? () => _showCustomerDetailsDialog(context, customer) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppColors.tealColor.withOpacity(0.15),
-                    child: Text(
-                      (customer['name'] ?? 'U')[0].toUpperCase(),
-                      style: TextStyle(
-                        color: AppColors.tealColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
+                    child: Text(initial,
+                        style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          customer['name'] ?? 'Unknown',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        if (customer['mobile1'] != null)
-                          Text(
-                            customer['mobile1'].toString(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      overflow: TextOverflow.ellipsis, maxLines: 1)),
+                  _buildPopupMenu(customer, isActive),
+                ]),
+                const SizedBox(height: 12),
+                Divider(color: Colors.grey.shade200, height: 1),
+                const SizedBox(height: 12),
+                Flexible(child: _buildInfoRow(Icons.phone_outlined, customer['mobile1'] ?? 'No Mobile')),
+                const SizedBox(height: 8),
+                Flexible(child: _buildInfoRow(Icons.location_on_outlined,
+                    '${customer['city'] ?? ''}${customer['state'] != null && customer['state'].isNotEmpty ? ', ${customer['state']}' : ''}')),
+              ],
             ),
-            SizedBox(height: 12),
-            Text(
-              'This action cannot be undone.',
-              style: TextStyle(
-                color: Colors.red.shade700,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('Cancel'),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(children: [
+      Icon(icon, size: 18, color: Colors.grey.shade500),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(text.isEmpty ? 'N/A' : text,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            overflow: TextOverflow.ellipsis, maxLines: 1),
+      ),
+    ]);
+  }
+
+  Widget _buildSearchBar({required bool isWeb}) {
+    return Container(
+      margin: isWeb ? EdgeInsets.zero : const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isWeb ? 8 : 12),
+        border: isWeb ? Border.all(color: Colors.grey.shade300) : null,
+        boxShadow: isWeb ? [] : [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: TextField(
+        onChanged: (value) => controller.searchCustomers(value),
+        decoration: InputDecoration(
+          hintText: 'search_by_name_mobile_or_email'.tr,
+          prefixIcon: Icon(Icons.search, color: AppColors.tealColor),
+          suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+              ? IconButton(icon: Icon(Icons.clear, color: AppColors.tealColor), onPressed: controller.clearSearch)
+              : const SizedBox()),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerCountHeaderMobile() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.7)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: AppColors.tealColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+      ),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+          child: const Icon(Icons.people, color: Colors.white, size: 30),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('total_customers'.tr,
+                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text('${controller.filteredCustomerList.length}',
+                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+            if (controller.searchQuery.value.isNotEmpty)
+              Text('of ${controller.customerCount.value} total',
+                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildAddButtonMobile() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: controller.navigateToAddNewCustomer,
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: Text('add_new_customer'.tr,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.tealColor,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 3,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerListMobile(BuildContext context) {
+    return Obx(() {
+      if (controller.filteredCustomerList.isEmpty) return _buildEmptyState();
+      return RefreshIndicator(
+        onRefresh: controller.refreshCustomers,
+        color: AppColors.tealColor,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: controller.filteredCustomerList.length + 1,
+          itemBuilder: (context, index) {
+            if (index == controller.filteredCustomerList.length) {
+              return Obx(() => controller.hasMore.value
+                  ? _buildLoadMoreButton()
+                  : const SizedBox(height: 20));
+            }
+            final customer = controller.filteredCustomerList[index];
+            return _buildCustomerCardMobile(context, customer);
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _buildCustomerCardMobile(BuildContext context, Map<String, dynamic> customer) {
+    final isActive = (customer['isActive']?.toString() ?? 'true').toLowerCase() == 'true';
+    final name = customer['name'] ?? 'Unknown';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: isActive ? Colors.white : Colors.red.shade50),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            radius: 24,
+            backgroundColor:
+            isActive ? AppColors.tealColor.withOpacity(0.1) : Colors.grey.shade200,
+            child: Text(initial,
+                style: TextStyle(
+                    color: isActive ? AppColors.tealColor : Colors.grey.shade500,
+                    fontWeight: FontWeight.bold)),
+          ),
+          title: Text(name,
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.black87 : Colors.grey)),
+          subtitle: Text(customer['mobile1'] ?? '',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          trailing: _buildPopupMenu(customer, isActive),
+          onTap: isActive ? () => _showCustomerDetailsDialog(context, customer) : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPopupMenu(Map<String, dynamic> customer, bool isActive) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.grey),
+      itemBuilder: (context) => <PopupMenuEntry<String>>[
+        if (isActive) ...[
+          const PopupMenuItem(value: 'edit',
+              child: Row(children: [Icon(Icons.edit, color: Colors.orange, size: 18), SizedBox(width: 8), Text('Edit')])),
+          const PopupMenuItem(value: 'invoice',
+              child: Row(children: [Icon(Icons.receipt, color: Colors.green, size: 18), SizedBox(width: 8), Text('Create Invoice')])),
+          const PopupMenuItem(value: 'share',
+              child: Row(children: [Icon(Icons.share, color: Colors.blue, size: 18), SizedBox(width: 8), Text('Share Order Link')])),
+          const PopupMenuDivider(),
+          const PopupMenuItem(value: 'delete',
+              child: Row(children: [Icon(Icons.delete, color: Colors.red, size: 18), SizedBox(width: 8), Text('Delete')])),
+        ] else ...[
+          const PopupMenuItem(value: 'restore',
+              child: Row(children: [Icon(Icons.restore, color: Colors.green, size: 18), SizedBox(width: 8), Text('Restore')])),
+        ],
+      ],
+      onSelected: (value) {
+        switch (value) {
+          case 'edit': controller.editCustomer(customer); break;
+          case 'invoice': controller.createInvoiceForCustomer(customer); break;
+          case 'share': controller.shareOrderLink(customer); break;
+          case 'delete': controller.deleteCustomer(customer); break;
+        }
+      },
+    );
+  }
+
+  Widget _buildShimmerLoader(BuildContext context) {
+    bool isWeb = MediaQuery.of(context).size.width > 900;
+    return isWeb
+        ? GridView.builder(
+      padding: const EdgeInsets.all(24),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 400, childAspectRatio: 1.6,
+          crossAxisSpacing: 20, mainAxisSpacing: 20),
+      itemCount: 8,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(16))),
+      ),
+    )
+        : ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            child: Container(height: 80)),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.people_outline, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('No Customers Yet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey)),
+          const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              await _performDeleteCustomer(customer);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Delete'),
+            onPressed: controller.navigateToAddNewCustomer,
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
+            child: const Text("Add Customer", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  /// ✅ FIXED: Delete from Google Sheets
-  Future<void> _performDeleteCustomer(Map<String, dynamic> customer) async {
-    try {
-      isLoading.value = true;
-
-      final user = _auth.currentUser;
-      if (user == null) {
-        Get.snackbar(
-          'Error',
-          'User not authenticated',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          icon: Icon(Icons.error, color: Colors.white),
-        );
-        return;
-      }
-
-      final customerId = customer['customerId']?.toString();
-      if (customerId == null || customerId.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Customer ID not found',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
-
-      // ✅ DELETE from Google Sheets
-      await GoogleSheetService.deleteCustomer(customerId, user.uid);
-
-      // Remove from local lists
-      customers.removeWhere((c) => c['customerId'] == customerId);
-      filteredCustomers.removeWhere((c) => c['customerId'] == customerId);
-
-      // Update customer count
-      customerCount.value = customers.length;
-
-      // Trigger UI update
-      customers.refresh();
-      filteredCustomers.refresh();
-
-      Get.snackbar(
-        'Customer Deleted',
-        '${customer['name']} has been permanently deleted',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        icon: Icon(Icons.check_circle, color: Colors.white),
-        duration: Duration(seconds: 3),
-      );
-
-    } catch (e) {
-      print("Error deleting customer: $e");
-      Get.snackbar(
-        'Error',
-        'Failed to delete customer: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        icon: Icon(Icons.error, color: Colors.white),
-        duration: Duration(seconds: 4),
-      );
-    } finally {
-      isLoading.value = false;
-    }
+  Widget _buildLoadMoreButton() {
+    return Center(
+        child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+                height: 20, width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.tealColor))));
   }
 }
-
 
