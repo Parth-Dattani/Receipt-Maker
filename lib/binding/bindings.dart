@@ -19,3 +19,4 @@ export 'purchase_entry_binding.dart';
 export 'purchase_list_binding.dart';
 export 'purchase_details_binding.dart';
 export 'stock_report_binding.dart';
+export 'admin_orders_binding.dart';

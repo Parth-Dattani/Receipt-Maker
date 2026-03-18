@@ -154,4 +154,14 @@ List<GetPage> appPages = [
     name: OrderSuccessScreen.pageId,
     page: () => const OrderSuccessScreen(),
   ),
+
+  GetPage(
+      name: OrderHistoryScreen.pageId,
+      page: () => const OrderHistoryScreen()),
+
+  GetPage(
+    name: AdminOrdersScreen.pageId,
+    page: () => const AdminOrdersScreen(),
+    binding: AdminOrdersBinding(),  // ← add this
+  ),
 ];

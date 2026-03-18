@@ -236,7 +236,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
-
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
@@ -244,55 +243,23 @@ import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
 
-import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:googleapis/sheets/v4.dart' as sheets;
 
-import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:googleapis/sheets/v4.dart' as sheets;
 
-import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:googleapis/sheets/v4.dart' as sheets;
+
+
+
+
+
+// Import your existing Item model
+// import '../model/item_model.dart'; // ← uncomment with correct path
 
 // ─────────────────────────────────────────────
-// ItemModel
+// OrderRow Model
 // ─────────────────────────────────────────────
-class ItemModel {
-  final String itemId;
-  final String itemName;
-  final double price;
-  final String unit;
-  final String category;
-
-  ItemModel({
-    required this.itemId,
-    required this.itemName,
-    required this.price,
-    this.unit = '',
-    this.category = '',
-  });
-
-  // Google Sheets row: A=itemId, B=itemName, C=price, D=sellPrice, E=gstPercent, F=unitOfMeasure
-  factory ItemModel.fromSheetRow(List<dynamic> row) {
-    return ItemModel(
-      itemId:   row.length > 0 ? row[0].toString() : '',
-      itemName: row.length > 1 ? row[1].toString() : '',
-      price:    row.length > 3 ? double.tryParse(row[3].toString()) ?? 0.0 : 0.0, // D = sellPrice
-      unit:     row.length > 5 ? row[5].toString() : '', // F = unitOfMeasure
-      category: row.length > 4 ? row[4].toString() : '', // E = gstPercent
-    );
-  }
+class OrderRow {
+  Item? selectedItem;
+  double qty;
+  OrderRow({this.selectedItem, this.qty = 0});
 }
 
 // ─────────────────────────────────────────────
@@ -305,23 +272,26 @@ class OrderController extends GetxController {
   var isLoading      = true.obs;
   var isPlacingOrder = false.obs;
   var customerName   = ''.obs;
-  var itemList       = <ItemModel>[].obs;
+  var companyName    = ''.obs;
+  var itemList       = <Item>[].obs;
+  var showPriceToCustomer = true.obs;
+  var orderRows    = <OrderRow>[].obs;
+
+  // Old cart (kept for compatibility)
   var cart = <String, int>{}.obs;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ Your actual JSON file name in assets/
   static const _serviceAccountAssetPath =
       'assets/getyourinvoice-8f128-3dfb21843bde.json';
-
-  // Show/Hide price setting (fetched from Firestore companies doc)
-  var showPriceToCustomer = true.obs;
 
   @override
   void onInit() {
     super.onInit();
-    companyId.value  = Get.parameters['cid'] ?? '';
-    customerId.value = Get.parameters['uid'] ?? '';
+    companyId.value  = (Get.parameters['cid'] ?? '')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
+    customerId.value = (Get.parameters['uid'] ?? '')
+        .replaceAll(RegExp(r'[^0-9]'), '');
 
     if (companyId.value.isEmpty || customerId.value.isEmpty) {
       Get.snackbar('Invalid Link', 'Order link is missing required parameters.',
@@ -329,7 +299,6 @@ class OrderController extends GetxController {
       isLoading.value = false;
       return;
     }
-
     _initPage();
   }
 
@@ -337,111 +306,164 @@ class OrderController extends GetxController {
     try {
       isLoading.value = true;
 
-      // First get spreadsheetId + price setting (from Firestore)
-      final spreadsheetId = await _fetchSpreadsheetId();
-
-      // Then load credentials once
       final jsonStr = await rootBundle.loadString(_serviceAccountAssetPath);
       final credentialsJson = json.decode(jsonStr) as Map<String, dynamic>;
 
-      // Run all in parallel
+      String spreadsheetId = '';
+      try {
+        spreadsheetId = await _fetchSpreadsheetId();
+        print('✅ spreadsheetId: $spreadsheetId');
+      } catch (e) {
+        print('❌ spreadsheetId fetch failed: $e');
+        Get.snackbar('Connection Error',
+            'Could not connect. Check internet and try again.',
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red.shade100);
+        isLoading.value = false;
+        return;
+      }
+
       await Future.wait([
         _fetchCustomerNameFromSheet(spreadsheetId, credentialsJson),
         _fetchItemsFromSheet(spreadsheetId, credentialsJson),
         _fetchPriceSetting(),
+        _fetchCompanyName(),
       ]);
+
+      // Default 1 empty row
+      orderRows.value = [OrderRow()];
+
     } catch (e) {
       print('❌ initPage error: $e');
-      Get.snackbar('Error', 'Failed to load page: $e');
     } finally {
       isLoading.value = false;
     }
   }
 
   // ─────────────────────────────────────────────
-  // spreadsheetId from Firestore: users/{cid}
+  // spreadsheetId — FY based or direct
   // ─────────────────────────────────────────────
   Future<String> _fetchSpreadsheetId() async {
-    final doc = await _firestore
-        .collection('users')
-        .doc(companyId.value)
-        .get();
+    Exception? lastError;
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        print('📊 Firestore fetch attempt $attempt...');
+        final doc = await _firestore
+            .collection('users')
+            .doc(companyId.value)
+            .get()
+            .timeout(Duration(seconds: attempt * 5));
 
-    final spreadsheetId = doc.data()?['spreadsheetId']?.toString() ?? '';
-    if (spreadsheetId.isEmpty) {
-      throw Exception('spreadsheetId not found for companyId: ${companyId.value}');
+        final data = doc.data();
+        if (data == null) throw Exception('User doc not found');
+
+        final now    = DateTime.now();
+        final fyYear = now.month >= 4 ? now.year : now.year - 1;
+        final currentFy = '$fyYear-${(fyYear + 1).toString().substring(2)}';
+
+        final byFy = data['spreadsheetIdsByFy'] as Map<String, dynamic>?;
+        if (byFy != null && byFy.containsKey(currentFy)) {
+          final id = byFy[currentFy].toString();
+          print('📊 spreadsheetId from FY $currentFy: $id');
+          return id;
+        }
+
+        final direct = data['spreadsheetId']?.toString() ?? '';
+        if (direct.isNotEmpty) {
+          print('📊 spreadsheetId direct: $direct');
+          return direct;
+        }
+
+        throw Exception('spreadsheetId not found');
+      } catch (e) {
+        lastError = Exception(e.toString());
+        print('⚠️ Attempt $attempt failed: $e');
+        if (attempt < 3) await Future.delayed(Duration(seconds: attempt * 2));
+      }
     }
-    print('📊 spreadsheetId: $spreadsheetId');
-    return spreadsheetId;
+    throw lastError ?? Exception('Could not fetch spreadsheetId');
   }
 
   // ─────────────────────────────────────────────
-  // Fetch showPriceToCustomer from Firestore
-  // users/{cid}/companies/{companyId} → showPriceToCustomer
+  // Price setting
   // ─────────────────────────────────────────────
   Future<void> _fetchPriceSetting() async {
     try {
-      // Get companies subcollection (first company doc)
-      final companiesSnap = await _firestore
+      final snap = await _firestore
           .collection('users')
           .doc(companyId.value)
           .collection('companies')
           .limit(1)
           .get();
-
-      if (companiesSnap.docs.isNotEmpty) {
-        final data = companiesSnap.docs.first.data();
-        // Default true if field not set
+      if (snap.docs.isNotEmpty) {
         showPriceToCustomer.value =
-            data['showPriceToCustomer'] as bool? ?? true;
+            snap.docs.first.data()['showPriceToCustomer'] as bool? ?? true;
         print('💰 showPriceToCustomer: ${showPriceToCustomer.value}');
       }
     } catch (e) {
-      print('❌ fetchPriceSetting error: $e');
-      showPriceToCustomer.value = true; // default: show
+      print('❌ fetchPriceSetting: $e');
+      showPriceToCustomer.value = true;
     }
   }
 
   // ─────────────────────────────────────────────
-  // Customer name from "Customer" sheet
-  // Sheet columns: A=customerId, B=companyId, C=companyName, D=name, E=address...
+  // Company name
+  // ─────────────────────────────────────────────
+  Future<void> _fetchCompanyName() async {
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(companyId.value)
+          .collection('companies')
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      if (snap.docs.isNotEmpty) {
+        companyName.value =
+            snap.docs.first.data()['companyName']?.toString() ?? '';
+        print('🏢 companyName: ${companyName.value}');
+      }
+    } catch (e) {
+      print('❌ fetchCompanyName: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // Customer name from Sheet
   // ─────────────────────────────────────────────
   Future<void> _fetchCustomerNameFromSheet(
       String spreadsheetId,
       Map<String, dynamic> credentialsJson,
       ) async {
     try {
-      final accountCredentials = ServiceAccountCredentials.fromJson(credentialsJson);
-      final scopes = [sheets.SheetsApi.spreadsheetsReadonlyScope];
-      final authClient = await clientViaServiceAccount(accountCredentials, scopes);
-
+      final authClient = await clientViaServiceAccount(
+        ServiceAccountCredentials.fromJson(credentialsJson),
+        [sheets.SheetsApi.spreadsheetsReadonlyScope],
+      );
       try {
         final sheetsApi = sheets.SheetsApi(authClient);
-
-        // A=customerId, B=companyId, C=companyName, D=name
         final response = await sheetsApi.spreadsheets.values.get(
-          spreadsheetId,
-          'Customer!A2:D',
+          spreadsheetId, 'Customer!A2:D',
         );
-
         final rows = response.values ?? [];
 
-        for (final row in rows) {
-          // Match by customerId (column A) only
-          // URL cid = userId (TozLIGsQq4...), NOT companyId (Oe6p4np...)
-          final rowCustomerId = row.length > 0 ? row[0].toString() : '';
+        print('🔍 URL customerId: "${customerId.value}"');
+        print('🔍 Total rows fetched: ${rows.length}');
+        for (int i = 0; i < rows.length; i++) {
+          print('🔍 Row $i → ${rows[i]}');
+        }
 
-          if (rowCustomerId == customerId.value) {
+        for (final row in rows) {
+          final id = row.isNotEmpty ? row[0].toString().trim() : '';
+          if (id == customerId.value.trim()) {
             customerName.value =
-            row.length > 3 ? row[3].toString() : 'Customer';
+            row.length > 3 ? row[3].toString().trim() : 'Customer';
             print('✅ Customer found: ${customerName.value}');
             return;
           }
         }
-
-        print('⚠️ Customer not found, customerId: ${customerId.value}');
+        print('❌ No match for customerId: "${customerId.value}"');
         customerName.value = 'Customer';
-
       } finally {
         authClient.close();
       }
@@ -452,32 +474,79 @@ class OrderController extends GetxController {
   }
 
   // ─────────────────────────────────────────────
-  // Items from "Item" sheet
-  // Sheet columns: A=itemId, B=itemName, C=price, D=unit, E=category
+  // Items from Sheet — header-based column mapping
   // ─────────────────────────────────────────────
   Future<void> _fetchItemsFromSheet(
       String spreadsheetId,
       Map<String, dynamic> credentialsJson,
       ) async {
     try {
-      final accountCredentials = ServiceAccountCredentials.fromJson(credentialsJson);
-      final scopes = [sheets.SheetsApi.spreadsheetsReadonlyScope];
-      final authClient = await clientViaServiceAccount(accountCredentials, scopes);
-
+      final authClient = await clientViaServiceAccount(
+        ServiceAccountCredentials.fromJson(credentialsJson),
+        [sheets.SheetsApi.spreadsheetsReadonlyScope],
+      );
       try {
         final sheetsApi = sheets.SheetsApi(authClient);
 
-        final response = await sheetsApi.spreadsheets.values.get(
-          spreadsheetId,
-          'Item!A2:E',
+        // ── Step 1: Fetch header row ──
+        final headerResp = await sheetsApi.spreadsheets.values.get(
+          spreadsheetId, 'Item!A1:Z1',
         );
+        final headers = (headerResp.values?.isNotEmpty == true)
+            ? headerResp.values!.first
+            .map((h) => h.toString().trim().toLowerCase())
+            .toList()
+            : <dynamic>[];
 
-        final rows = response.values ?? [];
-        print('✅ Fetched ${rows.length} items from Google Sheets');
+        print('📋 Item headers: $headers');
 
+        // ── Step 2: Find column indexes by header name ──
+        int _idx(String name) => headers.indexOf(name);
+
+        final itemIdIdx    = _idx('itemid');
+        final itemNameIdx  = _idx('itemname');
+        final priceIdx     = _idx('price');
+        final sellPriceIdx = _idx('sellprice');
+        final gstIdx       = _idx('gstpercent');
+        final unitIdx      = _idx('unitofmeasurement');
+
+        print('📊 itemId:$itemIdIdx itemName:$itemNameIdx '
+            'price:$priceIdx sellPrice:$sellPriceIdx '
+            'unit:$unitIdx gst:$gstIdx');
+
+        // ── Step 3: Fetch data rows ──
+        final dataResp = await sheetsApi.spreadsheets.values.get(
+          spreadsheetId, 'Item!A2:Z',
+        );
+        final rows = dataResp.values ?? [];
+        print('✅ Fetched ${rows.length} items');
+
+        // ── Step 4: Map rows → Item ──
         itemList.value = rows
             .where((row) => row.isNotEmpty && row[0].toString().isNotEmpty)
-            .map((row) => ItemModel.fromSheetRow(row))
+            .map((row) {
+          // Helper: safe cell read
+          String cell(int idx) =>
+              (idx >= 0 && idx < row.length)
+                  ? row[idx].toString().trim()
+                  : '';
+
+          // sellPrice first, fallback to price
+          final sellStr  = cell(sellPriceIdx);
+          final priceStr = cell(priceIdx >= 0 ? priceIdx : 2);
+          final finalPrice = double.tryParse(
+              sellStr.isNotEmpty ? sellStr : priceStr) ??
+              0.0;
+
+          return Item(
+            itemId:            cell(itemIdIdx   >= 0 ? itemIdIdx   : 0),
+            itemName:          cell(itemNameIdx >= 0 ? itemNameIdx : 1),
+            price:             double.tryParse(priceStr) ?? 0.0,
+            sellPrice:         finalPrice,
+            gstPercent:        double.tryParse(cell(gstIdx  >= 0 ? gstIdx  : 3)) ?? 0.0,
+            unitOfMeasurement: cell(unitIdx >= 0 ? unitIdx : 4),
+          );
+        })
             .toList();
 
       } finally {
@@ -490,15 +559,158 @@ class OrderController extends GetxController {
   }
 
   // ─────────────────────────────────────────────
-  // Cart helpers
+  // Save Order to Google Sheets "Orders" tab
   // ─────────────────────────────────────────────
-  int getQuantity(String itemId) => cart[itemId] ?? 0;
+  Future<void> _saveOrderToSheet(
+      String orderId,
+      List<Map<String, dynamic>> orderItems,
+      ) async {
+    try {
+      final jsonStr      = await rootBundle.loadString(_serviceAccountAssetPath);
+      final credentials  = json.decode(jsonStr) as Map<String, dynamic>;
+      final spreadsheetId = await _fetchSpreadsheetId();
 
+      final authClient = await clientViaServiceAccount(
+        ServiceAccountCredentials.fromJson(credentials),
+        [sheets.SheetsApi.spreadsheetsScope],
+      );
+      try {
+        final sheetsApi = sheets.SheetsApi(authClient);
+        final now = DateTime.now();
+        final ts  = '${now.day.toString().padLeft(2,'0')}/'
+            '${now.month.toString().padLeft(2,'0')}/${now.year} '
+            '${now.hour.toString().padLeft(2,'0')}:'
+            '${now.minute.toString().padLeft(2,'0')}:'
+            '${now.second.toString().padLeft(2,'0')}';
+
+        final List<List<Object>> rows = orderItems.map((item) => [
+          orderId,
+          companyId.value,
+          customerId.value,
+          customerName.value,
+          item['itemId']   ?? '',
+          item['itemName'] ?? '',
+          item['quantity'] ?? 0,
+          item['price']    ?? 0,
+          item['subtotal'] ?? 0,
+          item['quantity'] is double
+              ? (item['quantity'] as double) * (item['price'] as double? ?? 0)
+              : (item['subtotal'] ?? 0),
+          'pending',
+          ts,
+        ] as List<Object>).toList();
+
+        await sheetsApi.spreadsheets.values.append(
+          sheets.ValueRange(values: rows),
+          spreadsheetId,
+          'Orders!A:L',
+          valueInputOption: 'USER_ENTERED',
+          insertDataOption: 'INSERT_ROWS',
+        );
+        print('✅ Order saved to Sheets: ${rows.length} rows');
+      } finally {
+        authClient.close();
+      }
+    } catch (e) {
+      print('⚠️ Sheet save failed (order still placed): $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // Order Row Management
+  // ─────────────────────────────────────────────
+  void addNewRow() {
+    orderRows.add(OrderRow());
+    orderRows.refresh();
+  }
+
+  void removeRow(int index) {
+    if (orderRows.length > 1) {
+      orderRows.removeAt(index);
+      orderRows.refresh();
+    }
+  }
+
+  void selectItem(int index, Item item) {
+    orderRows[index].selectedItem = item;
+    orderRows[index].qty = 0;
+    orderRows.refresh();
+  }
+
+  void setQty(int index, double qty) {
+    orderRows[index].qty = qty;
+    orderRows.refresh();
+  }
+
+  double get orderTotalAmount {
+    double total = 0;
+    for (final row in orderRows) {
+      if (row.selectedItem != null && row.qty > 0) {
+        total += row.selectedItem!.sellPrice * row.qty;
+      }
+    }
+    return total;
+  }
+
+  // ─────────────────────────────────────────────
+  // Place Order
+  // ─────────────────────────────────────────────
+  Future<void> placeOrderNew() async {
+    final validRows = orderRows
+        .where((r) => r.selectedItem != null && r.qty > 0)
+        .toList();
+
+    if (validRows.isEmpty) {
+      Get.snackbar('Empty Order',
+          'Please select at least one item with quantity.');
+      return;
+    }
+
+    try {
+      isPlacingOrder.value = true;
+
+      final orderItems = validRows.map((r) => {
+        'itemId':   r.selectedItem!.itemId,
+        'itemName': r.selectedItem!.itemName,
+        'price':    r.selectedItem!.sellPrice,
+        'quantity': r.qty,
+        'subtotal': r.selectedItem!.sellPrice * r.qty,
+      }).toList();
+
+      final total = validRows.fold<double>(
+          0, (s, r) => s + r.selectedItem!.sellPrice * r.qty);
+
+      final docRef = await _firestore.collection('public_orders').add({
+        'companyId':    companyId.value,
+        'customerId':   customerId.value,
+        'customerName': customerName.value,
+        'items':        orderItems,
+        'totalAmount':  total,
+        'status':       'pending',
+        'timestamp':    FieldValue.serverTimestamp(),
+      });
+
+      await _saveOrderToSheet(docRef.id, orderItems);
+
+      orderRows.value = [OrderRow()];
+      Get.offNamed(OrderSuccessScreen.pageId);
+
+    } catch (e) {
+      print('❌ placeOrderNew error: $e');
+      Get.snackbar('Error', 'Failed to place order. Try again.',
+          backgroundColor: const Color(0xFFD32F2F),
+          colorText: Colors.white);
+    } finally {
+      isPlacingOrder.value = false;
+    }
+  }
+
+  // Old cart helpers (kept for compatibility)
+  int getQuantity(String itemId) => cart[itemId] ?? 0;
   void incrementQuantity(String itemId) {
     cart[itemId] = (cart[itemId] ?? 0) + 1;
     cart.refresh();
   }
-
   void decrementQuantity(String itemId) {
     if ((cart[itemId] ?? 0) > 0) {
       cart[itemId] = cart[itemId]! - 1;
@@ -506,63 +718,12 @@ class OrderController extends GetxController {
       cart.refresh();
     }
   }
-
   double get totalAmount {
     double total = 0;
     for (final entry in cart.entries) {
       final item = itemList.firstWhereOrNull((i) => i.itemId == entry.key);
-      if (item != null) total += item.price * entry.value;
+      if (item != null) total += item.sellPrice * entry.value;
     }
     return total;
-  }
-
-  // ─────────────────────────────────────────────
-  // Place Order → Firestore: public_orders
-  // ─────────────────────────────────────────────
-  Future<void> placeOrder() async {
-    if (cart.isEmpty) {
-      Get.snackbar('Empty Cart', 'Please add at least one item.');
-      return;
-    }
-
-    try {
-      isPlacingOrder.value = true;
-
-      final List<Map<String, dynamic>> orderItems = [];
-      for (final entry in cart.entries) {
-        final item = itemList.firstWhereOrNull((i) => i.itemId == entry.key);
-        if (item != null) {
-          orderItems.add({
-            'itemId':   item.itemId,
-            'itemName': item.itemName,
-            'price':    item.price,
-            'quantity': entry.value,
-            'subtotal': item.price * entry.value,
-          });
-        }
-      }
-
-      await _firestore.collection('public_orders').add({
-        'companyId':    companyId.value,
-        'customerId':   customerId.value,
-        'customerName': customerName.value,
-        'items':        orderItems,
-        'totalAmount':  totalAmount,
-        'status':       'pending',
-        'timestamp':    FieldValue.serverTimestamp(),
-      });
-
-      print('✅ Order placed successfully');
-      cart.clear();
-      Get.offNamed(OrderSuccessScreen.pageId);
-
-    } catch (e) {
-      print('❌ placeOrder error: $e');
-      Get.snackbar('Error', 'Failed to place order. Please try again.',
-          backgroundColor: const Color(0xFFD32F2F),
-          colorText: const Color(0xFFFFFFFF));
-    } finally {
-      isPlacingOrder.value = false;
-    }
   }
 }

@@ -714,6 +714,12 @@ class DashboardScreen extends GetView<DashboardController> {
 
                 _buildWebMenuItem(Icons.people, "customers".tr, false, () => controller.navigateToCustomerList()),
                 _buildWebMenuItem(Icons.payment, "payment".tr, false, () => controller.navigateToPaymentDetails()),
+                _buildWebMenuItem(
+                  Icons.receipt_long,
+                  'Customer Orders',
+                  false,
+                      () => Get.toNamed(AdminOrdersScreen.pageId),
+                ),
 
                 // Tighter Divider (Height 12 instead of 24)
                 const Divider(color: Colors.white24, height: 12),
@@ -2332,6 +2338,15 @@ class DashboardScreen extends GetView<DashboardController> {
                     _buildMenuItem(icon: Icons.assessment, iconColor: Colors.purple.shade600, title: "Stock Report", onTap: () { Get.back(); controller.navigateToStockReport(); }),
                   _buildMenuItem(icon: Icons.people, iconColor: Colors.orange.shade600, title: "customers".tr, onTap: () { Get.back(); controller.navigateToCustomerList(); }),
                   _buildMenuItem(icon: Icons.account_balance_wallet, iconColor: Colors.indigo.shade600, title: "payment".tr, onTap: () { Get.back(); controller.navigateToPaymentDetails(); }),
+                  _buildMenuItem(
+                    icon: Icons.receipt_long,
+                    iconColor: const Color(0xFF00897B),
+                    title: 'Customer Orders',
+                    onTap: () {
+                      Get.back();
+                      Get.toNamed(AdminOrdersScreen.pageId);
+                    },
+                  ),
                   Divider(height: 32, thickness: 1),
                   _buildSectionHeader("settings".tr),
                   _buildMenuItem(icon: Icons.settings, iconColor: Colors.grey.shade700, title: "Settings", onTap: () { Get.back(); Get.toNamed(SettingsScreen.pageId); }),

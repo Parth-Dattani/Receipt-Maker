@@ -19,3 +19,6 @@ export 'Inventory/purchase_list_screen.dart';
 export 'Inventory/purchase_details_screen.dart';
 export 'Inventory/stock_report_screen.dart';
 export 'admin/admin_panel_screen.dart';
+export 'order/order_screen.dart';
+export 'order/order_history_screen.dart';
+export 'order/admin_orders_screen.dart';

@@ -21,3 +21,4 @@ export 'purchase_entry_controller.dart';
 export 'purchase_list_controller.dart';
 export 'purchase_details_controller.dart';
 export 'stock_report_controller.dart';
+export 'admin_orders_controller.dart';
