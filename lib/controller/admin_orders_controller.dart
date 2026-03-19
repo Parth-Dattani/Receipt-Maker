@@ -10,9 +10,59 @@ import 'package:get/get.dart';
 
 import '../utils/shared_preferences_helper.dart';
 
-// ─────────────────────────────────────────────
-// AdminOrdersController
-// ─────────────────────────────────────────────
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:googleapis/sheets/v4.dart' as sheets;
+
+
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:googleapis/sheets/v4.dart' as sheets;
+
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:googleapis/sheets/v4.dart' as sheets;
+
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:googleapis/sheets/v4.dart' as sheets;
+
 class AdminOrdersController extends GetxController {
   var isLoading    = false.obs;
   var orders       = <Map<String, dynamic>>[].obs;
@@ -38,7 +88,6 @@ class AdminOrdersController extends GetxController {
   Future<void> loadOrders() async {
     try {
       isLoading.value = true;
-
       final uid = await _getCompanyUserId();
       if (uid.isEmpty) {
         print('❌ No user ID found');
@@ -76,13 +125,9 @@ class AdminOrdersController extends GetxController {
 
   Future<String> _getCompanyUserId() async {
     try {
-      // Try sharedPreferences first
       final pref = await sharedPreferencesHelper.getPrefData("userId");
-      if (pref != null && pref.toString().isNotEmpty) {
-        return pref.toString();
-      }
+      if (pref != null && pref.toString().isNotEmpty) return pref.toString();
     } catch (_) {}
-    // Fallback to FirebaseAuth
     return FirebaseAuth.instance.currentUser?.uid ?? '';
   }
 
@@ -92,6 +137,9 @@ class AdminOrdersController extends GetxController {
           .collection('public_orders')
           .doc(orderId)
           .update({'status': newStatus});
+
+      // Update Orders sheet status in background
+      _updateOrderStatusInSheet(orderId, newStatus);
 
       Get.snackbar(
         'Updated ✅',
@@ -106,4 +154,100 @@ class AdminOrdersController extends GetxController {
           backgroundColor: Colors.red.shade100);
     }
   }
+  // ── Update Orders sheet status column ──
+  void _updateOrderStatusInSheet(String orderId, String newStatus) {
+    Future.delayed(Duration.zero, () async {
+      try {
+        final jsonStr = await rootBundle.loadString(
+            'assets/getyourinvoice-8f128-3dfb21843bde.json');
+        final credentials = json.decode(jsonStr) as Map<String, dynamic>;
+
+        final uid = await _getCompanyUserId();
+        if (uid.isEmpty) return;
+
+        final doc = await _firestore.collection('users').doc(uid).get();
+        final data = doc.data();
+        if (data == null) return;
+
+        final now = DateTime.now();
+        final fyYear = now.month >= 4 ? now.year : now.year - 1;
+        final fy = fyYear.toString() + '-' +
+            (fyYear + 1).toString().substring(2);
+        final byFy = data['spreadsheetIdsByFy'] as Map<String, dynamic>?;
+        final spreadsheetId = (byFy != null && byFy.containsKey(fy))
+            ? byFy[fy].toString()
+            : data['spreadsheetId']?.toString() ?? '';
+        if (spreadsheetId.isEmpty) return;
+
+        final authClient = await clientViaServiceAccount(
+          ServiceAccountCredentials.fromJson(credentials),
+          [sheets.SheetsApi.spreadsheetsScope],
+        );
+        try {
+          final sheetsApi = sheets.SheetsApi(authClient);
+
+          // Find rows with this orderId in column A
+          final resp = await sheetsApi.spreadsheets.values.get(
+            spreadsheetId, 'Orders!A:A',
+          );
+          final rows = resp.values ?? [];
+
+          int updatedCount = 0;
+          for (int i = 0; i < rows.length; i++) {
+            if (rows[i].isNotEmpty &&
+                rows[i][0].toString().trim() == orderId) {
+              final rowNum = i + 1;
+              // K column = status (11th column)
+              final statusRange = sheets.ValueRange();
+              statusRange.values = [[newStatus]];
+              await sheetsApi.spreadsheets.values.update(
+                statusRange,
+                spreadsheetId,
+                'Orders!K' + rowNum.toString(),
+                valueInputOption: 'RAW',
+              );
+              updatedCount++;
+            }
+          }
+          print('✅ Orders sheet updated: ' + orderId + ' → ' + newStatus +
+              ' (' + updatedCount.toString() + ' rows)');
+        } finally {
+          authClient.close();
+        }
+      } catch (e) {
+        print('⚠️ Sheet status update failed: ' + e.toString());
+      }
+    });
+  }
+
+
+  // ── Mark Invoice created ──
+  Future<void> markInvoiceCreated(String orderId) async {
+    try {
+      await _firestore.collection('public_orders').doc(orderId).update({
+        'invoiceCreated': true,
+        'status': 'confirmed',
+      });
+      _updateOrderStatusInSheet(orderId, 'confirmed');
+      print('✅ Invoice marked created: ' + orderId);
+    } catch (e) {
+      print('❌ markInvoiceCreated error: ' + e.toString());
+    }
+  }
+
+  // ── Mark Challan created ──
+  Future<void> markChallanCreated(String orderId) async {
+    try {
+      await _firestore.collection('public_orders').doc(orderId).update({
+        'challanCreated': true,
+        'status': 'confirmed',
+      });
+      _updateOrderStatusInSheet(orderId, 'confirmed');
+      print('✅ Challan marked created: ' + orderId);
+    } catch (e) {
+      print('❌ markChallanCreated error: ' + e.toString());
+    }
+  }
+
+
 }

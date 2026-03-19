@@ -230,25 +230,22 @@ import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
 
+
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
+
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
-
-
-
-
-
-
-
 
 // Import your existing Item model
 // import '../model/item_model.dart'; // ← uncomment with correct path
@@ -273,6 +270,9 @@ class OrderController extends GetxController {
   var isPlacingOrder = false.obs;
   var customerName   = ''.obs;
   var companyName    = ''.obs;
+  var customerMobile  = ''.obs;
+  var customerAddress = ''.obs;
+  var customerEmail   = ''.obs;
   var itemList       = <Item>[].obs;
   var showPriceToCustomer = true.obs;
   var orderRows    = <OrderRow>[].obs;
@@ -323,8 +323,11 @@ class OrderController extends GetxController {
         return;
       }
 
+      // Fetch customer FIRST (sequential) so mobile/address available
+      await _fetchCustomerNameFromSheet(spreadsheetId, credentialsJson);
+
+      // Then load rest in parallel
       await Future.wait([
-        _fetchCustomerNameFromSheet(spreadsheetId, credentialsJson),
         _fetchItemsFromSheet(spreadsheetId, credentialsJson),
         _fetchPriceSetting(),
         _fetchCompanyName(),
@@ -442,27 +445,55 @@ class OrderController extends GetxController {
       );
       try {
         final sheetsApi = sheets.SheetsApi(authClient);
-        final response = await sheetsApi.spreadsheets.values.get(
-          spreadsheetId, 'Customer!A2:D',
-        );
-        final rows = response.values ?? [];
 
-        print('🔍 URL customerId: "${customerId.value}"');
-        print('🔍 Total rows fetched: ${rows.length}');
-        for (int i = 0; i < rows.length; i++) {
-          print('🔍 Row $i → ${rows[i]}');
+        // ── Header row ──
+        final headerResp = await sheetsApi.spreadsheets.values.get(
+          spreadsheetId, 'Customer!A1:Z1',
+        );
+        final headers = (headerResp.values?.isNotEmpty == true)
+            ? headerResp.values!.first
+            .map((h) => h.toString().trim().toLowerCase())
+            .toList()
+            : <dynamic>[];
+        print('📋 Customer headers: $headers');
+
+        int hIdx(String n) {
+          final i = headers.indexOf(n);
+          return i;
         }
 
+        final idIdx      = hIdx('customerid');
+        final nameIdx    = hIdx('name');
+        final mobileIdx  = hIdx('mobile1');
+        final addressIdx = hIdx('address');
+        final emailIdx   = hIdx('email');
+
+        print('📊 id:$idIdx name:$nameIdx mobile:$mobileIdx address:$addressIdx email:$emailIdx');
+
+        // ── Data rows ──
+        final response = await sheetsApi.spreadsheets.values.get(
+          spreadsheetId, 'Customer!A2:Z',
+        );
+        final rows = response.values ?? [];
+        print('🔍 customerId: "${customerId.value}" | rows: ${rows.length}');
+
+        String safeCell(List row, int idx) =>
+            (idx >= 0 && idx < row.length) ? row[idx].toString().trim() : '';
+
         for (final row in rows) {
-          final id = row.isNotEmpty ? row[0].toString().trim() : '';
+          final id = safeCell(row, idIdx >= 0 ? idIdx : 0);
           if (id == customerId.value.trim()) {
-            customerName.value =
-            row.length > 3 ? row[3].toString().trim() : 'Customer';
-            print('✅ Customer found: ${customerName.value}');
+            customerName.value    = safeCell(row, nameIdx    >= 0 ? nameIdx    : 3);
+            customerMobile.value  = safeCell(row, mobileIdx  >= 0 ? mobileIdx  : 13);
+            customerAddress.value = safeCell(row, addressIdx >= 0 ? addressIdx : 4);
+            customerEmail.value   = safeCell(row, emailIdx   >= 0 ? emailIdx   : 15);
+            print('✅ Customer: ${customerName.value}');
+            print('📱 Mobile: ${customerMobile.value}');
+            print('🏠 Address: ${customerAddress.value}');
             return;
           }
         }
-        print('❌ No match for customerId: "${customerId.value}"');
+        print('❌ No match for: "${customerId.value}"');
         customerName.value = 'Customer';
       } finally {
         authClient.close();
@@ -523,7 +554,16 @@ class OrderController extends GetxController {
 
         // ── Step 4: Map rows → Item ──
         itemList.value = rows
-            .where((row) => row.isNotEmpty && row[0].toString().isNotEmpty)
+            .where((row) {
+          if (row.isEmpty || row[0].toString().isEmpty) return false;
+          // isActive check — default true if field missing
+          final isActiveIdx = headers.indexOf('isactive');
+          if (isActiveIdx >= 0 && isActiveIdx < row.length) {
+            final val = row[isActiveIdx].toString().toLowerCase().trim();
+            if (val == 'false' || val == '0' || val == 'no') return false;
+          }
+          return true;
+        })
             .map((row) {
           // Helper: safe cell read
           String cell(int idx) =>
@@ -563,8 +603,9 @@ class OrderController extends GetxController {
   // ─────────────────────────────────────────────
   Future<void> _saveOrderToSheet(
       String orderId,
-      List<Map<String, dynamic>> orderItems,
-      ) async {
+      List<Map<String, dynamic>> orderItems, {
+        double total = 0,
+      }) async {
     try {
       final jsonStr      = await rootBundle.loadString(_serviceAccountAssetPath);
       final credentials  = json.decode(jsonStr) as Map<String, dynamic>;
@@ -583,7 +624,8 @@ class OrderController extends GetxController {
             '${now.minute.toString().padLeft(2,'0')}:'
             '${now.second.toString().padLeft(2,'0')}';
 
-        final List<List<Object>> rows = orderItems.map((item) => [
+        // Use List<List<dynamic>> for Web compatibility
+        final List<List<dynamic>> rows = orderItems.map<List<dynamic>>((item) => [
           orderId,
           companyId.value,
           customerId.value,
@@ -593,21 +635,28 @@ class OrderController extends GetxController {
           item['quantity'] ?? 0,
           item['price']    ?? 0,
           item['subtotal'] ?? 0,
-          item['quantity'] is double
-              ? (item['quantity'] as double) * (item['price'] as double? ?? 0)
-              : (item['subtotal'] ?? 0),
+          total,
           'pending',
           ts,
-        ] as List<Object>).toList();
+        ]).toList();
+
+        // ── Ensure Orders sheet exists ──
+        await _ensureOrdersSheetExists(sheetsApi, spreadsheetId);
+
+        // Web-compatible ValueRange
+        final valueRange = sheets.ValueRange();
+        valueRange.values = rows.map<List<Object?>>((r) =>
+            r.map<Object?>((e) => e?.toString() ?? '').toList()
+        ).toList();
 
         await sheetsApi.spreadsheets.values.append(
-          sheets.ValueRange(values: rows),
+          valueRange,
           spreadsheetId,
           'Orders!A:L',
           valueInputOption: 'USER_ENTERED',
           insertDataOption: 'INSERT_ROWS',
         );
-        print('✅ Order saved to Sheets: ${rows.length} rows');
+        print('✅ Order saved to Sheets: ' + rows.length.toString() + ' rows');
       } finally {
         authClient.close();
       }
@@ -681,19 +730,29 @@ class OrderController extends GetxController {
           0, (s, r) => s + r.selectedItem!.sellPrice * r.qty);
 
       final docRef = await _firestore.collection('public_orders').add({
-        'companyId':    companyId.value,
-        'customerId':   customerId.value,
-        'customerName': customerName.value,
-        'items':        orderItems,
-        'totalAmount':  total,
-        'status':       'pending',
-        'timestamp':    FieldValue.serverTimestamp(),
+        'companyId':       companyId.value,
+        'customerId':      customerId.value,
+        'customerName':    customerName.value,
+        'customerMobile':  customerMobile.value,
+        'customerAddress': customerAddress.value,
+        'customerEmail':   customerEmail.value,
+        'items':           orderItems,
+        'totalAmount':     total,
+        'status':          'pending',
+        'timestamp':       FieldValue.serverTimestamp(),
       });
 
-      await _saveOrderToSheet(docRef.id, orderItems);
+      await _saveOrderToSheet(docRef.id, orderItems, total: total);
 
       orderRows.value = [OrderRow()];
-      Get.offNamed(OrderSuccessScreen.pageId);
+      // Pass cid/uid to success screen so "Order More" works
+      Get.offNamed(
+        OrderSuccessScreen.pageId,
+        parameters: {
+          'cid': companyId.value,
+          'uid': customerId.value,
+        },
+      );
 
     } catch (e) {
       print('❌ placeOrderNew error: $e');
@@ -726,4 +785,61 @@ class OrderController extends GetxController {
     }
     return total;
   }
+
+  // ── Auto-create Orders sheet if not exists ──
+  Future<void> _ensureOrdersSheetExists(
+      sheets.SheetsApi sheetsApi,
+      String spreadsheetId,
+      ) async {
+    try {
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      final sheetExists = spreadsheet.sheets?.any(
+              (s) => s.properties?.title == 'Orders'
+      ) ?? false;
+
+      if (sheetExists) {
+        print('✅ Orders sheet exists');
+        return;
+      }
+
+      print('⚠️ Orders sheet missing — creating...');
+      await sheetsApi.spreadsheets.batchUpdate(
+        sheets.BatchUpdateSpreadsheetRequest(
+          requests: [
+            sheets.Request(
+              addSheet: sheets.AddSheetRequest(
+                properties: sheets.SheetProperties(
+                  title: 'Orders',
+                  gridProperties: sheets.GridProperties(
+                    rowCount: 1000,
+                    columnCount: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        spreadsheetId,
+      );
+
+      // Add headers
+      final headerRange = sheets.ValueRange();
+      headerRange.values = [
+        <Object?>['orderId','companyId','customerId','customerName',
+          'itemId','itemName','quantity','price','subtotal',
+          'totalAmount','status','timestamp']
+      ];
+      await sheetsApi.spreadsheets.values.update(
+        headerRange,
+        spreadsheetId,
+        'Orders!A1:L1',
+        valueInputOption: 'RAW',
+      );
+      print('✅ Orders sheet created with headers');
+    } catch (e) {
+      print('⚠️ ensureOrdersSheet error: \$e');
+    }
+  }
+
+
 }

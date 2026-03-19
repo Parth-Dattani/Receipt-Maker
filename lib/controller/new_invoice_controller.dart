@@ -308,16 +308,105 @@ class NewInvoiceController extends GetxController {
         return;
       }
 
-      // ✅ PRIORITY 4: Create invoice with pre-selected customer (from Customer List)
+      // // ✅ PRIORITY 4: Create invoice with pre-selected customer (from Customer List)
+      // if (arguments is Map && (arguments['customerData'] != null || arguments['customerId'] != null)) {
+      //   print("👤 [ARGS] Customer pre-selection from Customer List");
+      //   _customerFromListApplied = true;
+      //   _loadEssentialData().then((_) async {
+      //     await _loadSecondaryData();
+      //     _applyCustomerFromArguments(arguments as Map);
+      //   });
+      //   return;
+      // }
+
+
+      ///===
+      // ══════════════════════════════════════════════════════════════
+// PRIORITY 4 block — FINAL FIX (no extra empty row)
+// ══════════════════════════════════════════════════════════════
+
+      // ✅ PRIORITY 4: Customer + optional prefillItems from order
       if (arguments is Map && (arguments['customerData'] != null || arguments['customerId'] != null)) {
-        print("👤 [ARGS] Customer pre-selection from Customer List");
+        print("👤 [ARGS] Customer pre-selection");
         _customerFromListApplied = true;
         _loadEssentialData().then((_) async {
           await _loadSecondaryData();
           _applyCustomerFromArguments(arguments as Map);
+
+          final prefillItems = arguments['prefillItems'];
+          if (prefillItems is List && prefillItems.isNotEmpty) {
+            print('📦 [ARGS] Prefilling ${prefillItems.length} items from order');
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            // ── Clear ALL existing rows (including empty default row) ──
+            for (var item in invoiceItems) {
+              item.descriptionController?.dispose();
+            }
+            invoiceItems.clear();
+            for (var c in quantityControllers) { c.dispose(); }
+            quantityControllers.clear();
+            for (var c in priceControllers) { c.dispose(); }
+            priceControllers.clear();
+
+            final customerId = _getValidCustomerId();
+
+            for (final orderItem in prefillItems) {
+              if (orderItem is! Map) continue;
+
+              final itemId   = orderItem['itemId']?.toString()   ?? '';
+              final itemName = orderItem['itemName']?.toString() ?? '';
+              final qty      = double.tryParse(orderItem['quantity']?.toString() ?? '1') ?? 1.0;
+              final price    = double.tryParse(orderItem['price']?.toString()    ?? '0') ?? 0.0;
+
+              // Find in item list
+              final matched = itemList.firstWhereOrNull(
+                    (i) => i.itemId == itemId ||
+                    i.itemName.toLowerCase() == itemName.toLowerCase(),
+              );
+
+              if (matched != null) {
+                // Add row + select item
+                addNewItem();
+                final idx = invoiceItems.length - 1;
+                selectRemoteItemForIndex(idx, matched);
+
+                await Future.delayed(const Duration(milliseconds: 50));
+                updateItem(idx, quantity: qty);
+
+                if (idx < quantityControllers.length) {
+                  quantityControllers[idx].text =
+                  qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
+                }
+                print('✅ ${matched.itemName} x$qty');
+              } else {
+                // Manual add
+                final descCtrl = TextEditingController(text: itemName);
+                invoiceItems.add(InvoiceItem(
+                  itemId: itemId, itemName: itemName,
+                  description: itemName, quantity: qty,
+                  rate: price, gstRate: 0.0,
+                  totalPrice: qty * price,
+                  unit: '', customerId: customerId,
+                  descriptionController: descCtrl,
+                ));
+                quantityControllers.add(TextEditingController(
+                    text: qty % 1 == 0 ? qty.toInt().toString() : qty.toString()));
+                priceControllers.add(TextEditingController(
+                    text: price.toStringAsFixed(0)));
+                print('⚠️ Manual add: $itemName x$qty');
+              }
+            }
+
+            calculateTotals();
+            invoiceItems.refresh();
+            print('✅ Prefill done: ${invoiceItems.length} rows');
+          }
         });
         return;
       }
+      ///
+
+
 
       // ✅ DEFAULT: Normal new invoice
       print("📝 [ARGS] Default new invoice flow");
@@ -411,25 +500,75 @@ class NewInvoiceController extends GetxController {
   }
 
   /// Applies pre-selected customer when navigating from Customer List (Create Invoice).
+  ///coomet 19-03 when Order to Invoice That Time Not Load so I change
+  // void _applyCustomerFromArguments(Map arguments) {
+  //   try {
+  //     if (arguments['customerData'] != null && arguments['customerData'] is Map) {
+  //       final customerData = Map<String, dynamic>.from(arguments['customerData'] as Map);
+  //       if (!customers.any((c) => c['customerId']?.toString() == customerData['customerId']?.toString())) {
+  //         customers.insert(0, customerData);
+  //         customers.refresh();
+  //       }
+  //       selectCustomer(customerData);
+  //       print("✅ [ARGS] Customer auto-selected from Customer List: ${customerData['name']}");
+  //     } else if (arguments['customerId'] != null && arguments['customerId'].toString().isNotEmpty) {
+  //       final customerId = arguments['customerId'].toString();
+  //       selectedCustomerId.value = customerId;
+  //       _fetchCustomerDetailsById(customerId);
+  //       customers.refresh();
+  //       print("✅ [ARGS] Customer auto-selected by ID from Customer List: $customerId");
+  //     }
+  //   } catch (e) {
+  //     print("❌ [ARGS] Error applying customer from arguments: $e");
+  //   }
+  // }
+
+  // ══════════════════════════════════════════════════════════════
+// new_invoice_controller.dart
+// _applyCustomerFromArguments() — FINAL FIX
+// ══════════════════════════════════════════════════════════════
+
   void _applyCustomerFromArguments(Map arguments) {
     try {
       if (arguments['customerData'] != null && arguments['customerData'] is Map) {
-        final customerData = Map<String, dynamic>.from(arguments['customerData'] as Map);
-        if (!customers.any((c) => c['customerId']?.toString() == customerData['customerId']?.toString())) {
-          customers.insert(0, customerData);
-          customers.refresh();
+        final customerData = Map<String, dynamic>.from(
+            arguments['customerData'] as Map);
+
+        print("👤 Applying customer: ${customerData['name']}");
+
+        // ── Direct set all fields ──
+        selectedCustomerId.value       = customerData['customerId']?.toString() ?? '';
+        customerNameController.text    = customerData['name']?.toString()       ?? '';
+        customerMobileController.text  = customerData['mobile1']?.toString()    ?? '';
+        customerEmailController.text   = customerData['email']?.toString()      ?? '';
+        customerAddressController.text = customerData['address']?.toString()    ?? '';
+        customerPanController.text     = customerData['pan']?.toString()        ?? '';
+        customerGstController.text     = customerData['gst']?.toString()        ?? '';
+        showCustomerForm.value = false;
+
+        print("✅ Name:    ${customerNameController.text}");
+        print("✅ Mobile:  ${customerMobileController.text}");
+        print("✅ Address: ${customerAddressController.text}");
+
+        // ── If mobile/address still empty → fetch from Customer sheet ──
+        if (customerMobileController.text.isEmpty ||
+            customerAddressController.text.isEmpty) {
+          final cid = selectedCustomerId.value;
+          if (cid.isNotEmpty) {
+            print("📡 Mobile/address empty — fetching from Customer sheet...");
+            _fetchCustomerDetailsById(cid);
+          }
         }
-        selectCustomer(customerData);
-        print("✅ [ARGS] Customer auto-selected from Customer List: ${customerData['name']}");
-      } else if (arguments['customerId'] != null && arguments['customerId'].toString().isNotEmpty) {
-        final customerId = arguments['customerId'].toString();
-        selectedCustomerId.value = customerId;
-        _fetchCustomerDetailsById(customerId);
-        customers.refresh();
-        print("✅ [ARGS] Customer auto-selected by ID from Customer List: $customerId");
+
+      } else if (arguments['customerId'] != null &&
+          arguments['customerId'].toString().isNotEmpty) {
+        final cid = arguments['customerId'].toString();
+        selectedCustomerId.value = cid;
+        _fetchCustomerDetailsById(cid);
+        print("✅ Fetching customer by ID: $cid");
       }
     } catch (e) {
-      print("❌ [ARGS] Error applying customer from arguments: $e");
+      print("❌ Error applying customer: $e");
     }
   }
 

@@ -17,24 +17,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../utils/shared_preferences_helper.dart';
+import '../screen.dart';
 
 
+// ── Import your screen paths ──
+// import '../new_invoice/new_invoice_screen.dart';
+// import '../new_challan/new_challan_screen.dart';
 
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-
-// ─────────────────────────────────────────────
-// AdminOrdersScreen
-// ─────────────────────────────────────────────
 class AdminOrdersScreen extends GetView<AdminOrdersController> {
   static const pageId = '/AdminOrdersScreen';
   const AdminOrdersScreen({super.key});
@@ -122,9 +111,8 @@ class AdminOrdersScreen extends GetView<AdminOrdersController> {
                   padding: const EdgeInsets.all(16),
                   itemCount: controller.filteredOrders.length,
                   itemBuilder: (context, index) {
-                    final order = controller.filteredOrders[index];
                     return _AdminOrderCard(
-                      order: order,
+                      order: controller.filteredOrders[index],
                       controller: controller,
                     );
                   },
@@ -146,31 +134,19 @@ class _SummaryCard extends StatelessWidget {
   final int count;
   final Color color;
   final Color textColor;
-
-  const _SummaryCard({
-    required this.label,
-    required this.count,
-    required this.color,
-    required this.textColor,
-  });
+  const _SummaryCard({required this.label, required this.count, required this.color, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(10),
-        ),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('$count',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
-            Text(label,
-                style: TextStyle(fontSize: 10, color: textColor)),
+            Text('$count', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
+            Text(label, style: TextStyle(fontSize: 10, color: textColor)),
           ],
         ),
       ),
@@ -185,12 +161,7 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final String value;
   final AdminOrdersController controller;
-
-  const _FilterChip({
-    required this.label,
-    required this.value,
-    required this.controller,
-  });
+  const _FilterChip({required this.label, required this.value, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +196,6 @@ class _FilterChip extends StatelessWidget {
 class _AdminOrderCard extends StatefulWidget {
   final Map<String, dynamic> order;
   final AdminOrdersController controller;
-
   const _AdminOrderCard({required this.order, required this.controller});
 
   @override
@@ -234,7 +204,6 @@ class _AdminOrderCard extends StatefulWidget {
 
 class _AdminOrderCardState extends State<_AdminOrderCard> {
   bool _expanded = false;
-
   static const _statusOptions = ['pending', 'confirmed', 'delivered', 'cancelled'];
 
   Color _statusColor(String s) {
@@ -256,6 +225,73 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     } catch (_) { return ''; }
   }
 
+  void _createInvoice(Map<String, dynamic> order) {
+    final customerData = {
+      'name':       order['customerName']    ?? '',
+      'customerId': order['customerId']      ?? '',
+      'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
+      'address':    order['customerAddress'] ?? order['address'] ?? '',
+      'email':      order['customerEmail']   ?? order['email']   ?? '',
+      'pan':        order['customerPan']     ?? '',
+      'gst':        order['customerGst']     ?? '',
+      'isActive':   'true',
+    };
+    final orderItems = (order['items'] as List<dynamic>? ?? [])
+        .map((i) => i as Map<String, dynamic>).toList();
+
+    final orderId = order['id']?.toString() ?? '';
+
+    if (Get.isRegistered<NewInvoiceController>()) {
+      Get.delete<NewInvoiceController>(force: true);
+    }
+    Get.toNamed(NewInvoiceScreen.pageId, arguments: {
+      'customerData': customerData,
+      'customerId':   order['customerId'] ?? '',  // controller fetches full details by ID
+      'prefillItems': orderItems,
+      'fromOrderId':  orderId,
+    });
+
+    // ── Mark invoice created → disables both buttons ──
+    if (orderId.isNotEmpty) {
+      widget.controller.markInvoiceCreated(orderId);
+    }
+  }
+
+  void _createChallan(Map<String, dynamic> order) {
+    final orderId = order['id']?.toString() ?? '';
+    final customerData = {
+      'name':       order['customerName']    ?? '',
+      'customerId': order['customerId']      ?? '',
+      'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
+      'address':    order['customerAddress'] ?? order['address'] ?? '',
+      'email':      order['customerEmail']   ?? order['email']   ?? '',
+      'pan':        order['customerPan']     ?? '',
+      'gst':        order['customerGst']     ?? '',
+      'isActive':   'true',
+    };
+    final orderItems = (order['items'] as List<dynamic>? ?? [])
+        .map((i) => i as Map<String, dynamic>).toList();
+
+    // Force delete + re-inject NewChallanController via binding
+    if (Get.isRegistered<NewChallanController>()) {
+      Get.delete<NewChallanController>(force: true);
+    }
+    // Manually put controller — same as NewChallanBinding does
+    Get.put(NewChallanController());
+
+    Get.toNamed(NewChallanScreen.pageId, arguments: {
+      'customerData': customerData,
+      'customerId':   order['customerId'] ?? '',
+      'prefillItems': orderItems,
+      'fromOrderId':  orderId,
+    });
+
+    // ── Mark challan created + update status ──
+    if (orderId.isNotEmpty) {
+      widget.controller.markChallanCreated(orderId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final order        = widget.order;
@@ -271,12 +307,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
@@ -296,8 +327,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         backgroundColor: const Color(0xFF00897B).withOpacity(0.1),
                         child: Text(
                           customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
-                          style: const TextStyle(
-                              color: Color(0xFF00897B), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: Color(0xFF00897B), fontWeight: FontWeight.w700),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -305,13 +335,10 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(customerName,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700, fontSize: 14)),
+                            Text(customerName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
                             Text(
                               '${items.length} item${items.length == 1 ? '' : 's'}  •  ${_formatTs(order['timestamp'])}',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey.shade500),
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                             ),
                           ],
                         ),
@@ -319,22 +346,16 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                       if (totalAmount != null)
                         Text(
                           '₹${double.tryParse(totalAmount.toString())?.toStringAsFixed(0) ?? totalAmount}',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF00897B)),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF00897B)),
                         ),
                       const SizedBox(width: 6),
-                      Icon(
-                        _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                        color: Colors.grey.shade400, size: 20,
-                      ),
+                      Icon(_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          color: Colors.grey.shade400, size: 20),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Status badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
@@ -344,32 +365,23 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         ),
                         child: Text(
                           status[0].toUpperCase() + status.substring(1),
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: statusColor),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
                         ),
                       ),
                       const Spacer(),
-                      // Update status button
                       GestureDetector(
                         onTap: () => _showStatusPicker(context, orderId, status),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_outlined,
-                                  size: 13, color: Colors.grey.shade600),
+                              Icon(Icons.edit_outlined, size: 13, color: Colors.grey.shade600),
                               const SizedBox(width: 4),
-                              Text('Update Status',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey.shade600)),
+                              Text('Update Status', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                             ],
                           ),
                         ),
@@ -381,7 +393,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
             ),
           ),
 
-          // ── Expanded items ──
+          // ── Expanded ──
           if (_expanded) ...[
             Divider(height: 1, color: Colors.grey.shade100),
             Padding(
@@ -389,11 +401,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Items',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade600)),
+                  Text('Items', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
                   const SizedBox(height: 8),
                   ...items.map((item) {
                     final i = item as Map<String, dynamic>;
@@ -401,23 +409,14 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.circle,
-                              size: 6, color: Color(0xFF00897B)),
+                          const Icon(Icons.circle, size: 6, color: Color(0xFF00897B)),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(i['itemName']?.toString() ?? '',
-                                style: const TextStyle(fontSize: 13)),
-                          ),
-                          Text('x${i['quantity']}',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.grey.shade600)),
+                          Expanded(child: Text(i['itemName']?.toString() ?? '', style: const TextStyle(fontSize: 13))),
+                          Text('x${i['quantity']}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                           const SizedBox(width: 12),
                           Text(
                             '₹${double.tryParse(i['subtotal']?.toString() ?? '0')?.toStringAsFixed(0) ?? 0}',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF00897B)),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF00897B)),
                           ),
                         ],
                       ),
@@ -427,19 +426,98 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700)),
+                      Text('Total', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.grey.shade700)),
                       Text(
                         '₹${double.tryParse(totalAmount?.toString() ?? '0')?.toStringAsFixed(0) ?? 0}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: Color(0xFF00897B)),
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF00897B)),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  Divider(color: Colors.grey.shade100, height: 1),
+                  const SizedBox(height: 12),
+
+                  // ── Action Buttons ──
+                  Builder(builder: (context) {
+                    final invoiceDone = order['invoiceCreated'] == true;
+                    final challanDone = order['challanCreated'] == true;
+                    // ✅ Any one done → both disabled
+                    final anyDone = invoiceDone || challanDone;
+
+                    return Row(
+                      children: [
+                        // ── Invoice Button ──
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: anyDone
+                                ? null
+                                : () => _createInvoice(order),
+                            icon: Icon(
+                              invoiceDone
+                                  ? Icons.check_circle
+                                  : Icons.receipt,
+                              size: 16,
+                            ),
+                            label: Text(
+                              invoiceDone ? 'Invoice ✓' : 'Invoice',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: invoiceDone
+                                  ? Colors.green.shade100
+                                  : const Color(0xFF00897B),
+                              foregroundColor: invoiceDone
+                                  ? Colors.green.shade700
+                                  : Colors.white,
+                              disabledBackgroundColor: Colors.green.shade100,
+                              disabledForegroundColor: Colors.green.shade700,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // ── Challan Button ──
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: anyDone
+                                ? null
+                                : () => _createChallan(order),
+                            icon: Icon(
+                              challanDone
+                                  ? Icons.check_circle
+                                  : Icons.note_alt,
+                              size: 16,
+                              color: challanDone
+                                  ? Colors.green.shade600
+                                  : Colors.grey.shade700,
+                            ),
+                            label: Text(
+                              challanDone ? 'Challan ✓' : 'Challan',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: challanDone
+                                    ? Colors.green.shade600
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              side: BorderSide(
+                                color: challanDone
+                                    ? Colors.green.shade300
+                                    : Colors.grey.shade300,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),
@@ -449,20 +527,17 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     );
   }
 
-  void _showStatusPicker(
-      BuildContext context, String orderId, String currentStatus) {
+  void _showStatusPicker(BuildContext context, String orderId, String currentStatus) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Update Order Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text('Update Order Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             ..._statusOptions.map((s) {
               final color = _statusColor(s);
@@ -471,23 +546,15 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                 leading: CircleAvatar(
                   radius: 14,
                   backgroundColor: color.withOpacity(0.1),
-                  child: Icon(
-                    isSelected ? Icons.check : Icons.circle_outlined,
-                    size: 16, color: color,
-                  ),
+                  child: Icon(isSelected ? Icons.check : Icons.circle_outlined, size: 16, color: color),
                 ),
                 title: Text(
                   s[0].toUpperCase() + s.substring(1),
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? color : Colors.black87,
-                  ),
+                  style: TextStyle(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? color : Colors.black87),
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  if (s != currentStatus) {
-                    widget.controller.updateOrderStatus(orderId, s);
-                  }
+                  if (s != currentStatus) widget.controller.updateOrderStatus(orderId, s);
                 },
               );
             }),

@@ -69,36 +69,209 @@ class NewChallanController extends BaseController {
 
 // ✅ ADD THIS COMPUTED PROPERTY:
   bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
+  bool _orderArgApplied = false;
 
   @override
   void onInit() {
     super.onInit();
     _handleArguments();
-    // ✅ Generate challan ID first (only depends on challans)
-    //initializeChallan();
 
-    // Only initialize new challan if NOT in edit mode
     if (!isEditMode.value) {
       initializeChallan();
     } else {
-      // For edit mode, just add one item if none exist
-      if (challanItems.isEmpty) {
-        addNewItem();
+      if (challanItems.isEmpty) addNewItem();
+    }
+
+    _validateDatesForDemoMode();
+
+    Future.microtask(() async {
+      await Future.wait([
+        loadCompanyData(),
+        loadCustomers(),
+        fetchItems(),
+      ]);
+      _handleOrderArguments();
+    });
+  }
+
+  void _handleOrderArguments() {
+    if (_orderArgApplied) return;
+    final arguments = Get.arguments;
+    if (arguments == null || arguments is! Map) return;
+    if (arguments['editMode'] == true || arguments['challanData'] != null) return;
+
+    final customerData = arguments['customerData'];
+    final prefillItems = arguments['prefillItems'];
+    if (customerData == null && prefillItems == null) return;
+
+    _orderArgApplied = true;
+
+    // ── Apply customer ──
+    if (customerData is Map) {
+      final cd = Map<String, dynamic>.from(customerData);
+
+      final name    = cd['name']?.toString()       ?? '';
+      final cid     = cd['customerId']?.toString() ?? '';
+      final mobile  = cd['mobile1']?.toString()    ?? '';
+      final email   = cd['email']?.toString()      ?? '';
+      final address = cd['address']?.toString()    ?? '';
+      final pan     = cd['pan']?.toString()        ?? '';
+      final gst     = cd['gst']?.toString()        ?? '';
+
+      // Set all controllers
+      selectedCustomerId.value       = cid;
+      customerNameController.text    = name;
+      customerMobileController.text  = mobile;
+      customerEmailController.text   = email;
+      customerAddressController.text = address;
+      customerPanController.text     = pan;
+      customerGstController.text     = gst;
+
+      // ✅ KEY FIX: Set selectedCustomer so Obx shows form fields
+      // Build a customerMap same format as customers list
+      final customerMap = {
+        'customerId': cid,
+        'name':       name,
+        'mobile1':    mobile,
+        'email':      email,
+        'address':    address,
+        'pan':        pan,
+        'gst':        gst,
+        'isActive':   'true',
+      };
+      selectedCustomer.value = customerMap;
+
+      // ✅ If not already in customers list, insert at top
+      // so dropdown shows this customer as selected
+      if (!customers.any((c) => c['customerId'] == cid)) {
+        customers.insert(0, customerMap);
+        customers.refresh();
+      }
+
+      // ✅ Force showCustomerForm = false (show dropdown, not manual form)
+      showCustomerForm.value = false;
+
+      print('✅ [Challan] Customer set: $name (ID: $cid)');
+    }
+
+    // ── Prefill items ──
+    if (prefillItems is! List || prefillItems.isEmpty) return;
+
+    print('📦 [Challan] Prefilling ${prefillItems.length} items');
+
+    challanItems.clear();
+    for (var c in quantityControllers) { c.dispose(); }
+    quantityControllers.clear();
+    for (var c in priceControllers) { c.dispose(); }
+    priceControllers.clear();
+
+    final customerId = selectedCustomerId.value;
+
+    for (final orderItem in prefillItems) {
+      if (orderItem is! Map) continue;
+      final itemId   = orderItem['itemId']?.toString()   ?? '';
+      final itemName = orderItem['itemName']?.toString() ?? '';
+      final qty      = double.tryParse(orderItem['quantity']?.toString() ?? '1') ?? 1.0;
+      final price    = double.tryParse(orderItem['price']?.toString()    ?? '0') ?? 0.0;
+
+      final matched = itemList.firstWhereOrNull(
+            (i) => i.itemId == itemId ||
+            i.itemName.toLowerCase() == itemName.toLowerCase(),
+      );
+
+      if (matched != null) {
+        final sellPrice = matched.sellPrice.toDouble();
+        final gstRate   = matched.gstPercent.toDouble();
+        challanItems.add(ChallanItem(
+          itemId:        matched.itemId,
+          itemName:      matched.itemName,
+          description:   matched.itemName,
+          quantity:      qty,
+          price:         sellPrice,
+          gstRate:       gstRate,
+          totalPrice:    qty * sellPrice,
+          unit:          matched.unitOfMeasurement ?? '',
+          customerId:    customerId,
+          gstAmount:     0,
+          amountWithGst: 0,
+        ));
+        quantityControllers.add(TextEditingController(
+            text: qty % 1 == 0 ? qty.toInt().toString() : qty.toString()));
+        priceControllers.add(TextEditingController(
+            text: sellPrice.toStringAsFixed(0)));
+        print('✅ ${matched.itemName} x$qty @ ₹$sellPrice');
+      } else {
+        challanItems.add(ChallanItem(
+          itemId: itemId, itemName: itemName,
+          description: itemName, quantity: qty,
+          price: price, gstRate: 0.0,
+          totalPrice: qty * price, unit: '',
+          customerId: customerId,
+          gstAmount: 0, amountWithGst: 0,
+        ));
+        quantityControllers.add(TextEditingController(
+            text: qty % 1 == 0 ? qty.toInt().toString() : qty.toString()));
+        priceControllers.add(TextEditingController(
+            text: price.toStringAsFixed(0)));
+        print('⚠️ Manual: $itemName x$qty');
       }
     }
 
-    // ✅ Validate dates for demo mode
-    _validateDatesForDemoMode();
-
-    // ✅ Load other data in parallel (non-blocking for challan ID)
-    Future.microtask(() {
-      loadCompanyData();
-      loadCustomers();
-      fetchItems();
-    });
-
+    calculateTotals();
+    challanItems.refresh();
+    print('✅ [Challan] Prefill done: ${challanItems.length} rows');
   }
 
+// ══════════════════════════════════════════════════════════════
+// ALSO: _fetchCustomerDetailsById method ADD to NewChallanController
+// (Same as NewInvoiceController has it)
+// ══════════════════════════════════════════════════════════════
+
+  Future<void> _fetchCustomerDetailsById(String customerId) async {
+    if (customerId.isEmpty) return;
+    try {
+      print('🔍 [Challan] Fetching customer details for ID: $customerId');
+
+      final user = _auth.currentUser;
+      if (user == null) { print('❌ No user'); return; }
+
+      String companyId = await sharedPreferencesHelper.getPrefData('CompanyId') ?? '';
+      if (companyId.isEmpty) { print('❌ No companyId'); return; }
+
+      final allCustomers = await GoogleSheetService.getCustomers(
+        companyId: companyId,
+        userId: user.uid,
+      );
+
+      final cd = allCustomers.firstWhere(
+            (c) => c['customerId']?.toString() == customerId,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (cd.isEmpty) {
+        print('⚠️ Customer not found: $customerId');
+        return;
+      }
+
+      // Always update mobile, address (main purpose of this call)
+      customerMobileController.text  = cd['mobile1']?.toString() ?? '';
+      customerAddressController.text = cd['address']?.toString() ?? '';
+      customerEmailController.text   = cd['email']?.toString()   ?? '';
+      customerPanController.text     = cd['pan']?.toString()     ?? '';
+      customerGstController.text     = cd['gst']?.toString()     ?? '';
+
+      // Update name only if empty
+      if (customerNameController.text.isEmpty) {
+        customerNameController.text = cd['name']?.toString() ?? '';
+      }
+
+      print('✅ [Challan] Mobile: ${customerMobileController.text}');
+      print('✅ [Challan] Address: ${customerAddressController.text}');
+
+    } catch (e) {
+      print('❌ [Challan] _fetchCustomerDetailsById error: $e');
+    }
+  }
 
 
 // ALTERNATIVE: Fix your _handleArguments to handle both cases
@@ -1708,6 +1881,13 @@ class NewChallanController extends BaseController {
         return false;
       }
 
+      // ✅ FIX: mobile/address empty → fetch from Customer sheet before save
+      if (customerMobileController.text.trim().isEmpty &&
+          selectedCustomerId.value.isNotEmpty) {
+        print('📡 Mobile empty — fetching from Customer sheet...');
+        await _fetchCustomerDetailsById(selectedCustomerId.value);
+      }
+
       // ---------------- SAVING PROCESS START ----------------
       isLoading.value = true;
       debugAllItemsCustomerId();
@@ -1731,11 +1911,11 @@ class NewChallanController extends BaseController {
         'challanDate': _formatDate(challanDate.value),
         'customerId': finalCustomerId,
         'customerName': customerNameController.text.trim(),
-        'customerMobile': customerMobileController.text.trim(),
+        'customerMobile': customerMobileController.text.trim(),   // ✅ now filled
         'customerEmail': customerEmailController.text.trim(),
         'customerPan': customerPanController.text.trim(),
         'customerGst': customerGstController.text.trim(),
-        'customerAddress': customerAddressController.text.trim(),
+        'customerAddress': customerAddressController.text.trim(), // ✅ now filled
         'subtotal': subtotal.value,
         'gstRate': challanItems.isNotEmpty ? challanItems.first.gstRate : 0.0,
         'gstAmount': gstAmount.value,
@@ -1760,9 +1940,8 @@ class NewChallanController extends BaseController {
       }
 
       // ---------------- DATA SAVED - NOW ASK FOR PRINT ----------------
-      isLoading.value = false; // Stop loading UI
+      isLoading.value = false;
 
-      // Prepare Model for PDF
       List<Challan> challanModel = challanItems.map((item) {
         return Challan(
           challanId: challanId,
@@ -1786,7 +1965,6 @@ class NewChallanController extends BaseController {
         );
       }).toList();
 
-      // ✅ Show Dialog asking for Print Type
       await _showOutputFormatDialog(challanModel);
 
       return true;
@@ -1794,7 +1972,11 @@ class NewChallanController extends BaseController {
     } catch (e) {
       print("❌ Error saving challan: $e");
       isLoading.value = false;
-      showCustomSnackbar(title: "Error", message: "Failed: ${e.toString()}", baseColor: Colors.red.shade700, icon: Icons.error);
+      showCustomSnackbar(
+          title: "Error",
+          message: "Failed: ${e.toString()}",
+          baseColor: Colors.red.shade700,
+          icon: Icons.error);
       return false;
     }
   }
