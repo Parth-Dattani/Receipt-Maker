@@ -10,6 +10,14 @@ import 'package:get/get.dart';
 // OrderHistoryScreen
 // URL: /order-history?cid=...&uid=...
 // ─────────────────────────────────────────────
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+// ─────────────────────────────────────────────
+// OrderHistoryScreen
+// URL: /order-history?cid=...&uid=...
+// ─────────────────────────────────────────────
 class OrderHistoryScreen extends StatelessWidget {
   static const pageId = '/order-history';
   const OrderHistoryScreen({super.key});
@@ -236,8 +244,8 @@ class _OrderCardState extends State<_OrderCard> {
                         ),
                       ),
                       const Spacer(),
-                      // Total
-                      if (totalAmount != null)
+                      // Total — hide if pending (showPriceToCustomer unknown)
+                      if (totalAmount != null && status != 'pending')
                         Text(
                           '₹${double.tryParse(totalAmount.toString())?.toStringAsFixed(2) ?? totalAmount}',
                           style: const TextStyle(
@@ -326,7 +334,7 @@ class _OrderCardState extends State<_OrderCard> {
                                 fontSize: 13,
                                 color: Colors.grey.shade600),
                           ),
-                          if (subtotal != null) ...[
+                          if (subtotal != null && status != 'pending') ...[
                             const SizedBox(width: 12),
                             Text(
                               '₹${double.tryParse(subtotal.toString())?.toStringAsFixed(2) ?? subtotal}',
@@ -352,14 +360,15 @@ class _OrderCardState extends State<_OrderCard> {
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.grey.shade700)),
-                        Text(
-                          '₹${double.tryParse(totalAmount.toString())?.toStringAsFixed(2) ?? totalAmount}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: Color(0xFF00897B),
+                        if (status != 'pending')
+                          Text(
+                            '₹${double.tryParse(totalAmount.toString())?.toStringAsFixed(2) ?? totalAmount}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: Color(0xFF00897B),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],

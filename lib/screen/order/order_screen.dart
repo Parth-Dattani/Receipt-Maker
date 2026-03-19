@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/services.dart';
 
 
-
 // ─────────────────────────────────────────────
 // OrderScreen
 // ─────────────────────────────────────────────
@@ -332,13 +331,15 @@ class _OrderItemRow extends StatelessWidget {
                                     color: Colors.grey.shade300),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Text(
-                                '₹${item.price.toStringAsFixed(0)}',
+                              child: controller.showPriceToCustomer.value
+                                  ? Text(
+                                '₹${item.sellPrice.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF1A1A2E)),
-                              ),
+                              )
+                                  : const SizedBox.shrink(),
                             ),
                           ],
                         ),
