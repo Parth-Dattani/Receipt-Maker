@@ -104,6 +104,7 @@ class DashboardController extends BaseController {
   var todayCardAmount = 0.0.obs;
   var todayCardInvoices = 0.obs;
   var purchaseStatusData = <ChartData>[].obs;
+  StreamSubscription? _companyFeaturesListener;
 
   @override
   void onInit() {
@@ -134,6 +135,55 @@ class DashboardController extends BaseController {
     WidgetsBinding.instance.addPostFrameCallback((_) => _startOverdueChecker());
     _setupLifecycleObserver();
   }
+
+
+  void _listenCompanyFeatures() {
+    final user = FirebaseAuth.instance.currentUser;
+    // ✅ Use companyId.value (set in _loadCompanyData)
+    final cid = companyId.value.isNotEmpty
+        ? companyId.value
+        : AppConstants.companyId;
+
+    if (user == null || cid.isEmpty) {
+      print('⚠️ _listenCompanyFeatures: no user or companyId');
+      return;
+    }
+
+    // Cancel previous listener if any
+    _companyFeaturesListener?.cancel();
+
+    print('🎧 Listening company features: $cid');
+
+    _companyFeaturesListener = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('companies')
+        .doc(cid)
+        .snapshots()
+        .listen((snap) {
+      if (!snap.exists) return;
+      final data = snap.data() ?? {};
+
+      // ✅ enableCustomerOrderFeature real-time sync
+      final orderFeature = data['enableCustomerOrderFeature'] == true;
+      if (AppConstants.enableCustomerOrderFeature.value != orderFeature) {
+        AppConstants.enableCustomerOrderFeature.value = orderFeature;
+        AppConstants.setEnableCustomerOrderFeature(orderFeature);
+        print('🔄 enableCustomerOrderFeature: $orderFeature');
+      }
+
+      // ✅ allowDuplicateItems real-time sync
+      final allowDup = data['allowDuplicateItems'] == true;
+      if (AppConstants.allowDuplicateItems != allowDup) {
+        AppConstants.allowDuplicateItems = allowDup;
+        AppConstants.setAllowDuplicateItems(allowDup);
+        print('🔄 allowDuplicateItems: $allowDup');
+      }
+    }, onError: (e) {
+      print('❌ _listenCompanyFeatures error: $e');
+    });
+  }
+
 
 // ✅ NEW: Add lifecycle observer
   void _setupLifecycleObserver() {
@@ -167,7 +217,7 @@ class DashboardController extends BaseController {
         _loadCompanyData(),
       ]);
       await loadCompanySettings();
-
+      _listenCompanyFeatures();
       /// Load dashboard data (invoices + purchases in parallel inside loadDashboardData)
       await loadDashboardData();
 
@@ -1387,7 +1437,7 @@ class DashboardController extends BaseController {
     }
     Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-    await Get.toNamed(NewInvoiceScreen.pageId);
+    await Get.toNamed(NewInvoiceScreen.pageId, arguments: null);
     print("🔄 Returned from Invoice Creation, refreshing...");
     await refreshDashboard();
   }
@@ -1715,6 +1765,7 @@ class DashboardController extends BaseController {
   @override
   void onClose() {
     print("🔒 Closing DashboardController");
+    _companyFeaturesListener?.cancel();
     _hasInitialized = false;
     _isInitializing = false;
     super.onClose();

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../constant/app_colors.dart';
+import '../../constant/app_constant.dart';
 
 /// Full Admin Dashboard: responsive (web + mobile), controls users and app-wide data.
 /// Only accessible when current user's Firestore document has [isAdmin] == true.
@@ -380,10 +381,85 @@ class _AdminOverviewSection extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              _buildCustomerOrderFeatureAdminCard(),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCustomerOrderFeatureAdminCard() {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+
+    if (user == null || companyId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.grey.shade200)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('companies')
+              .doc(companyId)
+              .snapshots(),
+          builder: (context, companySnap) {
+            final data = companySnap.data?.data();
+            final enabled = data?['enableCustomerOrderFeature'] == true;
+
+            if (companySnap.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer Order Feature',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade800,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Admin can show/hide Customer Orders + Share Order Link.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  value: enabled,
+                  onChanged: (val) async {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('companies')
+                        .doc(companyId)
+                        .update({'enableCustomerOrderFeature': val});
+                    await AppConstants.setEnableCustomerOrderFeature(val);
+                  },
+                  title: Text(
+                    enabled ? 'Enabled' : 'Disabled',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  activeColor: AppColors.tealColor,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -1028,16 +1104,93 @@ class _UserCompaniesTile extends StatelessWidget {
             children: displayList.isEmpty
                 ? [ListTile(title: Text('No companies match "$searchQuery"', style: TextStyle(color: Colors.grey.shade600)))]
                 : displayList.map((doc) {
-                    final d = doc.data();
-                    final name = d['companyName']?.toString() ?? '—';
-                    final code = d['companyCode']?.toString() ?? '';
-                    return ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.business_outlined, size: 20),
-                      title: Text(name),
-                      subtitle: code.isNotEmpty ? Text(code, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)) : null,
-                    );
-                  }).toList(),
+              final d = doc.data();
+              final companyId = doc.id;
+              final name = d['companyName']?.toString() ?? '—';
+              final code = d['companyCode']?.toString() ?? '';
+              final enabled = d['enableCustomerOrderFeature'] == true;
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ListTile(
+                  dense: true,
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.business_outlined, size: 18, color: Color(0xFF00897B)),
+                  ),
+                  title: Text(
+                    name,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (code.isNotEmpty)
+                        Text(code, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 13,
+                            color: enabled ? Colors.green.shade600 : Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            enabled ? 'Customer Orders: ON' : 'Customer Orders: OFF',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: enabled ? Colors.green.shade600 : Colors.grey.shade500,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: Switch(
+                    value: enabled,
+                    activeColor: Colors.white,
+                    activeTrackColor: const Color(0xFF00897B),
+                    onChanged: (val) async {
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(uid)
+                            .collection('companies')
+                            .doc(companyId)
+                            .update({'enableCustomerOrderFeature': val});
+
+                        Get.snackbar(
+                          val ? 'Feature Enabled ✅' : 'Feature Disabled',
+                          '$name: Customer Order ${val ? "ON" : "OFF"}',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: val
+                              ? Colors.green.shade100
+                              : Colors.orange.shade100,
+                          colorText: Colors.black87,
+                          duration: const Duration(seconds: 2),
+                        );
+                      } catch (e) {
+                        Get.snackbar('Error', e.toString(),
+                            backgroundColor: Colors.red.shade100);
+                      }
+                    },
+                  ),
+                  isThreeLine: true,
+                ),
+              );
+            }).toList(),
+
           ),
         );
       },

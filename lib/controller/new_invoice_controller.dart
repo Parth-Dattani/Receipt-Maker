@@ -327,11 +327,20 @@ class NewInvoiceController extends GetxController {
 
       // ✅ PRIORITY 4: Customer + optional prefillItems from order
       if (arguments is Map && (arguments['customerData'] != null || arguments['customerId'] != null)) {
+
+        // ✅ SAFETY: Only prefill items if explicitly from order
+        // (fromOrderId must be present to trigger item prefill)
+        final fromOrderId = arguments['fromOrderId']?.toString() ?? '';
+        final hasOrderData = fromOrderId.isNotEmpty;
+
         print("👤 [ARGS] Customer pre-selection");
         _customerFromListApplied = true;
         _loadEssentialData().then((_) async {
           await _loadSecondaryData();
           _applyCustomerFromArguments(arguments as Map);
+
+          // Only prefill items if coming from order
+          if (!hasOrderData) return;
 
           final prefillItems = arguments['prefillItems'];
           if (prefillItems is List && prefillItems.isNotEmpty) {
@@ -1364,10 +1373,10 @@ class NewInvoiceController extends GetxController {
   }
 
   Future<T> _loadWithCache<T>(
-    String cacheKey,
-    Future<T> Function() loader, {
-    bool forceReload = false,
-  }) async {
+      String cacheKey,
+      Future<T> Function() loader, {
+        bool forceReload = false,
+      }) async {
     if (!forceReload &&
         _cache.containsKey(cacheKey) &&
         _cacheTimestamps.containsKey(cacheKey) &&
@@ -2231,6 +2240,7 @@ class NewInvoiceController extends GetxController {
       }
 
       calculateTotals();
+      invoiceItems.refresh();
     }
   }
 
@@ -2384,25 +2394,15 @@ class NewInvoiceController extends GetxController {
   void selectRemoteItemForIndex(int index, Item item) {
     if (index >= invoiceItems.length) return;
 
-    // ✅ NEW: Stock Check Logic
-    // 1. Check if business is NOT service (Services don't use stock)
-
     final businessType = AppConstants.businessType?.toLowerCase() ?? '';
     final isProductBusiness = businessType != 'service' && businessType != 'client';
 
+    // ── Stock Check ──
     if (isProductBusiness) {
-      // 2. Check if stock is 0 or less
-      // Note: Make sure your Item model has a 'stock' or 'quantity' property.
-      // Replace 'item.stock' with 'item.currentStock' if your variable name is different.
       if ((item.currentStock ?? 0) <= 0) {
-
-        // Use the unit in the message (e.g., "0 PCS")
-        String unit = item.unitOfMeasurement ?? 'units';
-
-        // 3. Show Notification
         Get.snackbar(
           "Out of Stock",
-          "Item '${item.itemName}' has 0 $unit stock available.\nPlease add stock in Inventory first.",
+          "Item '${item.itemName}' has 0 ${item.unitOfMeasurement ?? 'units'} stock available.\nPlease add stock in Inventory first.",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.shade700,
           colorText: Colors.white,
@@ -2410,56 +2410,85 @@ class NewInvoiceController extends GetxController {
           duration: Duration(seconds: 4),
           margin: EdgeInsets.all(16),
         );
-
-        // 4. Stop execution (Do not select the item)
         return;
       }
     }
 
-    // 🔎 Check if this item already exists
-    int existingIndex = -1;
-    for (int i = 0; i < invoiceItems.length; i++) {
-      if (i != index && invoiceItems[i].itemId == item.itemId && invoiceItems[i].itemId.isNotEmpty) {
-        existingIndex = i;
-        break;
+    // ── Duplicate Check — only if allowDuplicateItems is false ──
+    final bool allowDuplicate =
+        (() {
+          // Prefer live setting from SettingsController (more reliable than cached AppConstants).
+          try {
+            if (Get.isRegistered<SettingsController>()) {
+              return Get.find<SettingsController>().allowDuplicateItems.value;
+            }
+          } catch (_) {}
+          return AppConstants.allowDuplicateItems;
+        })();
+
+    if (!allowDuplicate) {
+      int existingIndex = -1;
+      for (int i = 0; i < invoiceItems.length; i++) {
+        if (i == index) continue;
+
+        final String existingId = invoiceItems[i].itemId;
+        final String selectedId = item.itemId;
+        final bool matchesId = existingId.isNotEmpty &&
+            selectedId.isNotEmpty &&
+            existingId == selectedId;
+
+        // Fallback: sometimes invoice row may not have a reliable itemId yet.
+        final bool matchesName = existingId.isEmpty ||
+            selectedId.isEmpty ||
+            existingId != selectedId;
+        final bool matchesNameLower = matchesName &&
+            invoiceItems[i].itemName.trim().toLowerCase() ==
+                item.itemName.trim().toLowerCase();
+
+        if (matchesId || matchesNameLower) {
+          existingIndex = i;
+          break;
+        }
       }
+
+      if (existingIndex != -1) {
+        // Merge qty into existing row
+        final existingItem = invoiceItems[existingIndex];
+        final currentQty = invoiceItems[index].quantity;
+        final newQty = existingItem.quantity + (currentQty > 0 ? currentQty : 1);
+
+        invoiceItems[existingIndex] = existingItem.copyWith(
+          quantity: newQty,
+          totalPrice: newQty * existingItem.rate,
+        );
+
+        // Update qty controller for merged row
+        if (existingIndex < quantityControllers.length) {
+          quantityControllers[existingIndex].text =
+          newQty % 1 == 0 ? newQty.toInt().toString() : newQty.toString();
+        }
+
+        invoiceItems[index].descriptionController?.dispose();
+        removeItem(index);
+
+        Get.snackbar(
+          "Item Merged",
+          "Qty added to existing ${item.itemName}. Total: $newQty",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.teal.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: Duration(seconds: 2),
+          margin: EdgeInsets.all(16),
+        );
+
+        calculateTotals();
+        invoiceItems.refresh();
+        return;
+      }
+      // allowDuplicateItems == true → skip merge, fall through to normal add
     }
 
-    if (existingIndex != -1) {
-      // ✅ Item already exists - merge quantities
-      final existingItem = invoiceItems[existingIndex];
-      final currentQty = invoiceItems[index].quantity;
-      final newQty = existingItem.quantity + currentQty;
-
-      // Update the existing item with increased quantity
-      invoiceItems[existingIndex] = existingItem.copyWith(
-        quantity: newQty,
-        totalPrice: newQty * existingItem.rate,
-      );
-
-      // ✅ UPDATE THE CONTROLLER for the existing item
-      //updateQuantityController(existingIndex, newQty);
-
-      // Remove the duplicate row
-      invoiceItems[index].descriptionController?.dispose();
-      removeItem(index);
-
-      // Show feedback to user
-      Get.snackbar(
-        "Item Merged",
-        "Quantity added to existing ${item.itemName}. Total: $newQty",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.teal.withOpacity(0.8),
-        colorText: Colors.white,
-        duration: Duration(seconds: 2),
-        margin: EdgeInsets.all(16),
-      );
-
-      calculateTotals();
-      return;
-    }
-
-    // 🚀 No duplicate found - proceed with normal item selection
+    // ── Normal Item Selection ──
     final currentItem = invoiceItems[index];
     String customerId = _getValidCustomerId();
 
@@ -2481,32 +2510,27 @@ class NewInvoiceController extends GetxController {
       gstRateToUse = item.gstPercent.toDouble();
     }
 
-    // ✅ CRITICAL: Preserve the existing description controller
+    // Preserve existing description controller
     final existingController = currentItem.descriptionController;
     final customDescription = existingController?.text.trim() ?? '';
 
-    // ✅ NEW: Decide what description to use
+    // Description logic
     String finalDescription;
-
-    // Check business type
     final isServiceBusiness = (businessType == 'service' || businessType == 'client');
 
     if (isServiceBusiness) {
-      // For service business: Keep user's custom description if they typed something different
-      // Otherwise, pre-fill with item name as starting point
       if (customDescription.isNotEmpty &&
           customDescription != currentItem.itemName &&
           customDescription != currentItem.description) {
-        finalDescription = customDescription;  // ✅ Keep user's custom description
+        finalDescription = customDescription;
       } else {
-        finalDescription = item.itemName;  // ✅ Pre-fill with item name for service description
+        finalDescription = item.itemName;
       }
     } else {
-      // For non-service business: just use item name
       finalDescription = item.itemName;
     }
 
-    // Update item at current index
+    // Update item
     invoiceItems[index] = InvoiceItem(
       customerId: customerId,
       description: finalDescription,
@@ -2518,13 +2542,11 @@ class NewInvoiceController extends GetxController {
       itemName: item.itemName,
       totalPrice: currentItem.quantity * item.sellPrice.toDouble(),
       unit: item.unitOfMeasurement,
-        descriptionController: existingController
+      descriptionController: existingController,
     );
 
-    // ✅ CRITICAL: Update the controller text
     if (existingController != null) {
       existingController.text = finalDescription;
-      // Move cursor to end only if there's text
       if (finalDescription.isNotEmpty) {
         existingController.selection = TextSelection.fromPosition(
           TextPosition(offset: finalDescription.length),
@@ -2532,15 +2554,11 @@ class NewInvoiceController extends GetxController {
       }
     }
 
-
-    // ✅ UPDATE CONTROLLERS for the current index
-    //updateQuantityController(index, currentItem.quantity);
     updatePriceController(index, item.sellPrice.toDouble());
     ensureControllersMatch();
-
     calculateTotals();
+    invoiceItems.refresh();
   }
-
 
   // ✅ NEW: Helper method to update item description
   void updateItemDescription(int index, String description) {
@@ -2796,11 +2814,11 @@ class NewInvoiceController extends GetxController {
       'itemId': item.itemId ?? '',
       'itemName':  item.itemName ?? '',
       'description': finalDescription,
-    // AppConstants.businessType == 'service'
-    //       ? serviceDescriptionController.value.text.isNotEmpty
-    //       ? serviceDescription.value.toString()
-    //       :  item.description ??  '' ,
-    //       :  item.description ??  '' ,
+      // AppConstants.businessType == 'service'
+      //       ? serviceDescriptionController.value.text.isNotEmpty
+      //       ? serviceDescription.value.toString()
+      //       :  item.description ??  '' ,
+      //       :  item.description ??  '' ,
       'quantity': item.quantity.toString(),
       'price': item.rate.toString(),
       'purchasePrice': item.purchasePrice.toString(),
@@ -3204,7 +3222,7 @@ class NewInvoiceController extends GetxController {
             customerGstController.text.trim(),
             customerAddressController.text.trim(),
             subtotal.value,
-           // dueDateController.text,
+            // dueDateController.text,
             _formatDate(invoiceDate.value),
             totalAmount.value,
             notesController.text,
@@ -3438,7 +3456,7 @@ class NewInvoiceController extends GetxController {
 
       // ✅ OPEN DIALOG: Print vs PDF
       await _showOutputFormatDialog(invoiceModels);
-
+      Get.back(result: true);
       return true;
 
     } catch (e, stackTrace) {

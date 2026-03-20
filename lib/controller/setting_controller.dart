@@ -17,6 +17,7 @@ const String kPdfTemplateMinimal = 'Minimal';
 const String kPdfTemplateProfessional = 'Professional';
 const String kPdfTemplateElegant = 'Elegant';
 
+
 class SettingsController extends GetxController {
   // Observable variables
   var isLoading = false.obs;
@@ -38,6 +39,11 @@ class SettingsController extends GetxController {
   final currencyController = TextEditingController();
   final startInvoiceController = TextEditingController();
   final termsController = TextEditingController();
+  var allowDuplicateItems = false.obs;
+  var enableCustomerOrderFeature = false.obs;
+  var isAdmin = false.obs;
+  var isLoadingDuplicateItems = false.obs;
+  var isLoadingCustomerOrderFeature = false.obs;
 
   // Currency options
   final List<String> currencyOptions = [
@@ -116,7 +122,117 @@ class SettingsController extends GetxController {
       Get.find<AuthController>().loadUserFyData();
     } catch (_) {}
     loadPdfTemplateFromFirestore();
+    loadAllowDuplicateItems();
+    loadIsAdmin();
+    loadEnableCustomerOrderFeature();
   }
+
+  Future<void> updateAllowDuplicateItems(bool val) async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    isLoadingDuplicateItems.value = true;
+    try {
+      // Update locally immediately so that invoice screens using AppConstants
+      // can react right away (before Firestore round-trip finishes).
+      allowDuplicateItems.value = val;
+      await AppConstants.setAllowDuplicateItems(val);
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .update({'allowDuplicateItems': val});
+
+    } catch (e) {
+      print('updateAllowDuplicateItems: $e');
+    } finally {
+      isLoadingDuplicateItems.value = false;
+    }
+  }
+
+  Future<void> updateEnableCustomerOrderFeature(bool val) async {
+    if (!isAdmin.value) return; // Non-admin cannot change this feature
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    isLoadingCustomerOrderFeature.value = true;
+    try {
+      // Update locally immediately so UI reacts before Firestore round-trip.
+      enableCustomerOrderFeature.value = val;
+      await AppConstants.setEnableCustomerOrderFeature(val);
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .update({'enableCustomerOrderFeature': val});
+    } catch (e) {
+      print('updateEnableCustomerOrderFeature: $e');
+    } finally {
+      isLoadingCustomerOrderFeature.value = false;
+    }
+  }
+
+  Future<void> loadAllowDuplicateItems() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .get();
+      if (doc.exists) {
+        final val = doc.data()?['allowDuplicateItems'] == true;
+        allowDuplicateItems.value = val;
+        await AppConstants.setAllowDuplicateItems(val);
+      }
+    } catch (e) {
+      print('loadAllowDuplicateItems: $e');
+    }
+  }
+
+  Future<void> loadEnableCustomerOrderFeature() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .get();
+      if (doc.exists) {
+        final val = doc.data()?['enableCustomerOrderFeature'] == true;
+        enableCustomerOrderFeature.value = val;
+        await AppConstants.setEnableCustomerOrderFeature(val);
+      }
+    } catch (e) {
+      print('loadEnableCustomerOrderFeature: $e');
+    }
+  }
+
+  Future<void> loadIsAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      isAdmin.value = doc.data()?['isAdmin'] == true;
+    } catch (e) {
+      print('loadIsAdmin: $e');
+    }
+  }
+
 
   static const _validTemplates = [
     kPdfTemplateModern, kPdfTemplateClassic, kPdfTemplateMinimal,

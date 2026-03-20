@@ -593,8 +593,11 @@ class CustomerListScreen extends GetView<CustomerListController> {
               child: Row(children: [Icon(Icons.edit, color: Colors.orange, size: 18), SizedBox(width: 8), Text('Edit')])),
           const PopupMenuItem(value: 'invoice',
               child: Row(children: [Icon(Icons.receipt, color: Colors.green, size: 18), SizedBox(width: 8), Text('Create Invoice')])),
-          const PopupMenuItem(value: 'share',
-              child: Row(children: [Icon(Icons.share, color: Colors.blue, size: 18), SizedBox(width: 8), Text('Share Order Link')])),
+          if (AppConstants.enableCustomerOrderFeature.value)
+            const PopupMenuItem(value: 'share',
+                child: Row(children: [Icon(Icons.share, color: Colors.blue, size: 18),
+                  SizedBox(width: 8),
+                  Text('Share Order Link')])),
           const PopupMenuDivider(),
           const PopupMenuItem(value: 'delete',
               child: Row(children: [Icon(Icons.delete, color: Colors.red, size: 18), SizedBox(width: 8), Text('Delete')])),

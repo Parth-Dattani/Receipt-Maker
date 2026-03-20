@@ -15,6 +15,7 @@ import '../../widgets/widgets.dart';
 import '../../widgets/web_screen_wrapper.dart';
 
 
+
 class NewInvoiceScreen extends GetView<NewInvoiceController> {
   static const String pageId = '/new-invoice';
 
@@ -609,12 +610,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
           children: [
             Icon(icon, size: 16, color: isSelected ? Colors.white : color),
             SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            type.name,
-            style: const TextStyle(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-          ),),
+            Flexible(
+              child: Text(
+                type.name,
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),),
           ],
         ),
         selected: isSelected,
@@ -632,7 +633,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
   Widget _buildCustomerSection() {
     return Obx(() {
       if (controller.createFromChallan.value
-         // && controller.selectedCustomerForInvoice.value.isNotEmpty
+      // && controller.selectedCustomerForInvoice.value.isNotEmpty
       ) {
         return SizedBox.shrink();
       }
@@ -1138,7 +1139,19 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                           }
 
                                           return SearchableDropdown<Item>(
-                                            value: selectedItem,
+                                            value: (() {
+                                              // Prefer matching by itemId; fallback to itemName to handle
+                                              // cases where itemId is temporarily missing in invoice row.
+                                              final String id = item.itemId;
+                                              final String name = item.itemName;
+                                              final byId = id.isNotEmpty
+                                                  ? activeItems.firstWhereOrNull((e) => e.itemId == id)
+                                                  : null;
+                                              if (byId != null) return byId;
+                                              return name.isNotEmpty
+                                                  ? activeItems.firstWhereOrNull((e) => e.itemName == name)
+                                                  : null;
+                                            })(),
                                             items: activeItems,
                                             itemLabel: (item) => item.itemName.toUpperCase(),
                                             hintText: 'Select Item',
@@ -1824,7 +1837,19 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                     try { selectedItem = activeItems.firstWhere((e) => e.itemId == item.itemId); } catch (e) {}
 
                                     return SearchableDropdown<Item>(
-                                      value: selectedItem,
+                                      value: (() {
+                                        // Prefer matching by itemId; fallback to itemName to handle
+                                        // cases where itemId is temporarily missing in invoice row.
+                                        final String id = item.itemId;
+                                        final String name = item.itemName;
+                                        final byId = id.isNotEmpty
+                                            ? activeItems.firstWhereOrNull((e) => e.itemId == id)
+                                            : null;
+                                        if (byId != null) return byId;
+                                        return name.isNotEmpty
+                                            ? activeItems.firstWhereOrNull((e) => e.itemName == name)
+                                            : null;
+                                      })(),
                                       items: activeItems,
                                       itemLabel: (item) => item.itemName.toUpperCase(),
                                       hintText: 'Select Item',
@@ -1854,11 +1879,23 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                 if (businessType == 'service' || businessType == 'client')
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
-                                    child: TextFormField(
+                                    child: item.descriptionController != null
+                                        ? TextFormField(
+                                      controller: item.descriptionController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Service Description',
+                                        border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(6)),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      ),
+                                      onChanged: (val) => controller.updateItemDescription(index, val),
+                                    )
+                                        : TextFormField(
                                       initialValue: item.description,
                                       decoration: InputDecoration(
                                         labelText: 'Service Description',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                        border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(6)),
                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
                                       onChanged: (val) => controller.updateItemDescription(index, val),
@@ -1943,8 +1980,8 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                     keyboardType: kIsWeb
                                         ? TextInputType.text
                                         : ((item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
-                                            ? TextInputType.number
-                                            : TextInputType.numberWithOptions(decimal: true)),
+                                        ? TextInputType.number
+                                        : TextInputType.numberWithOptions(decimal: true)),
                                     inputFormatters: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
                                         ? [IntegerOnlyInputFormatter()]
                                         : [DecimalQuantityInputFormatter()],
@@ -2125,259 +2162,259 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
 
                 // ✅ NEW: PAYMENT MODE SELECTION (Shows for Paid/Partial)
                 Obx(() {
-                      if (controller.paymentStatus.value == 'Paid' ||
-                          controller.paymentStatus.value == 'Partial') {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 16),
-                            Text(
-                              "Payment Mode",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            SizedBox(height: 8),
+                  if (controller.paymentStatus.value == 'Paid' ||
+                      controller.paymentStatus.value == 'Partial') {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 16),
+                        Text(
+                          "Payment Mode",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        SizedBox(height: 8),
 
-                            // Radio buttons for payment mode
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.shade200),
-                              ),
-                              child: Column(
-                                children: [
-                                  // Cash option
-                                  RadioListTile<String>(
-                                    title: Row(
-                                      children: [
-                                        Icon(Icons.money, size: 20, color: Colors.green.shade700),
-                                        SizedBox(width: 8),
-                                        Text('Cash', style: TextStyle(fontSize: 14)),
-                                      ],
-                                    ),
-                                    value: 'Cash',
-                                    groupValue: controller.paymentMode.value,
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        controller.updatePaymentMode(value);
-                                      }
-                                    },
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-
-                                  // UPI option
-                                  RadioListTile<String>(
-                                    title: Row(
-                                      children: [
-                                        Icon(Icons.smartphone, size: 20, color: Colors.purple.shade700),
-                                        SizedBox(width: 8),
-                                        Text('UPI', style: TextStyle(fontSize: 14)),
-                                      ],
-                                    ),
-                                    value: 'UPI',
-                                    groupValue: controller.paymentMode.value,
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        controller.updatePaymentMode(value);
-                                      }
-                                    },
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-
-                                  // Card option
-                                  RadioListTile<String>(
-                                    title: Row(
-                                      children: [
-                                        Icon(Icons.credit_card, size: 20, color: Colors.blue.shade700),
-                                        SizedBox(width: 8),
-                                        Text('Card', style: TextStyle(fontSize: 14)),
-                                      ],
-                                    ),
-                                    value: 'Card',
-                                    groupValue: controller.paymentMode.value,
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        controller.updatePaymentMode(value);
-                                      }
-                                    },
-                                    dense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      return SizedBox.shrink();
-                    }),
-
-                    // ✅ PARTIAL PAYMENT - RECEIVED AMOUNT
-                    Obx(() {
-                      if (controller.paymentStatus.value == 'Partial') {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 16),
-                            Text(
-                              "Received Amount",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            TextFormField(
-                              controller: controller.receivedAmountController,
-                              decoration: InputDecoration(
-                                prefixIcon: Icon(Icons.currency_rupee, size: 20),
-                                hintText: 'Enter received amount',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                        // Radio buttons for payment mode
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              // Cash option
+                              RadioListTile<String>(
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.money, size: 20, color: Colors.green.shade700),
+                                    SizedBox(width: 8),
+                                    Text('Cash', style: TextStyle(fontSize: 14)),
+                                  ],
                                 ),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                value: 'Cash',
+                                groupValue: controller.paymentMode.value,
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.updatePaymentMode(value);
+                                  }
+                                },
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
                               ),
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
-                              validator: (value) {
-                                if (controller.paymentStatus.value == 'Partial') {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter received amount';
+
+                              // UPI option
+                              RadioListTile<String>(
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.smartphone, size: 20, color: Colors.purple.shade700),
+                                    SizedBox(width: 8),
+                                    Text('UPI', style: TextStyle(fontSize: 14)),
+                                  ],
+                                ),
+                                value: 'UPI',
+                                groupValue: controller.paymentMode.value,
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.updatePaymentMode(value);
                                   }
-                                  double? amount = double.tryParse(value);
-                                  if (amount == null || amount <= 0) {
-                                    return 'Please enter a valid amount';
+                                },
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+
+                              // Card option
+                              RadioListTile<String>(
+                                title: Row(
+                                  children: [
+                                    Icon(Icons.credit_card, size: 20, color: Colors.blue.shade700),
+                                    SizedBox(width: 8),
+                                    Text('Card', style: TextStyle(fontSize: 14)),
+                                  ],
+                                ),
+                                value: 'Card',
+                                groupValue: controller.paymentMode.value,
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    controller.updatePaymentMode(value);
                                   }
-                                  if (amount > controller.totalAmount.value) {
-                                    return 'Cannot exceed total amount';
-                                  }
-                                }
-                                return null;
-                              },
-                              onChanged: (value) {
-                                controller.updateReceivedAmount(value);
-                              },
+                                },
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return SizedBox.shrink();
+                }),
+
+                // ✅ PARTIAL PAYMENT - RECEIVED AMOUNT
+                Obx(() {
+                  if (controller.paymentStatus.value == 'Partial') {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 16),
+                        Text(
+                          "Received Amount",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextFormField(
+                          controller: controller.receivedAmountController,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.currency_rupee, size: 20),
+                            hintText: 'Enter received amount',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.orange.shade200),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (controller.paymentStatus.value == 'Partial') {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter received amount';
+                              }
+                              double? amount = double.tryParse(value);
+                              if (amount == null || amount <= 0) {
+                                return 'Please enter a valid amount';
+                              }
+                              if (amount > controller.totalAmount.value) {
+                                return 'Cannot exceed total amount';
+                              }
+                            }
+                            return null;
+                          },
+                          onChanged: (value) {
+                            controller.updateReceivedAmount(value);
+                          },
+                        ),
+                        SizedBox(height: 12),
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Pending Amount:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade800,
+                                ),
                               ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              Obx(() => Text(
+                                '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.orange.shade800,
+                                ),
+                              )),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return SizedBox.shrink();
+                }),
+
+                // ✅ PAID STATUS INDICATOR
+                Obx(() {
+                  if (controller.paymentStatus.value == 'Paid') {
+                    return Column(
+                      children: [
+                        SizedBox(height: 12),
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Fully Paid',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  } else if (controller.paymentStatus.value == 'Pending') {
+                    return Column(
+                      children: [
+                        SizedBox(height: 12),
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
                                 children: [
+                                  Icon(Icons.pending, color: Colors.red.shade700, size: 20),
+                                  SizedBox(width: 8),
                                   Text(
                                     'Pending Amount:',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.orange.shade800,
-                                    ),
-                                  ),
-                                  Obx(() => Text(
-                                    '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.orange.shade800,
-                                    ),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      return SizedBox.shrink();
-                    }),
-
-                    // ✅ PAID STATUS INDICATOR
-                    Obx(() {
-                      if (controller.paymentStatus.value == 'Paid') {
-                        return Column(
-                          children: [
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Fully Paid',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green.shade800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      } else if (controller.paymentStatus.value == 'Pending') {
-                        return Column(
-                          children: [
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.red.shade200),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.pending, color: Colors.red.shade700, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Pending Amount:',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.red.shade800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    '₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
                                       color: Colors.red.shade800,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        );
-                      }
-                      return SizedBox.shrink();
-                    }),
+                              Text(
+                                '₹${AppUtil.formatCurrency(controller.totalAmount.value)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.red.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return SizedBox.shrink();
+                }),
               ],
             ],
           ),
         ),
       );
-  });
+    });
   }
 
   Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {
@@ -2884,6 +2921,11 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
     );
   }
 }
+
+
+
+
+
 
 
 

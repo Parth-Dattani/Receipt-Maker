@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -17,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../utils/shared_preferences_helper.dart';
+import '../../widgets/web_screen_wrapper.dart';
 import '../screen.dart';
 
 
@@ -30,7 +32,8 @@ class AdminOrdersScreen extends GetView<AdminOrdersController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // ✅ FIX: Web layout with sidebar
+    final content = Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF00897B),
@@ -123,6 +126,15 @@ class AdminOrdersScreen extends GetView<AdminOrdersController> {
         ],
       ),
     );
+
+    // ✅ Web ma sidebar wrapper, mobile ma direct scaffold
+    if (kIsWeb) {
+      return webScreenWrapper(
+        currentRoute: AdminOrdersScreen.pageId,
+        child: content,
+      );
+    }
+    return content;
   }
 }
 
@@ -225,7 +237,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     } catch (_) { return ''; }
   }
 
-  void _createInvoice(Map<String, dynamic> order) {
+  void _createInvoice(Map<String, dynamic> order) async {
     final customerData = {
       'name':       order['customerName']    ?? '',
       'customerId': order['customerId']      ?? '',
@@ -238,59 +250,59 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     };
     final orderItems = (order['items'] as List<dynamic>? ?? [])
         .map((i) => i as Map<String, dynamic>).toList();
-
     final orderId = order['id']?.toString() ?? '';
 
     if (Get.isRegistered<NewInvoiceController>()) {
       Get.delete<NewInvoiceController>(force: true);
     }
-    Get.toNamed(NewInvoiceScreen.pageId, arguments: {
-      'customerData': customerData,
-      'customerId':   order['customerId'] ?? '',  // controller fetches full details by ID
-      'prefillItems': orderItems,
-      'fromOrderId':  orderId,
-    });
 
-    // ── Mark invoice created → disables both buttons ──
-    if (orderId.isNotEmpty) {
-      widget.controller.markInvoiceCreated(orderId);
-    }
-  }
-
-  void _createChallan(Map<String, dynamic> order) {
-    final orderId = order['id']?.toString() ?? '';
-    final customerData = {
-      'name':       order['customerName']    ?? '',
-      'customerId': order['customerId']      ?? '',
-      'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
-      'address':    order['customerAddress'] ?? order['address'] ?? '',
-      'email':      order['customerEmail']   ?? order['email']   ?? '',
-      'pan':        order['customerPan']     ?? '',
-      'gst':        order['customerGst']     ?? '',
-      'isActive':   'true',
-    };
-    final orderItems = (order['items'] as List<dynamic>? ?? [])
-        .map((i) => i as Map<String, dynamic>).toList();
-
-    // Force delete + re-inject NewChallanController via binding
-    if (Get.isRegistered<NewChallanController>()) {
-      Get.delete<NewChallanController>(force: true);
-    }
-    // Manually put controller — same as NewChallanBinding does
-    Get.put(NewChallanController());
-
-    Get.toNamed(NewChallanScreen.pageId, arguments: {
+    // ✅ AWAIT result — only mark if user actually saved
+    final result = await Get.toNamed(NewInvoiceScreen.pageId, arguments: {
       'customerData': customerData,
       'customerId':   order['customerId'] ?? '',
       'prefillItems': orderItems,
       'fromOrderId':  orderId,
     });
 
-    // ── Mark challan created + update status ──
-    if (orderId.isNotEmpty) {
-      widget.controller.markChallanCreated(orderId);
+    // ✅ FIX: Only mark if result == true (invoice saved)
+    if (result == true && orderId.isNotEmpty) {
+      widget.controller.markInvoiceCreated(orderId);
     }
   }
+
+void _createChallan(Map<String, dynamic> order) async {
+  final orderId = order['id']?.toString() ?? '';
+  final customerData = {
+    'name':       order['customerName']    ?? '',
+    'customerId': order['customerId']      ?? '',
+    'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
+    'address':    order['customerAddress'] ?? order['address'] ?? '',
+    'email':      order['customerEmail']   ?? order['email']   ?? '',
+    'pan':        order['customerPan']     ?? '',
+    'gst':        order['customerGst']     ?? '',
+    'isActive':   'true',
+  };
+  final orderItems = (order['items'] as List<dynamic>? ?? [])
+      .map((i) => i as Map<String, dynamic>).toList();
+
+  if (Get.isRegistered<NewChallanController>()) {
+    Get.delete<NewChallanController>(force: true);
+  }
+  Get.put(NewChallanController());
+
+  // ✅ AWAIT result — only mark if user actually saved
+  final result = await Get.toNamed(NewChallanScreen.pageId, arguments: {
+    'customerData': customerData,
+    'customerId':   order['customerId'] ?? '',
+    'prefillItems': orderItems,
+    'fromOrderId':  orderId,
+  });
+
+  // ✅ FIX: Only mark if result == true (challan saved)
+  if (result == true && orderId.isNotEmpty) {
+    widget.controller.markChallanCreated(orderId);
+  }
+}
 
   @override
   Widget build(BuildContext context) {

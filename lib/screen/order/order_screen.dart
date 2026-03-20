@@ -10,6 +10,32 @@ import 'package:flutter/services.dart';
 
 
 // ─────────────────────────────────────────────
+// Helper — unit check (top level)
+// ─────────────────────────────────────────────
+bool _isWholeUnit(String? unit) {
+  const decimalUnits = {
+    // Weight
+    'kg', 'kgs', 'kilogram', 'kilograms',
+    'g', 'gm', 'gms', 'gram', 'grams',
+    'mg', 'milligram', 'milligrams',
+    'quintal', 'ton', 'tonne', 'tons', 'tonnes',
+    // Volume
+    'l', 'lt', 'ltr', 'ltrs', 'liter', 'litre', 'liters', 'litres',
+    'ml', 'milliliter', 'millilitre', 'milliliters', 'millilitres',
+    // Length
+    'm', 'mtr', 'meter', 'metre', 'meters', 'metres',
+    'cm', 'centimeter', 'centimetre',
+    'mm', 'millimeter', 'millimetre',
+    'ft', 'feet', 'foot',
+    'inch', 'inches', 'in',
+    'yard', 'yd',
+  };
+  final u = (unit ?? '').toLowerCase().trim();
+  if (u.isEmpty) return true; // no unit = pcs style = whole number
+  return !decimalUnits.contains(u);
+}
+
+// ─────────────────────────────────────────────
 // OrderScreen
 // ─────────────────────────────────────────────
 class OrderScreen extends StatelessWidget {
@@ -77,7 +103,6 @@ class OrderScreen extends StatelessWidget {
 
         return Column(
           children: [
-            // Subtitle
             Container(
               width: double.infinity,
               color: const Color(0xFF00897B),
@@ -88,23 +113,17 @@ class OrderScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.white60, fontSize: 12),
               ),
             ),
-
-            // Item cards list
             Expanded(
               child: Obx(() => ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                 children: [
-                  // Each selected/empty slot
                   ...List.generate(controller.orderRows.length, (index) {
                     return _OrderItemRow(
                       index: index,
                       controller: controller,
                     );
                   }),
-
                   const SizedBox(height: 12),
-
-                  // Add Another Item button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -118,18 +137,14 @@ class OrderScreen extends StatelessWidget {
                               fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00897B),
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 15),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
-                  // Total Items summary
                   Obx(() {
                     final total = controller.orderRows
                         .where((r) => r.selectedItem != null && r.qty > 0)
@@ -166,8 +181,6 @@ class OrderScreen extends StatelessWidget {
           ],
         );
       }),
-
-      // Bottom bar
       bottomNavigationBar: Obx(() {
         final hasItems = controller.orderRows
             .any((r) => r.selectedItem != null && r.qty > 0);
@@ -189,23 +202,17 @@ class _OrderItemRow extends StatelessWidget {
 
   const _OrderItemRow({required this.index, required this.controller});
 
-  bool _isWholeUnit(String unit) {
-    // Decimal units — these accept decimal input
-    final decimal = ['kg', 'gram', 'g', 'liter', 'litre', 'l', 'ml',
-      'meter', 'metre', 'm', 'cm', 'ft', 'inch', 'ton', 'tonne'];
-    final u = unit.toLowerCase().trim();
-    // If unit is empty OR not a decimal unit → treat as whole (pcs)
-    if (u.isEmpty) return true;
-    return !decimal.any((d) => u == d || u.startsWith(d));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final row = controller.orderRows[index];
+      final row  = controller.orderRows[index];
       final item = row.selectedItem;
-      final unit = item?.unitOfMeasurement ?? '';
+
+      // ✅ unit read with trim
+      final unit    = (item?.unitOfMeasurement ?? '').trim();
       final isWhole = _isWholeUnit(unit);
+
+
 
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -225,7 +232,7 @@ class _OrderItemRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header: #N Item + delete ──
+              // Header: #N + delete
               Row(
                 children: [
                   Container(
@@ -265,7 +272,7 @@ class _OrderItemRow extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // ── Item selector ──
+              // Item selector
               GestureDetector(
                 onTap: () => _showItemPicker(context, index, controller),
                 child: Container(
@@ -327,19 +334,17 @@ class _OrderItemRow extends StatelessWidget {
                                   horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
-                                border: Border.all(
-                                    color: Colors.grey.shade300),
+                                border:
+                                Border.all(color: Colors.grey.shade300),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: controller.showPriceToCustomer.value
-                                  ? Text(
+                              child: Text(
                                 '₹${item.sellPrice.toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF1A1A2E)),
-                              )
-                                  : const SizedBox.shrink(),
+                              ),
                             ),
                           ],
                         ),
@@ -358,7 +363,11 @@ class _OrderItemRow extends StatelessWidget {
                                 fontSize: 12, color: Colors.grey),
                           ),
                           const SizedBox(height: 6),
+                          // ✅ ValueKey — fresh widget on item/unit change
                           _QtyField(
+                            key: ValueKey(
+                              '${index}_${item.itemId}_$unit',
+                            ),
                             row: row,
                             index: index,
                             isWhole: isWhole,
@@ -395,7 +404,7 @@ class _OrderItemRow extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// Qty Field — type only, strict whole/decimal
+// ✅ FIXED: Qty Field — super.key + clean logic
 // ─────────────────────────────────────────────
 class _QtyField extends StatefulWidget {
   final OrderRow row;
@@ -404,6 +413,7 @@ class _QtyField extends StatefulWidget {
   final OrderController controller;
 
   const _QtyField({
+    super.key, // ✅ CRITICAL — allows ValueKey to work
     required this.row,
     required this.index,
     required this.isWhole,
@@ -420,11 +430,12 @@ class _QtyFieldState extends State<_QtyField> {
   @override
   void initState() {
     super.initState();
+    // Fresh state every time key changes
     _tc = TextEditingController(
       text: widget.row.qty > 0
           ? (widget.isWhole
-          ? '${widget.row.qty.toInt()}'
-          : '${widget.row.qty}')
+          ? widget.row.qty.toInt().toString()
+          : widget.row.qty.toString())
           : '',
     );
   }
@@ -445,13 +456,14 @@ class _QtyFieldState extends State<_QtyField> {
       ),
       child: TextField(
         controller: _tc,
-        keyboardType: TextInputType.numberWithOptions(
-            decimal: !widget.isWhole),
-        // pcs/box → digits only (no decimal at all)
-        // kg/L    → digits + one dot
+        // ✅ pcs/box = whole number keyboard, kg/lt = decimal keyboard
+        keyboardType: widget.isWhole
+            ? TextInputType.number
+            : const TextInputType.numberWithOptions(decimal: true),
+        // ✅ pcs/box = digits only, kg/lt = digits + one dot
         inputFormatters: widget.isWhole
             ? [FilteringTextInputFormatter.digitsOnly]
-            : [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
         textAlign: TextAlign.center,
         style: const TextStyle(
           fontSize: 17,
@@ -466,12 +478,16 @@ class _QtyFieldState extends State<_QtyField> {
           filled: true,
           fillColor: Colors.transparent,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          hintText: widget.isWhole ? 'Enter qty' : 'e.g. 2.5',
-          hintStyle: TextStyle(
-              color: Colors.grey.shade400, fontSize: 13),
+          hintText: widget.isWhole ? 'e.g. 5' : 'e.g. 2.5',
+          hintStyle:
+          TextStyle(color: Colors.grey.shade400, fontSize: 13),
         ),
         onChanged: (v) {
-          // pcs guard: block decimal input
+          if (v.isEmpty) {
+            widget.controller.setQty(widget.index, 0);
+            return;
+          }
+          // pcs guard: block dot
           if (widget.isWhole && v.contains('.')) {
             final clean = v.replaceAll('.', '');
             _tc.value = TextEditingValue(
@@ -482,6 +498,22 @@ class _QtyFieldState extends State<_QtyField> {
             widget.controller.setQty(
                 widget.index, double.tryParse(clean) ?? 0);
             return;
+          }
+          // decimal: only one dot allowed
+          if (!widget.isWhole) {
+            final parts = v.split('.');
+            if (parts.length > 2) {
+              final clean =
+                  '${parts[0]}.${parts.sublist(1).join('')}';
+              _tc.value = TextEditingValue(
+                text: clean,
+                selection:
+                TextSelection.collapsed(offset: clean.length),
+              );
+              widget.controller.setQty(
+                  widget.index, double.tryParse(clean) ?? 0);
+              return;
+            }
           }
           widget.controller.setQty(
               widget.index, double.tryParse(v) ?? 0);
@@ -523,18 +555,16 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
       ),
       child: Column(
         children: [
-          // Handle
           const SizedBox(height: 8),
           Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 16),
-
-          // Title
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Align(
@@ -545,8 +575,6 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Search
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -568,8 +596,6 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -591,13 +617,17 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15)),
-                              const SizedBox(height: 2),
+
                               if (widget.controller.showPriceToCustomer.value)
-                                Text('₹ ${item.price.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                        color: Color(0xFF00897B),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13)),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                      '₹ ${item.sellPrice.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          color: Color(0xFF00897B),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13)),
+                                ),
                             ],
                           ),
                         ),
@@ -608,8 +638,6 @@ class _ItemPickerSheetState extends State<_ItemPickerSheet> {
               },
             ),
           ),
-
-          // Cancel
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Align(
@@ -643,7 +671,8 @@ class _CartBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+        const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -666,7 +695,8 @@ class _CartBar extends StatelessWidget {
                   children: [
                     Text('Total Items: $count',
                         style: TextStyle(
-                            fontSize: 13, color: Colors.grey.shade600)),
+                            fontSize: 13,
+                            color: Colors.grey.shade600)),
                     if (controller.showPriceToCustomer.value)
                       Obx(() => Text(
                         '₹${controller.orderTotalAmount.toStringAsFixed(2)}',
@@ -694,12 +724,14 @@ class _CartBar extends StatelessWidget {
               ),
               child: controller.isPlacingOrder.value
                   ? const SizedBox(
-                  height: 20, width: 20,
+                  height: 20,
+                  width: 20,
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2))
                   : const Text('Place Order',
                   style: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700)),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
             )),
           ],
         ),
@@ -753,7 +785,6 @@ class OrderSuccessScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Order More
                   ElevatedButton.icon(
                     onPressed: () {
                       final cid = Get.parameters['cid'] ?? '';
@@ -778,7 +809,6 @@ class OrderSuccessScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // My Orders
                   OutlinedButton.icon(
                     onPressed: () {
                       final cid = Get.parameters['cid'] ?? '';

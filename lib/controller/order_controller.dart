@@ -247,9 +247,6 @@ import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
 
-// Import your existing Item model
-// import '../model/item_model.dart'; // ← uncomment with correct path
-
 // ─────────────────────────────────────────────
 // OrderRow Model
 // ─────────────────────────────────────────────
@@ -257,6 +254,32 @@ class OrderRow {
   Item? selectedItem;
   double qty;
   OrderRow({this.selectedItem, this.qty = 0});
+}
+
+// ─────────────────────────────────────────────
+// Helper — top level (outside class)
+// ─────────────────────────────────────────────
+bool _isWholeUnit(String? unit) {
+  const decimalUnits = {
+    // Weight
+    'kg', 'kgs', 'kilogram', 'kilograms',
+    'g', 'gm', 'gms', 'gram', 'grams',
+    'mg', 'milligram', 'milligrams',
+    'quintal', 'ton', 'tonne', 'tons', 'tonnes',
+    // Volume
+    'l', 'lt', 'ltr', 'ltrs', 'liter', 'litre', 'liters', 'litres',
+    'ml', 'milliliter', 'millilitre', 'milliliters', 'millilitres',
+    // Length
+    'm', 'mtr', 'meter', 'metre', 'meters', 'metres',
+    'cm', 'centimeter', 'centimetre',
+    'mm', 'millimeter', 'millimetre',
+    'ft', 'feet', 'foot',
+    'inch', 'inches', 'in',
+    'yard', 'yd',
+  };
+  final u = (unit ?? '').toLowerCase().trim();
+  if (u.isEmpty) return true; // no unit = pcs style = whole
+  return !decimalUnits.contains(u);
 }
 
 // ─────────────────────────────────────────────
@@ -446,7 +469,6 @@ class OrderController extends GetxController {
       try {
         final sheetsApi = sheets.SheetsApi(authClient);
 
-        // ── Header row ──
         final headerResp = await sheetsApi.spreadsheets.values.get(
           spreadsheetId, 'Customer!A1:Z1',
         );
@@ -457,10 +479,7 @@ class OrderController extends GetxController {
             : <dynamic>[];
         print('📋 Customer headers: $headers');
 
-        int hIdx(String n) {
-          final i = headers.indexOf(n);
-          return i;
-        }
+        int hIdx(String n) => headers.indexOf(n);
 
         final idIdx      = hIdx('customerid');
         final nameIdx    = hIdx('name');
@@ -470,7 +489,6 @@ class OrderController extends GetxController {
 
         print('📊 id:$idIdx name:$nameIdx mobile:$mobileIdx address:$addressIdx email:$emailIdx');
 
-        // ── Data rows ──
         final response = await sheetsApi.spreadsheets.values.get(
           spreadsheetId, 'Customer!A2:Z',
         );
@@ -505,7 +523,7 @@ class OrderController extends GetxController {
   }
 
   // ─────────────────────────────────────────────
-  // Items from Sheet — header-based column mapping
+  // ✅ FIXED: Items from Sheet — header-based column mapping
   // ─────────────────────────────────────────────
   Future<void> _fetchItemsFromSheet(
       String spreadsheetId,
@@ -519,7 +537,7 @@ class OrderController extends GetxController {
       try {
         final sheetsApi = sheets.SheetsApi(authClient);
 
-        // ── Step 1: Fetch header row ──
+        // Step 1: Header row
         final headerResp = await sheetsApi.spreadsheets.values.get(
           spreadsheetId, 'Item!A1:Z1',
         );
@@ -531,63 +549,103 @@ class OrderController extends GetxController {
 
         print('📋 Item headers: $headers');
 
-        // ── Step 2: Find column indexes by header name ──
-        int _idx(String name) => headers.indexOf(name);
+        // Step 2: Column indexes
+        int idx(String name) => headers.indexOf(name);
 
-        final itemIdIdx    = _idx('itemid');
-        final itemNameIdx  = _idx('itemname');
-        final priceIdx     = _idx('price');
-        final sellPriceIdx = _idx('sellprice');
-        final gstIdx       = _idx('gstpercent');
-        final unitIdx      = _idx('unitofmeasurement');
+        final itemIdIdx    = idx('itemid');
+        final itemNameIdx  = idx('itemname');
+        final priceIdx     = idx('price');
+        final sellPriceIdx = idx('sellprice');
+        final gstIdx       = idx('gstpercent');
+        final unitIdx      = idx('unitofmeasurement');
+        final isActiveIdx  = idx('isactive');
 
         print('📊 itemId:$itemIdIdx itemName:$itemNameIdx '
             'price:$priceIdx sellPrice:$sellPriceIdx '
-            'unit:$unitIdx gst:$gstIdx');
+            'unit:$unitIdx gst:$gstIdx isActive:$isActiveIdx');
 
-        // ── Step 3: Fetch data rows ──
+        // Step 3: Data rows — valueRenderOption FORMATTED_VALUE
         final dataResp = await sheetsApi.spreadsheets.values.get(
           spreadsheetId, 'Item!A2:Z',
+          valueRenderOption: 'FORMATTED_VALUE', // ✅ get actual cell text
         );
         final rows = dataResp.values ?? [];
-        print('✅ Fetched ${rows.length} items');
+        print('✅ Fetched ${rows.length} item rows');
 
-        // ── Step 4: Map rows → Item ──
-        itemList.value = rows
-            .where((row) {
-          if (row.isEmpty || row[0].toString().isEmpty) return false;
-          // isActive check — default true if field missing
-          final isActiveIdx = headers.indexOf('isactive');
+        // Step 4: Map rows → Item ✅ FIXED filter + unit
+        final mapped = <Item>[];
+        for (final row in rows) {
+          // Skip empty rows
+          if (row.isEmpty) continue;
+
+          // Safe cell reader
+          String cell(int i) =>
+              (i >= 0 && i < row.length) ? row[i].toString().trim() : '';
+
+          // Skip if itemId empty
+          final itemId = cell(itemIdIdx >= 0 ? itemIdIdx : 0);
+          if (itemId.isEmpty) continue;
+
+          // ✅ isActive filter — default true if column missing
           if (isActiveIdx >= 0 && isActiveIdx < row.length) {
-            final val = row[isActiveIdx].toString().toLowerCase().trim();
-            if (val == 'false' || val == '0' || val == 'no') return false;
+            final activeVal = cell(isActiveIdx).toLowerCase();
+            if (activeVal == 'false' || activeVal == '0' || activeVal == 'no') {
+              continue; // skip inactive
+            }
           }
-          return true;
-        })
-            .map((row) {
-          // Helper: safe cell read
-          String cell(int idx) =>
-              (idx >= 0 && idx < row.length)
-                  ? row[idx].toString().trim()
-                  : '';
 
-          // sellPrice first, fallback to price
-          final sellStr  = cell(sellPriceIdx);
+          // Price logic: sellPrice first, fallback to price
+          final sellStr  = cell(sellPriceIdx >= 0 ? sellPriceIdx : -1);
           final priceStr = cell(priceIdx >= 0 ? priceIdx : 2);
           final finalPrice = double.tryParse(
-              sellStr.isNotEmpty ? sellStr : priceStr) ??
-              0.0;
+              sellStr.isNotEmpty ? sellStr : priceStr) ?? 0.0;
 
-          return Item(
-            itemId:            cell(itemIdIdx   >= 0 ? itemIdIdx   : 0),
+          // ✅ KEY FIX: unit read correctly
+          // Guard: if cell value is numeric (currentstock leaked), treat as empty
+          final rawUnit = cell(unitIdx >= 0 ? unitIdx : 5).trim();
+          String unitValue = (double.tryParse(rawUnit) != null || rawUnit == '-1')
+              ? ''
+              : rawUnit;
+
+          // ✅ FALLBACK: if unit empty, guess from item name
+          if (unitValue.isEmpty) {
+            final name = cell(itemNameIdx >= 0 ? itemNameIdx : 1).toLowerCase();
+            // Common weight items → kg
+            if (name.contains('kg') || name.contains('rice') ||
+                name.contains('sugar') || name.contains('besan') ||
+                name.contains('flour') || name.contains('atta') ||
+                name.contains('dal') || name.contains('salt') ||
+                name.contains('wheat') || name.contains('maida') ||
+                name.contains('sooji') || name.contains('rawa') ||
+                name.contains('rava') || name.contains('chawal') ||
+                name.contains('gehu') || name.contains('chana') ||
+                name.contains('moong') || name.contains('urad') ||
+                name.contains('masoor') || name.contains('rajma') ||
+                name.contains('chini') || name.contains('namak') ||
+                name.contains('mirch') || name.contains('haldi') ||
+                name.contains('jeera') || name.contains('dhaniya') ||
+                name.contains('oil') || name.contains('ghee') ||
+                name.contains('tel') || name.contains('teli') ||
+                name.contains('liter') || name.contains('litre') ||
+                name.contains('milk') || name.contains('dudh')) {
+              unitValue = 'kg'; // treat as decimal unit
+            }
+          }
+
+
+          mapped.add(Item(
+            itemId:            itemId,
             itemName:          cell(itemNameIdx >= 0 ? itemNameIdx : 1),
             price:             double.tryParse(priceStr) ?? 0.0,
             sellPrice:         finalPrice,
-            gstPercent:        double.tryParse(cell(gstIdx  >= 0 ? gstIdx  : 3)) ?? 0.0,
-            unitOfMeasurement: cell(unitIdx >= 0 ? unitIdx : 4),
-          );
-        })
-            .toList();
+            gstPercent:        double.tryParse(
+                cell(gstIdx >= 0 ? gstIdx : 4)) ?? 0.0,
+            unitOfMeasurement: unitValue, // ✅ correct unit
+          ));
+        }
+
+        itemList.value = mapped;
+        print('✅ itemList set: ${itemList.length} active items');
 
       } finally {
         authClient.close();
@@ -624,7 +682,6 @@ class OrderController extends GetxController {
             '${now.minute.toString().padLeft(2,'0')}:'
             '${now.second.toString().padLeft(2,'0')}';
 
-        // Use List<List<dynamic>> for Web compatibility
         final List<List<dynamic>> rows = orderItems.map<List<dynamic>>((item) => [
           orderId,
           companyId.value,
@@ -640,10 +697,8 @@ class OrderController extends GetxController {
           ts,
         ]).toList();
 
-        // ── Ensure Orders sheet exists ──
         await _ensureOrdersSheetExists(sheetsApi, spreadsheetId);
 
-        // Web-compatible ValueRange
         final valueRange = sheets.ValueRange();
         valueRange.values = rows.map<List<Object?>>((r) =>
             r.map<Object?>((e) => e?.toString() ?? '').toList()
@@ -656,7 +711,7 @@ class OrderController extends GetxController {
           valueInputOption: 'USER_ENTERED',
           insertDataOption: 'INSERT_ROWS',
         );
-        print('✅ Order saved to Sheets: ' + rows.length.toString() + ' rows');
+        print('✅ Order saved to Sheets: ${rows.length} rows');
       } finally {
         authClient.close();
       }
@@ -745,7 +800,6 @@ class OrderController extends GetxController {
       await _saveOrderToSheet(docRef.id, orderItems, total: total);
 
       orderRows.value = [OrderRow()];
-      // Pass cid/uid to success screen so "Order More" works
       Get.offNamed(
         OrderSuccessScreen.pageId,
         parameters: {
@@ -822,7 +876,6 @@ class OrderController extends GetxController {
         spreadsheetId,
       );
 
-      // Add headers
       final headerRange = sheets.ValueRange();
       headerRange.values = [
         <Object?>['orderId','companyId','customerId','customerName',
@@ -837,9 +890,7 @@ class OrderController extends GetxController {
       );
       print('✅ Orders sheet created with headers');
     } catch (e) {
-      print('⚠️ ensureOrdersSheet error: \$e');
+      print('⚠️ ensureOrdersSheet error: $e');
     }
   }
-
-
 }

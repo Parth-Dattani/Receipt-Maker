@@ -1966,7 +1966,7 @@ class NewChallanController extends BaseController {
       }).toList();
 
       await _showOutputFormatDialog(challanModel);
-
+      Get.back(result: true);
       return true;
 
     } catch (e) {

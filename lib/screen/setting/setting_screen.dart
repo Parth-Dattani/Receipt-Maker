@@ -45,6 +45,10 @@ class SettingsScreen extends GetView<SettingsController> {
                       children: [
                         _buildInvoiceThemes(),
                         SizedBox(height: 20),
+                        _buildDuplicateItemsToggle(),
+                        SizedBox(height: 20),
+                        _buildCustomerOrderFeatureToggle(),
+                        SizedBox(height: 20),
                         _buildFinancialYearSettings(),
                       ],
                     ),
@@ -374,6 +378,61 @@ class SettingsScreen extends GetView<SettingsController> {
           ...children,
         ],
       ),
+    );
+  }
+
+  Widget _buildDuplicateItemsToggle() {
+    final settings = Get.find<SettingsController>();
+    return _buildSettingsCard(
+      icon: Icons.copy_all_outlined,
+      title: 'Invoice Item Settings',
+      children: [
+        Obx(() => SwitchListTile(
+          value: settings.allowDuplicateItems.value,
+          onChanged: (val) => settings.updateAllowDuplicateItems(val),
+          title: Text(
+            'Allow Duplicate Items',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          subtitle: Text(
+            settings.allowDuplicateItems.value
+                ? 'Same item can be added multiple times'
+                : 'Adding same item merges quantity automatically',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          activeColor: AppColors.tealColor,
+          contentPadding: EdgeInsets.zero,
+        )),
+      ],
+    );
+  }
+
+  Widget _buildCustomerOrderFeatureToggle() {
+    final settings = Get.find<SettingsController>();
+    if (!settings.isAdmin.value) {
+      return const SizedBox.shrink();
+    }
+    return _buildSettingsCard(
+      icon: Icons.shopping_cart_outlined,
+      title: 'Customer Order Feature',
+      children: [
+        Obx(() => SwitchListTile(
+          value: settings.enableCustomerOrderFeature.value,
+          onChanged: (val) => settings.updateEnableCustomerOrderFeature(val),
+          title: Text(
+            'Enable Customer Orders',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          subtitle: Text(
+            settings.enableCustomerOrderFeature.value
+                ? 'Shows Customer Orders menu + Share Order Link'
+                : 'Hides Customer Orders menu + Share Order Link',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          activeColor: AppColors.tealColor,
+          contentPadding: EdgeInsets.zero,
+        )),
+      ],
     );
   }
 }

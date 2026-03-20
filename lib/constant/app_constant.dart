@@ -31,9 +31,12 @@ class AppConstants{
    static final isDueDateEnabled = false.obs;
    static int dueDateDays = 0;
    static final RxBool isExtraNotesEnabled = false.obs;
+   static bool allowDuplicateItems = false;
+   static final RxBool enableCustomerOrderFeature = false.obs;
 
    /// Digits after decimal point for amounts (e.g. 2 → 350.00, 0 → 350).
    static int decimalPlaces = 2;
+
 
    /// Format amount with company's decimal places.
    static String formatAmount(double amount) => amount.toStringAsFixed(decimalPlaces);
@@ -65,6 +68,9 @@ class AppConstants{
       isDueDateEnabled.value = await sharedPreferencesHelper.retrievePrefBoolData("isDueDateEnabled") ?? false;
       dueDateDays = int.tryParse(await sharedPreferencesHelper.getPrefData("dueDateDays") ?? "0") ?? 0;
       decimalPlaces = int.tryParse(await sharedPreferencesHelper.getPrefData("decimalPlaces") ?? "2") ?? 2;
+      allowDuplicateItems = await sharedPreferencesHelper.retrievePrefBoolData("allowDuplicateItems") ?? false;
+
+      enableCustomerOrderFeature.value = await sharedPreferencesHelper.retrievePrefBoolData("enableCustomerOrderFeature") ?? false;
    }
 
    /// 🔹 Update + persist decimalPlaces (digits after decimal point)
@@ -167,5 +173,16 @@ class AppConstants{
    static Future<bool> getExtraNotesEnabled() async {
       // final prefs = await SharedPreferences.getInstance();
       return await sharedPreferencesHelper.retrievePrefBoolData('isExtraNotesEnabled') ?? false;
+   }
+
+
+   static Future<void> setAllowDuplicateItems(bool value) async {
+      allowDuplicateItems = value;
+      await sharedPreferencesHelper.storeBoolPrefData("allowDuplicateItems", value);
+   }
+
+   static Future<void> setEnableCustomerOrderFeature(bool val) async {
+      enableCustomerOrderFeature.value = val;
+      await sharedPreferencesHelper.storeBoolPrefData("enableCustomerOrderFeature", val);
    }
 }
