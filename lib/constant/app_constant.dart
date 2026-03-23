@@ -12,6 +12,7 @@ class AppConstants{
    static String  companyName = "";
    static String appId = "";
    static String spreadsheetId = "";
+   static String googleAccessToken = "";
    /// Active financial year (e.g. "2024-25"). Each FY has its own Google Sheet.
    static String activeFy = "";
    /// Service Account JSON in assets/ — GetYourInvoice project key (Sheets/Drive).

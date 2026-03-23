@@ -83,6 +83,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         key: controller.formKey,
         child: Column(
           children: [
+            _buildEmailBanner(),
             _buildCompanyInfoCard(),
             const SizedBox(height: 12),
             _buildBusinessInfoCard(),
@@ -133,6 +134,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
+                              _buildEmailBanner(),
                               _buildCompanyInfoCardWeb(),
                               const SizedBox(height: 16),
                               _buildBusinessInfoCardWeb(),
@@ -177,6 +179,40 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // _buildCompanyInfoCard() ની ઉપર ઉમેરો
+  Widget _buildEmailBanner() {
+    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.teal.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.teal.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.account_circle, color: Colors.teal.shade700, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 13, color: Colors.teal.shade800),
+                children: [
+                  const TextSpan(text: "Registering as: "),
+                  TextSpan(
+                    text: email,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

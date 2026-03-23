@@ -477,6 +477,11 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       );
       await _auth.signInWithCredential(credential);
 
+      // Save token for Company Registration to ensure InvoiceSathi folder creation
+      if (accessToken != null) {
+        AppConstants.googleAccessToken = accessToken;
+      }
+
       if (_isDisposed) return;
 
       final User? currentUser = _auth.currentUser;

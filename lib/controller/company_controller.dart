@@ -427,10 +427,15 @@ class CompanyController extends BaseController {
       // 🆕 Create Google Sheet using Service Account flow since it's missing (or user Drive if Google Token exists)
       if (AppConstants.spreadsheetId.isEmpty) {
         try {
-          String? accessToken;
-          try {
-            accessToken = await Get.find<AuthController>().getGoogleAccessToken();
-          } catch (_) {}
+          String? accessToken = AppConstants.googleAccessToken.isNotEmpty 
+              ? AppConstants.googleAccessToken 
+              : null;
+              
+          if (accessToken == null) {
+            try {
+              accessToken = await Get.find<AuthController>().getGoogleAccessToken();
+            } catch (_) {}
+          }
 
           final result = await GoogleSheetService.createNewUserSpreadsheet(
             user.uid,

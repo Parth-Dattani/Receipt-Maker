@@ -2049,34 +2049,74 @@ class GoogleSheetService {
     }
   }
 
-  /// Email/password flow: Service Account creates spreadsheet and shares with user's email.
   static Future<(String spreadsheetId, String folderId)?> _createSheetWithServiceAccountAndShare(String uid, String userEmail, String username) async {
     try {
       final client = await _getAuthClientWithDrive();
       final sheetsApi = SheetsApi(client);
+      final driveApi = drive.DriveApi(client);
+      
       final now = DateTime.now();
       final fyStart = now.month >= 4 ? now.year : now.year - 1;
       final fyEnd = fyStart + 1;
       final fyStr = '$fyStart-${fyEnd.toString().substring(2)}';
       final safeName = username.replaceAll(RegExp(r'[^\w\-.]'), '_');
       final title = 'Invoice Sathi - ${safeName}_${uid}_$fyStr';
-      final request = Spreadsheet()
-        ..properties = (SpreadsheetProperties()..title = title);
-      final spreadsheet = await sheetsApi.spreadsheets.create(request);
-      final id = spreadsheet.spreadsheetId;
-      if (id == null || id.isEmpty) return null;
-      print('✅ Created spreadsheet via Service Account: $id');
-      final driveApi = drive.DriveApi(client);
+
+      // 1. Create a dedicated folder "InvoiceSathi" for this user
+      final folder = drive.File()
+        ..name = 'InvoiceSathi'
+        ..mimeType = 'application/vnd.google-apps.folder';
+      final createdFolder = await driveApi.files.create(folder);
+      final folderId = createdFolder.id;
+
+      if (folderId == null) {
+        throw Exception("Failed to create folder via Service Account");
+      }
+
+      print('✅ Created folder "InvoiceSathi" ($folderId) via Service Account');
+
+      // 2. Share the folder with the user (so it appears in their Shared with me)
       await driveApi.permissions.create(
         drive.Permission()
           ..type = 'user'
           ..role = 'writer'
           ..emailAddress = userEmail,
-        id,
+        folderId,
         sendNotificationEmail: false,
       );
-      print('✅ Shared spreadsheet with $userEmail');
-      return (id, '');
+      print('✅ Shared folder "InvoiceSathi" with $userEmail');
+
+      // 3. Create Spreadsheet
+      final request = Spreadsheet()
+        ..properties = (SpreadsheetProperties()..title = title);
+      final spreadsheet = await sheetsApi.spreadsheets.create(request);
+      final spreadsheetId = spreadsheet.spreadsheetId;
+      if (spreadsheetId == null || spreadsheetId.isEmpty) return null;
+      print('✅ Created spreadsheet via Service Account: $spreadsheetId');
+
+      // 4. Move spreadsheet into the "InvoiceSathi" folder
+      final file = await driveApi.files.get(spreadsheetId, $fields: 'parents') as drive.File;
+      final previousParents = file.parents?.join(',') ?? '';
+
+      await driveApi.files.update(
+        drive.File(),
+        spreadsheetId,
+        addParents: folderId,
+        removeParents: previousParents,
+      );
+      print('✅ Moved spreadsheet into InvoiceSathi folder');
+      
+      // Also explicitly share the spreadsheet (safe redundancy)
+      await driveApi.permissions.create(
+        drive.Permission()
+          ..type = 'user'
+          ..role = 'writer'
+          ..emailAddress = userEmail,
+        spreadsheetId,
+        sendNotificationEmail: false,
+      );
+
+      return (spreadsheetId, folderId);
     } catch (e) {
       print('❌ _createSheetWithServiceAccountAndShare: $e');
       return null;
@@ -2291,6 +2331,26 @@ class GoogleSheetService {
         await _applyHeaderFormatToAllSheets(sheetsApi);
       }
 
+      // --- REMOVE DEFAULT "Sheet1" IF PRESENT ---
+      try {
+        final freshSpreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+        int? sheet1Id;
+        for (var sheet in (freshSpreadsheet.sheets ?? [])) {
+          final title = sheet.properties?.title;
+          if (title == 'Sheet1' || title == 'Sheet 1') {
+            sheet1Id = sheet.properties?.sheetId;
+            break;
+          }
+        }
+        // Only delete if there's at least one other sheet
+        if (sheet1Id != null && (freshSpreadsheet.sheets?.length ?? 0) > 1) {
+          print("🗑️ Removing unused default 'Sheet1' tab...");
+          await _deleteSheet(sheetsApi, sheet1Id);
+        }
+      } catch (e) {
+        print("⚠️ Could not remove default Sheet1: $e");
+      }
+
     } catch (e) {
       print("❌ Error checking sheets: $e");
       if (isProjectDeletedError(e)) {
@@ -2391,6 +2451,25 @@ class GoogleSheetService {
         print("🔧 Fix: Share spreadsheet with: ${AppConstants.serviceAccountEmailForDisplay}");
       }
       return false;
+    }
+  }
+  /// Delete a sheet (tab) from the spreadsheet by its ID
+  static Future<void> _deleteSheet(SheetsApi sheetsApi, int sheetId) async {
+    try {
+      print("🗑️ Deleting sheet with ID: $sheetId");
+      final request = BatchUpdateSpreadsheetRequest()
+        ..requests = [
+          Request()
+            ..deleteSheet = (DeleteSheetRequest()..sheetId = sheetId)
+        ];
+      await sheetsApi.spreadsheets.batchUpdate(request, spreadsheetId);
+      print("✅ Sheet deleted successfully");
+      
+      // Clear cache to force refresh
+      _cachedSheetTitles = <String>{};
+      _sheetTitlesFetchedAt = null;
+    } catch (e) {
+      print("❌ Error deleting sheet: $e");
     }
   }
 
