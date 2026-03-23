@@ -2368,67 +2368,32 @@ class GoogleSheetService {
 
   static Future<bool> testSpreadsheetAccess() async {
     print("🧪 Testing spreadsheet access...");
-    print("📋 Spreadsheet ID: $spreadsheetId");
 
     try {
       final client = await _getAuthClient();
       final sheetsApi = SheetsApi(client);
 
-      // Try to get spreadsheet metadata
+      // ૧. ફક્ત સ્પ્રેડશીટની મેટાડેટા (માહિતી) મેળવો - આનાથી Read Access કન્ફર્મ થઈ જશે
       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
 
       print("✅ Spreadsheet access successful!");
       print("   Name: ${spreadsheet.properties?.title}");
-      print("   Sheets: ${spreadsheet.sheets?.length ?? 0}");
 
-      // Use FIRST sheet's actual name (not hardcoded "Sheet1" - locale may differ)
-      final firstSheetName = spreadsheet.sheets?.isNotEmpty == true
-          ? (spreadsheet.sheets!.first.properties?.title ?? "Sheet1")
-          : "Sheet1";
-
-      // Try to read a cell (tests read permission)
-      try {
-        await sheetsApi.spreadsheets.values.get(spreadsheetId, "$firstSheetName!A1");
-        print("✅ Read permission confirmed");
-      } catch (e) {
-        print("⚠️ Could not read $firstSheetName!A1 (this is OK for new spreadsheet)");
-      }
-
-      // Try to write (tests write permission)
-      try {
-        final testData = ValueRange.fromJson({
-          "values": [["Test"]]
-        });
-        await sheetsApi.spreadsheets.values.update(
-          testData,
-          spreadsheetId,
-          "$firstSheetName!A1",
-          valueInputOption: "RAW",
-        );
-        print("✅ Write permission confirmed");
-        return true;
-      } catch (e) {
-        print("❌ Write permission denied: $e");
-        print("   → Please give Editor access to:");
-        print("   → ${AppConstants.serviceAccountEmailForDisplay}");
-        return false;
-      }
+      // ૨. જો શીટ ખુલે છે, તો એનો અર્થ એ કે આપણી પાસે એક્સેસ છે જ.
+      // વધારાનું "Test" લખવાની કોઈ જરૂર નથી.
+      return true;
 
     } catch (e) {
       print("❌ Failed to access spreadsheet: $e");
 
-      if (e.toString().contains('404')) {
-        print("🔍 404 Error means:");
-        print("   1. Wrong spreadsheet ID, OR");
-        print("   2. Service account has NO access");
-        print("");
-        print("🔧 Fix: Share spreadsheet with:");
-        print("   ${AppConstants.serviceAccountEmailForDisplay}");
+      // જો 403 કે 404 એરર આવે, તો એનો અર્થ એ કે એક્સેસ નથી
+      if (e.toString().contains('403') || e.toString().contains('404')) {
+        print("🔧 Fix: Share spreadsheet with: ${AppConstants.serviceAccountEmailForDisplay}");
       }
-
       return false;
     }
   }
+
   /// Create a new sheet (tab) in the spreadsheet
   static Future<void> _createSheet(SheetsApi sheetsApi, String sheetName) async {
     try {

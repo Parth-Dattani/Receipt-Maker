@@ -1091,10 +1091,10 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
                   color: Colors.deepPurple.shade50,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.lock_reset_rounded,
                   size: 40,
-                  color: Colors.deepPurple,
+                  color: AppColors.tealColor,
                 ),
               ),
               const SizedBox(height: 20),
@@ -1212,7 +1212,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
                               }
                             },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
+                          backgroundColor: AppColors.tealColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
