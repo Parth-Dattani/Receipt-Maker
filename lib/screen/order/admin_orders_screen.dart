@@ -26,13 +26,15 @@ import '../screen.dart';
 // import '../new_invoice/new_invoice_screen.dart';
 // import '../new_challan/new_challan_screen.dart';
 
+// ─────────────────────────────────────────────
+// AdminOrdersScreen
+// ─────────────────────────────────────────────
 class AdminOrdersScreen extends GetView<AdminOrdersController> {
   static const pageId = '/AdminOrdersScreen';
   const AdminOrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Web layout with sidebar
     final content = Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
@@ -127,7 +129,6 @@ class AdminOrdersScreen extends GetView<AdminOrdersController> {
       ),
     );
 
-    // ✅ Web ma sidebar wrapper, mobile ma direct scaffold
     if (kIsWeb) {
       return webScreenWrapper(
         currentRoute: AdminOrdersScreen.pageId,
@@ -256,7 +257,6 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       Get.delete<NewInvoiceController>(force: true);
     }
 
-    // ✅ AWAIT result — only mark if user actually saved
     final result = await Get.toNamed(NewInvoiceScreen.pageId, arguments: {
       'customerData': customerData,
       'customerId':   order['customerId'] ?? '',
@@ -264,45 +264,83 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
       'fromOrderId':  orderId,
     });
 
-    // ✅ FIX: Only mark if result == true (invoice saved)
     if (result == true && orderId.isNotEmpty) {
       widget.controller.markInvoiceCreated(orderId);
     }
   }
 
-void _createChallan(Map<String, dynamic> order) async {
-  final orderId = order['id']?.toString() ?? '';
-  final customerData = {
-    'name':       order['customerName']    ?? '',
-    'customerId': order['customerId']      ?? '',
-    'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
-    'address':    order['customerAddress'] ?? order['address'] ?? '',
-    'email':      order['customerEmail']   ?? order['email']   ?? '',
-    'pan':        order['customerPan']     ?? '',
-    'gst':        order['customerGst']     ?? '',
-    'isActive':   'true',
-  };
-  final orderItems = (order['items'] as List<dynamic>? ?? [])
-      .map((i) => i as Map<String, dynamic>).toList();
+  void _createChallan(Map<String, dynamic> order) async {
+    final orderId = order['id']?.toString() ?? '';
+    final customerData = {
+      'name':       order['customerName']    ?? '',
+      'customerId': order['customerId']      ?? '',
+      'mobile1':    order['customerMobile']  ?? order['customerPhone'] ?? order['mobile'] ?? '',
+      'address':    order['customerAddress'] ?? order['address'] ?? '',
+      'email':      order['customerEmail']   ?? order['email']   ?? '',
+      'pan':        order['customerPan']     ?? '',
+      'gst':        order['customerGst']     ?? '',
+      'isActive':   'true',
+    };
+    final orderItems = (order['items'] as List<dynamic>? ?? [])
+        .map((i) => i as Map<String, dynamic>).toList();
 
-  if (Get.isRegistered<NewChallanController>()) {
-    Get.delete<NewChallanController>(force: true);
+    if (Get.isRegistered<NewChallanController>()) {
+      Get.delete<NewChallanController>(force: true);
+    }
+    Get.put(NewChallanController());
+
+    final result = await Get.toNamed(NewChallanScreen.pageId, arguments: {
+      'customerData': customerData,
+      'customerId':   order['customerId'] ?? '',
+      'prefillItems': orderItems,
+      'fromOrderId':  orderId,
+    });
+
+    if (result == true && orderId.isNotEmpty) {
+      widget.controller.markChallanCreated(orderId);
+    }
   }
-  Get.put(NewChallanController());
 
-  // ✅ AWAIT result — only mark if user actually saved
-  final result = await Get.toNamed(NewChallanScreen.pageId, arguments: {
-    'customerData': customerData,
-    'customerId':   order['customerId'] ?? '',
-    'prefillItems': orderItems,
-    'fromOrderId':  orderId,
-  });
-
-  // ✅ FIX: Only mark if result == true (challan saved)
-  if (result == true && orderId.isNotEmpty) {
-    widget.controller.markChallanCreated(orderId);
+  // ✅ NEW: Reset confirm dialog
+  void _showResetConfirmDialog(BuildContext context, String orderId) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.edit_outlined, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Re-enable Order?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          'This will reset Invoice/Challan status and allow you to create them again.',
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Get.back();
+              widget.controller.resetOrderCreated(orderId);
+            },
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Re-enable'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -453,80 +491,101 @@ void _createChallan(Map<String, dynamic> order) async {
                   Builder(builder: (context) {
                     final invoiceDone = order['invoiceCreated'] == true;
                     final challanDone = order['challanCreated'] == true;
-                    // ✅ Any one done → both disabled
                     final anyDone = invoiceDone || challanDone;
 
-                    return Row(
+                    return Column(
                       children: [
-                        // ── Invoice Button ──
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: anyDone
-                                ? null
-                                : () => _createInvoice(order),
-                            icon: Icon(
-                              invoiceDone
-                                  ? Icons.check_circle
-                                  : Icons.receipt,
-                              size: 16,
-                            ),
-                            label: Text(
-                              invoiceDone ? 'Invoice ✓' : 'Invoice',
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: invoiceDone
-                                  ? Colors.green.shade100
-                                  : const Color(0xFF00897B),
-                              foregroundColor: invoiceDone
-                                  ? Colors.green.shade700
-                                  : Colors.white,
-                              disabledBackgroundColor: Colors.green.shade100,
-                              disabledForegroundColor: Colors.green.shade700,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // ── Challan Button ──
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: anyDone
-                                ? null
-                                : () => _createChallan(order),
-                            icon: Icon(
-                              challanDone
-                                  ? Icons.check_circle
-                                  : Icons.note_alt,
-                              size: 16,
-                              color: challanDone
-                                  ? Colors.green.shade600
-                                  : Colors.grey.shade700,
-                            ),
-                            label: Text(
-                              challanDone ? 'Challan ✓' : 'Challan',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: challanDone
-                                    ? Colors.green.shade600
-                                    : Colors.grey.shade700,
+                        Row(
+                          children: [
+                            // ── Invoice Button ──
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: anyDone ? null : () => _createInvoice(order),
+                                icon: Icon(
+                                  invoiceDone ? Icons.check_circle : Icons.receipt,
+                                  size: 16,
+                                ),
+                                label: Text(
+                                  invoiceDone ? 'Invoice ✓' : 'Invoice',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: invoiceDone
+                                      ? Colors.green.shade100
+                                      : const Color(0xFF00897B),
+                                  foregroundColor: invoiceDone
+                                      ? Colors.green.shade700
+                                      : Colors.white,
+                                  disabledBackgroundColor: Colors.green.shade100,
+                                  disabledForegroundColor: Colors.green.shade700,
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                  elevation: 0,
+                                ),
                               ),
                             ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              side: BorderSide(
-                                color: challanDone
-                                    ? Colors.green.shade300
-                                    : Colors.grey.shade300,
+                            const SizedBox(width: 10),
+                            // ── Challan Button ──
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: anyDone ? null : () => _createChallan(order),
+                                icon: Icon(
+                                  challanDone ? Icons.check_circle : Icons.note_alt,
+                                  size: 16,
+                                  color: challanDone
+                                      ? Colors.green.shade600
+                                      : Colors.grey.shade700,
+                                ),
+                                label: Text(
+                                  challanDone ? 'Challan ✓' : 'Challan',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: challanDone
+                                        ? Colors.green.shade600
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(
+                                    color: challanDone
+                                        ? Colors.green.shade300
+                                        : Colors.grey.shade300,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ],
+                        ),
+
+                        // ✅ NEW: Edit/Re-enable button — only when anyDone
+                        if (anyDone) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showResetConfirmDialog(context, orderId),
+                              icon: Icon(Icons.edit_outlined,
+                                  size: 15, color: Colors.orange.shade700),
+                              label: Text(
+                                'Edit / Re-enable',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade700,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                side: BorderSide(color: Colors.orange.shade300),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     );
                   }),
@@ -542,14 +601,16 @@ void _createChallan(Map<String, dynamic> order) async {
   void _showStatusPicker(BuildContext context, String orderId, String currentStatus) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Update Order Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text('Update Order Status',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             ..._statusOptions.map((s) {
               final color = _statusColor(s);
@@ -558,15 +619,23 @@ void _createChallan(Map<String, dynamic> order) async {
                 leading: CircleAvatar(
                   radius: 14,
                   backgroundColor: color.withOpacity(0.1),
-                  child: Icon(isSelected ? Icons.check : Icons.circle_outlined, size: 16, color: color),
+                  child: Icon(
+                      isSelected ? Icons.check : Icons.circle_outlined,
+                      size: 16,
+                      color: color),
                 ),
                 title: Text(
                   s[0].toUpperCase() + s.substring(1),
-                  style: TextStyle(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? color : Colors.black87),
+                  style: TextStyle(
+                      fontWeight:
+                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? color : Colors.black87),
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  if (s != currentStatus) widget.controller.updateOrderStatus(orderId, s);
+                  if (s != currentStatus) {
+                    widget.controller.updateOrderStatus(orderId, s);
+                  }
                 },
               );
             }),

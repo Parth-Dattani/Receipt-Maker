@@ -820,14 +820,24 @@ class InvoiceHelper {
     try {
       final pdf = pw.Document();
 
-      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final String mainFontPath = AppConstants.isGujarati.value
+          ? "assets/fonts/NotoSansGujarati-Regular.ttf"
+          : "assets/fonts/NotoSans-Regular.ttf";
+
+      final fontData = await rootBundle.load(mainFontPath);
       final iconData = await rootBundle.load("assets/fonts/NotoEmoji-Regular.ttf");
+
+      // Fallback માટે બીજો ફોન્ટ (મિક્સ ટેક્સ્ટ હોય તો કામ લાગે)
+      final fallbackFontData = await rootBundle.load(
+          AppConstants.isGujarati.value ? "assets/fonts/NotoSans-Regular.ttf" : "assets/fonts/NotoSansGujarati-Regular.ttf"
+      );
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
       final notoEmoji  = pw.Font.ttf(iconData.buffer.asByteData());
+      final fallbackFont = pw.Font.ttf(fallbackFontData.buffer.asByteData());
 
       final theme = pw.ThemeData.withFont(
         base: customFont, bold: customFont,
-        italic: customFont, boldItalic: customFont,
+        italic: customFont, boldItalic: customFont,fontFallback: [fallbackFont, notoEmoji],
       );
 
       final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
@@ -845,6 +855,17 @@ class InvoiceHelper {
       String companyUpi     = companyData['upiId']         ?? 'Upi Id';
       String companyIfsc    = companyData['ifsc']          ?? 'IFSC Code';
       String companyPan     = companyData['pan']           ?? 'PAN Number';
+
+      final bool isGuj = AppConstants.isGujarati.value;
+
+// ગુજરાતી અને ઇંગ્લિશ હેડર્સ
+      final String hNo      = '#';
+      final String hDesc    = 'DESCRIPTION';
+      final String hQty     = 'QTY';
+      final String hPrice   = 'PRICE';
+      final String hAmount  = 'AMOUNT';
+      final String hGst     = 'GST'; // GST ને GST જ રખાય અથવા 'ટેક્સ'
+      final String hNet     ='NET';
 
       final Uint8List? logoBytes = await _loadLogoBytes(companyData['logo']?.toString());
 
@@ -1203,17 +1224,18 @@ class InvoiceHelper {
                     },
                     children: [
                       pw.TableRow(
+
                         decoration: pw.BoxDecoration(color: tableHeaderBg),
                         children: [
-                          _tableHeaderColored('#',           bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.center),
-                          _tableHeaderColored('DESCRIPTION', bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.left),
-                          _tableHeaderColored('QTY',         bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
-                          _tableHeaderColored('PRICE',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
-                          _tableHeaderColored('AMOUNT',      bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored(hNo,           bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.center),
+                          _tableHeaderColored(hDesc, bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.left),
+                          _tableHeaderColored(hQty,         bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored(hPrice,       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                          _tableHeaderColored(hAmount,      bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('GST',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                            _tableHeaderColored(hGst,       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                           if (AppConstants.withGST.value)
-                            _tableHeaderColored('NET',       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
+                            _tableHeaderColored(hNet,       bgColor: tableHeaderBg, textColor: white, align: pw.TextAlign.right),
                         ],
                       ),
                       ...List<pw.TableRow>.generate(shownItemRows, (int index) {
@@ -1429,9 +1451,19 @@ class InvoiceHelper {
     try {
       final pdf = pw.Document();
 
+      final bool isGuj = AppConstants.isGujarati.value;
+      final String mainFontPath = isGuj
+          ? "assets/fonts/NotoSansGujarati-Regular.ttf"
+          : "assets/fonts/NotoSans-Regular.ttf";
+
       // Load Fonts
-      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final fontData = await rootBundle.load(mainFontPath);
       final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      // Fallback for mixed text
+      final fallbackFontData = await rootBundle.load(
+          isGuj ? "assets/fonts/NotoSans-Regular.ttf" : "assets/fonts/NotoSansGujarati-Regular.ttf"
+      );
+      final fallbackFont = pw.Font.ttf(fallbackFontData.buffer.asByteData());
 
       final theme = pw.ThemeData.withFont(
         base: customFont,
@@ -1439,6 +1471,13 @@ class InvoiceHelper {
         italic: customFont,
         boldItalic: customFont,
       );
+
+      final String hItem    = isGuj ? 'વિગત' : 'Item';
+      final String hQty     = isGuj ? 'જથ્થો' : 'Qty';
+      final String hPrice   = isGuj ? 'ભાવ' : 'Rate';
+      final String hTotal   = isGuj ? 'કુલ' : 'TOTAL';
+      final String hBillTo  = isGuj ? 'ગ્રાહક:' : 'Bill To:';
+      final String hBank    = isGuj ? 'બેંક વિગત:' : 'BANK DETAILS:';
 
       final String invoiceId = invoices.isNotEmpty ? invoices.first.invoiceId : "UNKNOWN";
       final String documentTitle = getInvoiceDocumentTitle(
@@ -1552,9 +1591,9 @@ class InvoiceHelper {
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('Item', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)), // Increased to 10
-                        pw.Text('Qty', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
-                        pw.Text('Rate', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        pw.Text(hItem, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)), // Increased to 10
+                        pw.Text(hQty, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
+                        pw.Text(hPrice, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right),
                       ],
                     ),
                     pw.TableRow(children: [pw.SizedBox(height: 4), pw.SizedBox(), pw.SizedBox()]), // Slightly more spacing

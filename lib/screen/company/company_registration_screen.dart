@@ -30,7 +30,6 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
           if (controller.isLoading.value) {
             return CompanyFormShimmer();
           }
-
           return LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth > 900) {
@@ -43,6 +42,8 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
         }),
       ),
     );
+
+    // ✅ ALWAYS wrap with webScreenWrapper (same as NewInvoiceScreen)
     if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
     return content;
   }

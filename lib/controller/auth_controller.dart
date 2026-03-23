@@ -1077,152 +1077,148 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        // ✅ વેબ માટે વિડ્થ ફિક્સ કરી (Max 450px)
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 450),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.lock_reset,
-                size: 60,
-                color: Colors.deepPurple,
+              // આઈકોન અને હેડિંગ
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  size: 40,
+                  color: Colors.deepPurple,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               const Text(
                 "Reset Password",
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
+                  color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               const Text(
-                "Enter your email address and we'll send you a link to reset your password",
+                "Enter your registered email address to receive a password reset link.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey,
+                  height: 1.4,
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Email Input
               TextFormField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
                   labelText: "Email Address",
-                  prefixIcon: const Icon(Icons.email),
+                  hintText: "example@gmail.com",
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+                  ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
+
+              // બટન્સ
               Row(
                 children: [
                   Expanded(
-                    child: Obx(
-                          () => TextButton(
-                        onPressed: dialogIsLoading.value
-                            ? null
-                            : () {
-                          Get.back();
-                        },
-                        child: const Text(
-                          "Cancel",
-                          style: TextStyle(color: Colors.grey),
-                        ),
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Obx(
                           () => ElevatedButton(
-                        onPressed: dialogIsLoading.value
-                            ? null
-                            : () async {
-                          dialogIsLoading.value = true;
-                          final email = emailController.text;
+                            onPressed: dialogIsLoading.value
+                                ? null
+                                : () async {
+                              final email = emailController.text.trim();
 
-                          // Validate email
-                          if (email.trim().isEmpty) {
-                            dialogIsLoading.value = false;
-                            showCustomSnackbar(
-                              title: "Required",
-                              message: "Please enter your email address",
-                              baseColor: AppColors.errorColor,
-                              icon: Icons.error_outline,
-                            );
-                            return;
-                          }
+                              // ૧. વેલિડેશન
+                              if (email.isEmpty) {
+                                showNativeSnackbar(
+                                  title: "Required",
+                                  message: "Please enter your email address",
+                                  isError: true,
+                                );
+                                return;
+                              }
 
-                          if (!GetUtils.isEmail(email)) {
-                            dialogIsLoading.value = false;
-                            showCustomSnackbar(
-                              title: "Invalid Email",
-                              message: "Please enter a valid email address",
-                              baseColor: AppColors.errorColor,
-                              icon: Icons.error_outline,
-                            );
-                            return;
-                          }
+                              if (!GetUtils.isEmail(email)) {
+                                showNativeSnackbar(
+                                  title: "Invalid Email",
+                                  message: "Please enter a valid email address",
+                                  isError: true,
+                                );
+                                return;
+                              }
 
-                          try {
-                            await _auth.sendPasswordResetEmail(email: email.trim());
+                              // ૨. મેઈન લોજિક (આ લાઈન તેં લખી નહોતી)
+                              dialogIsLoading.value = true;
+                              try {
+                                await _auth.sendPasswordResetEmail(email: email);
 
-                            dialogIsLoading.value = false; // ✅ Stop loading
+                                dialogIsLoading.value = false;
+                                Get.back(); // ડાયલોગ બંધ કરો
 
-                            showCustomSnackbar(
-                              title: "Success",
-                              message: "Password reset email sent! Please check your inbox.",
-                              baseColor: AppColors.greenColor2,
-                              icon: Icons.check_circle,
-                            );
-
-                            // Close dialog on success
-                            Get.back();
-
-                          } on FirebaseAuthException catch (e) {
-                            dialogIsLoading.value = false;
-                            String errorMessage;
-
-                            switch (e.code) {
-                              case 'user-not-found':
-                                errorMessage = "No account found with this email address";
-                                break;
-                              case 'invalid-email':
-                                errorMessage = "Invalid email address format";
-                                break;
-                              case 'too-many-requests':
-                                errorMessage = "Too many requests. Please try again later";
-                                break;
-                              default:
-                                errorMessage = e.message ?? "Failed to send reset email";
-                            }
-
-                            showCustomSnackbar(
-                              title: "Error",
-                              message: errorMessage,
-                              baseColor: AppColors.errorColor,
-                              icon: Icons.error,
-                            );
-                          } catch (e) {
-                            dialogIsLoading.value = false;
-                            showCustomSnackbar(
-                              title: "Error",
-                              message: "An unexpected error occurred",
-                              baseColor: AppColors.errorColor,
-                              icon: Icons.error,
-                            );
-                          }
-                        },
+                                showNativeSnackbar(
+                                  title: "Success",
+                                  message: "Password reset link sent to your email!",
+                                  isError: false,
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                dialogIsLoading.value = false;
+                                showNativeSnackbar(
+                                  title: "Error",
+                                  message: e.message ?? "Failed to send reset link",
+                                  isError: true,
+                                );
+                              } catch (e) {
+                                dialogIsLoading.value = false;
+                                showNativeSnackbar(
+                                  title: "Error",
+                                  message: "An unexpected error occurred",
+                                  isError: true,
+                                );
+                              }
+                            },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
                         ),
                         child: dialogIsLoading.value
                             ? const SizedBox(
@@ -1234,8 +1230,8 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
                           ),
                         )
                             : const Text(
-                          "Send Reset Link",
-                          style: TextStyle(color: Colors.white),
+                          "Send Link",
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -1247,10 +1243,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         ),
       ),
       barrierDismissible: false,
-    ).then((_) {
-      // Dispose controller after dialog is completely closed
-      emailController.dispose();
-    });
+    );
   }
 
   /// Forgot Password - Send password reset email

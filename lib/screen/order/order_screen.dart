@@ -54,21 +54,16 @@ class OrderScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         actions: [
-          Builder(
-            builder: (context) {
-              final controller = Get.find<OrderController>();
-              return IconButton(
-                icon: const Icon(Icons.history, color: Colors.white),
-                tooltip: 'My Orders',
-                onPressed: () => Get.toNamed(
-                  '/order-history',
-                  parameters: {
-                    'cid': controller.companyId.value,
-                    'uid': controller.customerId.value,
-                  },
-                ),
-              );
-            },
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.white),
+            tooltip: 'My Orders',
+            onPressed: () => Get.toNamed(
+              '/order-history',
+              parameters: {
+                'cid': controller.companyId.value,
+                'uid': controller.customerId.value,
+              },
+            ),
           ),
         ],
         title: Obx(() => Column(
@@ -95,101 +90,139 @@ class OrderScreen extends StatelessWidget {
           return const Center(
               child: CircularProgressIndicator(color: Color(0xFF00897B)));
         }
-        if (controller.itemList.isEmpty) {
-          return const Center(
-              child: Text('No items available',
-                  style: TextStyle(color: Colors.grey, fontSize: 16)));
-        }
 
-        return Column(
-          children: [
-            Container(
-              width: double.infinity,
-              color: const Color(0xFF00897B),
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: const Text(
-                'Select items and place your order below',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 12),
-              ),
-            ),
-            Expanded(
-              child: Obx(() => ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                children: [
-                  ...List.generate(controller.orderRows.length, (index) {
-                    return _OrderItemRow(
-                      index: index,
-                      controller: controller,
-                    );
-                  }),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: controller.addNewRow,
-                      icon: const Icon(Icons.add_circle_outline,
-                          color: Colors.white),
-                      label: const Text('Add Another Item',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00897B),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                    ),
+        // ✅ Web-Responsive Container
+        return Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 800), // વેબ માટે લિમિટ
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFF00897B),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: const Text(
+                    'Select items and place your order below',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
-                  const SizedBox(height: 12),
-                  Obx(() {
-                    final total = controller.orderRows
-                        .where((r) => r.selectedItem != null && r.qty > 0)
-                        .length;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: Colors.green.shade200, width: 1),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                    children: [
+                      // Items List
+                      ...List.generate(controller.orderRows.length, (index) {
+                        return _OrderItemRow(
+                          index: index,
+                          controller: controller,
+                        );
+                      }),
+
+                      const SizedBox(height: 12),
+
+                      // Add Item Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: controller.addNewRow,
+                          icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+                          label: const Text('Add Another Item',
+                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00897B),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Total Items:',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: Color(0xFF2E7D32))),
-                          Text('$total',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18,
-                                  color: Color(0xFF2E7D32))),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              )),
+
+                      const SizedBox(height: 12),
+
+                      // Total Summary Card
+                      _buildTotalItemsSummary(controller),
+
+                      const SizedBox(height: 30),
+
+                      // ✅ Professional One-Line Footer
+                      _buildFooter(),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       }),
+      // Bottom Bar (Centering for Web)
       bottomNavigationBar: Obx(() {
-        final hasItems = controller.orderRows
-            .any((r) => r.selectedItem != null && r.qty > 0);
-        if (!hasItems || controller.isLoading.value) {
-          return const SizedBox.shrink();
-        }
-        return _CartBar(controller: controller);
+        final hasItems = controller.orderRows.any((r) => r.selectedItem != null && r.qty > 0);
+        if (!hasItems || controller.isLoading.value) return const SizedBox.shrink();
+
+        return Center(
+          heightFactor: 1,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: _CartBar(controller: controller),
+          ),
+        );
       }),
     );
+  }
+
+  // --- Footer Widget ---
+  Widget _buildFooter() {
+    return Opacity(
+      opacity: 0.6,
+      child: Column(
+        children: [
+          Container(height: 1, width: 40, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              const Text(
+                'Application By: Intelligent Tech',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00897B)),
+              ),
+              _dot(),
+              const Text('252, NEO Square, Jamnagar', style: TextStyle(fontSize: 9, color: Colors.black54)),
+              _dot(),
+              const Text('7383915985', style: TextStyle(fontSize: 9, color: Colors.black54, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dot() => Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle));
+
+  // --- Total Items Summary Widget ---
+  Widget _buildTotalItemsSummary(OrderController controller) {
+    return Obx(() {
+      final total = controller.orderRows.where((r) => r.selectedItem != null && r.qty > 0).length;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.shade200, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total Items:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF2E7D32))),
+            Text('$total', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF2E7D32))),
+          ],
+        ),
+      );
+    });
   }
 }
 

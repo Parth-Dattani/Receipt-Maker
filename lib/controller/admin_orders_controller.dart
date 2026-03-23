@@ -138,7 +138,6 @@ class AdminOrdersController extends GetxController {
           .doc(orderId)
           .update({'status': newStatus});
 
-      // Update Orders sheet status in background
       _updateOrderStatusInSheet(orderId, newStatus);
 
       Get.snackbar(
@@ -154,7 +153,7 @@ class AdminOrdersController extends GetxController {
           backgroundColor: Colors.red.shade100);
     }
   }
-  // ── Update Orders sheet status column ──
+
   void _updateOrderStatusInSheet(String orderId, String newStatus) {
     Future.delayed(Duration.zero, () async {
       try {
@@ -186,7 +185,6 @@ class AdminOrdersController extends GetxController {
         try {
           final sheetsApi = sheets.SheetsApi(authClient);
 
-          // Find rows with this orderId in column A
           final resp = await sheetsApi.spreadsheets.values.get(
             spreadsheetId, 'Orders!A:A',
           );
@@ -197,7 +195,6 @@ class AdminOrdersController extends GetxController {
             if (rows[i].isNotEmpty &&
                 rows[i][0].toString().trim() == orderId) {
               final rowNum = i + 1;
-              // K column = status (11th column)
               final statusRange = sheets.ValueRange();
               statusRange.values = [[newStatus]];
               await sheetsApi.spreadsheets.values.update(
@@ -209,19 +206,16 @@ class AdminOrdersController extends GetxController {
               updatedCount++;
             }
           }
-          print('✅ Orders sheet updated: ' + orderId + ' → ' + newStatus +
-              ' (' + updatedCount.toString() + ' rows)');
+          print('✅ Orders sheet updated: $orderId → $newStatus ($updatedCount rows)');
         } finally {
           authClient.close();
         }
       } catch (e) {
-        print('⚠️ Sheet status update failed: ' + e.toString());
+        print('⚠️ Sheet status update failed: $e');
       }
     });
   }
 
-
-  // ── Mark Invoice created ──
   Future<void> markInvoiceCreated(String orderId) async {
     try {
       await _firestore.collection('public_orders').doc(orderId).update({
@@ -229,13 +223,12 @@ class AdminOrdersController extends GetxController {
         'status': 'confirmed',
       });
       _updateOrderStatusInSheet(orderId, 'confirmed');
-      print('✅ Invoice marked created: ' + orderId);
+      print('✅ Invoice marked created: $orderId');
     } catch (e) {
-      print('❌ markInvoiceCreated error: ' + e.toString());
+      print('❌ markInvoiceCreated error: $e');
     }
   }
 
-  // ── Mark Challan created ──
   Future<void> markChallanCreated(String orderId) async {
     try {
       await _firestore.collection('public_orders').doc(orderId).update({
@@ -243,11 +236,34 @@ class AdminOrdersController extends GetxController {
         'status': 'confirmed',
       });
       _updateOrderStatusInSheet(orderId, 'confirmed');
-      print('✅ Challan marked created: ' + orderId);
+      print('✅ Challan marked created: $orderId');
     } catch (e) {
-      print('❌ markChallanCreated error: ' + e.toString());
+      print('❌ markChallanCreated error: $e');
     }
   }
 
-
+  // ✅ NEW: Reset order — re-enable Invoice/Challan buttons
+  Future<void> resetOrderCreated(String orderId) async {
+    try {
+      await _firestore.collection('public_orders').doc(orderId).update({
+        'invoiceCreated': false,
+        'challanCreated': false,
+        'status': 'pending',
+      });
+      _updateOrderStatusInSheet(orderId, 'pending');
+      Get.snackbar(
+        'Reset ✅',
+        'Order re-enabled for Invoice/Challan',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.blue.shade100,
+        colorText: Colors.black87,
+        duration: const Duration(seconds: 2),
+      );
+      print('✅ Order reset: $orderId');
+    } catch (e) {
+      print('❌ resetOrderCreated error: $e');
+      Get.snackbar('Error', 'Failed to reset: $e',
+          backgroundColor: Colors.red.shade100);
+    }
+  }
 }

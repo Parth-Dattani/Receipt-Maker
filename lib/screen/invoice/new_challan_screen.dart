@@ -14,8 +14,8 @@ import '../../widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-
-
+import '../../widgets/web_screen_wrapper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class NewChallanScreen extends GetView<NewChallanController> {
   static const String pageId = '/NewChallanScreen';
@@ -24,7 +24,8 @@ class NewChallanScreen extends GetView<NewChallanController> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
+
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         // Check if it's web layout (width > 900)
         bool isWeb = constraints.maxWidth > 900;
@@ -128,6 +129,8 @@ class NewChallanScreen extends GetView<NewChallanController> {
         );
       },
     );
+    if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
+    return content;
   }
 
   // ===========================================================================
@@ -1768,13 +1771,16 @@ class NewChallanScreen extends GetView<NewChallanController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                (item.unit != null && item.unit!.trim().isNotEmpty)
-                                    ? 'Qty (${item.unit})'
-                                    : 'Qty (pcs)',
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                              ),
                               SizedBox(height: 4),
+                              if (!kIsWeb) ...[
+                                Text(
+                                  (item.unit != null && item.unit!.trim().isNotEmpty)
+                                      ? 'Qty (${item.unit})'
+                                      : 'Qty (pcs)',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                                SizedBox(height: 4),
+                              ],
                               TextFormField(
                                 controller: controller.getQuantityController(index, initialValue: item.quantity),
                                 textAlign: TextAlign.center,
