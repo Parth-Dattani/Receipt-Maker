@@ -2336,19 +2336,21 @@ class GoogleSheetService {
         final freshSpreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
         int? sheet1Id;
         for (var sheet in (freshSpreadsheet.sheets ?? [])) {
+          final id = sheet.properties?.sheetId;
           final title = sheet.properties?.title;
-          if (title == 'Sheet1' || title == 'Sheet 1') {
-            sheet1Id = sheet.properties?.sheetId;
+          // The default sheet always has ID 0. Make sure we don't delete a required sheet.
+          if (id == 0 && title != null && !requiredSheets.contains(title)) {
+            sheet1Id = id;
             break;
           }
         }
         // Only delete if there's at least one other sheet
         if (sheet1Id != null && (freshSpreadsheet.sheets?.length ?? 0) > 1) {
-          print("🗑️ Removing unused default 'Sheet1' tab...");
+          print("🗑️ Removing unused default tab (ID 0)...");
           await _deleteSheet(sheetsApi, sheet1Id);
         }
       } catch (e) {
-        print("⚠️ Could not remove default Sheet1: $e");
+        print("⚠️ Could not remove default tab: $e");
       }
 
     } catch (e) {

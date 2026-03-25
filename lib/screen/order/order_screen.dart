@@ -181,19 +181,38 @@ class OrderScreen extends StatelessWidget {
         children: [
           Container(height: 1, width: 40, color: Colors.grey.shade300),
           const SizedBox(height: 12),
+
+          // ૧. કંપનીનું નામ (12 -> 13)
+          const Text(
+            'Application By: Intelligent Tech',
+            style: TextStyle(
+                fontSize: 13, // સાઈઝ વધારી
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF00897B)
+            ),
+          ),
+
+          const SizedBox(height: 6), // થોડી વધારાની જગ્યા
+
+          // ૨. એડ્રેસ અને મોબાઈલ (9 -> 10)
           Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
+            spacing: 10,
             children: [
               const Text(
-                'Application By: Intelligent Tech',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00897B)),
+                  '252, NEO Square, Jamnagar',
+                  style: TextStyle(fontSize: 10, color: Colors.black54) // સાઈઝ વધારી
               ),
               _dot(),
-              const Text('252, NEO Square, Jamnagar', style: TextStyle(fontSize: 9, color: Colors.black54)),
-              _dot(),
-              const Text('7383915985', style: TextStyle(fontSize: 9, color: Colors.black54, fontWeight: FontWeight.w600)),
+              const Text(
+                  'Mo: 7383915985',
+                  style: TextStyle(
+                      fontSize: 10, // સાઈઝ વધારી
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600
+                  )
+              ),
             ],
           ),
         ],
