@@ -123,13 +123,17 @@ class CompanyController extends BaseController {
 
         await AppConstants.setBusinessType(currentCompany.value!['businessType'] ?? 'Trading');
 
-        Get.offNamed(
-          CustomerRegistrationScreen.pageId,
-          arguments: {
-            'companyId': companyDocs.docs.first.id,
-            'companyData': currentCompany.value,
-          },
-        );
+        final spreadsheetId = currentCompany.value!['spreadsheetId'] as String?;
+        if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
+          Get.offAllNamed(DashboardScreen.pageId);
+        } else {
+          showCustomSnackbar(
+            title: "Action Required",
+            message: "Google Sheet not found. Please click 'Update' below to generate your data sheets.",
+            icon: Icons.info,
+            baseColor: AppColors.appColor,
+          );
+        }
       }
     } catch (e) {
       print("Error checking company registration: $e");
@@ -576,6 +580,58 @@ class CompanyController extends BaseController {
           companyNameController.text.trim(),
           logoUrl,
         );
+      }
+
+      // 🆕 Create Google Sheet using Service Account flow since it's missing (or user Drive if Google Token exists)
+      final currentSpreadsheetId = existingData['spreadsheetId'] as String?;
+      if (currentSpreadsheetId == null || currentSpreadsheetId.isEmpty) {
+        try {
+          String? accessToken = AppConstants.googleAccessToken.isNotEmpty 
+              ? AppConstants.googleAccessToken 
+              : null;
+              
+          if (accessToken == null) {
+            try {
+              accessToken = await Get.find<AuthController>().getGoogleAccessToken();
+            } catch (_) {}
+          }
+
+          final result = await GoogleSheetService.createNewUserSpreadsheet(
+            user.uid,
+            accessToken: accessToken,
+            userEmail: user.email,
+            username: user.displayName ?? user.email?.split('@').first ?? 'user',
+          );
+          
+          if (result != null && result.$1.isNotEmpty) {
+            final newSpreadsheetId = result.$1;
+            AppConstants.spreadsheetId = newSpreadsheetId;
+            await sharedPreferencesHelper.storePrefData("spreadsheetId", newSpreadsheetId);
+            
+            final fy = FinancialYearHelper.currentFy();
+            await AppConstants.setActiveFy(fy);
+            
+            await _firestore.collection("users").doc(user.uid).update({
+              "spreadsheetId": newSpreadsheetId,
+              "activeFy": fy,
+              "spreadsheetIdsByFy": {fy: newSpreadsheetId},
+            });
+            
+            // Also update the company document with the spreadsheet ID
+            await _firestore
+                .collection("users")
+                .doc(user.uid)
+                .collection("companies")
+                .doc(existingCompanyId)
+                .update({
+              "spreadsheetId": newSpreadsheetId,
+            });
+
+            await GoogleSheetService.ensureSheetsExist();
+          }
+        } catch (e) {
+          print('createNewUserSpreadsheet during company update failed: $e');
+        }
       }
 
       // Fetch the updated document from Firebase

