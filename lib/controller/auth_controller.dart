@@ -20,11 +20,9 @@ import '../widgets/custom_snackbar.dart';
 
 
 class AuthController extends BaseController with GetSingleTickerProviderStateMixin {
-  // Observable variables
   var currentTabIndex = 0.obs;
   var _isDisposed = false;
 
-  // Tab controller
   late TabController tabController;
 
   // Login form controllers
@@ -265,7 +263,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   }
 
 
-  /// Login methods
   // -----------------------------------------------------------------------
   // 1. UPDATED HANDLE LOGIN
   // -----------------------------------------------------------------------
@@ -1333,10 +1330,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       }
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Financial Year (each FY has separate Google Sheet)
-  // ---------------------------------------------------------------------------
 
   /// Show snackbar after next frame so overlay is available (avoids crash when coming from dialog).
   void _safeSnackbar({required String title, required String message, required bool isError}) {

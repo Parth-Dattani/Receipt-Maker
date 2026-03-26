@@ -2,11 +2,8 @@ import 'package:GetYourInvoice/controller/order_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
-import 'package:flutter/material.dart';
 import '../../model/item_model.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/services.dart';
+
 
 
 // ─────────────────────────────────────────────
@@ -182,19 +179,17 @@ class OrderScreen extends StatelessWidget {
           Container(height: 1, width: 40, color: Colors.grey.shade300),
           const SizedBox(height: 12),
 
-          // ૧. કંપનીનું નામ (12 -> 13)
           const Text(
             'Application By: Intelligent Tech',
             style: TextStyle(
-                fontSize: 13, // સાઈઝ વધારી
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF00897B)
             ),
           ),
 
-          const SizedBox(height: 6), // થોડી વધારાની જગ્યા
+          const SizedBox(height: 6),
 
-          // ૨. એડ્રેસ અને મોબાઈલ (9 -> 10)
           Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -202,13 +197,13 @@ class OrderScreen extends StatelessWidget {
             children: [
               const Text(
                   '252, NEO Square, Jamnagar',
-                  style: TextStyle(fontSize: 10, color: Colors.black54) // સાઈઝ વધારી
+                  style: TextStyle(fontSize: 10, color: Colors.black54)
               ),
               _dot(),
               const Text(
                   'Mo: 7383915985',
                   style: TextStyle(
-                      fontSize: 10, // સાઈઝ વધારી
+                      fontSize: 10,
                       color: Colors.black54,
                       fontWeight: FontWeight.w600
                   )
