@@ -1158,7 +1158,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                             searchHintText: 'Search items by name...',
                                             itemBuilder: (item) {
                                               double currentStock = (item.currentStock ?? 0.0).toDouble();
-                                              bool isOutOfStock = currentStock <= 0;
+                                              bool isOutOfStock = currentStock <= 0 && currentStock != -1;
 
                                               return Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1856,7 +1856,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       searchHintText: 'Search items...',
                                       itemBuilder: (item) {
                                         double currentStock = (item.currentStock ?? 0.0).toDouble();
-                                        bool isOutOfStock = currentStock <= 0;
+                                        bool isOutOfStock = currentStock <= 0 && currentStock != -1;
                                         return Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [

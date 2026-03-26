@@ -2399,7 +2399,7 @@ class NewInvoiceController extends GetxController {
 
     // ── Stock Check ──
     if (isProductBusiness) {
-      if ((item.currentStock ?? 0) <= 0) {
+      if ((item.currentStock ?? 0) <= 0 && (item.currentStock ?? 0) != -1) {
         Get.snackbar(
           "Out of Stock",
           "Item '${item.itemName}' has 0 ${item.unitOfMeasurement ?? 'units'} stock available.\nPlease add stock in Inventory first.",

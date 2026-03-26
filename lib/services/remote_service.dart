@@ -4610,6 +4610,11 @@ class GoogleSheetService {
           continue;
         }
 
+        if (currentStock == -1) {
+          print("⚠️ Item ${item.itemId} has unlimited stock (-1). No stock deduction made (Invoice).");
+          continue;
+        }
+
         final newStock = currentStock - item.quantity;
         if (newStock < 0) {
           print("⚠️ Stock for item ${item.itemId} would go negative, forcing 0.");
@@ -5225,6 +5230,11 @@ class GoogleSheetService {
 
         if (rowToUpdate == null) {
           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+          continue;
+        }
+
+        if (currentStock == -1) {
+          print("⚠️ Item ${item.itemId} has unlimited stock (-1). No stock deduction made (Challan).");
           continue;
         }
 
@@ -7745,6 +7755,11 @@ class GoogleSheetService {
 
         if (rowToUpdate == null) {
           print("⚠️ Item ${item.itemId} not found in stock sheet.");
+          continue;
+        }
+
+        if (currentStock == -1) {
+          print("⚠️ Item ${item.itemId} has unlimited stock (-1). No stock update made (Purchase).");
           continue;
         }
 

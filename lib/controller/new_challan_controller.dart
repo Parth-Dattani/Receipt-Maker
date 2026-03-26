@@ -1141,7 +1141,7 @@ class NewChallanController extends BaseController {
     final isProductBusiness = businessType != 'service' && businessType != 'client';
 
     if (isProductBusiness) {
-      if ((item.currentStock ?? 0) <= 0) {
+      if ((item.currentStock ?? 0) <= 0 && (item.currentStock ?? 0) != -1) {
         String unit = item.unitOfMeasurement ?? 'units';
         Get.snackbar(
           "Out of Stock",
