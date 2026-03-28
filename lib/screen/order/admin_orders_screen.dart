@@ -1,23 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controller/controller.dart';
-
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-import '../../utils/shared_preferences_helper.dart';
 import '../../widgets/web_screen_wrapper.dart';
 import '../screen.dart';
 
@@ -217,7 +203,6 @@ class _AdminOrderCard extends StatefulWidget {
 
 class _AdminOrderCardState extends State<_AdminOrderCard> {
   bool _expanded = false;
-  static const _statusOptions = ['pending', 'confirmed', 'delivered', 'cancelled'];
 
   Color _statusColor(String s) {
     switch (s) {
@@ -418,24 +403,6 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
                         ),
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => _showStatusPicker(context, orderId, status),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.edit_outlined, size: 13, color: Colors.grey.shade600),
-                              const SizedBox(width: 4),
-                              Text('Update Status', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
@@ -594,53 +561,6 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  void _showStatusPicker(BuildContext context, String orderId, String currentStatus) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Update Order Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            ..._statusOptions.map((s) {
-              final color = _statusColor(s);
-              final isSelected = s == currentStatus;
-              return ListTile(
-                leading: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: color.withOpacity(0.1),
-                  child: Icon(
-                      isSelected ? Icons.check : Icons.circle_outlined,
-                      size: 16,
-                      color: color),
-                ),
-                title: Text(
-                  s[0].toUpperCase() + s.substring(1),
-                  style: TextStyle(
-                      fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? color : Colors.black87),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (s != currentStatus) {
-                    widget.controller.updateOrderStatus(orderId, s);
-                  }
-                },
-              );
-            }),
-          ],
-        ),
       ),
     );
   }

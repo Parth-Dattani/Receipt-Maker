@@ -1504,8 +1504,6 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                             : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                         onChanged: (value) {
                                           if (value.isEmpty) {
-                                            controller.itemsWithStockViolation.remove(index);
-                                            controller.violationMessages.remove(index);
                                             controller.updateItem(index, quantity: 0.0, price: item.price, unit: item.unit);
                                             return;
                                           }
@@ -1515,8 +1513,6 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                               Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
                                               return;
                                             }
-                                            controller.itemsWithStockViolation.remove(index);
-                                            controller.violationMessages.remove(index);
                                             controller.updateItem(index, quantity: qty, price: item.price, unit: item.unit);
                                           }
                                         },
@@ -2046,6 +2042,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                         ),
                       ),
                     ],
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: 36, top: 4),
+                    child: Text(
+                      'Stock is zero or quantity is higher than available stock. Fix the lines below or add stock in Inventory — then Save will be enabled.',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
                   ),
                   SizedBox(height: 8),
                   // List all items with violations

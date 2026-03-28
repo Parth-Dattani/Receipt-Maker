@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import '../constant/constant.dart';
 import '../model/model.dart';
 import '../screen/screen.dart';
+import '../services/public_order_status_sync.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../widgets/widgets.dart';
@@ -70,6 +71,7 @@ class NewChallanController extends BaseController {
 // ✅ ADD THIS COMPUTED PROPERTY:
   bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
   bool _orderArgApplied = false;
+  String _linkedPublicOrderId = '';
 
   @override
   void onInit() {
@@ -98,6 +100,8 @@ class NewChallanController extends BaseController {
     if (_orderArgApplied) return;
     final arguments = Get.arguments;
     if (arguments == null || arguments is! Map) return;
+    _linkedPublicOrderId =
+        (arguments['fromOrderId']?.toString() ?? '').trim();
     if (arguments['editMode'] == true || arguments['challanData'] != null) return;
 
     final customerData = arguments['customerData'];
@@ -219,6 +223,7 @@ class NewChallanController extends BaseController {
 
     calculateTotals();
     challanItems.refresh();
+    revalidateAllChallanStockRows();
     print('✅ [Challan] Prefill done: ${challanItems.length} rows');
   }
 
@@ -1129,35 +1134,81 @@ class NewChallanController extends BaseController {
         unit: unit ?? item.unit,
       );
       calculateTotals();
+      _refreshStockViolationForChallanRow(index);
     }
   }
 
+  void revalidateAllChallanStockRows() {
+    for (var i = 0; i < challanItems.length; i++) {
+      _refreshStockViolationForChallanRow(i);
+    }
+  }
+
+  void _refreshStockViolationForChallanRow(int index) {
+    if (index < 0 || index >= challanItems.length) return;
+    final row = challanItems[index];
+    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
+    if (businessType == 'service' || businessType == 'client') {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (row.itemId.isEmpty) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    final master = itemList.firstWhereOrNull((e) => e.itemId == row.itemId);
+    final raw = master?.currentStock;
+    if (raw == null || raw == -1) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    final avail = raw.toDouble();
+    final qty = row.quantity;
+    if (qty <= 0) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (avail <= 0) {
+      itemsWithStockViolation.add(index);
+      violationMessages[index] =
+          '${row.itemName}: No stock (0). Add stock in Inventory or lower quantity.';
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (qty > avail) {
+      itemsWithStockViolation.add(index);
+      final u = (row.unit ?? master?.unitOfMeasurement ?? '').trim();
+      final av =
+          avail % 1 == 0 ? avail.toInt().toString() : avail.toString();
+      violationMessages[index] =
+          '${row.itemName}: Only $av ${u.isNotEmpty ? '$u ' : ''}in stock — quantity is higher.';
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    itemsWithStockViolation.remove(index);
+    violationMessages.remove(index);
+    itemsWithStockViolation.refresh();
+    violationMessages.refresh();
+  }
 
   void selectRemoteItemForIndex(int index, Item item) {
     if (index >= challanItems.length) return;
 
-    // 1. Stock Check Logic
-    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
-    final isProductBusiness = businessType != 'service' && businessType != 'client';
-
-    if (isProductBusiness) {
-      if ((item.currentStock ?? 0) <= 0 && (item.currentStock ?? 0) != -1) {
-        String unit = item.unitOfMeasurement ?? 'units';
-        Get.snackbar(
-          "Out of Stock",
-          "Item '${item.itemName}' has 0 $unit stock available.\nPlease add stock in Inventory first.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.shade700,
-          colorText: Colors.white,
-          icon: Icon(Icons.inventory_2_outlined, color: Colors.white),
-          duration: Duration(seconds: 4),
-          margin: EdgeInsets.all(16),
-        );
-        return; // Stop selection if no stock
-      }
-    }
-
-    // 2. Duplicate Check Logic
+    // 1. Duplicate Check Logic
     int existingIndex = -1;
     for (int i = 0; i < challanItems.length; i++) {
       if (i != index && challanItems[i].itemId == item.itemId && challanItems[i].itemId.isNotEmpty) {
@@ -1190,10 +1241,12 @@ class NewChallanController extends BaseController {
       );
 
       calculateTotals();
+      final mergedAt = existingIndex > index ? existingIndex - 1 : existingIndex;
+      _refreshStockViolationForChallanRow(mergedAt);
       return;
     }
 
-    // 3. Select New Item
+    // 2. Select New Item
     final currentItem = challanItems[index];
     String customerId = _getValidCustomerId();
 
@@ -1238,6 +1291,7 @@ class NewChallanController extends BaseController {
     print("Updated item $index: ${item.itemName} with Sell Price: ${item.sellPrice}");
 
     calculateTotals();
+    _refreshStockViolationForChallanRow(index);
   }
 
 // Helper method to manually update GST rate if needed
@@ -1937,6 +1991,11 @@ class NewChallanController extends BaseController {
         List<Map<String, dynamic>> itemsData = challanItems.map((item) => createChallanItemData(item)).toList();
         await GoogleSheetService.addChallanItemsBatch(itemsData, AppConstants.userId);
         await GoogleSheetService.updateStockAfterDispatch(challanItems);
+      }
+
+      if (_linkedPublicOrderId.isNotEmpty && !isDraft) {
+        await PublicOrderStatusSync.markChallanCreated(_linkedPublicOrderId);
+        _linkedPublicOrderId = '';
       }
 
       // ---------------- DATA SAVED - NOW ASK FOR PRINT ----------------

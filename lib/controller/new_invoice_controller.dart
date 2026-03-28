@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../constant/constant.dart';
 import '../model/model.dart';
 import '../screen/screen.dart';
+import '../services/public_order_status_sync.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
 import '../utils/utils.dart';
@@ -133,6 +134,10 @@ class NewInvoiceController extends GetxController {
   bool get hasAnyStockViolation => itemsWithStockViolation.isNotEmpty;
   var forceRefreshTriggers = <int, int>{}.obs;
 
+  static bool lastSaveSuccessful = false;
+
+  /// Firestore document id of `public_orders` when opened from Admin → Invoice.
+  String _linkedPublicOrderId = '';
 
 //  @override
 //   void onInit() {
@@ -215,6 +220,7 @@ class NewInvoiceController extends GetxController {
     selectedCustomerForInvoice.value = '';
     sourceQuotationId.value = '';
     paymentStatus.value = 'Pending';
+    _linkedPublicOrderId = '';
 
     // ✅ CRITICAL: Force GetX to register observables for release mode
     invoiceType.listen((value) {
@@ -331,6 +337,7 @@ class NewInvoiceController extends GetxController {
         // ✅ SAFETY: Only prefill items if explicitly from order
         // (fromOrderId must be present to trigger item prefill)
         final fromOrderId = arguments['fromOrderId']?.toString() ?? '';
+        _linkedPublicOrderId = fromOrderId.trim();
         final hasOrderData = fromOrderId.isNotEmpty;
 
         print("👤 [ARGS] Customer pre-selection");
@@ -408,6 +415,7 @@ class NewInvoiceController extends GetxController {
 
             calculateTotals();
             invoiceItems.refresh();
+            revalidateAllInvoiceStockRows();
             print('✅ Prefill done: ${invoiceItems.length} rows');
           }
         });
@@ -2241,7 +2249,82 @@ class NewInvoiceController extends GetxController {
 
       calculateTotals();
       invoiceItems.refresh();
+      _refreshStockViolationForInvoiceRow(index);
     }
+  }
+
+  void revalidateAllInvoiceStockRows() {
+    for (var i = 0; i < invoiceItems.length; i++) {
+      _refreshStockViolationForInvoiceRow(i);
+    }
+  }
+
+  void _refreshStockViolationForInvoiceRow(int index) {
+    if (index < 0 || index >= invoiceItems.length) return;
+    final inv = invoiceItems[index];
+    if (inv.challanId != null && inv.challanId!.trim().isNotEmpty) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    final businessType = AppConstants.businessType?.toLowerCase() ?? '';
+    if (businessType == 'service' || businessType == 'client') {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (inv.itemId.isEmpty) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    final master = itemList.firstWhereOrNull((e) => e.itemId == inv.itemId);
+    final raw = master?.currentStock;
+    if (raw == null || raw == -1) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    final avail = raw.toDouble();
+    final qty = inv.quantity;
+    if (qty <= 0) {
+      itemsWithStockViolation.remove(index);
+      violationMessages.remove(index);
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (avail <= 0) {
+      itemsWithStockViolation.add(index);
+      violationMessages[index] =
+          '${inv.itemName}: No stock (0). Add stock in Inventory or lower quantity.';
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    if (qty > avail) {
+      itemsWithStockViolation.add(index);
+      final u = (inv.unit ?? master?.unitOfMeasurement ?? '').trim();
+      final av =
+          avail % 1 == 0 ? avail.toInt().toString() : avail.toString();
+      violationMessages[index] =
+          '${inv.itemName}: Only $av ${u.isNotEmpty ? '$u ' : ''}in stock — quantity is higher.';
+      itemsWithStockViolation.refresh();
+      violationMessages.refresh();
+      return;
+    }
+    itemsWithStockViolation.remove(index);
+    violationMessages.remove(index);
+    itemsWithStockViolation.refresh();
+    violationMessages.refresh();
   }
 
   TextEditingController getPriceController(int index, {double? initialValue}) {
@@ -2395,24 +2478,6 @@ class NewInvoiceController extends GetxController {
     if (index >= invoiceItems.length) return;
 
     final businessType = AppConstants.businessType?.toLowerCase() ?? '';
-    final isProductBusiness = businessType != 'service' && businessType != 'client';
-
-    // ── Stock Check ──
-    if (isProductBusiness) {
-      if ((item.currentStock ?? 0) <= 0 && (item.currentStock ?? 0) != -1) {
-        Get.snackbar(
-          "Out of Stock",
-          "Item '${item.itemName}' has 0 ${item.unitOfMeasurement ?? 'units'} stock available.\nPlease add stock in Inventory first.",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.shade700,
-          colorText: Colors.white,
-          icon: Icon(Icons.inventory_2_outlined, color: Colors.white),
-          duration: Duration(seconds: 4),
-          margin: EdgeInsets.all(16),
-        );
-        return;
-      }
-    }
 
     // ── Duplicate Check — only if allowDuplicateItems is false ──
     final bool allowDuplicate =
@@ -2483,6 +2548,8 @@ class NewInvoiceController extends GetxController {
 
         calculateTotals();
         invoiceItems.refresh();
+        final mergedAt = existingIndex > index ? existingIndex - 1 : existingIndex;
+        _refreshStockViolationForInvoiceRow(mergedAt);
         return;
       }
       // allowDuplicateItems == true → skip merge, fall through to normal add
@@ -2558,6 +2625,7 @@ class NewInvoiceController extends GetxController {
     ensureControllersMatch();
     calculateTotals();
     invoiceItems.refresh();
+    _refreshStockViolationForInvoiceRow(index);
   }
 
   // ✅ NEW: Helper method to update item description
@@ -3420,6 +3488,11 @@ class NewInvoiceController extends GetxController {
         }
       }
 
+      if (_linkedPublicOrderId.isNotEmpty) {
+        await PublicOrderStatusSync.markInvoiceCreated(_linkedPublicOrderId);
+        _linkedPublicOrderId = '';
+      }
+
       // Refresh Controllers
       _refreshParentControllers();
 
@@ -3490,6 +3563,7 @@ class NewInvoiceController extends GetxController {
               icon: Icon(Icons.print),
               label: Text("Thermal Print "),
               onPressed: () async {
+                NewInvoiceController.lastSaveSuccessful = true;
                 Get.back(); // Close Dialog
                 // Brief delay so dialog closes fully — then share sheet (WhatsApp, Telegram, Mail, Print...) opens properly
                 await Future.delayed(const Duration(milliseconds: 500));
@@ -3553,6 +3627,7 @@ class NewInvoiceController extends GetxController {
               icon: Icon(Icons.picture_as_pdf),
               label: Text("A4 Print "),
               onPressed: () async {
+                NewInvoiceController.lastSaveSuccessful = true;
                 Get.back(); // Close Dialog
                 // Brief delay so dialog closes fully — then share sheet (WhatsApp, Telegram, Mail, Print...) opens properly
                 await Future.delayed(const Duration(milliseconds: 500));
@@ -3586,6 +3661,7 @@ class NewInvoiceController extends GetxController {
           // 3. Skip
           TextButton(
             onPressed: () {
+              NewInvoiceController.lastSaveSuccessful = true;
               Get.back();
               _finishAndClose();
             },
