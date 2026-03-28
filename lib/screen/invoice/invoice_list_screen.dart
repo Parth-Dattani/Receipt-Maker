@@ -21,10 +21,9 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
   @override
   Widget build(BuildContext context) {
     final content = Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
         title: const Text('Invoices'),
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -43,8 +42,8 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
 
                   await Get.toNamed(NewInvoiceScreen.pageId);
                 },
-                icon:  Icon(Icons.add, size: 18, color: AppColors.tealColor),
-                label:  Text("New Invoice", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
+                icon:  Icon(Icons.add, size: 18, color: AppColors.appTheame),
+                label:  Text("New Invoice", style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   elevation: 0,
@@ -54,24 +53,29 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isLoading.value) {
-            return LayoutBuilder(builder: (context, constraints) {
-              return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
-            });
-          }
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return LayoutBuilder(builder: (context, constraints) {
+                return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
+              });
+            }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return _buildWebLayout();
-              } else {
-                return _buildMobileLayout();
-              }
-            },
-          );
-        }),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return _buildWebLayout();
+                } else {
+                  return _buildMobileLayout();
+                }
+              },
+            );
+          }),
+        ),
       ),
 
     );
@@ -108,7 +112,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildWebStatItem('Total', controller.totalInvoices.toString(), AppColors.tealColor),
+              _buildWebStatItem('Total', controller.totalInvoices.toString(), AppColors.appTheame),
               _buildVerticalDivider(),
               _buildWebStatItem('Paid', controller.paidInvoices.toString(), Colors.green),
               _buildVerticalDivider(),
@@ -222,7 +226,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-              color: isSelected ? AppColors.tealColor : Colors.grey,
+              color: isSelected ? AppColors.appTheame : Colors.grey,
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -278,7 +282,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                                   children: [
                                     Text(
                                       "${invoice.invoiceId} - ${invoice.customerName}",
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.tealColor),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.appTheame),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
                                     ),
@@ -319,7 +323,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                               Text("Total Amount:", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                               Text(
                                 "₹${invoice.totalAmount?.toStringAsFixed(2) ?? '0.00'}",
-                                style:  TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                                style:  TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.appTheame),
                               ),
                             ],
                           ),
@@ -343,7 +347,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details'.tr)]),
+          child: Row(children: [Icon(Icons.visibility, color: AppColors.appTheame), SizedBox(width: 8), Text('view_details'.tr)]),
         ),
         PopupMenuItem(
           value: 'export',
@@ -400,7 +404,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
       label: Text(label),
       selected: selected,
       onSelected: (_) => controller.filterByStatus(label),
-      selectedColor: AppColors.tealColor,
+      selectedColor: AppColors.appTheame,
       backgroundColor: Colors.white,
       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
     );
@@ -413,7 +417,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildMobileStatItem('Total', controller.totalInvoices.toString(), AppColors.tealColor),
+          _buildMobileStatItem('Total', controller.totalInvoices.toString(), AppColors.appTheame),
           _buildMobileStatItem('Paid', controller.paidInvoices.toString(), Colors.green),
           _buildMobileStatItem('Pending', controller.pendingInvoices.toString(), Colors.orange),
           _buildMobileStatItem('Revenue', '₹${AppUtil.formatCurrency(controller.totalRevenue)}', Colors.purple),
@@ -453,7 +457,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: AppColors.tealColor.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: AppColors.appTheame.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: ClipRRect(
@@ -478,7 +482,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                               Expanded(
                                 child: Text(
                                   "${invoice.invoiceId} - ${invoice.customerName}",
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -549,7 +553,7 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
 
               await Get.toNamed(NewInvoiceScreen.pageId);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
             child: const Text("Create Invoice", style: TextStyle(color: Colors.white)),
           ),
         ],

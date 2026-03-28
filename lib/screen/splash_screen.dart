@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'dart:async';
 
 import '../../controller/splash_controller.dart';
+import '../constant/constant.dart';
 
 class SplashScreen extends GetView<SplashController> {
   static const pageId = "/SplashScreen";
@@ -14,7 +15,7 @@ class SplashScreen extends GetView<SplashController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF004D40), // Teal (same as auth left panel)
+      backgroundColor: AppColors.appTheame, // Teal (same as auth left panel)
       body: Center(
         child: _AnimatedLogo(),
       ),

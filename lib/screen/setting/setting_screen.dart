@@ -19,43 +19,45 @@ class SettingsScreen extends GetView<SettingsController> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.7)],
+            colors: [AppColors.appTheame, AppColors.appTheame.withOpacity(0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(context),
-              Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(top: 20),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
+        child: Container(
+          child: SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(top: 20),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFF8F9FA),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
                     ),
-                  ),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInvoiceThemes(),
-                        SizedBox(height: 20),
-                        _buildDuplicateItemsToggle(),
-                        SizedBox(height: 20),
-                        _buildCustomerOrderFeatureToggle(),
-                        SizedBox(height: 20),
-                        _buildFinancialYearSettings(),
-                      ],
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInvoiceThemes(),
+                          SizedBox(height: 20),
+                          _buildDuplicateItemsToggle(),
+                          SizedBox(height: 20),
+                          _buildCustomerOrderFeatureToggle(),
+                          SizedBox(height: 20),
+                          _buildFinancialYearSettings(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -176,7 +178,7 @@ class SettingsScreen extends GetView<SettingsController> {
                               right: 0,
                               child: Container(
                                 padding: EdgeInsets.all(3),
-                                decoration: BoxDecoration(color: AppColors.tealColor, shape: BoxShape.circle),
+                                decoration: BoxDecoration(color: AppColors.appTheame, shape: BoxShape.circle),
                                 child: Icon(Icons.check, size: 12, color: Colors.white),
                               ),
                             ),
@@ -236,7 +238,7 @@ class SettingsScreen extends GetView<SettingsController> {
               ...list.map((fy) => ListTile(
                 title: Text(FinancialYearHelper.displayLabel(fy)),
                 trailing: auth.activeFyValue.value == fy
-                    ? Chip(label: Text('Active', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.tealColor)
+                    ? Chip(label: Text('Active', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.appTheame)
                     : TextButton(
                         onPressed: () => auth.switchFinancialYear(fy),
                         child: Text('Use this year'),
@@ -255,8 +257,8 @@ class SettingsScreen extends GetView<SettingsController> {
                   icon: Icon(Icons.add),
                   label: Text('Add new financial year'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.tealColor,
-                    side: BorderSide(color: AppColors.tealColor),
+                    foregroundColor: AppColors.appTheame,
+                    side: BorderSide(color: AppColors.appTheame),
                     padding: EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -283,7 +285,7 @@ class SettingsScreen extends GetView<SettingsController> {
       AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.calendar_today, color: AppColors.tealColor),
+            Icon(Icons.calendar_today, color: AppColors.appTheame),
             SizedBox(width: 10),
             Text('Create sheet for year'),
           ],
@@ -304,7 +306,7 @@ class SettingsScreen extends GetView<SettingsController> {
                 final isNext = fy == nextFy;
                 final subtitle = isCurrent ? 'Current year' : (isNext ? 'Next year' : 'Upcoming');
                 return ListTile(
-                  leading: Icon(isCurrent ? Icons.today : Icons.arrow_forward, color: AppColors.tealColor, size: 22),
+                  leading: Icon(isCurrent ? Icons.today : Icons.arrow_forward, color: AppColors.appTheame, size: 22),
                   title: Text(
                     FinancialYearHelper.displayLabel(fy),
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -358,10 +360,10 @@ class SettingsScreen extends GetView<SettingsController> {
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.tealColor.withOpacity(0.1),
+                  color: AppColors.appTheame.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: AppColors.tealColor, size: 20),
+                child: Icon(icon, color: AppColors.appTheame, size: 20),
               ),
               SizedBox(width: 12),
               Text(
@@ -400,7 +402,7 @@ class SettingsScreen extends GetView<SettingsController> {
                 : 'Adding same item merges quantity automatically',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
-          activeColor: AppColors.tealColor,
+          activeColor: AppColors.appTheame,
           contentPadding: EdgeInsets.zero,
         )),
       ],
@@ -429,7 +431,7 @@ class SettingsScreen extends GetView<SettingsController> {
                 : 'Hides Customer Orders menu + Share Order Link',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
-          activeColor: AppColors.tealColor,
+          activeColor: AppColors.appTheame,
           contentPadding: EdgeInsets.zero,
         )),
       ],

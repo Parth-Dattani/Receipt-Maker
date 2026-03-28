@@ -32,7 +32,7 @@ class StockReportScreen extends GetView<StockReportController> {
             ],
           ],
         ),
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -81,17 +81,22 @@ class StockReportScreen extends GetView<StockReportController> {
             ),
         ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.stockItems.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth > 900) return _buildWebLayout();
-            return _buildMobileLayout();
-          },
-        );
-      }),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: Obx(() {
+          if (controller.isLoading.value && controller.stockItems.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 900) return _buildWebLayout();
+              return _buildMobileLayout();
+            },
+          );
+        }),
+      ),
     );
     if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
     return content;
@@ -226,7 +231,7 @@ class StockReportScreen extends GetView<StockReportController> {
                       'Total Stock Value',
                       '₹${AppUtil.formatCurrency(controller.totalStockValue.value)}',
                       Icons.account_balance_wallet_outlined,
-                      AppColors.tealColor,
+                      AppColors.appTheame,
                     ),
                     const SizedBox(height: 8),
                     _buildSidebarStatCard(
@@ -315,7 +320,7 @@ class StockReportScreen extends GetView<StockReportController> {
     return Row(
       children: filters.map((f) {
         final isSelected = controller.filterStatus.value == f['value'];
-        Color chipColor = AppColors.tealColor;
+        Color chipColor = AppColors.appTheame;
         if (f['value'] == 'low_stock') chipColor = Colors.orange.shade600;
         if (f['value'] == 'out_of_stock') chipColor = Colors.red.shade600;
         if (f['value'] == 'in_stock') chipColor = Colors.green.shade600;
@@ -585,7 +590,7 @@ class StockReportScreen extends GetView<StockReportController> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: AppColors.tealColor),
+          borderSide: BorderSide(color: AppColors.appTheame),
         ),
         filled: true,
         fillColor: Colors.white,

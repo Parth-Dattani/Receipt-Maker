@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
-
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../utils/utils.dart';
 import '../../widgets/web_screen_wrapper.dart';
-
 import '../screen.dart';
 
 
@@ -22,7 +20,6 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
   Widget build(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width > 900;
     final content = Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
         title: Row(
           children: [
@@ -41,7 +38,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
           ],
         ),
 
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -58,8 +55,8 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                   Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
                   await Get.toNamed(PurchaseEntryScreen.pageId);
                 },
-                icon: Icon(Icons.add, size: 18, color: AppColors.tealColor),
-                label:  Text("New Purchase", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
+                icon: Icon(Icons.add, size: 18, color: AppColors.appTheame),
+                label:  Text("New Purchase", style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   elevation: 0,
@@ -69,28 +66,33 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isDataLoading) {
-            return LayoutBuilder(builder: (context, constraints) {
-              return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
-            });
-          }
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isDataLoading) {
+              return LayoutBuilder(builder: (context, constraints) {
+                return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
+              });
+            }
 
-          if (controller.filteredPurchaseList.isEmpty) {
-            return _buildEmptyState();
-          }
+            if (controller.filteredPurchaseList.isEmpty) {
+              return _buildEmptyState();
+            }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return _buildWebLayout();
-              } else {
-                return _buildMobileLayout();
-              }
-            },
-          );
-        }),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return _buildWebLayout();
+                } else {
+                  return _buildMobileLayout();
+                }
+              },
+            );
+          }),
+        ),
       ),
       floatingActionButton: MediaQuery.of(context).size.width <= 900
           ? FloatingActionButton(
@@ -98,7 +100,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
           Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
           await Get.toNamed(PurchaseEntryScreen.pageId);
         },
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         child: const Icon(Icons.add, color: Colors.white),
       )
           : null,
@@ -168,7 +170,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -227,7 +229,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
       if (isWeb) {
         return Column(
           children: [
-            _buildWebStatCard('Total Purchases', controller.totalPurchases.toString(), AppColors.tealColor, Icons.shopping_bag),
+            _buildWebStatCard('Total Purchases', controller.totalPurchases.toString(), AppColors.appTheame, Icons.shopping_bag),
             const SizedBox(height: 12),
             _buildWebStatCard('Paid Count', controller.completedPurchases.toString(), Colors.green, Icons.check_circle),
             const SizedBox(height: 12),
@@ -253,7 +255,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatItem('total'.tr, controller.totalPurchases.toString(), AppColors.tealColor),
+                  _buildStatItem('total'.tr, controller.totalPurchases.toString(), AppColors.appTheame),
                   _buildStatItem('paid'.tr, controller.completedPurchases.toString(), Colors.green),
                   _buildStatItem('pending'.tr, controller.pendingPurchases.toString(), Colors.orange),
                   _buildStatItem('partial'.tr, controller.partialPurchases.toString(), Colors.blue),
@@ -365,7 +367,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
       label: Text(label),
       selected: selected,
       onSelected: (_) => controller.filterByStatus(label),
-      selectedColor: AppColors.tealColor,
+      selectedColor: AppColors.appTheame,
       backgroundColor: Colors.white,
       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black87),
     );
@@ -382,7 +384,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => Get.toNamed('/new-purchase'),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
             child: const Text("Create Purchase", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -432,7 +434,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                               Expanded(
                                 child: Text(
                                   "${purchase.purchaseId} - ${purchase.vendorName}",
-                                  style:  TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.tealColor),
+                                  style:  TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.appTheame),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -534,7 +536,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
-                                        color: AppColors.tealColor,
+                                        color: AppColors.appTheame,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
@@ -605,7 +607,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.tealColor,
+                                  color: AppColors.appTheame,
                                 ),
                               ),
                             ],
@@ -630,7 +632,7 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details')]),
+          child: Row(children: [Icon(Icons.visibility, color: AppColors.appTheame), SizedBox(width: 8), Text('view_details')]),
         ),
         PopupMenuItem(
           value: 'edit',

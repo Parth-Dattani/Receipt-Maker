@@ -11,7 +11,7 @@ class AppColors{
   //static Color defaultColor = const Color(0xFF003087);
 
   static Color errorColor = const Color(0xFFF44336);
-  static Color whiteColor = const Color(0xFFFFFFFF);
+  static Color whiteColor =  Color(0xFFFFFFFF);
   static Color whiteColor2 = const Color(0xfff0f0f0);
   static Color greyColor = const Color(0xFF9E9E9E);
   static Color greyColor2 = const Color(0xfff4d4d4d);
@@ -29,7 +29,6 @@ class AppColors{
   static Color greenColor = const Color(0xFFB2EC77);
   static Color greenColor2 = const Color(0xFF78c400);
   static Color greenColor3 = const Color(0xFF6E9A34);
-  static Color darkBackground = const Color(0XFF23203c);
   static Color appColor = const Color(0xff09063f);
   static Color darkBorder = const Color(0xFFED1380);
   static Color darkBlue = const Color(0XFF1A60AB);
@@ -52,4 +51,20 @@ class AppColors{
   static Color darkBackground2 = const Color(0XFF23203c);
   static Color appColor3 = const Color(0xff09063f);
   static Color appColor2 = const Color(0xff08002A);
+
+  ///Invice App Colors
+  static Color appTheame2 = const Color(0xFF008080);
+  static Color appTheame = const Color(0xff3B3B98);
+
+  static const Color bgGradientStart = Color(0xFFE0E7FF);
+  static const Color bgGradientEnd = Color(0xFFD1D5FF);
+
+  // Background Style
+  static final BoxDecoration customeBackground = BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [bgGradientStart, whiteColor, bgGradientEnd],
+    ),
+  );
 }

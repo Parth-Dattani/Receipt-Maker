@@ -30,7 +30,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
         elevation: 4,
         automaticallyImplyLeading: false,
         foregroundColor: Colors.white,
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
        
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -110,7 +110,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.appTheame),
                       ),
                       SizedBox(height: 8),
                       Text(
@@ -282,14 +282,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           children: [
             Row(
               children: [
-                Icon(Icons.shopping_bag, color: AppColors.tealColor),
+                Icon(Icons.shopping_bag, color: AppColors.appTheame),
                 SizedBox(width: 8),
                 Text(
                   'Purchase Details',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Spacer(),
@@ -297,14 +297,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     ? Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.15),
+                    color: AppColors.appTheame.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Text(
                     'Edit Mode',
                     style: TextStyle(
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -321,11 +321,11 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     controller: controller.purchaseNumberController,
                     decoration: InputDecoration(
                       labelText: 'Purchase Number',
-                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.tealColor),
+                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.appTheame),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                       ),
                     ),
                     readOnly: true,
@@ -351,7 +351,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                           controller: controller.purchaseDateController,
                           decoration: InputDecoration(
                             labelText: 'Purchase Date',
-                            prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
+                            prefixIcon: Icon(Icons.calendar_today, color: AppColors.appTheame),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
@@ -365,7 +365,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                           controller: controller.paymentDueDateController,
                           decoration: InputDecoration(
                             labelText: 'Payment Due Date',
-                            prefixIcon: Icon(Icons.event, color: AppColors.tealColor),
+                            prefixIcon: Icon(Icons.event, color: AppColors.appTheame),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
@@ -429,7 +429,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           children: [
             Row(
               children: [
-                Icon(Icons.store, color: AppColors.tealColor),
+                Icon(Icons.store, color: AppColors.appTheame),
                 SizedBox(width: 8),
                 Expanded(
                   child: RichText(
@@ -441,7 +441,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.tealColor,
+                            color: AppColors.appTheame,
                           ),
                         ),
                         TextSpan(
@@ -463,7 +463,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     children: [
                       IconButton(
                         onPressed: controller.refreshVendors,
-                        icon: Icon(Icons.refresh, color: AppColors.tealColor),
+                        icon: Icon(Icons.refresh, color: AppColors.appTheame),
                         tooltip: 'Refresh vendors list',
                         visualDensity: VisualDensity.compact,
                       ),
@@ -473,7 +473,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                           controller.showVendorForm.value
                               ? Icons.store
                               : Icons.add_business,
-                          color: AppColors.tealColor,
+                          color: AppColors.appTheame,
                         ),
                         tooltip: controller.showVendorForm.value
                             ? 'Select from existing customers'
@@ -498,7 +498,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                       child: Column(
                         children: [
                           CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.appTheame),
                           ),
                           SizedBox(height: 12),
                           Text(
@@ -544,7 +544,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               icon: Icon(Icons.add_business, size: 18),
                               label: Text('Add Vendor'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.tealColor,
+                                backgroundColor: AppColors.appTheame,
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -554,8 +554,8 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               icon: Icon(Icons.refresh, size: 18),
                               label: Text('Refresh'),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.tealColor,
-                                side: BorderSide(color: AppColors.tealColor),
+                                foregroundColor: AppColors.appTheame,
+                                side: BorderSide(color: AppColors.appTheame),
                               ),
                             ),
                           ],
@@ -607,7 +607,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           controller: controller.vendorNameController,
           decoration: InputDecoration(
             labelText: 'Vendor Name',
-            prefixIcon: Icon(Icons.store, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.store, color: AppColors.appTheame),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -619,7 +619,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                 controller: controller.vendorMobileController,
                 decoration: InputDecoration(
                   labelText: 'Mobile Number',
-                  prefixIcon: Icon(Icons.phone, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.phone, color: AppColors.appTheame),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -630,7 +630,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                 controller: controller.vendorEmailController,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.email, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.email, color: AppColors.appTheame),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -642,7 +642,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           controller: controller.vendorAddressController,
           decoration: InputDecoration(
             labelText: 'Address',
-            prefixIcon: Icon(Icons.location_on, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.location_on, color: AppColors.appTheame),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           maxLines: 2,
@@ -662,14 +662,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //         children: [
   //           Row(
   //             children: [
-  //               Icon(Icons.inventory_2, color: AppColors.tealColor),
+  //               Icon(Icons.inventory_2, color: AppColors.appTheame),
   //               SizedBox(width: 8),
   //               Text(
   //                 'Purchase Items',
   //                 style: TextStyle(
   //                   fontSize: 18,
   //                   fontWeight: FontWeight.bold,
-  //                   color: AppColors.tealColor,
+  //                   color: AppColors.appTheame,
   //                 ),
   //               ),
   //               Spacer(),
@@ -677,12 +677,12 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
   //                 decoration: BoxDecoration(
   //                   color: controller.useItemMaster.value
-  //                       ? AppColors.tealColor.withOpacity(0.15)
+  //                       ? AppColors.appTheame.withOpacity(0.15)
   //                       : Colors.orange.withOpacity(0.15),
   //                   borderRadius: BorderRadius.circular(8),
   //                   border: Border.all(
   //                     color: controller.useItemMaster.value
-  //                         ? AppColors.tealColor.withOpacity(0.3)
+  //                         ? AppColors.appTheame.withOpacity(0.3)
   //                         : Colors.orange.withOpacity(0.3),
   //                   ),
   //                 ),
@@ -695,7 +695,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //                           : Icons.edit,
   //                       size: 16,
   //                       color: controller.useItemMaster.value
-  //                           ? AppColors.tealColor
+  //                           ? AppColors.appTheame
   //                           : Colors.orange,
   //                     ),
   //                     SizedBox(width: 4),
@@ -705,7 +705,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //                         fontSize: 12,
   //                         fontWeight: FontWeight.bold,
   //                         color: controller.useItemMaster.value
-  //                             ? AppColors.tealColor
+  //                             ? AppColors.appTheame
   //                             : Colors.orange,
   //                       ),
   //                     ),
@@ -714,7 +714,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //               )),
   //               SizedBox(width: 8),
   //               IconButton(
-  //                 icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
+  //                 icon: Icon(Icons.swap_horiz, color: AppColors.appTheame),
   //                 onPressed: controller.toggleItemEntryMode,
   //                 tooltip: 'Toggle between dropdown and manual entry',
   //               ),
@@ -724,14 +724,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //           // Container(
   //           //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
   //           //   decoration: BoxDecoration(
-  //           //     color: AppColors.tealColor.withOpacity(0.1),
+  //           //     color: AppColors.appTheame.withOpacity(0.1),
   //           //     borderRadius: BorderRadius.circular(12),
   //           //   ),
   //           //   child: Row(
   //           //     children: [
-  //           //       Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-  //           //       Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-  //           //       Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+  //           //       Expanded(flex: 3, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame))),
+  //           //       Expanded(flex: 1, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame))),
+  //           //       Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame))),
   //           //       SizedBox(width: 30),
   //           //     ],
   //           //   ),
@@ -752,7 +752,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //                     borderRadius: BorderRadius.circular(12),
   //                     boxShadow: [
   //                       BoxShadow(
-  //                         color: AppColors.tealColor.withOpacity(0.1),
+  //                         color: AppColors.appTheame.withOpacity(0.1),
   //                         blurRadius: 4,
   //                         offset: Offset(0, 2),
   //                       ),
@@ -997,7 +997,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
   //                   icon: Icon(Icons.add_circle_outline, size: 20),
   //                   label: Text('Add Another Item'),
   //                   style: ElevatedButton.styleFrom(
-  //                     backgroundColor: AppColors.tealColor,
+  //                     backgroundColor: AppColors.appTheame,
   //                     foregroundColor: Colors.white,
   //                     padding: EdgeInsets.symmetric(vertical: 12),
   //                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1024,7 +1024,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           children: [
             Row(
               children: [
-                Icon(Icons.inventory_2, color: AppColors.tealColor),
+                Icon(Icons.inventory_2, color: AppColors.appTheame),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1033,7 +1033,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                     ),
                   ),
                 ),
@@ -1048,12 +1048,12 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: isList
-                                ? AppColors.tealColor.withOpacity(0.15)
+                                ? AppColors.appTheame.withOpacity(0.15)
                                 : Colors.orange.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: isList
-                                  ? AppColors.tealColor.withOpacity(0.3)
+                                  ? AppColors.appTheame.withOpacity(0.3)
                                   : Colors.orange.withOpacity(0.3),
                             ),
                           ),
@@ -1063,7 +1063,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                               Icon(
                                 isList ? Icons.arrow_drop_down_circle : Icons.edit,
                                 size: 16,
-                                color: isList ? AppColors.tealColor : Colors.orange,
+                                color: isList ? AppColors.appTheame : Colors.orange,
                               ),
                               SizedBox(width: 4),
                               Text(
@@ -1071,7 +1071,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isList ? AppColors.tealColor : Colors.orange,
+                                  color: isList ? AppColors.appTheame : Colors.orange,
                                 ),
                               ),
                             ],
@@ -1079,13 +1079,13 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                         ),
                         SizedBox(width: 8),
                         IconButton(
-                          icon: Icon(Icons.refresh, color: AppColors.tealColor),
+                          icon: Icon(Icons.refresh, color: AppColors.appTheame),
                           onPressed: controller.refreshItems,
                           tooltip: 'Refresh items list',
                           visualDensity: VisualDensity.compact,
                         ),
                         IconButton(
-                          icon: Icon(Icons.swap_horiz, color: AppColors.tealColor),
+                          icon: Icon(Icons.swap_horiz, color: AppColors.appTheame),
                           onPressed: controller.toggleItemEntryMode,
                           tooltip: 'Toggle between dropdown and manual entry',
                           visualDensity: VisualDensity.compact,
@@ -1106,21 +1106,21 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                   return Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppColors.tealColor.withOpacity(0.1),
+                      color: AppColors.appTheame.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
                         SizedBox(width: 40), // Space for index badge
-                        Expanded(flex: 4, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor))),
+                        Expanded(flex: 4, child: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame))),
                         SizedBox(width: 12),
-                        Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        Expanded(flex: 2, child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame), textAlign: TextAlign.center)),
                         SizedBox(width: 12),
-                        Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        Expanded(flex: 1, child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame), textAlign: TextAlign.center)),
                         SizedBox(width: 12),
-                        Expanded(flex: 1, child: Text('GST%', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        Expanded(flex: 1, child: Text('GST%', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame), textAlign: TextAlign.center)),
                         SizedBox(width: 12),
-                        Expanded(flex: 1, child: Text('Unit', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor), textAlign: TextAlign.center)),
+                        Expanded(flex: 1, child: Text('Unit', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame), textAlign: TextAlign.center)),
                         SizedBox(width: 40), // Space for delete button
                       ],
                     ),
@@ -1151,7 +1151,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.tealColor.withOpacity(0.1),
+                                color: AppColors.appTheame.withOpacity(0.1),
                                 blurRadius: 4,
                                 offset: Offset(0, 2),
                               ),
@@ -1368,7 +1368,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.tealColor.withOpacity(0.1),
+                                color: AppColors.appTheame.withOpacity(0.1),
                                 blurRadius: 4,
                                 offset: Offset(0, 2),
                               ),
@@ -1662,7 +1662,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                     icon: Icon(Icons.add_circle_outline, size: 20),
                     label: Text('Add Another Item'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.tealColor,
+                      backgroundColor: AppColors.appTheame,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1688,14 +1688,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           children: [
             Row(
               children: [
-                Icon(Icons.calculate, color: AppColors.tealColor),
+                Icon(Icons.calculate, color: AppColors.appTheame),
                 SizedBox(width: 8),
                 Text(
                   'Purchase Summary',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
               ],
@@ -1820,7 +1820,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           Radio<String>(
             value: value,
             groupValue: controller.paymentMethod.value,
-            activeColor: AppColors.tealColor,
+            activeColor: AppColors.appTheame,
             onChanged: (val) => controller.paymentMethod.value = val!,
             visualDensity: VisualDensity.compact, // જગ્યા ઓછી રોકે
           ),
@@ -1861,14 +1861,14 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           children: [
             Row(
               children: [
-                Icon(Icons.note, color: AppColors.tealColor),
+                Icon(Icons.note, color: AppColors.appTheame),
                 SizedBox(width: 8),
                 Text(
                   'Additional Notes',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
               ],
@@ -1907,7 +1907,7 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
           child: ElevatedButton(
             onPressed: controller.isLoading.value ? null : () => controller.savePurchase(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.tealColor,
+              backgroundColor: AppColors.appTheame,
               padding: EdgeInsets.symmetric(vertical: 12),
             ),
             child: Text(

@@ -28,7 +28,8 @@ class ItemScreen extends GetView<ItemController> {
       builder: (context, constraints) {
         if (constraints.maxWidth < 900) {
           return _buildMobileScaffold(context);
-        } else {
+        }
+        else {
           return _buildWebScaffold(context);
         }
       },
@@ -37,16 +38,25 @@ class ItemScreen extends GetView<ItemController> {
     return content;
   }
 
+  Widget _buildBackgroundWrapper({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: AppColors.customeBackground,
+      child: SafeArea(child: child), // SafeArea aahi muki devu vadhare saru
+    );
+  }
+
   // ===========================================================================
   // 📱 MOBILE LAYOUT
   // ===========================================================================
 
   Widget _buildMobileScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      //backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 4,
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
@@ -68,23 +78,25 @@ class ItemScreen extends GetView<ItemController> {
           const SizedBox(width: 12),
         ],
       ),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isLoading.value) {
-            return _buildShimmerLoader(isWeb: false);
-          }
-
-          final items = controller.filteredItemList;
-
-          if (items.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return _buildMobileItemList(items);
-        }),
+      body: _buildBackgroundWrapper(
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return _buildShimmerLoader(isWeb: false);
+            }
+        
+            final items = controller.filteredItemList;
+        
+            if (items.isEmpty) {
+              return _buildEmptyState();
+            }
+        
+            return _buildMobileItemList(items);
+          }),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text("Add Item", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         onPressed: () => _showAddItemDialog(context),
@@ -101,14 +113,14 @@ class ItemScreen extends GetView<ItemController> {
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 4,
-          shadowColor: AppColors.tealColor.withOpacity(0.2),
+          shadowColor: AppColors.appTheame.withOpacity(0.2),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           child: ExpansionTile(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             backgroundColor: item.isActive ? Colors.white : Colors.red.shade50,
             leading: CircleAvatar(
-              backgroundColor: item.isActive ? AppColors.tealColor.withOpacity(0.15) : Colors.red.shade100,
-              child: Icon(Icons.inventory_2_outlined, color: item.isActive ? AppColors.tealColor : Colors.red.shade600),
+              backgroundColor: item.isActive ? AppColors.appTheame.withOpacity(0.15) : Colors.red.shade100,
+              child: Icon(Icons.inventory_2_outlined, color: item.isActive ? AppColors.appTheame : Colors.red.shade600),
             ),
             title: Text(
               item.itemName,
@@ -125,7 +137,7 @@ class ItemScreen extends GetView<ItemController> {
                 const SizedBox(height: 4),
                 Text("Purchase: ₹${item.price.toStringAsFixed(2)}", style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                 Text("Sell: ₹${item.sellPrice.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
-                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.tealColor)),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.appTheame)),
               ],
             ),
             trailing: Row(
@@ -163,7 +175,7 @@ class ItemScreen extends GetView<ItemController> {
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         title: const Text("Item Management", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
         actions: [
@@ -175,7 +187,7 @@ class ItemScreen extends GetView<ItemController> {
               label: const Text("Add Item", style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: AppColors.tealColor,
+                foregroundColor: AppColors.appTheame,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -184,54 +196,56 @@ class ItemScreen extends GetView<ItemController> {
           )
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Item Directory", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  Row(
-                    children: [
-                      Text("Active Only", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500, fontSize: 14)),
-                      const SizedBox(width: 12),
-                      Obx(() => Switch(
-                        value: !controller.showInactiveItems.value,
-                        onChanged: (_) => controller.toggleShowInactive(),
-                        activeColor: AppColors.tealColor,
-                      )),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value) return _buildShimmerLoader(isWeb: true);
-                final items = controller.filteredItemList;
-                if (items.isEmpty) return _buildEmptyState();
-                return Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 400,
-                      mainAxisExtent: 240,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
+      body: _buildBackgroundWrapper(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Item Directory", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    Row(
+                      children: [
+                        Text("Active Only", style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500, fontSize: 14)),
+                        const SizedBox(width: 12),
+                        Obx(() => Switch(
+                          value: !controller.showInactiveItems.value,
+                          onChanged: (_) => controller.toggleShowInactive(),
+                          activeColor: AppColors.appTheame,
+                        )),
+                      ],
                     ),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) => _buildWebItemCard(context, items[index]),
-                  ),
-                );
-              }),
-            ),
-          ],
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value) return _buildShimmerLoader(isWeb: true);
+                  final items = controller.filteredItemList;
+                  if (items.isEmpty) return _buildEmptyState();
+                  return Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 400,
+                        mainAxisExtent: 240,
+                        crossAxisSpacing: 24,
+                        mainAxisSpacing: 24,
+                      ),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) => _buildWebItemCard(context, items[index]),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -255,8 +269,8 @@ class ItemScreen extends GetView<ItemController> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), shape: BoxShape.circle),
-                  child: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor, size: 22),
+                  decoration: BoxDecoration(color: AppColors.appTheame.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.inventory_2_outlined, color: AppColors.appTheame, size: 22),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -276,7 +290,7 @@ class ItemScreen extends GetView<ItemController> {
                 const SizedBox(height: 6),
                 Text("Purchase: ₹${item.price.toStringAsFixed(2)}", style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
                 Text("Sell: ₹${item.sellPrice.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
-                    style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold, fontSize: 16)),
 
                 const Spacer(),
                 if (item.currentStock != -1)
@@ -375,7 +389,7 @@ class ItemScreen extends GetView<ItemController> {
                 child: Form(
                   key: formKey,
                   child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Add New Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.tealColor)), IconButton(icon: Icon(Icons.close, color: AppColors.tealColor), onPressed: isAdding ? null : () => Navigator.pop(context))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Add New Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isAdding ? null : () => Navigator.pop(context))]),
                     const SizedBox(height: 20),
                     TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
                     const SizedBox(height: 16),
@@ -425,9 +439,9 @@ class ItemScreen extends GetView<ItemController> {
                     const SizedBox(height: 16),
                     TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
                     const SizedBox(height: 16),
-                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.tealColor), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
+                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.appTheame), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
                     const SizedBox(height: 24),
-                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isAdding ? null : () async {
+                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isAdding ? null : () async {
                       if (formKey.currentState!.validate()) {
                         setState(() => isAdding = true);
                         try {
@@ -476,7 +490,7 @@ class ItemScreen extends GetView<ItemController> {
                 child: Form(
                   key: formKey,
                   child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Edit Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.tealColor)), IconButton(icon: Icon(Icons.close, color: AppColors.tealColor), onPressed: isSaving ? null : () => Navigator.pop(context))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Edit Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isSaving ? null : () => Navigator.pop(context))]),
                     const SizedBox(height: 20),
                     TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
                     const SizedBox(height: 16),
@@ -526,9 +540,9 @@ class ItemScreen extends GetView<ItemController> {
                     const SizedBox(height: 16),
                     TextFormField(controller: detailCtrl, decoration: InputDecoration(labelText: "Details", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), maxLines: 3),
                     const SizedBox(height: 16),
-                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.tealColor), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
+                    Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.appTheame), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
                     const SizedBox(height: 24),
-                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isSaving ? null : () async {
+                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isSaving ? null : () async {
                       if (formKey.currentState!.validate()) {
                         setState(() => isSaving = true);
                         try {
@@ -594,7 +608,7 @@ class ItemScreen extends GetView<ItemController> {
 //       backgroundColor: Colors.grey.shade100,
 //       appBar: AppBar(
 //         elevation: 4,
-//         backgroundColor: AppColors.tealColor,
+//         backgroundColor: AppColors.appTheame,
 //         shape: const RoundedRectangleBorder(
 //           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
 //         ),
@@ -640,7 +654,7 @@ class ItemScreen extends GetView<ItemController> {
 //         }),
 //       ),
 //       floatingActionButton: FloatingActionButton.extended(
-//         backgroundColor: AppColors.tealColor,
+//         backgroundColor: AppColors.appTheame,
 //         icon: const Icon(Icons.add, color: Colors.white),
 //         label: const Text(
 //           "Add Item",
@@ -660,7 +674,7 @@ class ItemScreen extends GetView<ItemController> {
 //         return Card(
 //           margin: const EdgeInsets.only(bottom: 16),
 //           elevation: 4,
-//           shadowColor: AppColors.tealColor.withOpacity(0.2),
+//           shadowColor: AppColors.appTheame.withOpacity(0.2),
 //           shape:
 //           RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
 //           child: ExpansionTile(
@@ -670,11 +684,11 @@ class ItemScreen extends GetView<ItemController> {
 //             backgroundColor: item.isActive ? Colors.white : Colors.red.shade50,
 //             leading: CircleAvatar(
 //               backgroundColor: item.isActive
-//                   ? AppColors.tealColor.withOpacity(0.15)
+//                   ? AppColors.appTheame.withOpacity(0.15)
 //                   : Colors.red.shade100,
 //               child: Icon(Icons.inventory_2_outlined,
 //                   color: item.isActive
-//                       ? AppColors.tealColor
+//                       ? AppColors.appTheame
 //                       : Colors.red.shade600),
 //             ),
 //             title: Text(
@@ -692,7 +706,7 @@ class ItemScreen extends GetView<ItemController> {
 //               "₹${item.price.toStringAsFixed(2)} / ${item.unitOfMeasurement}",
 //               style: TextStyle(
 //                 fontWeight: FontWeight.w500,
-//                 color: AppColors.tealColor,
+//                 color: AppColors.appTheame,
 //               ),
 //             ),
 //             trailing: Row(
@@ -735,7 +749,7 @@ class ItemScreen extends GetView<ItemController> {
 //       backgroundColor: const Color(0xFFF5F7FA), // Light SaaS Background
 //       appBar: AppBar(
 //         elevation: 0,
-//         backgroundColor: AppColors.tealColor,
+//         backgroundColor: AppColors.appTheame,
 //
 //         title: const Text(
 //           "Item Management", // Matching image title style
@@ -758,7 +772,7 @@ class ItemScreen extends GetView<ItemController> {
 //               ),
 //               style: ElevatedButton.styleFrom(
 //                 backgroundColor: Colors.white,
-//                 foregroundColor: AppColors.tealColor,
+//                 foregroundColor: AppColors.appTheame,
 //                 elevation: 0,
 //                 padding: const EdgeInsets.symmetric(horizontal: 20),
 //                 shape: RoundedRectangleBorder(
@@ -806,7 +820,7 @@ class ItemScreen extends GetView<ItemController> {
 //                         // Logic: If showing inactive is false, then "Active Only" is true
 //                         value: !controller.showInactiveItems.value,
 //                         onChanged: (_) => controller.toggleShowInactive(),
-//                         activeColor: AppColors.tealColor,
+//                         activeColor: AppColors.appTheame,
 //                       )),
 //                     ],
 //                   ),
@@ -879,12 +893,12 @@ class ItemScreen extends GetView<ItemController> {
 //                 Container(
 //                   padding: const EdgeInsets.all(10),
 //                   decoration: BoxDecoration(
-//                     color: AppColors.tealColor.withOpacity(0.1),
+//                     color: AppColors.appTheame.withOpacity(0.1),
 //                     shape: BoxShape.circle,
 //                   ),
 //                   child: Icon(
 //                     Icons.inventory_2_outlined, // Box/Service icon
-//                     color: AppColors.tealColor,
+//                     color: AppColors.appTheame,
 //                     size: 22,
 //                   ),
 //                 ),
@@ -932,7 +946,7 @@ class ItemScreen extends GetView<ItemController> {
 //                     Text(
 //                       "₹${item.price.toStringAsFixed(2)}",
 //                       style: TextStyle(
-//                         color: AppColors.tealColor,
+//                         color: AppColors.appTheame,
 //                         fontWeight: FontWeight.bold,
 //                         fontSize: 16,
 //                       ),
@@ -1222,11 +1236,11 @@ class ItemScreen extends GetView<ItemController> {
 //                               style: TextStyle(
 //                                 fontSize: 22,
 //                                 fontWeight: FontWeight.bold,
-//                                 color: AppColors.tealColor,
+//                                 color: AppColors.appTheame,
 //                               ),
 //                             ),
 //                             IconButton(
-//                               icon: Icon(Icons.close, color: AppColors.tealColor),
+//                               icon: Icon(Icons.close, color: AppColors.appTheame),
 //                               onPressed: isAdding ? null : () => Navigator.pop(context),
 //                             ),
 //                           ],
@@ -1242,7 +1256,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                             filled: true,
 //                             fillColor: Colors.grey.shade50,
-//                             prefixIcon: Icon(Icons.label_outline, color: AppColors.tealColor),
+//                             prefixIcon: Icon(Icons.label_outline, color: AppColors.appTheame),
 //                           ),
 //                           enabled: !isAdding,
 //                           validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
@@ -1262,7 +1276,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                   filled: true,
 //                                   fillColor: Colors.grey.shade50,
-//                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
+//                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.appTheame),
 //                                 ),
 //                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
 //                                 enabled: !isAdding,
@@ -1318,7 +1332,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                 filled: true,
 //                                 fillColor: Colors.grey.shade50,
-//                                 prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
+//                                 prefixIcon: Icon(Icons.percent, color: AppColors.appTheame),
 //                               ),
 //                               items: const [
 //                                 DropdownMenuItem(value: 0.0, child: Text("0%")),
@@ -1338,7 +1352,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             Text(
 //                               "Selected GST: ${selectedGst}%",
 //                               style: TextStyle(
-//                                 color: AppColors.tealColor,
+//                                 color: AppColors.appTheame,
 //                                 fontWeight: FontWeight.w500,
 //                               ),
 //                             ),
@@ -1373,7 +1387,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                   filled: true,
 //                                   fillColor: Colors.grey.shade50,
-//                                   prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor),
+//                                   prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.appTheame),
 //                                 ),
 //                                 keyboardType: TextInputType.number,
 //                                 enabled: !isAdding,
@@ -1397,7 +1411,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                             filled: true,
 //                             fillColor: Colors.grey.shade50,
-//                             prefixIcon: Icon(Icons.notes_outlined, color: AppColors.tealColor),
+//                             prefixIcon: Icon(Icons.notes_outlined, color: AppColors.appTheame),
 //                           ),
 //                           maxLines: 3,
 //                           enabled: !isAdding,
@@ -1413,7 +1427,7 @@ class ItemScreen extends GetView<ItemController> {
 //                           ),
 //                           child: Row(
 //                             children: [
-//                               Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
+//                               Icon(Icons.toggle_on_outlined, color: AppColors.appTheame),
 //                               const SizedBox(width: 8),
 //                               const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
 //                               const Spacer(),
@@ -1422,7 +1436,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 onChanged: isAdding ? null : (value) {
 //                                   setState(() => isActive = value);
 //                                 },
-//                                 activeColor: AppColors.tealColor,
+//                                 activeColor: AppColors.appTheame,
 //                               ),
 //                               Text(
 //                                 isActive ? "Active" : "Inactive",
@@ -1457,7 +1471,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             const SizedBox(width: 12),
 //                             ElevatedButton(
 //                               style: ElevatedButton.styleFrom(
-//                                 backgroundColor: AppColors.tealColor,
+//                                 backgroundColor: AppColors.appTheame,
 //                                 foregroundColor: AppColors.whiteColor,
 //                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 //                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -1573,11 +1587,11 @@ class ItemScreen extends GetView<ItemController> {
 //                               style: TextStyle(
 //                                 fontSize: 22,
 //                                 fontWeight: FontWeight.bold,
-//                                 color: AppColors.tealColor,
+//                                 color: AppColors.appTheame,
 //                               ),
 //                             ),
 //                             IconButton(
-//                               icon: Icon(Icons.close, color: AppColors.tealColor),
+//                               icon: Icon(Icons.close, color: AppColors.appTheame),
 //                               onPressed: isSaving ? null : () => Navigator.pop(context),
 //                             ),
 //                           ],
@@ -1593,7 +1607,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                             filled: true,
 //                             fillColor: Colors.grey.shade50,
-//                             prefixIcon: Icon(Icons.label_outline, color: AppColors.tealColor),
+//                             prefixIcon: Icon(Icons.label_outline, color: AppColors.appTheame),
 //                           ),
 //                           enabled: !isSaving,
 //                           validator: (value) => value?.trim().isEmpty ?? true ? "Item name is required" : null,
@@ -1613,7 +1627,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                   filled: true,
 //                                   fillColor: Colors.grey.shade50,
-//                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.tealColor),
+//                                   prefixIcon: Icon(Icons.currency_rupee_outlined, color: AppColors.appTheame),
 //                                 ),
 //                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
 //                                 enabled: !isSaving,
@@ -1666,7 +1680,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                 filled: true,
 //                                 fillColor: Colors.grey.shade50,
-//                                 prefixIcon: Icon(Icons.percent, color: AppColors.tealColor),
+//                                 prefixIcon: Icon(Icons.percent, color: AppColors.appTheame),
 //                               ),
 //                               items: const [
 //                                 DropdownMenuItem(value: 0.0, child: Text("0%")),
@@ -1716,7 +1730,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                                   filled: true,
 //                                   fillColor: Colors.grey.shade50,
-//                                   prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.tealColor),
+//                                   prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.appTheame),
 //                                 ),
 //                                 keyboardType: TextInputType.number,
 //                                 enabled: !isSaving,
@@ -1740,7 +1754,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
 //                             filled: true,
 //                             fillColor: Colors.grey.shade50,
-//                             prefixIcon: Icon(Icons.notes_outlined, color: AppColors.tealColor),
+//                             prefixIcon: Icon(Icons.notes_outlined, color: AppColors.appTheame),
 //                           ),
 //                           maxLines: 3,
 //                           enabled: !isSaving,
@@ -1756,7 +1770,7 @@ class ItemScreen extends GetView<ItemController> {
 //                           ),
 //                           child: Row(
 //                             children: [
-//                               Icon(Icons.toggle_on_outlined, color: AppColors.tealColor),
+//                               Icon(Icons.toggle_on_outlined, color: AppColors.appTheame),
 //                               const SizedBox(width: 8),
 //                               const Text("Status:", style: TextStyle(fontWeight: FontWeight.w500)),
 //                               const Spacer(),
@@ -1765,7 +1779,7 @@ class ItemScreen extends GetView<ItemController> {
 //                                 onChanged: isSaving ? null : (value) {
 //                                   setState(() => isActive = value);
 //                                 },
-//                                 activeColor: AppColors.tealColor,
+//                                 activeColor: AppColors.appTheame,
 //                               ),
 //                               Text(
 //                                 isActive ? "Active" : "Inactive",
@@ -1800,7 +1814,7 @@ class ItemScreen extends GetView<ItemController> {
 //                             const SizedBox(width: 12),
 //                             ElevatedButton(
 //                               style: ElevatedButton.styleFrom(
-//                                 backgroundColor: AppColors.tealColor,
+//                                 backgroundColor: AppColors.appTheame,
 //                                 foregroundColor: AppColors.whiteColor,
 //                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 //                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

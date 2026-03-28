@@ -21,10 +21,9 @@ class ChallanListScreen extends GetView<ChallanListController> {
   @override
   Widget build(BuildContext context) {
     final content = Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
       appBar: AppBar(
         title: Text('challans'.tr),
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -46,8 +45,8 @@ class ChallanListScreen extends GetView<ChallanListController> {
 
                   await Get.toNamed(NewChallanScreen.pageId);
                 },
-                icon: Icon(Icons.add, size: 18, color: AppColors.tealColor),
-                label: Text("New Challan", style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold)),
+                icon: Icon(Icons.add, size: 18, color: AppColors.appTheame),
+                label: Text("New Challan", style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   elevation: 0,
@@ -57,28 +56,33 @@ class ChallanListScreen extends GetView<ChallanListController> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isDataLoading) {
-            return LayoutBuilder(builder: (context, constraints) {
-              return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
-            });
-          }
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isDataLoading) {
+              return LayoutBuilder(builder: (context, constraints) {
+                return constraints.maxWidth > 900 ? _buildWebShimmer() : _buildFullShimmer();
+              });
+            }
 
-          if (controller.filteredChallanList.isEmpty) {
-            return _buildEmptyState();
-          }
+            if (controller.filteredChallanList.isEmpty) {
+              return _buildEmptyState();
+            }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return _buildWebLayout();
-              } else {
-                return _buildMobileLayout();
-              }
-            },
-          );
-        }),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return _buildWebLayout();
+                } else {
+                  return _buildMobileLayout();
+                }
+              },
+            );
+          }),
+        ),
       ),
 
     );
@@ -141,7 +145,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -167,7 +171,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
         // Vertical Layout for Web Sidebar
         return Column(
           children: [
-            _buildWebStatCard('total'.tr, controller.totalChallans.toString(), AppColors.tealColor, Icons.folder),
+            _buildWebStatCard('total'.tr, controller.totalChallans.toString(), AppColors.appTheame, Icons.folder),
             const SizedBox(height: 12),
             _buildWebStatCard('delivered'.tr, controller.deliveredChallans.toString(), Colors.green, Icons.check_circle),
             const SizedBox(height: 12),
@@ -184,7 +188,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('total'.tr, controller.totalChallans.toString(), AppColors.tealColor),
+              _buildStatItem('total'.tr, controller.totalChallans.toString(), AppColors.appTheame),
               _buildStatItem('delivered'.tr, controller.deliveredChallans.toString(), Colors.green),
               _buildStatItem('pending'.tr, controller.pendingChallans.toString(), Colors.orange),
               _buildStatItem('in_transit'.tr, controller.inTransitChallans.toString(), Colors.purple),
@@ -287,7 +291,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
       label: Text(label),
       selected: selected,
       onSelected: (_) => controller.filterByStatus(filterKey),
-      selectedColor: AppColors.tealColor,
+      selectedColor: AppColors.appTheame,
       backgroundColor: Colors.white,
       labelStyle: TextStyle(
         color: selected ? Colors.white : Colors.black87,
@@ -295,7 +299,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: selected ? AppColors.tealColor : Colors.grey.shade300),
+        side: BorderSide(color: selected ? AppColors.appTheame : Colors.grey.shade300),
       ),
     );
   }
@@ -327,7 +331,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
               await Get.toNamed(NewChallanScreen.pageId);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.tealColor,
+              backgroundColor: AppColors.appTheame,
               foregroundColor: Colors.white,
             ),
             child: Text('create_challan'.tr),
@@ -407,7 +411,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                               Expanded(
                                 child: Text(
                                   "${challan.challanId} - ${challan.customerName}",
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.tealColor),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.appTheame),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -492,7 +496,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                                   children: [
                                     Text(
                                       "${challan.challanId} - ${challan.customerName}",
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.tealColor),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.appTheame),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
                                     ),
@@ -547,7 +551,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
       items: [
         PopupMenuItem(
           value: 'view',
-          child: Row(children: [Icon(Icons.visibility, color: AppColors.tealColor), SizedBox(width: 8), Text('view_details'.tr)]),
+          child: Row(children: [Icon(Icons.visibility, color: AppColors.appTheame), SizedBox(width: 8), Text('view_details'.tr)]),
         ),
         PopupMenuItem(
           value: 'export_pdf',

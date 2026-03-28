@@ -4,16 +4,9 @@ import 'package:GetYourInvoice/utils/input_formatters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../widgets/widgets.dart';
-
-
-
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../widgets/web_screen_wrapper.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -62,7 +55,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 ],
               ],
             ),
-            backgroundColor: AppColors.tealColor,
+            backgroundColor: AppColors.appTheame,
             foregroundColor: Colors.white,
             actions: [
               Obx(() => controller.isEditMode.value
@@ -70,60 +63,65 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   : const SizedBox.shrink()),
             ],
           ),
-          body: SafeArea(
-            child: Stack(
-              children: [
-                // RESPONSIVE LAYOUT BUILDER
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    if (constraints.maxWidth > 900) {
-                      return _buildWebLayout(context);
-                    } else {
-                      return _buildMobileLayout(context);
-                    }
-                  },
-                ),
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: AppColors.customeBackground,
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  // RESPONSIVE LAYOUT BUILDER
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth > 900) {
+                        return _buildWebLayout(context);
+                      } else {
+                        return _buildMobileLayout(context);
+                      }
+                    },
+                  ),
 
-                // LOADING OVERLAY
-                Obx(() => controller.isLoading.value
-                    ? Container(
-                  color: Colors.black.withOpacity(0.3),
-                  child: Center(
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            controller.isEditMode.value ? 'updating...'.tr : 'loading...'.tr,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
+                  // LOADING OVERLAY
+                  Obx(() => controller.isLoading.value
+                      ? Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.appTheame),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              controller.isEditMode.value ? 'updating...'.tr : 'loading...'.tr,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
-                    : SizedBox.shrink()),
-              ],
+                  )
+                      : SizedBox.shrink()),
+                ],
+              ),
             ),
           ),
         );
@@ -277,7 +275,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Spacer(),
@@ -285,14 +283,14 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     ? Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.15),
+                    color: AppColors.appTheame.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Text(
                     'edit_mode'.tr,
                     style: TextStyle(
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -310,13 +308,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     controller: controller.challanNumberController,
                     decoration: InputDecoration(
                       labelText: 'Challan Number',
-                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.tealColor),
+                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.appTheame),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                       ),
                     ),
                     readOnly: true,
@@ -328,13 +326,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     controller: controller.challanDateController,
                     decoration: InputDecoration(
                       labelText: 'Challan Date',
-                      prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
+                      prefixIcon: Icon(Icons.calendar_today, color: AppColors.appTheame),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                       ),
                     ),
                     readOnly: true,
@@ -429,7 +427,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Spacer(),
@@ -437,14 +435,14 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     ? Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.15),
+                    color: AppColors.appTheame.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Text(
                     'edit_mode'.tr,
                     style: TextStyle(
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -464,13 +462,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     controller: controller.challanNumberController,
                     decoration: InputDecoration(
                       labelText: 'Challan Number',
-                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.tealColor),
+                      prefixIcon: Icon(Icons.receipt_long, color: AppColors.appTheame),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                       ),
                     ),
                     readOnly: true,
@@ -482,13 +480,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     controller: controller.challanDateController,
                     decoration: InputDecoration(
                       labelText: 'Challan Date',
-                      prefixIcon: Icon(Icons.calendar_today, color: AppColors.tealColor),
+                      prefixIcon: Icon(Icons.calendar_today, color: AppColors.appTheame),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                        borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                       ),
                     ),
                     readOnly: true,
@@ -583,7 +581,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Text(
@@ -599,7 +597,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   onPressed: controller.toggleCustomerForm,
                   icon: Icon(
                     controller.showCustomerForm.value ? Icons.person : Icons.person_add,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                   tooltip: controller.showCustomerForm.value
                       ? 'Select from existing customers'
@@ -623,7 +621,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       ElevatedButton(
                         onPressed: controller.toggleCustomerForm,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
+                          backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
                         ),
                         child: Text('Add New Customer'),
@@ -699,7 +697,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Text(
@@ -715,7 +713,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   onPressed: controller.toggleCustomerForm,
                   icon: Icon(
                     controller.showCustomerForm.value ? Icons.person : Icons.person_add,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                   tooltip: controller.showCustomerForm.value
                       ? 'Select from existing customers'
@@ -739,7 +737,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       ElevatedButton(
                         onPressed: controller.toggleCustomerForm,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
+                          backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
                         ),
                         child: Text('Add New Customer'),
@@ -805,7 +803,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
           'add_new_customer'.tr,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.tealColor,
+            color: AppColors.appTheame,
           ),
         ),
         SizedBox(height: 12),
@@ -813,13 +811,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
           controller: controller.customerNameController,
           decoration: InputDecoration(
             labelText: 'customer_name'.tr,
-            prefixIcon: Icon(Icons.person, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.person, color: AppColors.appTheame),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+              borderSide: BorderSide(color: AppColors.appTheame, width: 2),
             ),
           ),
           validator: (value) {
@@ -837,13 +835,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 controller: controller.customerMobileController,
                 decoration: InputDecoration(
                   labelText: 'mobile_number'.tr,
-                  prefixIcon: Icon(Icons.phone, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.phone, color: AppColors.appTheame),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                    borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                   ),
                 ),
                 keyboardType: TextInputType.phone,
@@ -855,13 +853,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 controller: controller.customerEmailController,
                 decoration: InputDecoration(
                   labelText: 'email'.tr,
-                  prefixIcon: Icon(Icons.email, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.email, color: AppColors.appTheame),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                    borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
@@ -874,13 +872,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
           controller: controller.customerAddressController,
           decoration: InputDecoration(
             labelText: 'address'.tr,
-            prefixIcon: Icon(Icons.location_on, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.location_on, color: AppColors.appTheame),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+              borderSide: BorderSide(color: AppColors.appTheame, width: 2),
             ),
           ),
           maxLines: 2,
@@ -898,7 +896,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
           'add_new_customer'.tr,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.tealColor,
+            color: AppColors.appTheame,
           ),
         ),
         SizedBox(height: 12),
@@ -908,13 +906,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
           controller: controller.customerNameController,
           decoration: InputDecoration(
             labelText: 'customer_name'.tr,
-            prefixIcon: Icon(Icons.person, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.person, color: AppColors.appTheame),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+              borderSide: BorderSide(color: AppColors.appTheame, width: 2),
             ),
           ),
           validator: (value) {
@@ -934,13 +932,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 controller: controller.customerMobileController,
                 decoration: InputDecoration(
                   labelText: 'mobile_number'.tr,
-                  prefixIcon: Icon(Icons.phone, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.phone, color: AppColors.appTheame),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                    borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                   ),
                 ),
                 keyboardType: TextInputType.phone,
@@ -952,13 +950,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 controller: controller.customerEmailController,
                 decoration: InputDecoration(
                   labelText: 'email'.tr,
-                  prefixIcon: Icon(Icons.email, color: AppColors.tealColor),
+                  prefixIcon: Icon(Icons.email, color: AppColors.appTheame),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                    borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
@@ -973,13 +971,13 @@ class NewChallanScreen extends GetView<NewChallanController> {
           controller: controller.customerAddressController,
           decoration: InputDecoration(
             labelText: 'address'.tr,
-            prefixIcon: Icon(Icons.location_on, color: AppColors.tealColor),
+            prefixIcon: Icon(Icons.location_on, color: AppColors.appTheame),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+              borderSide: BorderSide(color: AppColors.appTheame, width: 2),
             ),
           ),
           maxLines: 2,
@@ -1021,7 +1019,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Spacer(),
@@ -1033,18 +1031,18 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 return Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.1),
+                    color: AppColors.appTheame.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.history, size: 16, color: AppColors.tealColor),
+                      Icon(Icons.history, size: 16, color: AppColors.appTheame),
                       SizedBox(width: 8),
                       Text(
                         'Originally had ${controller.originalItemsCount} items',
                         style: TextStyle(
-                          color: AppColors.tealColor,
+                          color: AppColors.appTheame,
                           fontSize: 12,
                         ),
                       ),
@@ -1058,7 +1056,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.tealColor.withOpacity(0.1),
+                color: AppColors.appTheame.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1069,7 +1067,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       'item_description'.tr,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
+                        color: AppColors.appTheame,
                       ),
                     ),
                   ),
@@ -1079,7 +1077,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       'price_inr'.tr,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
+                        color: AppColors.appTheame,
                       ),
                       textAlign: TextAlign.start,
                     ),
@@ -1090,7 +1088,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       'quantity'.tr,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.tealColor,
+                        color: AppColors.appTheame,
                       ),
                       textAlign: TextAlign.start,
                     ),
@@ -1137,7 +1135,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.tealColor.withOpacity(0.1),
+                          color: AppColors.appTheame.withOpacity(0.1),
                           blurRadius: 4,
                           offset: Offset(0, 2),
                         ),
@@ -1309,7 +1307,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
 
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                          borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                                         ),
                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       ),
@@ -1365,7 +1363,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                          borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                                         ),
                                       ),
                                       keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -1406,7 +1404,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                   //           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   //           focusedBorder: OutlineInputBorder(
                                   //             borderRadius: BorderRadius.circular(8),
-                                  //             borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                  //             borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                                   //           ),
                                   //         ),
                                   //         keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -1436,7 +1434,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                   //           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   //           focusedBorder: OutlineInputBorder(
                                   //             borderRadius: BorderRadius.circular(8),
-                                  //             borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                  //             borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                                   //           ),
                                   //         ),
                                   //         keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -1491,7 +1489,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                           suffixStyle: const TextStyle(fontSize: 10, color: Colors.grey),
                                           focusedBorder: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(8),
-                                            borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+                                            borderSide: BorderSide(color: AppColors.appTheame, width: 2),
                                           ),
                                           hintText: availableStock != null
                                               ? 'Stocks: ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)}'
@@ -1544,7 +1542,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     icon: Icon(Icons.add_circle_outline, size: 20),
                     label: Text('Add Another Item'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.tealColor,
+                      backgroundColor: AppColors.appTheame,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -1557,9 +1555,9 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.1),
+                    color: AppColors.appTheame.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1568,14 +1566,14 @@ class NewChallanScreen extends GetView<NewChallanController> {
                         'Total Items:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.tealColor,
+                          color: AppColors.appTheame,
                         ),
                       ),
                       Text(
                         '${controller.challanItems.length}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.tealColor,
+                          color: AppColors.appTheame,
                         ),
                       ),
                     ],
@@ -1608,7 +1606,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.tealColor,
+                    color: AppColors.appTheame,
                   ),
                 ),
                 Spacer(),
@@ -1622,7 +1620,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.tealColor.withOpacity(0.1),
+                color: AppColors.appTheame.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1632,7 +1630,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     flex: 5,
                     child: Text(
                       'item_description'.tr,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -1640,7 +1638,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     flex: 2,
                     child: Text(
                       'price_inr'.tr,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1649,7 +1647,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     flex: 2,
                     child: Text(
                       'quantity'.tr,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1681,7 +1679,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.tealColor.withOpacity(0.05),
+                          color: AppColors.appTheame.withOpacity(0.05),
                           blurRadius: 4,
                           offset: Offset(0, 2),
                         ),
@@ -1792,7 +1790,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                                   suffixStyle: TextStyle(fontSize: 10, color: Colors.grey),
                                   focusedBorder: controller.itemsWithStockViolation.contains(index)
                                       ? OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2), borderRadius: BorderRadius.circular(8))
-                                      : OutlineInputBorder(borderSide: BorderSide(color: AppColors.tealColor, width: 2), borderRadius: BorderRadius.circular(8)),
+                                      : OutlineInputBorder(borderSide: BorderSide(color: AppColors.appTheame, width: 2), borderRadius: BorderRadius.circular(8)),
                                 ),
                                 keyboardType: (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box")
                                     ? TextInputType.number
@@ -1848,7 +1846,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     icon: Icon(Icons.add_circle_outline, size: 20),
                     label: Text('Add Another Item'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.tealColor,
+                      backgroundColor: AppColors.appTheame,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -1858,15 +1856,15 @@ class NewChallanScreen extends GetView<NewChallanController> {
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.tealColor.withOpacity(0.1),
+                    color: AppColors.appTheame.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.tealColor.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.appTheame.withOpacity(0.3)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total Items:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor)),
-                      Text('${controller.challanItems.length}', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.tealColor)),
+                      Text('Total Items:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame)),
+                      Text('${controller.challanItems.length}', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.appTheame)),
                     ],
                   ),
                 ),
@@ -1892,7 +1890,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppColors.tealColor,
+                color: AppColors.appTheame,
               ),
             ),
             SizedBox(height: 16),
@@ -1963,7 +1961,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.appTheame)
                   : Colors.black87,
             ),
           ),
@@ -1973,7 +1971,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.appTheame)
                   : Colors.black87,
             ),
           ),
@@ -1996,7 +1994,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppColors.tealColor,
+                color: AppColors.appTheame,
               ),
             ),
             SizedBox(height: 16),
@@ -2103,7 +2101,7 @@ class NewChallanScreen extends GetView<NewChallanController> {
                     ? null
                     : () => controller.saveChallan(isDraft: false),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.tealColor,
+                  backgroundColor: AppColors.appTheame,
                   padding: EdgeInsets.symmetric(vertical: 12),
                   disabledBackgroundColor: Colors.grey.shade400,
                 ),

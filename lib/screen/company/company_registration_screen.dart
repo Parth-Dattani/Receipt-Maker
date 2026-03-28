@@ -23,23 +23,27 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
   @override
   Widget build(BuildContext context) {
     final content = Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(context),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isLoading.value) {
-            return CompanyFormShimmer();
-          }
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return _buildWebLayout(context);
-              } else {
-                return _buildMobileLayout(context);
-              }
-            },
-          );
-        }),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return CompanyFormShimmer();
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return _buildWebLayout(context);
+                } else {
+                  return _buildMobileLayout(context);
+                }
+              },
+            );
+          }),
+        ),
       ),
     );
 
@@ -50,7 +54,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.tealColor,
+      backgroundColor: AppColors.appTheame,
       title: Obx(() => Text(
         controller.isEditMode.value ? "Edit Company" : "Company Registration",
         style: const TextStyle(color: Colors.white),
@@ -449,7 +453,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 }
               },
               activeColor: Colors.white,
-              activeTrackColor: AppColors.tealColor,
+              activeTrackColor: AppColors.appTheame,
               inactiveThumbColor: Colors.grey,
               title: const Text(
                 "Enable Due Date",
@@ -459,7 +463,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 "Set payment due date in days from invoice date",
                 style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               ),
-              secondary: Icon(Icons.calendar_today, color: AppColors.tealColor),
+              secondary: Icon(Icons.calendar_today, color: AppColors.appTheame),
             )),
 
             // Due Date Days Field
@@ -687,7 +691,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 }
               },
               activeColor: Colors.white,
-              activeTrackColor: AppColors.tealColor,
+              activeTrackColor: AppColors.appTheame,
               inactiveThumbColor: Colors.grey,
               title: const Text(
                 "Enable Due Date",
@@ -697,7 +701,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 "Set payment due date in days from invoice date",
                 style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               ),
-              secondary: Icon(Icons.calendar_today, color: AppColors.tealColor),
+              secondary: Icon(Icons.calendar_today, color: AppColors.appTheame),
             )),
             Obx(() {
               if (controller.isDueDateEnabled.value) {
@@ -774,7 +778,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 }
               },
               activeColor: Colors.white,
-              activeTrackColor: AppColors.tealColor,
+              activeTrackColor: AppColors.appTheame,
               inactiveThumbColor: Colors.grey,
               title: const Text(
                 "Enable Extra Notes",
@@ -784,7 +788,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
                 "Add up to 3 custom notes to display on invoices",
                 style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               ),
-              secondary: Icon(Icons.note_add, color: AppColors.tealColor),
+              secondary: Icon(Icons.note_add, color: AppColors.appTheame),
             )),
 
             Obx(() {
@@ -847,26 +851,26 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             _sectionTitle("Features", Icons.featured_play_list),
             Row(
               children: [
-                Icon(Icons.list_alt, color: AppColors.tealColor, size: 24),
+                Icon(Icons.list_alt, color: AppColors.appTheame, size: 24),
                 const SizedBox(width: 12),
                 const Expanded(child: Text("Enable Challan Feature", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
                 Obx(() => Checkbox(
                   value: controller.isChallanEnabled.value,
                   onChanged: (val) => controller.isChallanEnabled.value = val ?? false,
-                  activeColor: AppColors.tealColor,
+                  activeColor: AppColors.appTheame,
                 )),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.receipt, color: AppColors.tealColor, size: 24),
+                Icon(Icons.receipt, color: AppColors.appTheame, size: 24),
                 const SizedBox(width: 12),
                 const Expanded(child: Text("Enable CashMemo", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
                 Obx(() => Checkbox(
                   value: controller.isCashMemoEnabled.value,
                   onChanged: (val) => controller.isCashMemoEnabled.value = val ?? false,
-                  activeColor: AppColors.tealColor,
+                  activeColor: AppColors.appTheame,
                 )),
               ],
             ),
@@ -889,10 +893,10 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
               value: controller.isGstEnabled.value,
               onChanged: controller.isEditMode.value ? null : (val) => controller.isGstEnabled.value = val,
               activeColor: Colors.white,
-              activeTrackColor: AppColors.tealColor,
+              activeTrackColor: AppColors.appTheame,
               title: const Text("Enable GST", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               subtitle: const Text("Enable this if invoices should include GST calculation", style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
-              secondary: Icon(Icons.receipt_long, color: AppColors.tealColor),
+              secondary: Icon(Icons.receipt_long, color: AppColors.appTheame),
             )),
           ],
         ),
@@ -904,7 +908,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
     return Center(
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.tealColor,
+          backgroundColor: AppColors.appTheame,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -929,11 +933,11 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.tealColor, size: 22),
+          Icon(icon, color: AppColors.appTheame, size: 22),
           const SizedBox(width: 8),
           Text(
             title,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.tealColor),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.appTheame),
           ),
         ],
       ),
@@ -957,7 +961,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.tealColor.withOpacity(0.5)),
+              border: Border.all(color: AppColors.appTheame.withOpacity(0.5)),
             ),
             clipBehavior: Clip.antiAlias,
             child: url.isEmpty
@@ -992,7 +996,7 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
               onPressed: () => controller.pickLogoImage(),
               icon: const Icon(Icons.image, size: 18),
               label: const Text("Pick image"),
-              style: OutlinedButton.styleFrom(foregroundColor: AppColors.tealColor),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.appTheame),
             ),
             OutlinedButton.icon(
               onPressed: () => controller.clearLogo(),
@@ -1035,11 +1039,11 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
       value: safeValue,
       decoration: InputDecoration(
         labelText: isRequired ? '$label *' : label,
-        prefixIcon: Icon(prefixIcon, color: AppColors.tealColor),
+        prefixIcon: Icon(prefixIcon, color: AppColors.appTheame),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.tealColor, width: 2),
+          borderSide: BorderSide(color: AppColors.appTheame, width: 2),
         ),
       ),
       items: items,

@@ -24,23 +24,27 @@ class CustomerListScreen extends GetView<CustomerListController> {
   @override
   Widget build(BuildContext context) {
     final content = Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
       appBar: _buildAppBar(context),
-      body: SafeArea(
-        child: Obx(() {
-          if (controller.isLoading.value) {
-            return _buildShimmerLoader(context);
-          }
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 900) {
-                return _buildWebLayout(context);
-              } else {
-                return _buildMobileLayout(context);
-              }
-            },
-          );
-        }),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: SafeArea(
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              return _buildShimmerLoader(context);
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  return _buildWebLayout(context);
+                } else {
+                  return _buildMobileLayout(context);
+                }
+              },
+            );
+          }),
+        ),
       ),
     );
     if (kIsWeb) {
@@ -54,7 +58,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
     return AppBar(
       foregroundColor: Colors.white,
       elevation: 0,
-      backgroundColor: AppColors.tealColor,
+      backgroundColor: AppColors.appTheame,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () { if (Navigator.of(context).canPop()) Navigator.of(context).pop(); },
@@ -95,7 +99,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
 
   Widget _buildSortItemMobile(IconData icon, String text) {
     return Row(children: [
-      Icon(icon, size: 20, color: AppColors.tealColor),
+      Icon(icon, size: 20, color: AppColors.appTheame),
       const SizedBox(width: 8),
       Text(text),
     ]);
@@ -200,9 +204,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.tealColor,
+                  color: AppColors.appTheame,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.tealColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: AppColors.appTheame.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
                 ),
                 child: Row(children: [
                   Container(
@@ -275,9 +279,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 Row(children: [
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
+                    backgroundColor: AppColors.appTheame.withOpacity(0.1),
                     child: Text(initial,
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.tealColor)),
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.appTheame)),
                   ),
                   const SizedBox(width: 16),
                   Expanded(child: Text(name,
@@ -308,7 +312,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
                       icon: const Icon(Icons.edit, size: 18, color: Colors.white),
                       label: const Text("Edit", style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.tealColor,
+                        backgroundColor: AppColors.appTheame,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
@@ -326,7 +330,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
 
   Widget _buildSectionTitle(String title) {
     return Text(title,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.tealColor));
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.appTheame));
   }
 
   Widget _buildDetailRow(IconData icon, String label, String? value) {
@@ -409,9 +413,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 Row(children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
+                    backgroundColor: AppColors.appTheame.withOpacity(0.1),
                     child: Text(initial,
-                        style: TextStyle(color: AppColors.tealColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(name,
@@ -459,9 +463,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
         onChanged: (value) => controller.searchCustomers(value),
         decoration: InputDecoration(
           hintText: 'search_by_name_mobile_or_email'.tr,
-          prefixIcon: Icon(Icons.search, color: AppColors.tealColor),
+          prefixIcon: Icon(Icons.search, color: AppColors.appTheame),
           suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
-              ? IconButton(icon: Icon(Icons.clear, color: AppColors.tealColor), onPressed: controller.clearSearch)
+              ? IconButton(icon: Icon(Icons.clear, color: AppColors.appTheame), onPressed: controller.clearSearch)
               : const SizedBox()),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -477,10 +481,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-            colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.7)],
+            colors: [AppColors.appTheame, AppColors.appTheame.withOpacity(0.7)],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: AppColors.tealColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: AppColors.appTheame.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Row(children: [
         Container(
@@ -516,7 +520,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
         label: Text('add_new_customer'.tr,
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.tealColor,
+          backgroundColor: AppColors.appTheame,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 3,
@@ -530,7 +534,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
       if (controller.filteredCustomerList.isEmpty) return _buildEmptyState();
       return RefreshIndicator(
         onRefresh: controller.refreshCustomers,
-        color: AppColors.tealColor,
+        color: AppColors.appTheame,
         child: ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: controller.filteredCustomerList.length + 1,
@@ -565,10 +569,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
           leading: CircleAvatar(
             radius: 24,
             backgroundColor:
-            isActive ? AppColors.tealColor.withOpacity(0.1) : Colors.grey.shade200,
+            isActive ? AppColors.appTheame.withOpacity(0.1) : Colors.grey.shade200,
             child: Text(initial,
                 style: TextStyle(
-                    color: isActive ? AppColors.tealColor : Colors.grey.shade500,
+                    color: isActive ? AppColors.appTheame : Colors.grey.shade500,
                     fontWeight: FontWeight.bold)),
           ),
           title: Text(name,
@@ -660,7 +664,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: controller.navigateToAddNewCustomer,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.tealColor),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
             child: const Text("Add Customer", style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -674,6 +678,6 @@ class CustomerListScreen extends GetView<CustomerListController> {
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
                 height: 20, width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.tealColor))));
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.appTheame))));
   }
 }

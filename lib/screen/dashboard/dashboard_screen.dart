@@ -53,7 +53,7 @@ class DashboardScreen extends GetView<DashboardController> {
           icon: const Icon(Icons.menu),
         ),
         title: Text('invoice_sathi'.tr),
-        backgroundColor: AppColors.tealColor,
+        backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -658,7 +658,7 @@ class DashboardScreen extends GetView<DashboardController> {
 
   // ===========================================================================
   // 🎨 WEB COMPONENTS
-  // ===========================================================================
+  // ==========================================================================
 
   Widget _buildWebSidebar(BuildContext context) {
     return Container(
@@ -881,227 +881,6 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
-  // Widget _buildWebHeader() {
-  //   return Container(
-  //     height: 60, // Reduced from 70
-  //     padding: const EdgeInsets.symmetric(horizontal: 20), // Reduced horizontal padding
-  //     decoration: BoxDecoration(
-  //       color: Colors.white,
-  //       border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-  //     ),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //       children: [
-  //         Text("Dashboard", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-  //         Row(
-  //           children: [
-  //             IconButton(
-  //               icon: const Icon(Icons.refresh, color: Colors.grey),
-  //               onPressed: controller.refreshDashboard,
-  //               splashRadius: 20, // Tighter splash
-  //             ),
-  //             const SizedBox(width: 16),
-  //             Obx(() => Column(
-  //               crossAxisAlignment: CrossAxisAlignment.end,
-  //               mainAxisAlignment: MainAxisAlignment.center,
-  //               children: [
-  //                 Text(controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
-  //                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-  //                 Text(controller.companyName, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-  //               ],
-  //             )),
-  //             const SizedBox(width: 12),
-  //             CircleAvatar(
-  //                 radius: 18, // Slightly smaller avatar
-  //                 backgroundColor: AppColors.tealColor.withOpacity(0.1),
-  //                 child: Icon(Icons.person, color: AppColors.tealColor, size: 20)
-  //             ),
-  //           ],
-  //         )
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  Widget _buildWebHeader() {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text("Dashboard", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.grey),
-                onPressed: controller.refreshDashboard,
-                splashRadius: 20,
-              ),
-              const SizedBox(width: 16),
-              Obx(() => Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                      controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
-                  ),
-                  Text(controller.companyName, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              )),
-              const SizedBox(width: 12),
-
-              // User Avatar with Popup Menu
-              PopupMenuButton<String>(
-                offset: Offset(0, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: AppColors.tealColor.withOpacity(0.1),
-                    child: Icon(Icons.person, color: AppColors.tealColor, size: 20)
-                ),
-                onSelected: (String value) {
-                  if (value == 'logout') {
-                    Get.dialog(
-                        AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: Row(
-                                children: [
-                                  Icon(Icons.logout, color: Colors.red.shade600),
-                                  SizedBox(width: 12),
-                                  Text("confirm_logout".tr)
-                                ]
-                            ),
-                            content: Text("logout_message".tr),
-                            actions: [
-                              TextButton(
-                                child: Text("cancel".tr),
-                                onPressed: () => Get.back(),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red.shade600,
-                                ),
-                                onPressed: () async {
-                                  Get.back();
-                                  await controller.logout();
-                                },
-                                child: Text("logout".tr),
-                              )
-                            ]
-                        )
-                    );
-                  } else if (value == 'edit_company') {
-                    final data = controller.currentCompany.value;
-                    if (data != null) {
-                      controller.navigateToEditCompany(data, controller.companyId.value);
-                    }
-                  } else if (value == 'switch_company') {
-                    controller.showCompanySwitcher();
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  // User Info Header
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    child: Obx(() => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          controller.userName.value.isNotEmpty ? controller.userName.value : 'User',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          controller.userEmail.value,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.tealColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            controller.companyName.isNotEmpty ? controller.companyName : "No Company",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.tealColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )),
-                  ),
-                  PopupMenuDivider(),
-
-                  // Edit Company
-                  PopupMenuItem<String>(
-                    value: 'edit_company',
-                    child: Row(
-                      children: [
-                        Icon(Icons.business, size: 20, color: Colors.grey.shade700),
-                        SizedBox(width: 12),
-                        Text("edit_company".tr),
-                      ],
-                    ),
-                  ),
-
-                  // Switch Company (if multiple companies)
-                  if (controller.hasMultipleCompanies.value)
-                    PopupMenuItem<String>(
-                      value: 'switch_company',
-                      child: Row(
-                        children: [
-                          Icon(Icons.swap_horiz, size: 20, color: Colors.grey.shade700),
-                          SizedBox(width: 12),
-                          Text("Switch Company"),
-                        ],
-                      ),
-                    ),
-
-                  PopupMenuDivider(),
-
-                  // Logout
-                  PopupMenuItem<String>(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, size: 20, color: Colors.red.shade600),
-                        SizedBox(width: 12),
-                        Text(
-                          "logout".tr,
-                          style: TextStyle(color: Colors.red.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
 
   Widget _buildWelcomeBanner() {
     return Container(
@@ -1110,8 +889,8 @@ class DashboardScreen extends GetView<DashboardController> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.tealColor,
-            AppColors.tealColor.withOpacity(0.7)
+            AppColors.appTheame,
+            AppColors.appTheame.withOpacity(0.7)
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1422,7 +1201,7 @@ class DashboardScreen extends GetView<DashboardController> {
                     width: 4,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1450,7 +1229,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.tealColor.withOpacity(0.12),
+                      color: AppColors.appTheame.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1494,7 +1273,7 @@ class DashboardScreen extends GetView<DashboardController> {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
         decoration: BoxDecoration(
-          color: AppColors.tealColor,
+          color: AppColors.appTheame,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -2257,7 +2036,7 @@ class DashboardScreen extends GetView<DashboardController> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.7)],
+                  colors: [AppColors.appTheame, AppColors.appTheame.withOpacity(0.7)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

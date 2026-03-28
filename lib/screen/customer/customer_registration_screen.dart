@@ -14,72 +14,77 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
   const CustomerRegistrationScreen({super.key});
 
   // Theme Color (Purple)
-  static final Color _themeColor = AppColors.tealColor;
+  static final Color _themeColor = AppColors.appTheame;
 
   @override
   Widget build(BuildContext context) {
     final content = Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(context),
-      body: Stack(
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth > 1000) {
-                return _buildWebLayout(context);
-              } else {
-                return _buildMobileLayout(context);
-              }
-            },
-          ),
-          // Nice loading overlay when saving customer
-          Obx(() {
-            if (!controller.isLoading.value) return const SizedBox.shrink();
-            return Container(
-              color: Colors.black26,
-              child: Center(
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: AppColors.customeBackground,
+        child: Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 1000) {
+                  return _buildWebLayout(context);
+                } else {
+                  return _buildMobileLayout(context);
+                }
+              },
+            ),
+            // Nice loading overlay when saving customer
+            Obx(() {
+              if (!controller.isLoading.value) return const SizedBox.shrink();
+              return Container(
+                color: Colors.black26,
+                child: Center(
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.appTheame),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          controller.isEditMode.value ? "Updating customer..." : "Saving customer...",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
+                          const SizedBox(height: 20),
+                          Text(
+                            controller.isEditMode.value ? "Updating customer..." : "Saving customer...",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Please wait",
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
+                          const SizedBox(height: 8),
+                          Text(
+                            "Please wait",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }),
-        ],
+              );
+            }),
+          ],
+        ),
       ),
     );
     if (kIsWeb) return webScreenWrapper(currentRoute: pageId, child: content);
@@ -88,7 +93,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.tealColor,
+      backgroundColor: AppColors.appTheame,
       foregroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
@@ -259,7 +264,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.8)],
+          colors: [AppColors.appTheame, AppColors.appTheame.withOpacity(0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -715,7 +720,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
           LinearProgressIndicator(
             value: controller.formProgress.value,
             backgroundColor: Colors.grey.shade300,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.tealColor),
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.appTheame),
             minHeight: 4,
           ),
         ],
@@ -747,11 +752,11 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
             ),
             child: Obx(() => Column(
               children: [
-                Icon(controller.isEditMode.value ? Icons.edit : Icons.person_add, color: _themeColor, size: 40),
+                Icon(controller.isEditMode.value ? Icons.edit : Icons.person_add, color: AppColors.appTheame, size: 40),
                 const SizedBox(height: 12),
                 Text(
                   controller.isEditMode.value ? "Update Customer Details" : "Register New Customer",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: _themeColor, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.appTheame, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -784,19 +789,19 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.tealColor.withOpacity(0.08),
+                  color: AppColors.appTheame.withOpacity(0.08),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(icon, color: AppColors.tealColor, size: 20),
+                      decoration: BoxDecoration(color: AppColors.appTheame.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                      child: Icon(icon, color: AppColors.appTheame, size: 20),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.tealColor))),
-                    AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 300), child: Icon(Icons.keyboard_arrow_down, color: AppColors.tealColor)),
+                    Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.appTheame))),
+                    AnimatedRotation(turns: isExpanded ? 0.5 : 0, duration: const Duration(milliseconds: 300), child: Icon(Icons.keyboard_arrow_down, color: AppColors.appTheame)),
                   ],
                 ),
               ),
@@ -848,14 +853,14 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         maxLines: maxLines,
         inputFormatters: inputFormatters,
         decoration: InputDecoration(
-          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: AppColors.tealColor, size: 20)),
+          prefixIcon: Container(margin: const EdgeInsets.all(8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.appTheame.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: AppColors.appTheame, size: 20)),
           labelText: label,
           hintText: hint,
           filled: true,
           fillColor: Colors.grey.shade50,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.tealColor, width: 2)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.appTheame, width: 2)),
         ),
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) return "This field is required";
@@ -892,9 +897,9 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.tealColor.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? AppColors.appTheame.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? AppColors.tealColor: Colors.grey.shade300, width: isSelected ? 2 : 1),
+          border: Border.all(color: isSelected ? AppColors.appTheame: Colors.grey.shade300, width: isSelected ? 2 : 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -902,10 +907,10 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
             Radio<String>(value: value,
                 groupValue: isSelected ? value : null,
                 onChanged: onChanged,
-                activeColor: AppColors.tealColor),
+                activeColor: AppColors.appTheame),
             const SizedBox(width: 4),
             Text(label, style: TextStyle(fontWeight: FontWeight.w500,
-                color: isSelected ? AppColors.tealColor : Colors.grey.shade700)),
+                color: isSelected ? AppColors.appTheame : Colors.grey.shade700)),
           ],
         ),
       ),
@@ -923,7 +928,7 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
         decoration: InputDecoration(
           prefixIcon: Container(margin:  EdgeInsets.all(8),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: AppColors.tealColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(prefixIcon, color: AppColors.tealColor, size: 20)),
+              decoration: BoxDecoration(color: AppColors.appTheame.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(prefixIcon, color: AppColors.appTheame, size: 20)),
           labelText: label,
           hintText: hint,
           filled: true,
@@ -945,8 +950,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              backgroundColor: isWeb ? _themeColor : Colors.white,
-              foregroundColor: isWeb ? Colors.white : _themeColor,
+              backgroundColor: isWeb ? AppColors.appTheame : Colors.white,
+              foregroundColor: isWeb ? Colors.white : AppColors.appTheame,
               elevation: 8,
             ),
             icon: controller.isLoading.value

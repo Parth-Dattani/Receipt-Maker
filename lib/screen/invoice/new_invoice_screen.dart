@@ -8,8 +8,6 @@ import 'package:intl/intl.dart';
 import '../../controller/controller.dart';
 import 'package:GetYourInvoice/model/item_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../model/model.dart';
 import '../../widgets/widgets.dart';
 import '../../widgets/web_screen_wrapper.dart';
@@ -76,7 +74,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
             ),
             backgroundColor: controller.isEditMode.value
                 ? Colors.orange.shade700
-                : AppColors.tealColor,
+                : AppColors.appTheame,
             foregroundColor: Colors.white,
             actions: [
               Obx(() => controller.isEditMode.value
@@ -85,81 +83,86 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               ),
             ],
           ),
-          body: SafeArea(
-            child: Stack(
-              children: [
-                // ✅ UPDATED: Used LayoutBuilder for Responsive Web UI
-                Obx((){
-                  final _ = controller.isEditMode.value;
-                  final __ = controller.invoiceType.value;
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: AppColors.customeBackground,
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  // ✅ UPDATED: Used LayoutBuilder for Responsive Web UI
+                  Obx((){
+                    final _ = controller.isEditMode.value;
+                    final __ = controller.invoiceType.value;
 
-                  return   LayoutBuilder(
-                    builder: (context, constraints) {
-                      // Check if width is greater than 900 (Web/Tablet landscape)
-                      bool isWeb = constraints.maxWidth > 900;
+                    return   LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Check if width is greater than 900 (Web/Tablet landscape)
+                        bool isWeb = constraints.maxWidth > 900;
 
-                      return Form(
-                        key: controller.formKey,
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.all(isWeb ? 12 : 16),
-                          child: Center(
-                            child: Container(
-                              constraints: BoxConstraints(maxWidth: 1400), // Max width for large monitors
-                              child: isWeb
-                                  ? _buildWebLayout()
-                                  : _buildMobileLayout(),
+                        return Form(
+                          key: controller.formKey,
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.all(isWeb ? 12 : 16),
+                            child: Center(
+                              child: Container(
+                                constraints: BoxConstraints(maxWidth: 1400), // Max width for large monitors
+                                child: isWeb
+                                    ? _buildWebLayout()
+                                    : _buildMobileLayout(),
+                              ),
                             ),
                           ),
+                        );
+                      },
+                    );
+                  }),
+
+                  // Loading Overlay
+                  Obx(() => controller.isLoading.value
+                      ? Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: Center(
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  );
-                }),
-
-                // Loading Overlay
-                Obx(() => controller.isLoading.value
-                    ? Container(
-                  color: Colors.black.withOpacity(0.3),
-                  child: Center(
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                controller.isEditMode.value
-                                    ? Colors.orange.shade700
-                                    : Colors.blue.shade700
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  controller.isEditMode.value
+                                      ? Colors.orange.shade700
+                                      : Colors.blue.shade700
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            controller.isEditMode.value ? 'Updating...' : 'Loading...',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
+                            SizedBox(height: 8),
+                            Text(
+                              controller.isEditMode.value ? 'Updating...' : 'Loading...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
-                    : SizedBox.shrink()),
-              ],
+                  )
+                      : SizedBox.shrink()),
+                ],
+              ),
             ),
           ),
         );
@@ -318,7 +321,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : AppColors.tealColor,
+                          : AppColors.appTheame,
                     ),
                   ),
                   Spacer(),
@@ -362,7 +365,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.tealColor,
+                      color: AppColors.appTheame,
                     ),
                   ),
                   SizedBox(height: 8),
@@ -657,7 +660,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : AppColors.tealColor,
+                          : AppColors.appTheame,
                     ),
                   ),
                   Text(
@@ -679,7 +682,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                             : Icons.person_add,
                         color: controller.isEditMode.value
                             ? Colors.orange.shade700
-                            : AppColors.tealColor,
+                            : AppColors.appTheame,
                       ),
                       tooltip: controller.showCustomerForm.value
                           ? 'Select from existing customers'
@@ -962,7 +965,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : AppColors.tealColor,
+                          : AppColors.appTheame,
                     ),
                   ),
                   Spacer(),
@@ -1631,7 +1634,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         icon: Icon(Icons.add_circle_outline, size: 20),
                         label: Text('add_another_item'.tr),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
+                          backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -1707,7 +1710,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                       fontWeight: FontWeight.bold,
                       color: controller.isEditMode.value
                           ? Colors.orange.shade700
-                          : AppColors.tealColor,
+                          : AppColors.appTheame,
                     ),
                   ),
                   Spacer(),
@@ -1973,7 +1976,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                       // Visual error
                                       focusedBorder: controller.itemsWithStockViolation.contains(index)
                                           ? OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2), borderRadius: BorderRadius.circular(6))
-                                          : OutlineInputBorder(borderSide: BorderSide(color: AppColors.tealColor, width: 2), borderRadius: BorderRadius.circular(6)),
+                                          : OutlineInputBorder(borderSide: BorderSide(color: AppColors.appTheame, width: 2), borderRadius: BorderRadius.circular(6)),
                                       filled: isFromChallan,
                                       fillColor: isFromChallan ? Colors.grey.shade200 : null,
                                     ),
@@ -2057,7 +2060,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         icon: Icon(Icons.add_circle_outline, size: 20),
                         label: Text('add_another_item'.tr),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
+                          backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -2110,7 +2113,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                   fontWeight: FontWeight.bold,
                   color: controller.isEditMode.value
                       ? Colors.orange.shade700
-                      : AppColors.tealColor,
+                      : AppColors.appTheame,
                 ),
               ),
               SizedBox(height: 16),
@@ -2429,7 +2432,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.appTheame)
                   : Colors.black87,
             ),
           ),
@@ -2439,7 +2442,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
               fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               color: isTotal ?
-              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.tealColor)
+              (controller.isEditMode.value ? Colors.orange.shade700 : AppColors.appTheame)
                   : Colors.black87,
             ),
           ),
@@ -2464,7 +2467,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 fontWeight: FontWeight.bold,
                 color: controller.isEditMode.value
                     ? Colors.orange.shade700
-                    : AppColors.tealColor,
+                    : AppColors.appTheame,
               ),
             ),
             SizedBox(height: 16),
@@ -2506,7 +2509,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
   //           style: ElevatedButton.styleFrom(
   //             backgroundColor: controller.isEditMode.value
   //                 ? Colors.orange.shade700
-  //                 : AppColors.tealColor,
+  //                 : AppColors.appTheame,
   //             padding: EdgeInsets.symmetric(vertical: 12),
   //           ),
   //           child: Text(
@@ -2612,7 +2615,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: controller.isEditMode.value
                       ? Colors.orange.shade700
-                      : AppColors.tealColor,
+                      : AppColors.appTheame,
                   padding: EdgeInsets.symmetric(vertical: 12),
                   disabledBackgroundColor: Colors.grey.shade400,
                 ),
