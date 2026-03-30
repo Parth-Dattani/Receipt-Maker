@@ -1561,8 +1561,7 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                             onChanged: (value) {
                                               if (isFromChallan) return;
                                               if (value.isEmpty) {
-                                                controller.itemsWithStockViolation.remove(index);
-                                                controller.violationMessages.remove(index);
+                                                controller.updateItem(index, quantity: 0, rate: item.rate, unit: item.unit);
                                                 return;
                                               }
                                               final normalized = value.replaceAll(',', '.');
@@ -1593,19 +1592,6 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                                 });
                                                 return;
                                               }
-                                              if (availableStock != null && availableStock > 0 && qty > availableStock) {
-                                                controller.itemsWithStockViolation.add(index);
-                                                controller.violationMessages[index] = "${item.itemName}: Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available";
-                                                Get.snackbar("Stock Limit Exceeded", "Only ${availableStock.toStringAsFixed(availableStock % 1 == 0 ? 0 : 2)} ${item.unit ?? ''} available.", snackPosition: SnackPosition.TOP, backgroundColor: Colors.red.shade700, colorText: Colors.white, duration: Duration(seconds: 3), margin: EdgeInsets.all(10));
-                                                Future.delayed(Duration(milliseconds: 100), () {
-                                                  final qtyController = controller.getQuantityController(index);
-                                                  qtyController.text = availableStock! % 1 == 0 ? availableStock.toInt().toString() : availableStock.toString();
-                                                  qtyController.selection = TextSelection.fromPosition(TextPosition(offset: qtyController.text.length));
-                                                });
-                                                return;
-                                              }
-                                              controller.itemsWithStockViolation.remove(index);
-                                              controller.violationMessages.remove(index);
                                               controller.updateItem(index, quantity: qty, rate: item.rate, unit: item.unit);
                                             },
                                           ),
@@ -1990,15 +1976,12 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                         : [DecimalQuantityInputFormatter()],
                                     onChanged: (value) {
                                       if (isFromChallan) return;
-                                      // --- COPIED VALIDATION LOGIC START ---
                                       if (value.isEmpty) {
-                                        controller.itemsWithStockViolation.remove(index);
-                                        controller.violationMessages.remove(index);
+                                        controller.updateItem(index, quantity: 0, rate: item.rate, unit: item.unit);
                                         return;
                                       }
                                       final normalized = value.replaceAll(',', '.');
                                       final isPcsOrBox = item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box";
-                                      // Allow typing 0.2 on mobile: don't validate or update on "0" or "0."
                                       if (!isPcsOrBox && (normalized == '0' || normalized == '0.')) return;
                                       double? qty = double.tryParse(normalized);
                                       if (qty == null || qty <= 0) {
@@ -2006,23 +1989,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                                         controller.violationMessages[index] = "Invalid qty";
                                         return;
                                       }
-                                      // Pcs/box: whole numbers only (same as New Invoice)
                                       if (item.unit?.toLowerCase() == "pcs" || item.unit?.toLowerCase() == "box") {
                                         if (qty % 1 != 0) {
                                           Get.snackbar("Invalid Qty", "Whole numbers only for ${item.unit} items.", snackPosition: SnackPosition.BOTTOM);
                                           return;
                                         }
                                       }
-                                      // Stock check
-                                      if (availableStock != null && qty > availableStock) {
-                                        controller.itemsWithStockViolation.add(index);
-                                        controller.violationMessages[index] = "Max: $availableStock";
-                                      } else {
-                                        controller.itemsWithStockViolation.remove(index);
-                                        controller.violationMessages.remove(index);
-                                      }
                                       controller.updateItem(index, quantity: qty, rate: item.rate, unit: item.unit);
-                                      // --- COPIED VALIDATION LOGIC END ---
                                     },
                                   );
                                 }),
@@ -2558,6 +2531,13 @@ class NewInvoiceScreen extends GetView<NewInvoiceController> {
                         ),
                       ),
                     ],
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: 36, top: 4),
+                    child: Text(
+                      'Stock is zero or quantity is higher than available stock. Fix the lines below or add stock in Inventory — then Save will be enabled.',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
                   ),
                   SizedBox(height: 8),
                   // ✅ List ALL items with violations
