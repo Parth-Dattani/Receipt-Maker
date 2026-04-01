@@ -5,7 +5,6 @@ import '../../../constant/constant.dart';
 import '../../../controller/controller.dart';
 
 
-
 ///new No Duplication
 class DashboardStatsCard extends GetView<DashboardController> {
   static const pageId = "/DashboardStatsCard";
@@ -35,7 +34,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
             Expanded(
               child:
               isTrading
-                  ?
+              ?
               Obx(() => _buildModernCard(
                 title: 'Purchase',
                 value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}',
@@ -43,7 +42,7 @@ class DashboardStatsCard extends GetView<DashboardController> {
                 iconColor: Colors.red,
                 bgColor: Colors.red.shade50,
               ))
-                  :
+            :
               Obx(() => _buildModernCard(
                 title: 'To Receive',
                 value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
@@ -322,4 +321,3 @@ class DashboardStatsCard extends GetView<DashboardController> {
     );
   }
 }
-

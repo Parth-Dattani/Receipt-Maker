@@ -17,8 +17,160 @@ class SplashController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    //goToNext();
+    goToNext();
   }
+
+  // void goToNext() async {
+  //   final startTime = DateTime.now();
+  //   // Show splash for minimum 2 seconds
+  //  // await Future.delayed(const Duration(seconds: 2));
+  //
+  //   // ✅ Public route bypass: allow /order on web without login
+  //   if (kIsWeb) {
+  //     final frag = Uri.base.fragment;
+  //     if (frag.contains('/order')) {
+  //       print("Public order route detected → OrderScreen (no auth)");
+  //       Get.offAllNamed(OrderScreen.pageId);
+  //       return;
+  //     }
+  //   }
+  //
+  //   final user = _auth.currentUser;
+  //
+  //   // ✅ Step 1: User not logged in
+  //   if (user == null) {
+  //     print("No user logged in → AuthScreen");
+  //     Get.offAllNamed(AuthScreen.pageId);
+  //     return;
+  //   }
+  //
+  //   // ✅ Save userId
+  //   await AppConstants.setUserId(user.uid);
+  //   print("Logged-in User: ${user.uid} | Email: ${user.email}");
+  //
+  //   try {
+  //     // ✅ Fetch user doc and companies in parallel (one less round trip)
+  //     final results = await Future.wait([
+  //       _firestore.collection("users").doc(user.uid).get(),
+  //       _firestore
+  //           .collection("users")
+  //           .doc(user.uid)
+  //           .collection("companies")
+  //           .where('isActive', isEqualTo: true)
+  //           .limit(1)
+  //           .get(),
+  //     ]);
+  //
+  //     final userDoc = results[0] as DocumentSnapshot;
+  //     final companiesQuery = results[1] as QuerySnapshot;
+  //
+  //     // Demo status from user doc
+  //     if (userDoc.exists) {
+  //       final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+  //       await AppConstants.setDemoMode(userData['isDemo'] == true);
+  //     } else {
+  //       await AppConstants.setDemoMode(false);
+  //     }
+  //
+  //     // ✅ Step 2: Check if company exists
+  //     if (companiesQuery.docs.isEmpty) {
+  //       print("No company found → CompanyRegistrationScreen");
+  //       Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //       return;
+  //     }
+  //
+  //     final companyDoc = companiesQuery.docs.first;
+  //     final companyId = companyDoc.id;
+  //     final companyData = companyDoc.data() as Map<String, dynamic>;
+  //
+  //     await AppConstants.setCompanyId(companyId);
+  //     print("Company found → ID: $companyId");
+  //
+  //     String fetchedCompanyName = companyData['companyName'] ?? "";
+  //     if (fetchedCompanyName.isNotEmpty) {
+  //       await AppConstants.setCompanyName(fetchedCompanyName);
+  //     }
+  //
+  //     // ✅ Load company settings from already fetched data
+  //     await loadCompanySettingsFromData(companyData);
+  //
+  //     // ✅ Step 3: Check spreadsheet (from same user doc we already have)
+  //     if (!userDoc.exists) {
+  //       print("User document missing → CompanyRegistrationScreen");
+  //       Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //       return;
+  //     }
+  //
+  //     final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+  //     // Resolve spreadsheet for active financial year (each FY has separate sheet)
+  //     String? resolvedSpreadsheetId = userData['spreadsheetId'] as String?;
+  //     String? activeFy = userData['activeFy'] as String?;
+  //     final spreadsheetIdsByFy = userData['spreadsheetIdsByFy'];
+  //     Map<String, String>? fyMap;
+  //     if (spreadsheetIdsByFy is Map) {
+  //       fyMap = Map<String, String>.from(
+  //         spreadsheetIdsByFy.map((k, v) => MapEntry(k.toString(), v?.toString() ?? '')),
+  //       );
+  //     }
+  //     if (fyMap != null && fyMap.isNotEmpty && activeFy != null && activeFy.isNotEmpty) {
+  //       resolvedSpreadsheetId = fyMap[activeFy] ?? resolvedSpreadsheetId;
+  //     }
+  //     // Migrate: if we have sheet but no FY data, set current FY and one entry
+  //     if (resolvedSpreadsheetId != null &&
+  //         resolvedSpreadsheetId.isNotEmpty &&
+  //         (activeFy == null || activeFy.isEmpty || fyMap == null || fyMap.isEmpty)) {
+  //       final currentFy = FinancialYearHelper.currentFy();
+  //       activeFy = currentFy;
+  //       fyMap = {currentFy: resolvedSpreadsheetId};
+  //       try {
+  //         await _firestore.collection('users').doc(user.uid).update({
+  //           'activeFy': currentFy,
+  //           'spreadsheetIdsByFy': {currentFy: resolvedSpreadsheetId},
+  //         });
+  //       } catch (_) {}
+  //     }
+  //
+  //     final spreadsheetId = resolvedSpreadsheetId;
+  //
+  //     if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
+  //       await AppConstants.setSpreadsheetId(spreadsheetId);
+  //       if (activeFy != null && activeFy.isNotEmpty) {
+  //         await AppConstants.setActiveFy(activeFy);
+  //       }
+  //
+  //       print("✅ Spreadsheet found → $spreadsheetId${activeFy != null ? " (FY $activeFy)" : ""}");
+  //
+  //       // Ensure Item, Customer, Invoice etc. tabs exist (required before Dashboard)
+  //       try {
+  //         await GoogleSheetService.ensureSheetsExist();
+  //       } catch (e) {
+  //         print("⚠️ ensureSheetsExist on splash: $e");
+  //       }
+  //
+  //       // Only test access before navigate; heavy validation runs in background
+  //       final hasAccess = await GoogleSheetService.testSpreadsheetAccess();
+  //       if (!hasAccess) {
+  //         _printSheetsAccessInstructions();
+  //         return;
+  //       }
+  //
+  //       // Run full validation in background (don't block opening Dashboard)
+  //       _runSheetValidationInBackground();
+  //
+  //       // Go to dashboard immediately
+  //       print("✅ Navigating to Dashboard");
+  //       Get.offAllNamed(DashboardScreen.pageId);
+  //     }
+  //     else {
+  //       print("Company exists but no Spreadsheet → CompanyRegistrationScreen");
+  //       Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //     }
+  //
+  //   } catch (e) {
+  //     print("Error checking company or user data: $e");
+  //     Get.offAllNamed(CompanyRegistrationScreen.pageId);
+  //   }
+  // }
 
   void goToNext() async {
     final startTime = DateTime.now();
