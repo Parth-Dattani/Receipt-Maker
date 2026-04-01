@@ -52,7 +52,7 @@ class LoginForm extends GetView<AuthController> {
                       child: Checkbox(
                         value: controller.rememberMe.value,
                         onChanged: (v) => controller.rememberMe.value = v ?? false,
-                        activeColor: AppColors.tealColor,
+                        activeColor: AppColors.appTheame,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -212,7 +212,7 @@ class LoginForm extends GetView<AuthController> {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.tealColor,
+          backgroundColor: AppColors.appTheame,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
