@@ -2,6 +2,7 @@ import 'package:GetYourInvoice/screen/auth/widgets/widget.dart';
 import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 
 
@@ -14,7 +15,9 @@ class AuthScreen extends GetView<AuthController> {
     final bool isWeb = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
-      backgroundColor: isWeb ? const Color(0xFF004D40) : Colors.grey.shade100,
+      backgroundColor: isWeb
+          ? AppColors.appTheame
+          : Colors.grey.shade100,
       body: Obx(() => Stack(
         children: [
           // ફક્ત વેબ હોય તો જ નવું લેઆઉટ, બાકી તારો ઓરિજિનલ મોબાઈલ વ્યુ
@@ -23,7 +26,7 @@ class AuthScreen extends GetView<AuthController> {
           if (controller.isLoading.value)
             Container(
               color: Colors.black.withOpacity(0.4),
-              child: Center(child: CircularProgressIndicator(color: AppColors.tealColor)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.appTheame)),
             ),
         ],
       )),
@@ -51,7 +54,7 @@ class AuthScreen extends GetView<AuthController> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Image.asset(
-                        'assets/images/app_logo.png',
+                        ImagePath.splashImage,
                         height: 100,
                         width: 100,
                         fit: BoxFit.contain,
@@ -192,7 +195,7 @@ class AuthScreen extends GetView<AuthController> {
                             const EdgeInsets.symmetric(horizontal: 6),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            foregroundColor: AppColors.tealColor,
+                            foregroundColor: AppColors.appTheame,
                           ),
                           child: const Text("Register",
                               style: TextStyle(fontWeight: FontWeight.w600)),
@@ -431,7 +434,7 @@ class AuthScreen extends GetView<AuthController> {
                           const EdgeInsets.symmetric(horizontal: 6),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          foregroundColor: AppColors.tealColor,
+                          foregroundColor: AppColors.appTheame,
                         ),
                         child: const Text("Login",
                             style: TextStyle(fontWeight: FontWeight.w600)),
@@ -656,7 +659,7 @@ class AuthScreen extends GetView<AuthController> {
           children: [
             const SizedBox(height: 20),
             Image.asset(
-              'assets/images/app_logo.png',
+              ImagePath.splashImage,
               height: 80,
               width: 80,
               fit: BoxFit.contain,

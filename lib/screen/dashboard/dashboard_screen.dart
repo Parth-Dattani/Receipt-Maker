@@ -39,6 +39,16 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
+  Widget _buildBackgroundWrapper({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: AppColors.customeBackground,
+      child: SafeArea(child: child), // SafeArea aahi muki devu vadhare saru
+    );
+  }
+
+
   // ===========================================================================
   // 📱 MOBILE LAYOUT (Horizontal Cards)
   // ===========================================================================
@@ -75,92 +85,94 @@ class DashboardScreen extends GetView<DashboardController> {
           )),
         ],
       ),
-        body: SafeArea(
-        child: Obx(() {
-          if (controller.showInitialShimmer) {
-            return const DashboardShimmer();
-          }
-          return RefreshIndicator(
-            onRefresh: () async => await controller.refreshDashboard(),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 16),
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Welcome Section
-                  _buildWelcomeBanner(),
-                  const SizedBox(height: 16),
-
-                  _buildCashBoxCard(),
-                  const SizedBox(height: 20),
-
-                  // Statistics Cards
-                  DashboardStatsCard(),
-                  const SizedBox(height: 20),
-
-                  // Quick Actions
-                  QuickActionsGrid(),
-                  const SizedBox(height: 20),
-
-                  // ✅ ROW 1: Invoice Status & Purchase Status
-                  IntrinsicHeight( // આનાથી બંને કાર્ડની હાઈટ સરખી થશે
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+        body: _buildBackgroundWrapper(
+          child: SafeArea(
+          child: Obx(() {
+            if (controller.showInitialShimmer) {
+              return const DashboardShimmer();
+            }
+            return RefreshIndicator(
+              onRefresh: () async => await controller.refreshDashboard(),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 16),
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome Section
+                    _buildWelcomeBanner(),
+                    const SizedBox(height: 16),
+          
+                    _buildCashBoxCard(),
+                    const SizedBox(height: 20),
+          
+                    // Statistics Cards
+                    DashboardStatsCard(),
+                    const SizedBox(height: 20),
+          
+                    // Quick Actions
+                    QuickActionsGrid(),
+                    const SizedBox(height: 20),
+          
+                    // ✅ ROW 1: Invoice Status & Purchase Status
+                    IntrinsicHeight( // આનાથી બંને કાર્ડની હાઈટ સરખી થશે
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Invoice Status
+                          Expanded(
+                            child: _buildInvoiceStatusCard(),
+                          ),
+                          const SizedBox(width: 12),
+                          // Purchase Status
+                          Expanded(
+                            child: _buildPurchaseStatusCard(),
+                          ),
+                        ],
+                      ),
+                    ),
+          
+                    const SizedBox(height: 16),
+          
+                    // ✅ ROW 2: Summary Report & Export Data
+                    Row(
                       children: [
-                        // Invoice Status
+                        // Summary Report
                         Expanded(
-                          child: _buildInvoiceStatusCard(),
+                          child: _buildMobileReportCard(
+                            icon: Icons.summarize,
+                            title: "Summary Report",
+                            subtitle: "Monthly stats",
+                            color: Colors.teal,
+                            onTap: () => showReportDialog(context),
+                          ),
                         ),
                         const SizedBox(width: 12),
-                        // Purchase Status
+                        // Export Data
                         Expanded(
-                          child: _buildPurchaseStatusCard(),
+                          child: _buildMobileReportCard(
+                            icon: Icons.file_download,
+                            title: "Export Data",
+                            subtitle: "Excel format",
+                            color: Colors.green,
+                            onTap: () => showExportDialog(context),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ✅ ROW 2: Summary Report & Export Data
-                  Row(
-                    children: [
-                      // Summary Report
-                      Expanded(
-                        child: _buildMobileReportCard(
-                          icon: Icons.summarize,
-                          title: "Summary Report",
-                          subtitle: "Monthly stats",
-                          color: Colors.teal,
-                          onTap: () => showReportDialog(context),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Export Data
-                      Expanded(
-                        child: _buildMobileReportCard(
-                          icon: Icons.file_download,
-                          title: "Export Data",
-                          subtitle: "Excel format",
-                          color: Colors.green,
-                          onTap: () => showExportDialog(context),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Recent Invoices
-                  RecentInvoicesCard(),
-                  const SizedBox(height: 80), // Bottom padding
-                ],
+          
+                    const SizedBox(height: 20),
+          
+                    // Recent Invoices
+                    RecentInvoicesCard(),
+                    const SizedBox(height: 80), // Bottom padding
+                  ],
+                ),
               ),
-            ),
-          );
-        }),
-      ),
+            );
+          }),
+                ),
+        ),
       drawer: buildDrawer(),
     );
   }
@@ -179,120 +191,122 @@ class DashboardScreen extends GetView<DashboardController> {
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Row(
-        children: [
-          // 1. Shared sidebar (same on every web screen)
-          WebAppSidebar(currentRoute: DashboardScreen.pageId),
-
-          // 2. Main Content
-          Expanded(
-            child: Column(
-              children: [
-                // Header
-                _buildWebHeaderWithWelcome(),
-
-                // Content Area
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 0),
-                    child: Obx(() {
-                      if (controller.showInitialShimmer) {
-                        return const DashboardShimmer(isWeb: true);
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // ------------------------------------------------
-                              // LEFT COLUMN - Main Content (Flex 3)
-                              // ------------------------------------------------
-                              Expanded(
-                                flex: 3,
-                                child: Column(
-                                  children: [
-                                    // 1. Financial Metrics
-                                    _buildFinancialMetricsWithStatus(),
-
-                                    const SizedBox(height: 16),
-
-                                    // 2. Recent Invoices (Removed Status Cards from here)
-                                    RecentInvoicesCard(),
-                                  ],
+      body: _buildBackgroundWrapper(
+        child: Row(
+          children: [
+            // 1. Shared sidebar (same on every web screen)
+            WebAppSidebar(currentRoute: DashboardScreen.pageId),
+        
+            // 2. Main Content
+            Expanded(
+              child: Column(
+                children: [
+                  // Header
+                  _buildWebHeaderWithWelcome(),
+        
+                  // Content Area
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 0),
+                      child: Obx(() {
+                        if (controller.showInitialShimmer) {
+                          return const DashboardShimmer(isWeb: true);
+                        }
+        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ------------------------------------------------
+                                // LEFT COLUMN - Main Content (Flex 3)
+                                // ------------------------------------------------
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    children: [
+                                      // 1. Financial Metrics
+                                      _buildFinancialMetricsWithStatus(),
+        
+                                      const SizedBox(height: 16),
+        
+                                      // 2. Recent Invoices (Removed Status Cards from here)
+                                      RecentInvoicesCard(),
+                                    ],
+                                  ),
                                 ),
-                              ),
-
-                              const SizedBox(width: 16),
-
-                              // ------------------------------------------------
-                              // RIGHT COLUMN - Sidebar Widgets (Flex 1)
-                              // ------------------------------------------------
-                              Expanded(
-                                flex: 1,
-                                child: Column(
-                                  children: [
-                                    // 1. Quick Actions
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          )
-                                        ],
+        
+                                const SizedBox(width: 16),
+        
+                                // ------------------------------------------------
+                                // RIGHT COLUMN - Sidebar Widgets (Flex 1)
+                                // ------------------------------------------------
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    children: [
+                                      // 1. Quick Actions
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Colors.black12,
+                                              blurRadius: 4,
+                                              offset: Offset(0, 2),
+                                            )
+                                          ],
+                                        ),
+                                        child: QuickActionsGrid(),
                                       ),
-                                      child: QuickActionsGrid(),
-                                    ),
-
-                                    const SizedBox(height: 16),
-
-                                    // 2. Invoice Status Card (Text Based)
-                                    _buildInvoiceStatusCard(),
-
-                                    const SizedBox(height: 16),
-
-                                    // ✅ 3. NEW: Purchase Status Card (Added Below Invoice Status)
-                                    _buildPurchaseStatusCard(),
-
-                                    const SizedBox(height: 16),
-
-                                    // 4. Reports
-                                    _buildWebReportCard(
-                                      icon: Icons.summarize,
-                                      title: "Summary Report",
-                                      subtitle: "Get monthly summary",
-                                      onTap: () => showReportDialog(context),
-                                    ),
-
-                                    const SizedBox(height: 12),
-
-                                    // 5. Export Data
-                                    _buildWebReportCard(
-                                      icon: Icons.file_download,
-                                      title: "Export Data",
-                                      subtitle: "Excel format",
-                                      onTap: () => showExportDialog(context),
-                                    ),
-                                  ],
+        
+                                      const SizedBox(height: 16),
+        
+                                      // 2. Invoice Status Card (Text Based)
+                                      _buildInvoiceStatusCard(),
+        
+                                      const SizedBox(height: 16),
+        
+                                      // ✅ 3. NEW: Purchase Status Card (Added Below Invoice Status)
+                                      _buildPurchaseStatusCard(),
+        
+                                      const SizedBox(height: 16),
+        
+                                      // 4. Reports
+                                      _buildWebReportCard(
+                                        icon: Icons.summarize,
+                                        title: "Summary Report",
+                                        subtitle: "Get monthly summary",
+                                        onTap: () => showReportDialog(context),
+                                      ),
+        
+                                      const SizedBox(height: 12),
+        
+                                      // 5. Export Data
+                                      _buildWebReportCard(
+                                        icon: Icons.file_download,
+                                        title: "Export Data",
+                                        subtitle: "Excel format",
+                                        onTap: () => showExportDialog(context),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }),
+                              ],
+                            ),
+                          ],
+                        );
+                      }),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
