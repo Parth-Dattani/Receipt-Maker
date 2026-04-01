@@ -30,10 +30,14 @@ class CustomerListScreen extends GetView<CustomerListController> {
         height: double.infinity,
         decoration: AppColors.customeBackground,
         child: SafeArea(
+          // AA OBX LEVEL NE BAHAR LAI AAVO
           child: Obx(() {
             if (controller.isLoading.value) {
               return _buildShimmerLoader(context);
             }
+
+            // Have jyare enableOrderFeature.value update thase,
+            // tyre aa Obx automatic layoutBuilder ne re-run karse
             return LayoutBuilder(
               builder: (context, constraints) {
                 if (constraints.maxWidth > 900) {
@@ -65,7 +69,8 @@ class CustomerListScreen extends GetView<CustomerListController> {
       ),
       title: isWeb
           ? Row(children: [
-        Text('customers'.tr,
+        Text(AppConstants.businessType == "Trading" ?
+            'customers'.tr : 'clients'.tr,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
         if (kIsWeb && Get.isRegistered<DashboardController>()) ...[
           const Spacer(),
@@ -76,7 +81,9 @@ class CustomerListScreen extends GetView<CustomerListController> {
           }),
         ],
       ])
-          : Text('customers'.tr,
+          : Text(
+          AppConstants.businessType == "Trading" ?
+          'customers'.tr : 'clients'.tr,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
       centerTitle: !isWeb,
       actions: [
@@ -114,7 +121,13 @@ class CustomerListScreen extends GetView<CustomerListController> {
         _buildSearchBar(isWeb: false),
         _buildCustomerCountHeaderMobile(),
         _buildAddButtonMobile(),
-        _buildPriceToggleBanner(),   // ← Price toggle banner
+        // CONDITION: Jo controller ma showPriceToCustomer true hoi to j banner dikhay
+        Obx(() {
+          if (controller.enableOrderFeature.value) {
+            return _buildPriceToggleBanner();
+          }
+          return const SizedBox.shrink();
+        }),// ← Price toggle banner
         const SizedBox(height: 8),
         Expanded(child: _buildCustomerListMobile(context)),
       ],
@@ -165,8 +178,8 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 ),
                 Text(
                   controller.showPriceToCustomer.value
-                      ? 'Customers can see prices'
-                      : 'Prices hidden from customers',
+                      ? '${controller.userLabel.capitalizeFirst}s can see prices'
+                      : 'Prices hidden from ${controller.userLabel}s',
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
               ],
@@ -218,7 +231,11 @@ class CustomerListScreen extends GetView<CustomerListController> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('total_customers'.tr, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      Text(
+                          AppConstants.businessType == "Trading"?
+                          'total_customers'.tr :
+                          'total_clients'.tr
+                          , style: const TextStyle(color: Colors.white70, fontSize: 13)),
                       Obx(() => Text('${controller.filteredCustomerList.length}',
                           style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold))),
                     ]),
@@ -228,9 +245,19 @@ class CustomerListScreen extends GetView<CustomerListController> {
               const SizedBox(height: 20),
 
               // ── Web Price Toggle ──
-              _buildPriceToggleBanner(),
-
-              const SizedBox(height: 20),
+              // CONDITION: Web mate pan same logic
+              // ✅ FIXED: Khali Feature check karo
+              Obx(() {
+                if (controller.enableOrderFeature.value) {
+                  return Column(
+                    children: [
+                      _buildPriceToggleBanner(),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
               const Text("Search & Filter", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
               const SizedBox(height: 12),
               _buildSearchBar(isWeb: true),
@@ -496,7 +523,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
         const SizedBox(width: 16),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('total_customers'.tr,
+            Text(
+                AppConstants.businessType == "Trading"?
+                'total_customers'.tr :
+                'total_clients'.tr,
                 style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16, fontWeight: FontWeight.w500)),
             const SizedBox(height: 4),
             Text('${controller.filteredCustomerList.length}',
@@ -517,7 +547,10 @@ class CustomerListScreen extends GetView<CustomerListController> {
       child: ElevatedButton.icon(
         onPressed: controller.navigateToAddNewCustomer,
         icon: const Icon(Icons.person_add, color: Colors.white),
-        label: Text('add_new_customer'.tr,
+        label: Text(
+            AppConstants.businessType == "Trading" ?
+            'add_new_customer'.tr :
+            'add_new_client'.tr,
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.appTheame,
@@ -665,7 +698,7 @@ class CustomerListScreen extends GetView<CustomerListController> {
           ElevatedButton(
             onPressed: controller.navigateToAddNewCustomer,
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
-            child: const Text("Add Customer", style: TextStyle(color: Colors.white)),
+            child:  Text("Add ${controller.userLabel}", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -681,3 +714,4 @@ class CustomerListScreen extends GetView<CustomerListController> {
                 child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.appTheame))));
   }
 }
+

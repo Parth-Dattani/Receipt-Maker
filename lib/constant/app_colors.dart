@@ -53,8 +53,8 @@ class AppColors{
   static Color appColor2 = const Color(0xff08002A);
 
   ///Invice App Colors
-  static Color appTheame2 = const Color(0xFF008080);
-  static Color appTheame = const Color(0xff3B3B98);
+  static Color appTheame = const Color(0xFF008080);
+  static Color appTheame2 = const Color(0xff3B3B98);
 
   static const Color bgGradientStart = Color(0xFFE0E7FF);
   static const Color bgGradientEnd = Color(0xFFD1D5FF);
@@ -64,7 +64,12 @@ class AppColors{
     gradient: LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [bgGradientStart, whiteColor, bgGradientEnd],
+      colors: [
+       //bgGradientStart,
+        whiteColor,
+        whiteColor,
+      //  bgGradientEnd
+      ],
     ),
   );
 }

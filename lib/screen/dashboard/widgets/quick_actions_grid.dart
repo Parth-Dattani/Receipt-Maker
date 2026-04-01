@@ -65,14 +65,16 @@ class QuickActionsGrid extends GetView<DashboardController> {
               ),
             _buildActionCard(
               icon: Icons.people,
-              label: 'customers'.tr,
+                label: AppConstants.businessType == "Trading"
+                  ? 'customers'.tr : 'clients'.tr,
               color: Colors.purple,
               onTap: controller.navigateToCustomers,
               isWeb: isWeb,
             ),
             _buildActionCard(
               icon: Icons.production_quantity_limits,
-              label: 'items'.tr,
+              label:  AppConstants.businessType == "Trading"
+                  ? 'items'.tr : 'services'.tr,
               color: Colors.orange,
               onTap: controller.navigateToItems,
               isWeb: isWeb,
