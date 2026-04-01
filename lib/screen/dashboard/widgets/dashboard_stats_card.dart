@@ -1,6 +1,7 @@
 import 'package:GetYourInvoice/utils/calculations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../constant/constant.dart';
 import '../../../controller/controller.dart';
 
 
@@ -10,6 +11,8 @@ class DashboardStatsCard extends GetView<DashboardController> {
 
   @override
   Widget build(BuildContext context) {
+    bool isTrading = AppConstants.businessType == "Trading";
+
     return Column(
       children: [
         // ✅ FINANCIAL METRICS
@@ -29,72 +32,89 @@ class DashboardStatsCard extends GetView<DashboardController> {
             ),
             SizedBox(width: 12),
             Expanded(
-              child: Obx(() => _buildModernCard(
+              child:
+              isTrading
+              ?
+              Obx(() => _buildModernCard(
                 title: 'Purchase',
                 value: '₹${AppUtil.formatCurrency(controller.totalPurchaseAmount.value)}',
                 icon: Icons.remove_circle_outline,
                 iconColor: Colors.red,
                 bgColor: Colors.red.shade50,
-              )),
-            ),
-          ],
-        ),
-
-        SizedBox(height: 12),
-
-        Row(
-          children: [
-            Expanded(
-              child: Obx(() => _buildModernCard(
+              ))
+            :
+              Obx(() => _buildModernCard(
                 title: 'To Receive',
                 value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
                 icon: Icons.download_rounded,
                 iconColor: Colors.orange,
                 bgColor: Colors.orange.shade50,
-              )),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Obx(() => _buildModernCard(
-                title: 'To Pay',
-                value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}',
-                icon: Icons.upload_rounded,
-                iconColor: Colors.deepOrange,
-                bgColor: Colors.deepOrange.shade50,
-              )),
+              ))
+              ,
             ),
           ],
         ),
+
+        // Jo Trading hoy to j Biji Row batavvi
+        if (isTrading) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => _buildModernCard(
+                  title: 'To Receive',
+                  value: '₹${AppUtil.formatCurrency(controller.pendingAmount.value)}',
+                  icon: Icons.download_rounded,
+                  iconColor: Colors.orange,
+                  bgColor: Colors.orange.shade50,
+                )),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() => _buildModernCard(
+                  title: 'To Pay',
+                  value: '₹${AppUtil.formatCurrency(controller.pendingPurchaseAmount.value)}',
+                  icon: Icons.upload_rounded,
+                  iconColor: Colors.deepOrange,
+                  bgColor: Colors.deepOrange.shade50,
+                )),
+              ),
+            ],
+          ),
+        ],
 
         SizedBox(height: 20),
 
-        // ✅ TRANSACTIONS COUNT
-        _buildSectionTitle('Transactions'),
-        SizedBox(height: 12),
+        // ✅ TRANSACTIONS COUNT - Aakho section khali Trading mate
+        if (isTrading) ...[
+          const SizedBox(height: 20),
+          _buildSectionTitle('Transactions'),
+          const SizedBox(height: 12),
 
-        Row(
-          children: [
-            Expanded(
-              child: Obx(() => _buildCountCard(
-                title: 'Invoices',
-                count: controller.invoiceList.length,
-                overdue: controller.overdueCount.value,
-                icon: Icons.receipt_rounded,
-                color: Colors.blue,
-              )),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Obx(() => _buildCountCard(
-                title: 'Orders',
-                count: controller.totalPurchases.value,
-                overdue: controller.overduePurchases.value,
-                icon: Icons.shopping_bag_rounded,
-                color: Colors.indigo,
-              )),
-            ),
-          ],
-        ),
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => _buildCountCard(
+                  title: 'Invoices',
+                  count: controller.invoiceList.length,
+                  overdue: controller.overdueCount.value,
+                  icon: Icons.receipt_rounded,
+                  color: Colors.blue,
+                )),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() => _buildCountCard(
+                  title: 'Orders',
+                  count: controller.totalPurchases.value,
+                  overdue: controller.overduePurchases.value,
+                  icon: Icons.shopping_bag_rounded,
+                  color: Colors.indigo,
+                )),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

@@ -123,11 +123,13 @@ class DashboardScreen extends GetView<DashboardController> {
                           Expanded(
                             child: _buildInvoiceStatusCard(),
                           ),
-                          const SizedBox(width: 12),
+                          AppConstants.businessType == "Trading"
+                          ? const SizedBox(width: 12) : Container(),
                           // Purchase Status
-                          Expanded(
+                          AppConstants.businessType == "Trading"
+                          ? Expanded(
                             child: _buildPurchaseStatusCard(),
-                          ),
+                          ) : Container(),
                         ],
                       ),
                     ),
@@ -2132,7 +2134,10 @@ class DashboardScreen extends GetView<DashboardController> {
                   ),
                   if (AppConstants.businessType == "Trading")
                     _buildMenuItem(icon: Icons.assessment, iconColor: Colors.purple.shade600, title: "Stock Report", onTap: () { Get.back(); controller.navigateToStockReport(); }),
-                  _buildMenuItem(icon: Icons.people, iconColor: Colors.orange.shade600, title: "customers".tr, onTap: () { Get.back(); controller.navigateToCustomerList(); }),
+                  _buildMenuItem(icon: Icons.people, iconColor: Colors.orange.shade600,
+                      title:
+                      AppConstants.businessType == "Trading" ?
+                      "customers".tr :  "clients".tr, onTap: () { Get.back(); controller.navigateToCustomerList(); }),
                   _buildMenuItem(icon: Icons.account_balance_wallet, iconColor: Colors.indigo.shade600, title: "payment".tr, onTap: () { Get.back(); controller.navigateToPaymentDetails(); }),
                   Obx(() => AppConstants.enableCustomerOrderFeature.value
                       ?   _buildMenuItem(
