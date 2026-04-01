@@ -23,6 +23,7 @@ class CustomerListController extends BaseController {
   var customerCount = 0.obs;
   var searchQuery = ''.obs;
   var showInactiveCustomers = false.obs;
+  var enableOrderFeature = false.obs;
 
   // Pagination variables
   var currentPage = 1.obs;
@@ -32,17 +33,28 @@ class CustomerListController extends BaseController {
   var hasMore = true.obs;
 
   // ── Price Toggle ──
-  var showPriceToCustomer = true.obs;
+  var showPriceToCustomer = false.obs;
   String _currentCompanyId = '';
-
+  var showPriceToCustomerInCompany = false.obs;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void onInit() {
     super.onInit();
-    loadCustomers();
-    _loadPriceSetting();
+    _initData();
   }
+
+  @override
+  void onReady() {
+    super.onReady();
+    _loadPriceSetting(); // Screen ready thay tyre data fetch karo
+  }
+
+  Future<void> _initData() async {
+    await _loadPriceSetting(); // Pehla settings load thava dyo
+    await loadCustomers();    // Pachi customers
+  }
+
 
   /// Computed getter for filtered customers based on active/inactive filter
   List<Map<String, dynamic>> get filteredCustomerList {
@@ -54,9 +66,45 @@ class CustomerListController extends BaseController {
     ).toList();
   }
 
+  // Controller ni andar
+  String get userLabel => AppConstants.businessType == "Trading" ? "customer" : "client";
+
   // ─────────────────────────────────────────────
   // Price Setting — Load & Toggle
   // ─────────────────────────────────────────────
+  // Future<void> _loadPriceSetting() async {
+  //   try {
+  //     final user = _auth.currentUser;
+  //     if (user == null) return;
+  //
+  //     _currentCompanyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
+  //     if (_currentCompanyId.isEmpty) return;
+  //
+  //     final doc = await FirebaseFirestore.instance
+  //         .collection('users')
+  //         .doc(user.uid)
+  //         .collection('companies')
+  //         .doc(_currentCompanyId)
+  //         .get();
+  //
+  //     if (doc.exists) {
+  //       // 1. AA MAIN CONDITION CHE: Firestore mathi field read karo
+  //       // Jo field exist na karti hoi to default 'false' rakho
+  //       bool priceSetting = doc.data()?['showPriceToCustomer'] as bool? ?? false;
+  //
+  //       // 2. Banner ne hide/show karva valo variable update karo
+  //       showPriceToCustomerInCompany.value = priceSetting;
+  //
+  //       // 3. Switch ni state update karo
+  //       showPriceToCustomer.value = priceSetting;
+  //     }
+  //
+  //     print('💰 showPriceToCustomer: ${showPriceToCustomer.value}');
+  //   } catch (e) {
+  //     print('❌ loadPriceSetting: $e');
+  //   }
+  // }
+
   Future<void> _loadPriceSetting() async {
     try {
       final user = _auth.currentUser;
@@ -72,10 +120,19 @@ class CustomerListController extends BaseController {
           .doc(_currentCompanyId)
           .get();
 
-      showPriceToCustomer.value =
-          doc.data()?['showPriceToCustomer'] as bool? ?? true;
+      if (doc.exists) {
+        final data = doc.data();
 
-      print('💰 showPriceToCustomer: ${showPriceToCustomer.value}');
+        // Value set karo
+        enableOrderFeature.value = data?['enableCustomerOrderFeature'] as bool? ?? false;
+        bool priceSetting = data?['showPriceToCustomer'] as bool? ?? false;
+        showPriceToCustomerInCompany.value = priceSetting;
+        showPriceToCustomer.value = priceSetting;
+
+        // 🔥 MAIN FIX: Aa banne line refresh karse
+        enableOrderFeature.refresh();
+        update(); // GetX ne force update karavo
+      }
     } catch (e) {
       print('❌ loadPriceSetting: $e');
     }
@@ -86,20 +143,22 @@ class CustomerListController extends BaseController {
       final user = _auth.currentUser;
       if (user == null) return;
 
-      if (_currentCompanyId.isEmpty) {
-        _currentCompanyId = await sharedPreferencesHelper.getPrefData("CompanyId") ?? "";
-      }
+      // New Value decide karo
+      bool newValue = !showPriceToCustomer.value;
 
-      // Toggle locally first (instant UI)
-      showPriceToCustomer.value = !showPriceToCustomer.value;
+      // 1. UI update karo instant (Switch mate)
+      showPriceToCustomer.value = newValue;
 
-      // Save to Firestore
+      // 2. Firestore ma update karo
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('companies')
           .doc(_currentCompanyId)
-          .update({'showPriceToCustomer': showPriceToCustomer.value});
+          .update({'showPriceToCustomer': newValue});
+
+      // 3. Variable update karo (Jethi banner hide/show thay sake, optional jo tame hide karva mangta ho to)
+      // showPriceToCustomerInCompany.value = newValue;
 
       Get.snackbar(
         showPriceToCustomer.value ? '💰 Price Visible' : '🙈 Price Hidden',

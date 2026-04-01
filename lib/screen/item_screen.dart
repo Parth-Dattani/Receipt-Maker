@@ -61,8 +61,9 @@ class ItemScreen extends GetView<ItemController> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
         foregroundColor: Colors.white,
-        title: const Text(
-          "Items Management",
+        title: Text(
+          AppConstants.businessType == "Trading"
+          ? "Items Management" :  "Service Management ",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
         ),
         centerTitle: true,
@@ -98,7 +99,9 @@ class ItemScreen extends GetView<ItemController> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.appTheame,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Add Item", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        label: Text(
+            AppConstants.businessType == "Trading"
+            ? "Add Item" : "Ad Service", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         onPressed: () => _showAddItemDialog(context),
       ),
     );
@@ -389,9 +392,18 @@ class ItemScreen extends GetView<ItemController> {
                 child: Form(
                   key: formKey,
                   child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Add New Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isAdding ? null : () => Navigator.pop(context))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text(
+                          AppConstants.businessType == "Trading"
+                          ? "Add New Item"
+                          : "Add New Service",
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isAdding ? null : () => Navigator.pop(context))]),
                     const SizedBox(height: 20),
-                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
+                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText:
+                    AppConstants.businessType == "Trading" ?
+                    "Item Name *" :
+                    "Service Name *",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
                     const SizedBox(height: 16),
 
                     // ✅ BEST UX: purchase Price & Sell Price Side-by-Side (Safe for Dialog)
@@ -449,7 +461,11 @@ class ItemScreen extends GetView<ItemController> {
                           Navigator.pop(context);
                         } catch (e) { setState(() => isAdding = false); }
                       }
-                    }, child: isAdding ? const CircularProgressIndicator(color: Colors.white) : const Text("Add Item", style: TextStyle(fontSize: 16, color: Colors.white))))
+                    }, child: isAdding ? const CircularProgressIndicator(color: Colors.white) :  Text(
+                        AppConstants.businessType == "Trading"
+                        ? "Add Item"
+                        : "Add Service"
+                        , style: TextStyle(fontSize: 16, color: Colors.white))))
                   ]),
                 ),
               ),
@@ -490,9 +506,16 @@ class ItemScreen extends GetView<ItemController> {
                 child: Form(
                   key: formKey,
                   child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Edit Item", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isSaving ? null : () => Navigator.pop(context))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(  AppConstants.businessType == "Trading"
+                              ? "Edit Item" : "Edit Service",
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)), IconButton(icon: Icon(Icons.close, color: AppColors.appTheame), onPressed: isSaving ? null : () => Navigator.pop(context))]),
                     const SizedBox(height: 20),
-                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText: "Item Name *", border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
+                    TextFormField(controller: nameCtrl, decoration: InputDecoration(labelText:
+                    AppConstants.businessType == "Trading" ?
+                    "Item Name *" : "Service Name *",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))), validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null),
                     const SizedBox(height: 16),
 
                     // ✅ BEST UX: purchase Price & Sell Price Side-by-Side
@@ -542,7 +565,9 @@ class ItemScreen extends GetView<ItemController> {
                     const SizedBox(height: 16),
                     Row(children: [const Text("Status: "), Switch(value: isActive, onChanged: (value) => setState(() => isActive = value), activeColor: AppColors.appTheame), Text(isActive ? "Active" : "Inactive", style: TextStyle(color: isActive ? Colors.green : Colors.red))]),
                     const SizedBox(height: 24),
-                    SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), onPressed: isSaving ? null : () async {
+                    SizedBox(width: double.infinity,
+                        child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                            onPressed: isSaving ? null : () async {
                       if (formKey.currentState!.validate()) {
                         setState(() => isSaving = true);
                         try {
@@ -550,7 +575,11 @@ class ItemScreen extends GetView<ItemController> {
                           Navigator.pop(context);
                         } catch (e) { setState(() => isSaving = false); }
                       }
-                    }, child: isSaving ? const CircularProgressIndicator(color: Colors.white) : const Text("Update Item", style: TextStyle(fontSize: 16, color: Colors.white))))
+                    },
+                            child: isSaving ? const CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                AppConstants.businessType == "Trading"
+                                ? "Update Item" : "Update Service", style: TextStyle(fontSize: 16, color: Colors.white))))
                   ]),
                 ),
               ),
