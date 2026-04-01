@@ -197,8 +197,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _mainController.forward();
 
-    // Navigation logic ahi muki shako
-    // Timer(const Duration(seconds: 4), () => Get.offNamed(NextPage));
+    /// Navigation logic ahi muki shako
+    Timer(const Duration(seconds: 3), () {
+      Get.find<SplashController>().goToNext();
+    });
   }
 
   @override
