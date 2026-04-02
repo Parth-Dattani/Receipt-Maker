@@ -9181,6 +9181,73 @@ class GoogleSheetService {
     }
     return columnName;
   }
+
+  /// 👥 Customer Migration: જૂની શીટમાંથી બધા કસ્ટમરને નવી શીટમાં લાવવા માટે
+  static Future<void> migrateCustomersToNewFy(String oldId, String newId) async {
+    try {
+      print("👥 Starting Customer Migration from $oldId to $newId...");
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // ૧. જૂની શીટમાંથી કસ્ટમરનો ડેટા મેળવો (Headers વગર A2 થી Z)
+      // ધારો કે તારા કસ્ટમર શીટનું નામ 'Customer' છે
+      final response = await sheetsApi.spreadsheets.values.get(oldId, "Customer!A2:Z");
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No customers found in old sheet to migrate.");
+        return;
+      }
+
+      final List<List<Object?>> oldCustomers = response.values!;
+      print("📋 Found ${oldCustomers.length} customers to migrate.");
+
+      // ૨. નવી શીટમાં આ ડેટા રાઈટ કરો
+      await sheetsApi.spreadsheets.values.update(
+        ValueRange(values: oldCustomers),
+        newId,
+        "Customer!A2",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Successfully migrated all customers to new FY sheet.");
+    } catch (e) {
+      print("❌ Error during Customer Migration: $e");
+    }
+  }
+
+  /// 🚀 FY Migration: જૂની શીટમાંથી આઈટમ્સ અને સ્ટોક નવી શીટમાં ટ્રાન્સફર કરવા માટે
+  static Future<void> migrateItemsToNewFy(String oldId, String newId) async {
+    try {
+      print("📦 Starting Migration from $oldId to $newId...");
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // ૧. જૂની શીટમાંથી આઈટમ્સનો ડેટા મેળવો
+      final response = await sheetsApi.spreadsheets.values.get(oldId, "$itemSheetName!A2:Z");
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No items found in old sheet to migrate.");
+        return;
+      }
+
+      // ૨. ડેટા તૈયાર કરો
+      final List<List<Object?>> oldItems = response.values!;
+      print("📋 Found ${oldItems.length} items to migrate.");
+
+      // ૩. નવી શીટમાં આ ડેટા રાઈટ કરો
+      // નોંધ: આપણે આખા લિસ્ટને એકસાથે અપડેટ કરીશું (Batch update જેવું)
+      await sheetsApi.spreadsheets.values.update(
+        ValueRange(values: oldItems),
+        newId,
+        "$itemSheetName!A2",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Successfully migrated all items with current stock to new FY sheet.");
+    } catch (e) {
+      print("❌ Error during FY Migration: $e");
+    }
+  }
 }
 
 ///see this googleSheet Service file if Customer table is not Found so It Auto created i want Same funcnality for all other tables so Please Give meupdate

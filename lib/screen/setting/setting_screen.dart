@@ -295,9 +295,15 @@ class SettingsScreen extends GetView<SettingsController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               Text(
                 'Select a financial year to create a new Google Sheet (next 3 years only):',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Note: Your current items and stock will be automatically moved to the new sheet.',
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade700, fontWeight: FontWeight.w500),
               ),
               SizedBox(height: 12),
               ...availableFys.map((fy) {
