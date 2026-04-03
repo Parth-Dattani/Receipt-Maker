@@ -11,6 +11,8 @@ void showCustomSnackbar({
   Duration duration = const Duration(seconds: 3),
   SnackPosition position = SnackPosition.TOP,
 }) {
+  if (Get.context == null) return;
+
   // Generate gradient from single color
   List<Color> gradientColors = [
     baseColor,

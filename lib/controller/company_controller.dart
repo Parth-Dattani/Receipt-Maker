@@ -431,43 +431,55 @@ class CompanyController extends BaseController {
       // 🆕 Create Google Sheet using Service Account flow since it's missing (or user Drive if Google Token exists)
       if (AppConstants.spreadsheetId.isEmpty) {
         try {
-          String? accessToken = AppConstants.googleAccessToken.isNotEmpty 
-              ? AppConstants.googleAccessToken 
+          String? accessToken = AppConstants.googleAccessToken.isNotEmpty
+              ? AppConstants.googleAccessToken
               : null;
-              
+
           if (accessToken == null) {
             try {
               accessToken = await Get.find<AuthController>().getGoogleAccessToken();
             } catch (_) {}
           }
 
+          // 🚀 ૧. નવી મેથડ કોલ કરો જે Spreadsheet અને Invoices ફોલ્ડર બંને બનાવશે
+          // હવે આ (spreadsheetId, folderId, pdfFolderId) રિટર્ન કરશે
           final result = await GoogleSheetService.createNewUserSpreadsheet(
             user.uid,
             accessToken: accessToken,
             userEmail: user.email,
             username: user.displayName ?? user.email?.split('@').first ?? 'user',
           );
-          
+
           if (result != null && result.$1.isNotEmpty) {
             final newSpreadsheetId = result.$1;
+            final mainFolderId = result.$2;
+            final pdfFolderId = result.$3; // 🔥 આ આપણું નવું PDF ફોલ્ડર ID
+
             AppConstants.spreadsheetId = newSpreadsheetId;
             await sharedPreferencesHelper.storePrefData("spreadsheetId", newSpreadsheetId);
-            
+
             final fy = FinancialYearHelper.currentFy();
             await AppConstants.setActiveFy(fy);
-            
+
+            // ૨. Firestore - Users કલેક્શનમાં બધી ID સેવ કરો
             await _firestore.collection("users").doc(user.uid).update({
               "spreadsheetId": newSpreadsheetId,
               "activeFy": fy,
               "spreadsheetIdsByFy": {fy: newSpreadsheetId},
-            });
-            
-            // Also update the company document with the spreadsheet ID
-            await companyRef.update({
-              "spreadsheetId": newSpreadsheetId,
+              "mainFolderId": mainFolderId, // સેફ્ટી માટે સાચવી લઈએ
+              "pdfFolderId": pdfFolderId,   // 📂 આ ખાસ PDF અપલોડ માટે કામ લાગશે
             });
 
+            // ૩. Firestore - Company ડોક્યુમેન્ટમાં પણ ID સેવ કરો
+            await companyRef.update({
+              "spreadsheetId": newSpreadsheetId,
+              "pdfFolderId": pdfFolderId,
+            });
+
+            // ૪. શીટમાં ટેબ્સ બનાવો
             await GoogleSheetService.ensureSheetsExist();
+
+            print("✅ Drive Setup Complete: Sheet and PDF folder created.");
           }
         } catch (e) {
           print('createNewUserSpreadsheet during company registration failed: $e');

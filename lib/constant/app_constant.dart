@@ -34,6 +34,7 @@ class AppConstants{
    static final RxBool isExtraNotesEnabled = false.obs;
    static bool allowDuplicateItems = false;
    static final RxBool enableCustomerOrderFeature = false.obs;
+   static var isWhatsappDirectShare = false.obs;
 
    /// Digits after decimal point for amounts (e.g. 2 → 350.00, 0 → 350).
    static int decimalPlaces = 2;
@@ -72,6 +73,8 @@ class AppConstants{
       allowDuplicateItems = await sharedPreferencesHelper.retrievePrefBoolData("allowDuplicateItems") ?? false;
 
       enableCustomerOrderFeature.value = await sharedPreferencesHelper.retrievePrefBoolData("enableCustomerOrderFeature") ?? false;
+
+      isWhatsappDirectShare.value = await sharedPreferencesHelper.retrievePrefBoolData("isWhatsappDirectShare") ?? false;
    }
 
    /// 🔹 Update + persist decimalPlaces (digits after decimal point)
@@ -185,5 +188,11 @@ class AppConstants{
    static Future<void> setEnableCustomerOrderFeature(bool val) async {
       enableCustomerOrderFeature.value = val;
       await sharedPreferencesHelper.storeBoolPrefData("enableCustomerOrderFeature", val);
+   }
+
+   static Future<void> setIsWhatsappDirectShare(bool val) async {
+      isWhatsappDirectShare.value = val;
+      await sharedPreferencesHelper.storeBoolPrefData("isWhatsappDirectShare", val);
+      print("💾 WhatsApp Direct Share Saved: $val");
    }
 }
