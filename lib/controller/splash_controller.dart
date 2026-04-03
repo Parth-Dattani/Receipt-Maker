@@ -17,7 +17,7 @@ class SplashController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    goToNext();
+   // goToNext();
   }
 
   // void goToNext() async {
