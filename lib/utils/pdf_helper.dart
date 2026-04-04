@@ -67,7 +67,7 @@ class InvoiceHelper {
   static String _formatQty(num qty) =>
       qty.toStringAsFixed(AppConstants.decimalPlaces);
 
-  static Future<void> generateAndShareInvoice(
+  static Future<io.File?> generateAndShareInvoice(
       List<Invoice> invoices,
       String userName,
       String phoneNumber,
@@ -777,12 +777,12 @@ class InvoiceHelper {
         await file.writeAsBytes(bytes);
 
         print("✅ Mobile File Saved: $filePath");
-
-        // Open Share Sheet
-        await Share.shareXFiles(
-            [XFile(filePath)],
-            text: '$documentTitle - $invoiceId'
-        );
+        return file;
+        // // Open Share Sheet
+        // await Share.shareXFiles(
+        //     [XFile(filePath)],
+        //     text: '$documentTitle - $invoiceId'
+        // );
       }
       // final file = File(filePath);
       // await file.writeAsBytes(await pdf.save());
@@ -799,7 +799,7 @@ class InvoiceHelper {
 
   /// Same as [generateAndShareInvoice] but with teal/color theme (header, borders, table header, totals).
   /// Use this for a colored PDF; keep [generateAndShareInvoice] for black & white.
-  static Future<void> generateAndShareInvoiceColor(
+  static Future<dynamic> generateAndShareInvoiceColor(
       List<Invoice> invoices,
       String userName,
       String phoneNumber,
@@ -815,6 +815,7 @@ class InvoiceHelper {
       InvoiceType invoiceType,
       double gstAmount,
       String dueDate,
+      {bool isForAutomation = false}
       ) async {
     try {
       final pdf = pw.Document();
@@ -1408,6 +1409,9 @@ class InvoiceHelper {
             colorText: Colors.green.shade800,
             icon: Icon(Icons.print, color: Colors.green.shade700),
           );
+          await Printing.sharePdf(bytes: bytes, filename: filename);
+
+          return bytes;
         } catch (e) {
           print("❌ Error opening print dialog: $e");
           Get.snackbar(
@@ -1417,14 +1421,16 @@ class InvoiceHelper {
             icon: Icon(Icons.error_outline, color: Colors.red.shade700),
           );
         }
-        return;
+
       }
       final directory = await getApplicationDocumentsDirectory();
       final filePath  = '${directory.path}/$filename';
       final file      = io.File(filePath);
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
-
+      if (!isForAutomation) {
+        await Share.shareXFiles([XFile(filePath)], text: '$documentTitle - $invoiceId');
+      }
+      return file;
     } catch (e) {
       print("❌ Error generating PDF (color): $e");
     }
@@ -6112,6 +6118,39 @@ class InvoiceHelper {
   }
 
 
+  // InvoiceHelper ક્લાસની અંદર આ ઉમેરો
+  static Future<io.File?> generatePdfForWhatsApp(Invoice invoice, Map<String, dynamic> companyData) async {
+    try {
+      final pdf = pw.Document();
+
+      // ફોન્ટ લોડ કરવાનું લોજિક (તારા ક્લાસમાં છે જ)
+      final fontData = await rootBundle.load("assets/fonts/NotoSans-Regular.ttf");
+      final customFont = pw.Font.ttf(fontData.buffer.asByteData());
+      final theme = pw.ThemeData.withFont(base: customFont, bold: customFont);
+
+      // પીડીએફ પેજ બનાવો (તારું જે મેઈન ડિઝાઈન લોજિક છે એ અહીં વાપરી શકાય)
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          theme: theme,
+          build: (pw.Context context) {
+            return pw.Center(child: pw.Text("Invoice #${invoice.invoiceId}")); // અહીં તારી આખી ડિઝાઈન આવી શકે
+          },
+        ),
+      );
+
+      final Uint8List bytes = await pdf.save();
+      final directory = await getApplicationDocumentsDirectory();
+      final String filename = 'Invoice_${invoice.invoiceId}.pdf';
+      final file = io.File('${directory.path}/$filename');
+      await file.writeAsBytes(bytes);
+
+      return file; // આ ફાઈલ હવે ડ્રાઈવ પર અપલોડ થશે
+    } catch (e) {
+      print("❌ Error in generatePdfForWhatsApp: $e");
+      return null;
+    }
+  }
 
 
   // Helper methods (add these if not already present)

@@ -150,6 +150,7 @@ class DashboardScreen extends GetView<DashboardController> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        
                         // Export Data
                         Expanded(
                           child: _buildMobileReportCard(
@@ -1849,6 +1850,7 @@ class DashboardScreen extends GetView<DashboardController> {
   Future<void> showReportDialog(BuildContext context) async {
     DateTime? fromDate;
     DateTime? toDate;
+    String selectedReport = "Sales";
 
     await showDialog(
       context: context,
@@ -1858,130 +1860,154 @@ class DashboardScreen extends GetView<DashboardController> {
           builder: (context, setState) {
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                constraints: const BoxConstraints(maxWidth: 500),
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Header Section
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.7)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: LinearGradient(colors: [AppColors.tealColor, AppColors.tealColor.withOpacity(0.8)]),
                         borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.file_download_outlined, color: Colors.white, size: 28),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("export_invoices".tr, style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4),
-                                Text("Select date range to export", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                              ],
-                            ),
-                          ),
+                          const Icon(Icons.summarize_outlined, color: Colors.white, size: 28),
+                          const SizedBox(width: 12),
+                          const Text("Business Reports", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                          const Spacer(),
                           IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
                         ],
                       ),
                     ),
+
                     Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDateCard(
-                            context: context,
-                            icon: Icons.calendar_today,
-                            label: "from_date".tr,
-                            date: fromDate,
-                            color: AppColors.tealColor,
-                            onTap: () async {
-                              final isDemo = AppConstants.isDemo.value;
-                              final startLimit = isDemo ? DateTime(1990) : DateTime(2000);
-                              final endLimit = isDemo ? DateTime(1992) : DateTime.now();
+                          const Text("Select Report Type", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+                          const SizedBox(height: 12),
 
-                              DateTime initDate = fromDate ?? (isDemo ? DateTime(1992) : DateTime.now());
-                              if (initDate.isAfter(endLimit)) initDate = endLimit;
-                              if (initDate.isBefore(startLimit)) initDate = startLimit;
-
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: initDate,
-                                firstDate: startLimit,
-                                lastDate: endLimit,
-                              );
-                              if (picked != null) setState(() => fromDate = picked);
-                            },
+                          // Sales Report
+                          _buildReportOption(
+                            title: "Sales Report",
+                            icon: Icons.receipt_long,
+                            isSelected: selectedReport == "Sales",
+                            onTap: () => setState(() => selectedReport = "Sales"),
                           ),
-                          const SizedBox(height: 16),
-                          Icon(Icons.arrow_downward_rounded, color: Colors.grey.shade400, size: 24),
-                          const SizedBox(height: 16),
-                          _buildDateCard(
-                            context: context,
-                            icon: Icons.event,
-                            label: "to_date",
-                            date: toDate,
-                            color: AppColors.tealColor,
-                            onTap: () async {
-                              final isDemo = AppConstants.isDemo.value;
-                              final startLimit = isDemo ? DateTime(1990) : DateTime(2000);
-                              final endLimit = isDemo ? DateTime(1992) : DateTime.now();
 
-                              DateTime effectiveFirst = fromDate ?? startLimit;
-                              if (effectiveFirst.isAfter(endLimit)) effectiveFirst = endLimit;
-                              if (effectiveFirst.isBefore(startLimit)) effectiveFirst = startLimit;
+                          if(AppConstants.businessType == "Trading") ...[
+                            const SizedBox(height: 10),
+                            // Purchase Report
+                            _buildReportOption(
+                              title: "Purchase Report",
+                              icon: Icons.shopping_bag,
+                              isSelected: selectedReport == "Purchase",
+                              onTap: () => setState(() => selectedReport = "Purchase"),
+                            ),
+                            const SizedBox(height: 10),
+                            // Stock Report
+                            _buildReportOption(
+                              title: "Stock Report",
+                              icon: Icons.inventory_2,
+                              isSelected: selectedReport == "Stock",
+                              onTap: () => setState(() => selectedReport = "Stock"),
+                            ),
+                          ],
 
-                              DateTime initDate = toDate ?? endLimit;
-                              if (initDate.isBefore(effectiveFirst)) initDate = effectiveFirst;
-                              if (initDate.isAfter(endLimit)) initDate = endLimit;
-
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: initDate,
-                                firstDate: effectiveFirst,
-                                lastDate: endLimit,
-                              );
-                              if (picked != null) setState(() => toDate = picked);
-                            },
+                          const SizedBox(height: 10),
+                          // All-in-One Report Button
+                          _buildReportOption(
+                            title: "All-in-One Report",
+                            icon: Icons.auto_awesome_motion,
+                            isSelected: selectedReport == "All",
+                            onTap: () => setState(() => selectedReport = "All"),
                           ),
+
                           const SizedBox(height: 24),
+
+                          // Date Pickers: "Stock" સિવાયના બધામાં તારીખ માંગશે
+                          if (selectedReport != "Stock") ...[
+                            const Text("Select Duration", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+                            const SizedBox(height: 12),
+                            _buildDateCard(
+                              context: context,
+                              icon: Icons.calendar_today,
+                              label: "From Date",
+                              date: fromDate,
+                              color: AppColors.tealColor,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2000),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) setState(() => fromDate = picked);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildDateCard(
+                              context: context,
+                              icon: Icons.event,
+                              label: "To Date",
+                              date: toDate,
+                              color: AppColors.tealColor,
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: fromDate ?? DateTime(2000),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) setState(() => toDate = picked);
+                              },
+                            ),
+                          ] else ...[
+                            // Stock Report માટે નોટ
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              width: double.infinity,
+                              decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+                              child: const Text("Note: Stock report will be generated based on current inventory levels.",
+                                  style: TextStyle(fontSize: 12, color: Colors.blue)),
+                            ),
+                          ],
+
+                          const SizedBox(height: 24),
+
+                          // Generate Button
                           SizedBox(
                             width: double.infinity,
-                            height: 56,
+                            height: 50,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.tealColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               onPressed: () async {
-                                if (fromDate == null || toDate == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Please select both dates"), backgroundColor: Colors.red.shade600));
+                                // Validation
+                                if (selectedReport != "Stock" && (fromDate == null || toDate == null)) {
+                                  Get.snackbar("Required", "Please select From and To dates",
+                                      snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
                                   return;
                                 }
+
                                 Navigator.pop(context);
-                                await controller.exportGSTReportWithDateFilter(fromDate!, toDate!);
+
+                                if (selectedReport == "Sales") {
+                                  await controller.exportGSTReportWithDateFilter(fromDate!, toDate!);
+                                } else if (selectedReport == "Purchase") {
+                                  await controller.exportPurchaseReport(fromDate!, toDate!);
+                                } else if (selectedReport == "Stock") {
+                                  await controller.exportStockReport();
+                                } else if (selectedReport == "All") {
+                                  await controller.exportAllInOneReport(fromDate!, toDate!);
+                                }
                               },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.download_rounded, size: 24),
-                                  SizedBox(width: 12),
-                                  Text("export".tr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
+                              child: const Text("Generate Report", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -1994,6 +2020,31 @@ class DashboardScreen extends GetView<DashboardController> {
           },
         );
       },
+    );
+  }
+
+// Helper Widget for Report Options
+  Widget _buildReportOption({required String title, required IconData icon, required bool isSelected, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.tealColor.withOpacity(0.1) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? AppColors.tealColor : Colors.grey.shade200, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? AppColors.tealColor : Colors.grey, size: 22),
+            const SizedBox(width: 12),
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? AppColors.tealColor : Colors.black87)),
+            const Spacer(),
+            if (isSelected) Icon(Icons.check_circle, color: AppColors.tealColor, size: 20),
+          ],
+        ),
+      ),
     );
   }
 

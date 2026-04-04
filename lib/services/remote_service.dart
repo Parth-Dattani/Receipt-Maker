@@ -1,14 +1,17 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:math' as Math;
+import 'dart:typed_data';
 
 import 'package:GetYourInvoice/constant/app_constant.dart';
 import 'package:GetYourInvoice/model/comment_model.dart';
 import 'package:GetYourInvoice/services/api.dart';
 import 'package:GetYourInvoice/utils/shared_preferences_helper.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-
+import 'dart:io' as io;
+import '../controller/controller.dart';
 import '../model/model.dart';
 import '../utils/pdf_helper.dart';
 import 'dart:convert';
@@ -273,6 +276,8 @@ import 'package:http/http.dart' as http;
 //   }
 // }
 import 'package:googleapis_auth/auth_io.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 ///new
 class RemoteService {
@@ -1907,18 +1912,25 @@ class GoogleSheetService {
 
   /// Create a new Google Sheet: with [accessToken] = in user's Drive (folder InvoiceSathi); with [userEmail] only = Service Account creates and shares with user (email/password flow).
   /// Returns (spreadsheetId, folderId) on success. folderId empty for email/password flow.
-  static Future<(String spreadsheetId, String folderId)?> createNewUserSpreadsheet(
-    String uid, {
-    String? accessToken,
-    String? username,
-    String? existingFolderId,
-    String? userEmail,
-  }) async {
-    // Email/password flow: Service Account creates sheet and shares with user's email
+  /// Create a new Google Sheet and Folders:
+  /// Returns (spreadsheetId, folderId, pdfFolderId) on success.
+  /// Create a new Google Sheet and Folders:
+  /// Returns (spreadsheetId, folderId, pdfFolderId) on success.
+  static Future<(String spreadsheetId, String folderId, String pdfFolderId)?> createNewUserSpreadsheet(
+      String uid, {
+        String? accessToken,
+        String? username,
+        String? existingFolderId,
+        String? userEmail,
+      }) async {
+    // ૧. Email/password flow: Service Account logic
     if ((accessToken == null || accessToken.isEmpty) && userEmail != null && userEmail.trim().isNotEmpty) {
-      return await _createSheetWithServiceAccountAndShare(uid, userEmail.trim(), username ?? 'user');
+      final res = await _createSheetWithServiceAccountAndShare(uid, userEmail.trim(), username ?? 'user');
+      return res != null ? (res.$1, res.$2, res.$3) : null;
     }
+
     if (accessToken == null || accessToken.isEmpty) return null;
+
     try {
       final baseUrl = 'https://www.googleapis.com/drive/v3/files';
       final headers = {
@@ -1926,40 +1938,73 @@ class GoogleSheetService {
         'Content-Type': 'application/json',
       };
 
-      String? folderId;
+      String? folderId;      // Main "InvoiceSathi" Folder ID
+      String? pdfFolderId;   // Sub "Invoices" Folder ID
       const folderName = 'InvoiceSathi';
+      const pdfFolderName = 'Invoices';
+      const supportEmail = 'dattaniparth2@gmail.com';
 
+      // --- STEP A: Main 'InvoiceSathi' Folder સેટઅપ કરો ---
       if (existingFolderId != null && existingFolderId.isNotEmpty) {
         folderId = existingFolderId;
       } else {
         final driveQuery = "name='$folderName' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false";
         final listUrl = Uri.parse('$baseUrl?q=${Uri.encodeComponent(driveQuery)}&fields=files(id,name)');
         final listRes = await http.get(listUrl, headers: headers);
+
         if (listRes.statusCode == 200) {
           final listData = jsonDecode(listRes.body) as Map<String, dynamic>;
           final files = listData['files'] as List<dynamic>?;
           if (files != null && files.isNotEmpty) {
-            folderId = (files.first as Map<String, dynamic>)['id'] as String?;
+            folderId = files.first['id'];
           }
         }
+
         if (folderId == null || folderId.isEmpty) {
           final createFolderRes = await http.post(
             Uri.parse(baseUrl),
             headers: headers,
             body: jsonEncode({'name': folderName, 'mimeType': 'application/vnd.google-apps.folder'}),
           );
-          if (createFolderRes.statusCode != 200) {
-            print('❌ Drive API create folder failed: ${createFolderRes.statusCode} ${createFolderRes.body}');
-            return null;
+          if (createFolderRes.statusCode == 200) {
+            folderId = jsonDecode(createFolderRes.body)['id'];
+            print('✅ Created main folder "$folderName": $folderId');
           }
-          final folderData = jsonDecode(createFolderRes.body) as Map<String, dynamic>;
-          folderId = folderData['id'] as String?;
-          if (folderId == null || folderId.isEmpty) return null;
-          print('✅ Created folder "$folderName" in user Drive: $folderId');
         }
       }
 
-      final parentId = folderId!;
+      if (folderId == null) return null;
+
+      // --- STEP B: Sub 'Invoices' Folder સેટઅપ કરો (PDF માટે) ---
+      final pdfDriveQuery = "name='$pdfFolderName' and mimeType='application/vnd.google-apps.folder' and '$folderId' in parents and trashed=false";
+      final pdfListUrl = Uri.parse('$baseUrl?q=${Uri.encodeComponent(pdfDriveQuery)}&fields=files(id,name)');
+      final pdfListRes = await http.get(pdfListUrl, headers: headers);
+
+      if (pdfListRes.statusCode == 200) {
+        final pdfListData = jsonDecode(pdfListRes.body) as Map<String, dynamic>;
+        final pdfFiles = pdfListData['files'] as List<dynamic>?;
+        if (pdfFiles != null && pdfFiles.isNotEmpty) {
+          pdfFolderId = pdfFiles.first['id'];
+        }
+      }
+
+      if (pdfFolderId == null || pdfFolderId.isEmpty) {
+        final createPdfRes = await http.post(
+          Uri.parse(baseUrl),
+          headers: headers,
+          body: jsonEncode({
+            'name': pdfFolderName,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [folderId]
+          }),
+        );
+        if (createPdfRes.statusCode == 200) {
+          pdfFolderId = jsonDecode(createPdfRes.body)['id'];
+          print('✅ Created sub-folder "$pdfFolderName": $pdfFolderId');
+        }
+      }
+
+      // --- STEP C: Spreadsheet બનાવો ---
       final now = DateTime.now();
       final fyStart = now.month >= 4 ? now.year : now.year - 1;
       final fyEnd = fyStart + 1;
@@ -1970,60 +2015,136 @@ class GoogleSheetService {
       final sheetBody = jsonEncode({
         'name': sheetName,
         'mimeType': 'application/vnd.google-apps.spreadsheet',
-        'parents': [parentId],
+        'parents': [folderId],
       });
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: headers,
-        body: sheetBody,
-      );
+
+      final response = await http.post(Uri.parse(baseUrl), headers: headers, body: sheetBody);
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final id = data['id'] as String?;
+        final id = jsonDecode(response.body)['id'] as String?;
         if (id != null && id.isNotEmpty) {
-          print('✅ Created spreadsheet "$sheetName" in folder $folderName: $id');
+
+          // --- STEP D: Permissions (સર્વિસ એકાઉન્ટ અને સપોર્ટ ઈમેઈલ માટે) ---
+          final permUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$id/permissions').replace(queryParameters: {'sendNotificationEmail': 'false'});
+
           try {
             final credStr = await _loadServiceAccountJson();
             final credJson = jsonDecode(credStr) as Map<String, dynamic>;
             final serviceAccountEmail = credJson['client_email'] as String?;
-            if (serviceAccountEmail != null && serviceAccountEmail.isNotEmpty) {
-              final permUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$id/permissions').replace(queryParameters: {'sendNotificationEmail': 'false'});
-              final permRes = await http.post(
-                permUrl,
-                headers: headers,
-                body: jsonEncode({
-                  'type': 'user',
-                  'role': 'writer',
-                  'emailAddress': serviceAccountEmail,
-                }),
-              );
-              if (permRes.statusCode >= 200 && permRes.statusCode < 300) {
-                print('✅ Shared spreadsheet with Service Account');
-              } else {
-                print('⚠️ Could not share sheet with Service Account: ${permRes.statusCode} ${permRes.body}');
-              }
-              try {
-                await http.post(
-                  permUrl,
-                  headers: headers,
-                  body: jsonEncode({
-                    'type': 'user',
-                    'role': 'reader',
-                    'emailAddress': 'dattaniparth2@gmail.com',
-                  }),
-                );
-              } catch (_) {}
+
+            // ૧. સર્વિસ એકાઉન્ટને 'writer' બનાવો
+            if (serviceAccountEmail != null) {
+              await http.post(permUrl, headers: headers, body: jsonEncode({'type': 'user', 'role': 'writer', 'emailAddress': serviceAccountEmail}));
             }
+
+            // ૨. 🔥 સપોર્ટ ઈમેઈલ (તમારું ID) 'reader' તરીકે એડ કરો
+            await http.post(permUrl, headers: headers, body: jsonEncode({'type': 'user', 'role': 'reader', 'emailAddress': supportEmail}));
+            print('✅ Shared spreadsheet with SA and Support Email');
+
           } catch (shareErr) {
-            print('⚠️ Share with Service Account failed: $shareErr');
+            print('⚠️ Sharing failed: $shareErr');
           }
-          return (id, parentId);
+
+          return (id, folderId, pdfFolderId ?? "");
         }
       }
-      print('❌ Drive API create sheet failed: ${response.statusCode} ${response.body}');
       return null;
     } catch (e) {
       print('❌ createNewUserSpreadsheet error: $e');
+      return null;
+    }
+  }
+
+  static Future<String> getOrCreateInvoicesFolder(drive.DriveApi driveApi, String parentId) async {
+    // ૧. પહેલા ચેક કરો કે 'Invoices' નામનું ફોલ્ડર પહેલેથી છે?
+    final query = "name = 'Invoices' and '$parentId' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+    final fileList = await driveApi.files.list(q: query, $fields: "files(id, name)");
+
+    if (fileList.files != null && fileList.files!.isNotEmpty) {
+      return fileList.files!.first.id!; // જો મળી જાય તો તેનો ID આપો
+    }
+
+    // ૨. જો ન મળે, તો નવું બનાવો
+    var folderMetadata = drive.File()
+      ..name = 'Invoices'
+      ..mimeType = 'application/vnd.google-apps.folder'
+      ..parents = [parentId];
+
+    var newFolder = await driveApi.files.create(folderMetadata);
+    return newFolder.id!;
+  }
+
+  static Future<String?> uploadPdfToDrive({
+    required Uint8List pdfBytes,
+    required String invoiceNo,
+  }) async {
+    try {
+      print("📡 Starting Drive Upload (Fixed Quota Issue)...");
+
+      // ૧. યુઝરનો Access Token મેળવો (જો ગૂગલ લોગિન હોય તો)
+      // જો ટોકન ખાલી હોય તો સર્વિસ એકાઉન્ટ વાપરશે, પણ ૪૦૩ આવશે જ
+      String? token = AppConstants.googleAccessToken;
+      if (token == null || token.isEmpty) {
+        try {
+          // અહીં તારા AuthController માંથી ફ્રેશ ટોકન ખેંચો
+          token = await Get.find<AuthController>().getGoogleAccessToken();
+        } catch (e) {
+          print("⚠️ Token fetch error: $e");
+        }
+      }
+
+      // ૨. _getAuthClient માં ખાસ ટોકન પાસ કરો જેથી 'યુઝર ક્વોટા' વપરાય
+      final client = await _getAuthClient(accessToken: token);
+      final driveApi = drive.DriveApi(client);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      String? folderId = userDoc.data()?['pdfFolderId'];
+      String? parentFolderId = userData?['folderId'];
+
+      if (folderId == null || folderId.isEmpty) {
+        print("⚠️ Invoices folder missing for old user. Attempting to create...");
+
+        if (parentFolderId == null || parentFolderId.isEmpty) {
+          print("❌ Parent folderId (InvoiceSathi) not found in Firestore.");
+          return null;
+        }
+        // 'Invoices' ફોલ્ડર શોધો અથવા બનાવો
+        folderId = await getOrCreateInvoicesFolder(driveApi, parentFolderId);
+
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'pdfFolderId': folderId,
+        });
+        print("✅ New Invoices folder created and saved: $folderId");
+      }
+
+      var driveFile = drive.File();
+      driveFile.name = "Invoice_$invoiceNo.pdf";
+      driveFile.parents = [folderId!];
+
+      // ૩. Bytes ને Stream માં ફેરવીને અપલોડ કરો
+      final media = drive.Media(Stream.value(pdfBytes), pdfBytes.length);
+      final result = await driveApi.files.create(driveFile, uploadMedia: media);
+
+      if (result.id != null) {
+        print("✅ PDF Uploaded Successfully. ID: ${result.id}");
+
+        // ૪. પરમિશન સેટ કરો
+        try {
+          await driveApi.permissions.create(
+            drive.Permission()..type = 'anyone'..role = 'reader',
+            result.id!,
+          );
+        } catch (e) { print("⚠️ Permission error: $e"); }
+
+        return "https://drive.google.com/uc?export=download&id=${result.id}";
+      }
+      return null;
+    } catch (e) {
+      print("❌ Drive Fatal Error: $e");
       return null;
     }
   }
@@ -2074,12 +2195,14 @@ class GoogleSheetService {
     }
   }
 
-  static Future<(String spreadsheetId, String folderId)?> _createSheetWithServiceAccountAndShare(String uid, String userEmail, String username) async {
+  /// Service Account flow: Create folders and spreadsheet, then share with user.
+  /// Returns (spreadsheetId, folderId, pdfFolderId) on success.
+  static Future<(String spreadsheetId, String folderId, String pdfFolderId)?> _createSheetWithServiceAccountAndShare(String uid, String userEmail, String username) async {
     try {
       final client = await _getAuthClientWithDrive();
       final sheetsApi = SheetsApi(client);
       final driveApi = drive.DriveApi(client);
-      
+
       final now = DateTime.now();
       final fyStart = now.month >= 4 ? now.year : now.year - 1;
       final fyEnd = fyStart + 1;
@@ -2087,7 +2210,7 @@ class GoogleSheetService {
       final safeName = username.replaceAll(RegExp(r'[^\w\-.]'), '_');
       final title = 'Invoice Sathi - ${safeName}_${uid}_$fyStr';
 
-      // 1. Create a dedicated folder "InvoiceSathi" for this user
+      // 1. "InvoiceSathi" (Main) ફોલ્ડર બનાવો
       final folder = drive.File()
         ..name = 'InvoiceSathi'
         ..mimeType = 'application/vnd.google-apps.folder';
@@ -2095,12 +2218,20 @@ class GoogleSheetService {
       final folderId = createdFolder.id;
 
       if (folderId == null) {
-        throw Exception("Failed to create folder via Service Account");
+        throw Exception("Failed to create main folder via Service Account");
       }
+      print('✅ Created main folder "InvoiceSathi" ($folderId)');
 
-      print('✅ Created folder "InvoiceSathi" ($folderId) via Service Account');
+      // 2. "Invoices" (Sub) ફોલ્ડર બનાવો આની અંદર
+      final pdfFolder = drive.File()
+        ..name = 'Invoices'
+        ..parents = [folderId]
+        ..mimeType = 'application/vnd.google-apps.folder';
+      final createdPdfFolder = await driveApi.files.create(pdfFolder);
+      final pdfFolderId = createdPdfFolder.id ?? "";
+      print('✅ Created sub-folder "Invoices" ($pdfFolderId)');
 
-      // 2. Share the folder with the user (so it appears in their Shared with me)
+      // 3. ફોલ્ડર યુઝર સાથે શેર કરો (જેથી તે 'Shared with me' માં દેખાય)
       try {
         await driveApi.permissions.create(
           drive.Permission()
@@ -2110,12 +2241,8 @@ class GoogleSheetService {
           folderId,
           sendNotificationEmail: false,
         );
-        print('✅ Shared folder "InvoiceSathi" with $userEmail');
-      } catch (e) {
-        print('⚠️ Could not share folder with $userEmail: $e');
-      }
 
-      try {
+        // સપોર્ટ ઈમેઈલ સાથે પણ શેરિંગ
         await driveApi.permissions.create(
           drive.Permission()
             ..type = 'user'
@@ -2125,18 +2252,18 @@ class GoogleSheetService {
           sendNotificationEmail: false,
         );
       } catch (e) {
-        print('⚠️ Could not share folder with support: $e');
+        print('⚠️ Sharing folders failed: $e');
       }
 
-      // 3. Create Spreadsheet
+      // 4. Spreadsheet બનાવો
       final request = Spreadsheet()
         ..properties = (SpreadsheetProperties()..title = title);
       final spreadsheet = await sheetsApi.spreadsheets.create(request);
       final spreadsheetId = spreadsheet.spreadsheetId;
       if (spreadsheetId == null || spreadsheetId.isEmpty) return null;
-      print('✅ Created spreadsheet via Service Account: $spreadsheetId');
+      print('✅ Created spreadsheet: $spreadsheetId');
 
-      // 4. Move spreadsheet into the "InvoiceSathi" folder
+      // 5. Spreadsheet ને "InvoiceSathi" ફોલ્ડરમાં મૂકો
       final file = await driveApi.files.get(spreadsheetId, $fields: 'parents') as drive.File;
       final previousParents = file.parents?.join(',') ?? '';
 
@@ -2146,9 +2273,8 @@ class GoogleSheetService {
         addParents: folderId,
         removeParents: previousParents,
       );
-      print('✅ Moved spreadsheet into InvoiceSathi folder');
-      
-      // Also explicitly share the spreadsheet (safe redundancy)
+
+      // 6. Spreadsheet યુઝર સાથે શેર કરો
       try {
         await driveApi.permissions.create(
           drive.Permission()
@@ -2159,25 +2285,13 @@ class GoogleSheetService {
           sendNotificationEmail: false,
         );
       } catch (e) {
-        print('⚠️ Could not share spreadsheet with $userEmail: $e');
+        print('⚠️ Sharing spreadsheet failed: $e');
       }
 
-      try {
-        await driveApi.permissions.create(
-          drive.Permission()
-            ..type = 'user'
-            ..role = 'reader'
-            ..emailAddress = 'dattaniparth2@gmail.com',
-          spreadsheetId,
-          sendNotificationEmail: false,
-        );
-      } catch (e) {
-        print('⚠️ Could not share spreadsheet with support: $e');
-      }
-
-      return (spreadsheetId, folderId);
+      // ✅ રિટર્ન: (Spreadsheet ID, Main Folder ID, PDF Folder ID)
+      return (spreadsheetId, folderId, pdfFolderId);
     } catch (e) {
-      print('❌ _createSheetWithServiceAccountAndShare: $e');
+      print('❌ _createSheetWithServiceAccountAndShare Error: $e');
       return null;
     }
   }
@@ -2347,7 +2461,7 @@ class GoogleSheetService {
   static Future<AuthClient> _getAuthClientWithDrive() async {
     final credentialsJson = await _loadServiceAccountJson();
     final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
-    final scopes = [SheetsApi.spreadsheetsScope, drive.DriveApi.driveScope];
+    final scopes = [SheetsApi.spreadsheetsScope, drive.DriveApi.driveScope,drive.DriveApi.driveFileScope,];
     return await clientViaServiceAccount(accountCredentials, scopes);
   }
 
@@ -3133,12 +3247,37 @@ class GoogleSheetService {
     }
   }
 
-  static Future<AuthClient> _getAuthClient() async {
-    final credentialsJson = await _loadServiceAccountJson();
+  static Future<AuthClient> _getAuthClient({String? accessToken}) async {
+    // ૧. જો યુઝરનો Access Token (Google Sign-In) હોય, તો તેનાથી ક્લાયન્ટ બનાવો
+    if (accessToken != null && accessToken.isNotEmpty) {
+      return authenticatedClient(
+        http.Client(),
+        AccessCredentials(
+          AccessToken(
+            'Bearer',
+            accessToken,
+            DateTime.now().add(const Duration(hours: 1)).toUtc(),
+          ),
+          null, // Refresh token નથી જોઈતો
+          [
+            drive.DriveApi.driveFileScope,
+            drive.DriveApi.driveScope,
+            SheetsApi.spreadsheetsScope,
+          ],
+        ),
+      );
+    }
 
-    final accountCredentials =
-    ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
-    final scopes = [SheetsApi.spreadsheetsScope];
+    // ૨. જો Access Token ના હોય, તો જૂની રીતે Service Account વાપરો
+    final credentialsJson = await _loadServiceAccountJson();
+    final accountCredentials = ServiceAccountCredentials.fromJson(jsonDecode(credentialsJson));
+
+    // Scopes માં Drive પણ ઉમેરવું પડશે જેથી PDF અપલોડ કરી શકાય
+    final scopes = [
+      SheetsApi.spreadsheetsScope,
+      drive.DriveApi.driveFileScope,
+      drive.DriveApi.driveScope,
+    ];
 
     return await clientViaServiceAccount(accountCredentials, scopes);
   }
@@ -9180,6 +9319,73 @@ class GoogleSheetService {
       colIndex = ((colIndex - modulo) ~/ 26);
     }
     return columnName;
+  }
+
+  /// 👥 Customer Migration: જૂની શીટમાંથી બધા કસ્ટમરને નવી શીટમાં લાવવા માટે
+  static Future<void> migrateCustomersToNewFy(String oldId, String newId) async {
+    try {
+      print("👥 Starting Customer Migration from $oldId to $newId...");
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // ૧. જૂની શીટમાંથી કસ્ટમરનો ડેટા મેળવો (Headers વગર A2 થી Z)
+      // ધારો કે તારા કસ્ટમર શીટનું નામ 'Customer' છે
+      final response = await sheetsApi.spreadsheets.values.get(oldId, "Customer!A2:Z");
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No customers found in old sheet to migrate.");
+        return;
+      }
+
+      final List<List<Object?>> oldCustomers = response.values!;
+      print("📋 Found ${oldCustomers.length} customers to migrate.");
+
+      // ૨. નવી શીટમાં આ ડેટા રાઈટ કરો
+      await sheetsApi.spreadsheets.values.update(
+        ValueRange(values: oldCustomers),
+        newId,
+        "Customer!A2",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Successfully migrated all customers to new FY sheet.");
+    } catch (e) {
+      print("❌ Error during Customer Migration: $e");
+    }
+  }
+
+  /// 🚀 FY Migration: જૂની શીટમાંથી આઈટમ્સ અને સ્ટોક નવી શીટમાં ટ્રાન્સફર કરવા માટે
+  static Future<void> migrateItemsToNewFy(String oldId, String newId) async {
+    try {
+      print("📦 Starting Migration from $oldId to $newId...");
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // ૧. જૂની શીટમાંથી આઈટમ્સનો ડેટા મેળવો
+      final response = await sheetsApi.spreadsheets.values.get(oldId, "$itemSheetName!A2:Z");
+
+      if (response.values == null || response.values!.isEmpty) {
+        print("⚠️ No items found in old sheet to migrate.");
+        return;
+      }
+
+      // ૨. ડેટા તૈયાર કરો
+      final List<List<Object?>> oldItems = response.values!;
+      print("📋 Found ${oldItems.length} items to migrate.");
+
+      // ૩. નવી શીટમાં આ ડેટા રાઈટ કરો
+      // નોંધ: આપણે આખા લિસ્ટને એકસાથે અપડેટ કરીશું (Batch update જેવું)
+      await sheetsApi.spreadsheets.values.update(
+        ValueRange(values: oldItems),
+        newId,
+        "$itemSheetName!A2",
+        valueInputOption: "USER_ENTERED",
+      );
+
+      print("✅ Successfully migrated all items with current stock to new FY sheet.");
+    } catch (e) {
+      print("❌ Error during FY Migration: $e");
+    }
   }
 }
 

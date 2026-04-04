@@ -50,6 +50,8 @@ class SettingsScreen extends GetView<SettingsController> {
                           SizedBox(height: 20),
                           _buildCustomerOrderFeatureToggle(),
                           SizedBox(height: 20),
+                          _buildWhatsappSettings(),
+                          SizedBox(height: 20),
                           _buildFinancialYearSettings(),
                         ],
                       ),
@@ -295,9 +297,15 @@ class SettingsScreen extends GetView<SettingsController> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               Text(
                 'Select a financial year to create a new Google Sheet (next 3 years only):',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Note: Your current items and stock will be automatically moved to the new sheet.',
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade700, fontWeight: FontWeight.w500),
               ),
               SizedBox(height: 12),
               ...availableFys.map((fy) {
@@ -434,6 +442,40 @@ class SettingsScreen extends GetView<SettingsController> {
           activeColor: AppColors.appTheame,
           contentPadding: EdgeInsets.zero,
         )),
+      ],
+    );
+  }
+
+  Widget _buildWhatsappSettings() {
+    final settings = Get.find<SettingsController>();
+    return _buildSettingsCard(
+      icon: Icons.message,
+      title: 'WhatsApp Automation',
+      children: [
+        Obx(() => SwitchListTile(
+          value: settings.isWhatsappDirectShare.value,
+          onChanged: (val) => settings.updateWhatsappDirectShare(val),
+          title: Text(
+            'Direct Share on WhatsApp',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          subtitle: Text(
+            settings.isWhatsappDirectShare.value
+                ? 'PDF will be uploaded to Drive and shared via WhatsApp API'
+                : 'Manual sharing via system share sheet',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          activeColor: Colors.green, // WhatsApp theme color
+          contentPadding: EdgeInsets.zero,
+        )),
+        if (settings.isWhatsappDirectShare.value)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Note: Invoices will be stored in "Invoices" folder on your Drive.',
+              style: TextStyle(fontSize: 11, color: Colors.blue.shade700, fontStyle: FontStyle.italic),
+            ),
+          ),
       ],
     );
   }

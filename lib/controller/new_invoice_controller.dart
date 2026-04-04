@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:GetYourInvoice/screen/invoice/new_invoice_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,7 +18,7 @@ import '../utils/utils.dart';
 import '../widgets/widgets.dart';
 import 'controller.dart';
 
-
+import 'dart:io' as io;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -3527,6 +3528,11 @@ class NewInvoiceController extends GetxController {
       // ---------------- STOP LOADING & SHOW DIALOG ----------------
       isLoading.value = false;
 
+      // 🔥🔥 NEW WHATSAPP LOGIC 🔥🔥
+      if (AppConstants.isWhatsappDirectShare.value) {
+        _handleWhatsappAutomation(invoiceModels[0], invoiceModels);
+      }
+
       // ✅ OPEN DIALOG: Print vs PDF
       await _showOutputFormatDialog(invoiceModels);
       Get.back(result: true);
@@ -3855,6 +3861,57 @@ class NewInvoiceController extends GetxController {
   }
 
 
+  // ૧. WhatsApp ઓટોમેશન હેન્ડલ કરવા માટે
+  Future<void> _handleWhatsappAutomation(Invoice invoice, List<Invoice> invoiceModels) async {
+    try {
+      print("🚀 Automation Start...");
+
+      // આ મેથડ હવે Web માં Bytes અને Mobile માં File રિટર્ન કરે છે
+      final dynamic pdfResult = await InvoiceHelper.generateAndShareInvoiceColor(
+        invoiceModels,
+        customerNameController.text.trim(),
+        customerMobileController.text.trim(),
+        customerEmailController.text.trim(),
+        customerPanController.text.trim(),
+        customerGstController.text.trim(),
+        customerAddressController.text.trim(),
+        subtotal.value,
+        _formatDate(invoiceDate.value),
+        totalAmount.value,
+        notesController.text,
+        companyData.value,
+        invoiceType.value,
+        gstAmount.value,
+        _formatDate(paymentDueDate.value),
+        isForAutomation: true,
+      );
+
+      if (pdfResult != null) {
+        Uint8List? bytesToUpload;
+
+        if (kIsWeb && pdfResult is Uint8List) {
+          bytesToUpload = pdfResult; // Web માટે ડાયરેક્ટ bytes
+        } else if (pdfResult is io.File) {
+          bytesToUpload = await pdfResult.readAsBytes(); // Mobile માટે ફાઈલમાંથી bytes
+        }
+
+        if (bytesToUpload != null) {
+          // 🔥 આ મેથડ ખાસ ચેક કરજે કે તે pdfBytes સ્વીકારે છે
+          String? driveUrl = await GoogleSheetService.uploadPdfToDrive(
+              pdfBytes: bytesToUpload,
+              invoiceNo: invoice.invoiceId ?? ""
+          );
+
+          if (driveUrl != null) {
+            print("✅ Uploaded to Drive: $driveUrl");
+            // WhatsApp Meta API કોલ અહીં આવશે
+          }
+        }
+      }
+    } catch (e) {
+      print("❌ Automation Error: $e");
+    }
+  }
 }
 
 enum InvoiceType {

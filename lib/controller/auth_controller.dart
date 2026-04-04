@@ -1379,7 +1379,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
   /// Create a new Google Sheet for the given [fy] and set it as active.
   /// Uses Google token when available (same as first sheet) so previous-year sheet creation works without Drive API for Service Account.
-  Future<bool> addNewFinancialYearForFy(String fy) async {
+  Future<bool> oldaddNewFinancialYearForFy(String fy) async {
     final user = _auth.currentUser;
     if (user == null) return false;
     final email = user.email ?? '';
@@ -1443,6 +1443,101 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
             : e.toString();
         _safeSnackbar(title: 'Error', message: msg, isError: true);
       }
+      return false;
+    } finally {
+      isLoadingFy.value = false;
+    }
+  }
+
+  /// Create a new Google Sheet for the given [fy] and set it as active.
+  Future<bool> addNewFinancialYearForFy(String fy) async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    final email = user.email ?? '';
+    if (email.isEmpty) return false;
+
+    // 🔥 ૧. માઈગ્રેશન માટે જૂની Spreadsheet ID સાચવી લો
+    final String oldSpreadsheetId = AppConstants.spreadsheetId;
+
+    isLoadingFy.value = true;
+    try {
+      String? accessToken = await getGoogleAccessToken();
+
+      // ૨. નવી Spreadsheet ક્રિએટ કરો
+      final result = await GoogleSheetService.createNewSpreadsheetForFy(
+        user.uid,
+        email,
+        user.displayName ?? email.split('@').first,
+        fy: fy,
+        accessToken: accessToken,
+      );
+
+      if (result == null || result.$1.isEmpty) {
+        if (!_isDisposed) {
+          _safeSnackbar(title: 'Error', message: 'Could not create new sheet for FY $fy', isError: true);
+        }
+        return false;
+      }
+
+      final newId = result.$1;
+
+      // ૩. નવી શીટમાં ટેબ્સ (Item, Invoice, etc.) બનાવો
+      try {
+        // AppConstants માં નવી ID સેટ કરવી જરૂરી છે જેથી ensureSheetsExist નવી શીટમાં કામ કરે
+        await AppConstants.setSpreadsheetId(newId);
+        await GoogleSheetService.ensureSheetsExist();
+      } catch (e) {
+        print('ensureSheetsExist for new FY: $e');
+      }
+
+      // 🔥 ૪. સ્ટોક માઈગ્રેશન (જૂની શીટ -> નવી શીટ)
+      if (oldSpreadsheetId.isNotEmpty && oldSpreadsheetId != newId) {
+        print("📦 Starting Stock Migration from $oldSpreadsheetId to $newId");
+        try {
+          await GoogleSheetService.migrateItemsToNewFy(oldSpreadsheetId, newId);
+          await GoogleSheetService.migrateCustomersToNewFy(oldSpreadsheetId, newId);
+          print("✅ Items & Customer Migration Completed!");
+        } catch (migrationError) {
+          print("⚠️ Migration failed but continuing: $migrationError");
+          // જો માઈગ્રેશન ફેલ જાય તો પણ નવી શીટ તો બની જ ગઈ છે
+        }
+      }
+
+      // ૫. Firestore અપડેટ અને બાકીનું લોજિક (તારું ઓરિજિનલ લોજિક)
+      await AppConstants.setActiveFy(fy);
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final data = doc.data() ?? {};
+      Map<String, String> byFy = {};
+      final existing = data['spreadsheetIdsByFy'];
+      if (existing is Map) {
+        for (final e in existing.entries) {
+          byFy[e.key.toString()] = e.value?.toString() ?? '';
+        }
+      }
+      byFy[fy] = newId;
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'spreadsheetId': newId,
+        'activeFy': fy,
+        'spreadsheetIdsByFy': byFy,
+      });
+
+      fyList.assignAll(byFy.keys.toList()..sort());
+      activeFyValue.value = fy;
+
+      GoogleSheetService.clearInvoiceListCacheForNewFy();
+
+      try {
+        await Get.find<DashboardController>().refreshDashboard();
+      } catch (_) {}
+
+      if (!_isDisposed) {
+        _safeSnackbar(title: 'Success', message: 'FY $fy sheet created with stock migration!', isError: false);
+      }
+      return true;
+    } catch (e) {
+      print('addNewFinancialYearForFy Error: $e');
+      // એરર હેન્ડલિંગ...
       return false;
     } finally {
       isLoadingFy.value = false;

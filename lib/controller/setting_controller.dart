@@ -30,6 +30,8 @@ class SettingsController extends GetxController {
   var selectedLanguage = 'English'.obs;
   var termsAndConditions = ''.obs;
   var selectedTemplate = 1.obs;
+  var isWhatsappDirectShare = false.obs;
+  var isLoadingWhatsappSetting = false.obs;
 
   /// Invoice PDF theme (5 options). Saved in Firestore company doc.
   var selectedPdfTemplate = kPdfTemplateClassic.obs;
@@ -125,6 +127,60 @@ class SettingsController extends GetxController {
     loadAllowDuplicateItems();
     loadIsAdmin();
     loadEnableCustomerOrderFeature();
+    loadWhatsappSettings();
+  }
+
+  Future<void> loadWhatsappSettings() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .get();
+
+      if (doc.exists) {
+        isWhatsappDirectShare.value = doc.data()?['isWhatsappDirectShare'] == true;
+        // AppConstants માં પણ સેટ કરી દઈએ જેથી ઈન્વોઈસ સ્ક્રીન પર સીધું વાપરી શકાય
+        AppConstants.setIsWhatsappDirectShare(isWhatsappDirectShare.value);
+      }
+    } catch (e) {
+      print('Error loading WhatsApp settings: $e');
+    }
+  }
+
+  Future<void> updateWhatsappDirectShare(bool val) async {
+    final user = FirebaseAuth.instance.currentUser;
+    final companyId = AppConstants.companyId;
+    if (user == null || companyId.isEmpty) return;
+
+    isLoadingWhatsappSetting.value = true;
+    try {
+      isWhatsappDirectShare.value = val;
+      await AppConstants.setIsWhatsappDirectShare(val);
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('companies')
+          .doc(companyId)
+          .update({'isWhatsappDirectShare': val});
+
+      Get.snackbar(
+        'Success',
+        val ? 'WhatsApp Direct Share Enabled' : 'WhatsApp Direct Share Disabled',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: val ? Colors.green.shade100 : Colors.orange.shade100,
+      );
+    } catch (e) {
+      print('updateWhatsappDirectShare Error: $e');
+    } finally {
+      isLoadingWhatsappSetting.value = false;
+    }
   }
 
   Future<void> updateAllowDuplicateItems(bool val) async {

@@ -1,5 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:io' as io;
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/controller/bash_controller.dart';
@@ -567,6 +571,31 @@ class DashboardController extends BaseController {
     }
   }
 
+  /// URL અથવા Base64 સ્ટ્રિંગમાંથી લોગોના બાઈટ્સ લોડ કરવા માટે
+  Future<Uint8List?> _loadLogoBytes(String? logo) async {
+    if (logo == null || logo.trim().isEmpty) return null;
+    final s = logo.trim();
+    try {
+      // ૧. જો ડેટા Base64 ફોર્મેટમાં હોય
+      if (s.startsWith('data:') && s.contains('base64,')) {
+        final idx = s.indexOf('base64,');
+        if (idx >= 0) {
+          final base64String = s.substring(idx + 7).trim();
+          if (base64String.isNotEmpty) return Uint8List.fromList(base64Decode(base64String));
+        }
+        return null;
+      }
+
+      // ૨. જો ડેટા HTTP/HTTPS URL હોય
+      if (s.startsWith('http://') || s.startsWith('https://')) {
+        final response = await http.get(Uri.parse(s)).timeout(const Duration(seconds: 10));
+        if (response.statusCode == 200) return response.bodyBytes;
+      }
+    } catch (e) {
+      print("❌ Error loading logo bytes: $e");
+    }
+    return null;
+  }
 
   Future<void> loadDashboardData() async {
     try {
@@ -2004,7 +2033,7 @@ class DashboardController extends BaseController {
 
   Future<void> exportGSTReportWithDateFilter(DateTime fromDate, DateTime toDate) async {
     try {
-      // Get invoices and items
+      // ૧. ડેટા ફેચ કરવો
       final invoices = await GoogleSheetService.getInvoices(type: "INV");
       final items = await GoogleSheetService.getInvoiceItems();
 
@@ -2014,22 +2043,13 @@ class DashboardController extends BaseController {
         return;
       }
 
-      // Normalize dates
+      // ૨. તારીખ ફિલ્ટર કરવી
       final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
       final end = DateTime(toDate.year, toDate.month, toDate.day);
 
-      print("📅 Generating GST Report from ${_formatDate(start)} to ${_formatDate(end)}");
-
-      // Filter invoices by date range
       final filteredInvoices = invoices.where((inv) {
         if (inv.issueDate == null) return false;
-
-        final issueDate = DateTime(
-          inv.issueDate!.year,
-          inv.issueDate!.month,
-          inv.issueDate!.day,
-        );
-
+        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
         return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
             (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
       }).toList();
@@ -2040,49 +2060,32 @@ class DashboardController extends BaseController {
         return;
       }
 
-      print("✅ Found ${filteredInvoices.length} invoices");
-
-      // Create PDF document
       final pdf = pw.Document();
 
-      // Calculate totals
-      double grandSubtotal = 0;
-      double grandCGST = 0;
-      double grandSGST = 0;
-      double grandTotal = 0;
-      int rowCount = 0;
+      // ૩. ગણતરી માટેના વેરીએબલ્સ
+      double grandSubtotal = 0, grandCGST = 0, grandSGST = 0, grandTotal = 0;
+      int totalItemsSold = 0;
+      double totalCash = 0, totalUpi = 0, totalCard = 0;
 
-      // ✅ NEW: Payment Mode Totals Variables
-      double totalCashCollection = 0;
-      double totalUpiCollection = 0;
-      double totalCardCollection = 0;
-
-      // Group by GST Rate for summary
+      bool showGstData = AppConstants.withGST.value;
       Map<double, Map<String, double>> gstRateSummary = {};
 
       for (var inv in filteredInvoices) {
-        // ✅ NEW: Calculate Payment Mode Totals (Per Invoice)
-        // We do this in the outer loop so we don't count the same invoice amount multiple times
         String mode = (inv.paymentMode ?? "").toLowerCase().trim();
         double invAmount = inv.totalAmount ?? 0.0;
+        if (mode == "cash") totalCash += invAmount;
+        else if (mode == "upi") totalUpi += invAmount;
+        else if (mode == "card") totalCard += invAmount;
 
-        if (mode == "cash") {
-          totalCashCollection += invAmount;
-        } else if (mode == "upi") {
-          totalUpiCollection += invAmount;
-        } else if (mode == "card") {
-          totalCardCollection += invAmount;
-        }
-
-        // --- Existing Logic for Items ---
         final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
 
         for (var item in invItems) {
           double qty = item.quantity ?? 0;
           double rate = item.rate ?? 0;
           double subtotal = rate * qty;
-          double gstRate = item.gstRate ?? 0;
-          double totalGST = subtotal * gstRate / 100;
+          double itemGstRate = (item.gstRate ?? 0.0).toDouble();
+
+          double totalGST = showGstData ? (subtotal * itemGstRate / 100) : 0;
           double cgst = totalGST / 2;
           double sgst = totalGST / 2;
           double total = subtotal + totalGST;
@@ -2091,29 +2094,19 @@ class DashboardController extends BaseController {
           grandCGST += cgst;
           grandSGST += sgst;
           grandTotal += total;
-          rowCount++;
+          totalItemsSold++;
 
-          if (!gstRateSummary.containsKey(gstRate)) {
-            gstRateSummary[gstRate] = {
-              'subtotal': 0,
-              'cgst': 0,
-              'sgst': 0,
-              'total': 0,
-            };
+          if (showGstData) {
+            gstRateSummary.putIfAbsent(itemGstRate, () => {'subtotal': 0, 'cgst': 0, 'sgst': 0, 'total': 0});
+            gstRateSummary[itemGstRate]!['subtotal'] = gstRateSummary[itemGstRate]!['subtotal']! + subtotal;
+            gstRateSummary[itemGstRate]!['cgst'] = gstRateSummary[itemGstRate]!['cgst']! + cgst;
+            gstRateSummary[itemGstRate]!['sgst'] = gstRateSummary[itemGstRate]!['sgst']! + sgst;
+            gstRateSummary[itemGstRate]!['total'] = gstRateSummary[itemGstRate]!['total']! + total;
           }
-
-          gstRateSummary[gstRate]!['subtotal'] =
-              (gstRateSummary[gstRate]!['subtotal'] ?? 0) + subtotal;
-          gstRateSummary[gstRate]!['cgst'] =
-              (gstRateSummary[gstRate]!['cgst'] ?? 0) + cgst;
-          gstRateSummary[gstRate]!['sgst'] =
-              (gstRateSummary[gstRate]!['sgst'] ?? 0) + sgst;
-          gstRateSummary[gstRate]!['total'] =
-              (gstRateSummary[gstRate]!['total'] ?? 0) + total;
         }
       }
 
-      // ========== PAGE 1: GST SUMMARY ==========
+      // ========== PAGE 1: SUMMARY REPORT (Original UI) ==========
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -2121,379 +2114,790 @@ class DashboardController extends BaseController {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // Header
                 pw.Container(
-                  padding: pw.EdgeInsets.all(20),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.blue900,
-                  ),
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: const pw.BoxDecoration(color: PdfColors.blue900),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(
-                        companyName.isNotEmpty
-                            ? companyName
-                            : 'GST SUMMARY REPORT',
-                        style: pw.TextStyle(
-                          fontSize: 24,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                      pw.SizedBox(height: 10),
-                      pw.Text(
-                        'Period: ${_formatDate(start)} to ${_formatDate(end)}',
-                        style: pw.TextStyle(fontSize: 12, color: PdfColors.white),
-                      ),
+                      pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      pw.SizedBox(height: 5),
+                      pw.Text('SALES SUMMARY REPORT ${showGstData ? "(GST)" : ""}', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
+                      pw.Text('Period: ${_formatDate(start)} to ${_formatDate(end)}', style: pw.TextStyle(fontSize: 11, color: PdfColors.white)),
                     ],
                   ),
                 ),
                 pw.SizedBox(height: 20),
-
-                // Report Info
                 pw.Container(
-                  padding: pw.EdgeInsets.all(15),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey400),
-                    borderRadius: pw.BorderRadius.circular(5),
-                  ),
-                  child: pw.Column(
-                    children: [
-                      _buildInfoRow('Total Invoices:', '${filteredInvoices.length}'),
-                      _buildInfoRow('Total Items:', '$rowCount'),
-                      _buildInfoRow(
-                        'Invoice Range:',
-                        '${filteredInvoices.first.invoiceId ?? "N/A"} to ${filteredInvoices.last.invoiceId ?? "N/A"}',
-                      ),
-                    ],
-                  ),
+                  padding: const pw.EdgeInsets.all(15),
+                  decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(5)),
+                  child: pw.Column(children: [
+                    _buildInfoRow('Total Invoices:', '${filteredInvoices.length}'),
+                    _buildInfoRow('Total Items Sold:', '$totalItemsSold'),
+                    _buildInfoRow('Invoice Range:', '${filteredInvoices.first.invoiceId ?? "N/A"} to ${filteredInvoices.last.invoiceId ?? "N/A"}'),
+                  ]),
                 ),
-
                 pw.SizedBox(height: 20),
-
-                // ✅ NEW: Payment Collection Summary Row
-                pw.Text(
-                  'Collection Summary',
-                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-                ),
-                pw.SizedBox(height: 10),
-
-                pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                  _buildSummaryBox("CASH", totalCash, PdfColors.green50, PdfColors.green700, PdfColors.green900),
+                  pw.SizedBox(width: 10),
+                  _buildSummaryBox("UPI", totalUpi, PdfColors.blue50, PdfColors.blue700, PdfColors.blue900),
+                  pw.SizedBox(width: 10),
+                  _buildSummaryBox("CARD", totalCard, PdfColors.orange50, PdfColors.orange700, PdfColors.orange900),
+                ]),
+                if (showGstData && gstRateSummary.isNotEmpty) ...[
+                  pw.SizedBox(height: 20),
+                  pw.Text('GST Rate-wise Summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 10),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey400),
                     children: [
-                      // Cash Box
-                      pw.Expanded(
-                        child: pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.green50,
-                              border: pw.Border.all(color: PdfColors.green700),
-                              borderRadius: pw.BorderRadius.circular(4),
-                            ),
-                            child: pw.Column(
-                                children: [
-                                  pw.Text("CASH", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
-                                  pw.SizedBox(height: 4),
-                                  pw.Text(AppUtil.formatCurrency(totalCashCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                                ]
-                            )
-                        ),
-                      ),
-                      pw.SizedBox(width: 10),
-                      // UPI Box
-                      pw.Expanded(
-                        child: pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.blue50,
-                              border: pw.Border.all(color: PdfColors.blue700),
-                              borderRadius: pw.BorderRadius.circular(4),
-                            ),
-                            child: pw.Column(
-                                children: [
-                                  pw.Text("UPI", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                                  pw.SizedBox(height: 4),
-                                  pw.Text(AppUtil.formatCurrency(totalUpiCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                                ]
-                            )
-                        ),
-                      ),
-                      pw.SizedBox(width: 10),
-                      // Card Box
-                      pw.Expanded(
-                        child: pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.orange50,
-                              border: pw.Border.all(color: PdfColors.orange700),
-                              borderRadius: pw.BorderRadius.circular(4),
-                            ),
-                            child: pw.Column(
-                                children: [
-                                  pw.Text("CARD", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.orange900)),
-                                  pw.SizedBox(height: 4),
-                                  pw.Text(AppUtil.formatCurrency(totalCardCollection), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                                ]
-                            )
-                        ),
-                      ),
-                    ]
-                ),
-
-                pw.SizedBox(height: 20),
-
-                // GST Rate-wise Summary Table
-                pw.Text(
-                  'GST Rate-wise Summary',
-                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey400),
-                  children: [
-                    // Header
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
-                      children: [
+                      pw.TableRow(decoration: const pw.BoxDecoration(color: PdfColors.grey300), children: [
                         _buildTableCell('GST Rate (%)', isHeader: true),
                         _buildTableCell('Taxable Amount', isHeader: true),
                         _buildTableCell('CGST', isHeader: true),
                         _buildTableCell('SGST', isHeader: true),
                         _buildTableCell('Total Amount', isHeader: true),
-                      ],
-                    ),
-                    // Data rows
-                    ...(gstRateSummary.keys.toList()..sort()).map((gstRate) {
-                      var data = gstRateSummary[gstRate]!;
-                      return pw.TableRow(
-                        children: [
-                          _buildTableCell('${gstRate.toStringAsFixed(2)}%'),
+                      ]),
+                      ...((gstRateSummary.keys.toList()..sort()).map((rate) {
+                        var data = gstRateSummary[rate]!;
+                        return pw.TableRow(children: [
+                          _buildTableCell('${rate.toStringAsFixed(2)}%'),
                           _buildTableCell(AppUtil.formatCurrency(data['subtotal']!)),
                           _buildTableCell(AppUtil.formatCurrency(data['cgst']!)),
                           _buildTableCell(AppUtil.formatCurrency(data['sgst']!)),
                           _buildTableCell(AppUtil.formatCurrency(data['total']!)),
-                        ],
-                      );
-                    }).toList(),
-                    // Total row
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(color: PdfColors.grey200),
-                      children: [
+                        ]);
+                      }).toList()),
+                      pw.TableRow(decoration: const pw.BoxDecoration(color: PdfColors.grey200), children: [
                         _buildTableCell('TOTAL', isHeader: true),
                         _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true),
                         _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true),
                         _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true),
                         _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true),
-                      ],
-                    ),
-                  ],
-                ),
+                      ]),
+                    ],
+                  ),
+                ],
               ],
             );
           },
         ),
       );
 
-      // ========== PAGE 2+: DETAILED INVOICE REPORT ==========
-      List<pw.TableRow> detailRows = [];
-
-      // Header
-      detailRows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColors.grey300),
-          children: [
-            _buildTableCell('Invoice ID', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
-            _buildTableCell('Customer', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
-            _buildTableCell('Date', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.center),
-            _buildTableCell('Item', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.left),
-            _buildTableCell('Qty', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('Rate', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('Subtotal', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('GST%', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('CGST', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('SGST', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-            _buildTableCell('Total', isHeader: true, fontSize: 7, textAlign: pw.TextAlign.right),
-          ],
-        ),
-      );
-
-      // Data rows
-      for (var inv in filteredInvoices) {
-        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
-        String dateStr = _formatDate(inv.issueDate);
-
-        if (invItems.isEmpty) {
-          detailRows.add(
-            pw.TableRow(
-              children: [
-                _buildTableCell(inv.invoiceId ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                _buildTableCell(dateStr, fontSize: 7, textAlign: pw.TextAlign.center),
-                _buildTableCell("No Items", fontSize: 7, textAlign: pw.TextAlign.left),
-                _buildTableCell("0", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
-                _buildTableCell("0.00", fontSize: 7, textAlign: pw.TextAlign.right),
-              ],
-            ),
-          );
-        } else {
-          for (var item in invItems) {
-            double qty = item.quantity ?? 0;
-            double rate = item.rate ?? 0;
-            double subtotal = rate * qty;
-            double gstRate = item.gstRate ?? 0;
-            double totalGST = subtotal * gstRate / 100;
-            double cgst = totalGST / 2;
-            double sgst = totalGST / 2;
-            double total = subtotal + totalGST;
-
-            detailRows.add(
-              pw.TableRow(
-                children: [
-                  _buildTableCell(inv.invoiceId ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                  _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                  _buildTableCell(dateStr, fontSize: 7, textAlign: pw.TextAlign.center),
-                  _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                  _buildTableCell(qty.toStringAsFixed(0), fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell(AppUtil.formatCurrency(rate), fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell(AppUtil.formatCurrency(subtotal), fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell('${gstRate.toStringAsFixed(0)}%', fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell(AppUtil.formatCurrency(cgst), fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell(AppUtil.formatCurrency(sgst), fontSize: 7, textAlign: pw.TextAlign.right),
-                  _buildTableCell(AppUtil.formatCurrency(total), fontSize: 7, textAlign: pw.TextAlign.right),
-                ],
-              ),
-            );
-          }
-        }
-      }
-
-      // Total row
-      detailRows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColors.grey200),
-          children: [
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8, textAlign: pw.TextAlign.left),
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
-            _buildTableCell('', fontSize: 7),
-            _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
-            _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
-            _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8, textAlign: pw.TextAlign.right),
-          ],
-        ),
-      );
-
+      // ========== PAGE 2+: DETAILED REPORT (Multi-page Fix with Original UI) ==========
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(32),
+          header: (context) => context.pageNumber > 1
+              ? pw.Column(children: [
+            pw.Text('Detailed Sales Report (Continued)', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            pw.SizedBox(height: 10)
+          ]) : pw.SizedBox(),
           build: (pw.Context context) => [
-            pw.Text(
-              'Detailed Invoice Report',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 10),
+            pw.Text('Detailed Sales Report', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 15),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-              columnWidths: {
-                0: pw.FixedColumnWidth(50),   // Invoice ID
-                1: pw.FixedColumnWidth(60),   // Customer
-                2: pw.FixedColumnWidth(45),   // Date
-                3: pw.FixedColumnWidth(70),   // Item
-                4: pw.FixedColumnWidth(28),   // Qty
-                5: pw.FixedColumnWidth(40),   // Rate
-                6: pw.FixedColumnWidth(45),   // Subtotal
-                7: pw.FixedColumnWidth(30),   // GST%
-                8: pw.FixedColumnWidth(42),   // CGST
-                9: pw.FixedColumnWidth(42),   // SGST
-                10: pw.FixedColumnWidth(48),  // Total
-              },
-              children: detailRows,
+              columnWidths: showGstData
+                  ? {0: const pw.FixedColumnWidth(40), 1: const pw.FixedColumnWidth(55), 2: const pw.FixedColumnWidth(40), 3: const pw.FixedColumnWidth(70), 4: const pw.FixedColumnWidth(25), 5: const pw.FixedColumnWidth(35), 6: const pw.FixedColumnWidth(40), 7: const pw.FixedColumnWidth(25), 8: const pw.FixedColumnWidth(35), 9: const pw.FixedColumnWidth(35), 10: const pw.FixedColumnWidth(40)}
+                  : {0: const pw.FixedColumnWidth(60), 1: const pw.FixedColumnWidth(80), 2: const pw.FixedColumnWidth(50), 3: const pw.FixedColumnWidth(100), 4: const pw.FixedColumnWidth(30), 5: const pw.FixedColumnWidth(50), 6: const pw.FixedColumnWidth(60), 7: const pw.FixedColumnWidth(70)},
+              children: [
+                // Header Row
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    'ID', 'Customer', 'Date', 'Item', 'Qty', 'Rate', 'Subtotal',
+                    if (showGstData) ...['GST%', 'CGST', 'SGST'],
+                    'Total'
+                  ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8)).toList(),
+                ),
+                // Data Rows
+                ...filteredInvoices.expand((inv) {
+                  final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
+                  String dateStr = _formatDate(inv.issueDate);
+                  return invItems.map((item) {
+                    double sub = (item.rate ?? 0) * (item.quantity ?? 0);
+                    double taxRate = showGstData ? (item.gstRate ?? 0) : 0;
+                    double taxAmt = sub * taxRate / 100;
+                    return pw.TableRow(children: [
+                      _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
+                      _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                      _buildTableCell(dateStr, fontSize: 7),
+                      _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                      _buildTableCell(item.quantity?.toString() ?? "0", fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(item.rate ?? 0), fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(sub), fontSize: 7),
+                      if (showGstData) ...[
+                        _buildTableCell('$taxRate%', fontSize: 7),
+                        _buildTableCell(AppUtil.formatCurrency(taxAmt / 2), fontSize: 7),
+                        _buildTableCell(AppUtil.formatCurrency(taxAmt / 2), fontSize: 7),
+                      ],
+                      _buildTableCell(AppUtil.formatCurrency(sub + taxAmt), fontSize: 7),
+                    ]);
+                  });
+                }).toList(),
+                // ✅ GRAND TOTAL ROW (Bold & Original UI)
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    _buildTableCell('', fontSize: 7),
+                    _buildTableCell('', fontSize: 7),
+                    _buildTableCell('', fontSize: 7),
+                    _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8, textAlign: pw.TextAlign.left),
+                    _buildTableCell('', fontSize: 7),
+                    _buildTableCell('', fontSize: 7),
+                    _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8),
+                    if (showGstData) ...[
+                      _buildTableCell('', fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8),
+                      _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8),
+                    ],
+                    _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8),
+                  ],
+                ),
+              ],
             ),
           ],
+          footer: (pw.Context context) => pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+          ),
         ),
       );
 
-      // Save PDF file
-     // final dir = await getApplicationDocumentsDirectory();
-      String fromDateStr = _formatDateForFilename(start);
-      String toDateStr = _formatDateForFilename(end);
-      String fileName = "${companyName.isNotEmpty ? companyName : 'SUMMARY'}_Report_${fromDateStr}_to_${toDateStr}.pdf";
-
+      String fileName = "Sales_Report_${_formatDateForFilename(start)}.pdf";
       if (kIsWeb) {
-        // ✅ WEB: Open Browser Print Preview
-        print("🖨️ Web Mode: Opening Print Preview");
-        await Printing.layoutPdf(
-          onLayout: (PdfPageFormat format) async => pdf.save(),
-          name: fileName,
-        );
-      }
-      else {
-        // 📱 MOBILE: Save to File
+        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
+      } else {
         final dir = await getApplicationDocumentsDirectory();
-        String outputFile = "${dir.path}/$fileName";
-        final file = File(outputFile);
+        final file = File("${dir.path}/$fileName");
         await file.writeAsBytes(await pdf.save());
-        print("✅ Saved to: $outputFile");
-        OpenFile.open(outputFile);
+        OpenFile.open(file.path);
       }
-
-      Get.snackbar(
-        'Success',
-        'GST Report PDF exported successfully',
-        backgroundColor: Colors.green.shade100,
-        icon: Icon(Icons.check_circle, color: Colors.green),
-      );
-
-
-    } catch (e, st) {
-      print("❌ Error generating GST report: $e");
-      print(st);
-      Get.snackbar(
-        'Error',
-        'Failed to generate report: $e',
-        backgroundColor: Colors.red.shade100,
-      );
+    } catch (e) {
+      print("❌ Export Error: $e");
+      Get.snackbar('Error', 'Failed to generate report');
     }
   }
 
-// Helper function to build table cells
-  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10, pw.TextAlign? textAlign}) {
+// --- HELPER WIDGETS ---
+  pw.Widget _buildSummaryBox(String label, double amount, PdfColor bgColor, PdfColor borderColor, PdfColor textColor) {
+    return pw.Expanded(
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: pw.BoxDecoration(color: bgColor, border: pw.Border.all(color: borderColor), borderRadius: pw.BorderRadius.circular(4)),
+        child: pw.Column(children: [
+          pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: textColor, fontSize: 10)),
+          pw.SizedBox(height: 4),
+          pw.Text(AppUtil.formatCurrency(amount), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+        ]),
+      ),
+    );
+  }
+
+// --- નવું Header Helper ---
+
+// ==========================================
+// હેડર ફંક્શન (Logo Left - Details Right)
+// ==========================================
+  pw.Widget _buildReportHeader(Map<String, dynamic>? company, String title, DateTime start, DateTime end, pw.MemoryImage? logo) {
+    String cName = company?['companyName'] ?? "YOUR BUSINESS";
+    String cAddress = company?['address'] ?? "";
+    String cPhone = company?['phone'] ?? "";
+    String cGst = company?['gst'] ?? "";
+
+    return pw.Column(
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // ✅ ૧. લોગો - ડાબી બાજુ (Left Side)
+            if (logo != null)
+              pw.Container(
+                height: 120, // સાઈઝ જરૂર મુજબ એડજસ્ટ કરી છે
+                width: 190,
+                child: pw.Image(logo, fit: pw.BoxFit.contain),
+              )
+            else
+              pw.SizedBox(width: 150), // જો લોગો ન હોય તો જગ્યા ખાલી રાખશે
+
+            // ✅ ૨. કંપની વિગતો - જમણી બાજુ (Right Side)
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end, // બધું જમણી બાજુ એલાઈન થશે
+                children: [
+                  pw.Text(
+                    cName.toUpperCase(),
+                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                  pw.SizedBox(height: 4),
+                  if (cAddress.isNotEmpty)
+                    pw.Text(
+                      cAddress,
+                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+                      textAlign: pw.TextAlign.right,
+                    ),
+                  if (cPhone.isNotEmpty)
+                    pw.Text(
+                      "Phone: $cPhone",
+                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+                      textAlign: pw.TextAlign.right,
+                    ),
+                  if (cGst.isNotEmpty)
+                    pw.Text(
+                      "GST: $cGst",
+                      style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+                      textAlign: pw.TextAlign.right,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 15),
+
+        // ✅ રિપોર્ટ ટાઇટલ અને સમયગાળો (Title Line)
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(title, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+            pw.Text(
+              'Period: ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 4),
+        pw.Container(height: 1.5, color: PdfColors.blue800), // બ્લુ ડિવાઈડર લાઈન
+        pw.SizedBox(height: 10),
+      ],
+    );
+  }
+
+  // ✅ સુધારેલું Cell Helper જે કલર સપોર્ટ કરે છે
+  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10, pw.TextAlign? textAlign, PdfColor color = PdfColors.black}) {
     return pw.Padding(
-      padding: pw.EdgeInsets.all(4),
+      padding: const pw.EdgeInsets.all(5),
       child: pw.Text(
         text,
         style: pw.TextStyle(
           fontSize: fontSize,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color, // હેડર માટે વ્હાઇટ કલર આવશે
         ),
         textAlign: textAlign ?? pw.TextAlign.center,
       ),
     );
   }
 
-// Helper function to build info rows
-  pw.Widget _buildInfoRow(String label, String value) {
-    return pw.Padding(
-      padding: pw.EdgeInsets.symmetric(vertical: 4),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-          pw.Text(value),
-        ],
-      ),
+  pw.Widget _buildSectionHeader(String title) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      child: pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
     );
   }
 
+
+  pw.Widget _buildInfoRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+        pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.Text(value),
+      ]),
+    );
+  }
+
+  Future<void> exportStockReport() async {
+    try {
+      // ૧. ડેટા ફેચ કરવો
+      final items = await GoogleSheetService.getItems(userId: AppConstants.userId);
+
+      if (items.isEmpty) {
+        Get.snackbar('No Data', 'No items found in stock',
+            backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      final pdf = pw.Document();
+      double totalStockValue = 0;
+      int activeItems = 0;
+
+      // ૨. કેલ્ક્યુલેશન
+      for (var item in items) {
+        if (item.isActive) {
+          activeItems++;
+          // સ્ટોકની કુલ વેલ્યુ (Current Stock * Price)
+          totalStockValue += (item.currentStock * item.price);
+        }
+      }
+
+      // ૩. PDF પેજ બનાવો
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              // Header
+              pw.Container(
+                padding: const pw.EdgeInsets.all(15),
+                decoration: const pw.BoxDecoration(color: PdfColors.teal900),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                        pw.Text('Inventory / Stock Report', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
+                      ],
+                    ),
+                    pw.Text('Date: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}', style: pw.TextStyle(color: PdfColors.white)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Summary Info
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildInfoRow('Total Active Items:', '$activeItems'),
+                  _buildInfoRow('Total Stock Value:', 'INR ${AppUtil.formatCurrency(totalStockValue)}'),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+
+              // Stock Table
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(150), // Item Name
+                  1: const pw.FixedColumnWidth(60),  // Price
+                  2: const pw.FixedColumnWidth(60),  // GST %
+                  3: const pw.FixedColumnWidth(60),  // Stock
+                  4: const pw.FixedColumnWidth(80),  // Value
+                },
+                children: [
+                  // Header Row
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                    children: [
+                      _buildTableCell('Item Name', isHeader: true),
+                      _buildTableCell('Purchase Price', isHeader: true),
+                      _buildTableCell('GST %', isHeader: true),
+                      _buildTableCell('Current Stock', isHeader: true),
+                      _buildTableCell('Stock Value', isHeader: true),
+                    ],
+                  ),
+                  // Data Rows
+                  ...items.map((item) {
+                    double stockVal = item.currentStock * item.price;
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell(item.itemName, textAlign: pw.TextAlign.left),
+                        _buildTableCell(AppUtil.formatCurrency(item.price)),
+                        _buildTableCell('${item.gstPercent}%'),
+                        _buildTableCell('${item.currentStock} ${item.unitOfMeasurement}'),
+                        _buildTableCell(AppUtil.formatCurrency(stockVal)),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            ];
+          },
+        ),
+      );
+
+      // ૪. ફાઈલ સેવ અને ઓપન કરવી
+      String fileName = "Stock_Report_${DateFormat('dd-MM-yyyy').format(DateTime.now())}.pdf";
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File("${dir.path}/$fileName");
+        await file.writeAsBytes(await pdf.save());
+        OpenFile.open(file.path);
+      }
+
+    } catch (e) {
+      print("❌ Stock Export Error: $e");
+      Get.snackbar('Error', 'Failed to generate stock report');
+    }
+  }
+
+  Future<void> exportPurchaseReport(DateTime fromDate, DateTime toDate) async {
+    try {
+      // ૧. ડેટા ફેચ કરવો
+      final purchases = await GoogleSheetService.getPurchasesList();
+
+      if (purchases.isEmpty) {
+        Get.snackbar('No Data', 'No purchases found to export',
+            backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      // ૨. તારીખ નોર્મલાઈઝ અને ફિલ્ટર કરવી
+      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      final end = DateTime(toDate.year, toDate.month, toDate.day);
+
+      final filteredPurchases = purchases.where((p) {
+        if (p.purchaseDate == null) return false;
+        final pDate = DateTime(p.purchaseDate!.year, p.purchaseDate!.month, p.purchaseDate!.day);
+        return (pDate.isAtSameMomentAs(start) || pDate.isAfter(start)) &&
+            (pDate.isAtSameMomentAs(end) || pDate.isBefore(end)) &&
+            p.userId == AppConstants.userId;
+      }).toList();
+
+      if (filteredPurchases.isEmpty) {
+        Get.snackbar('No Data', 'No purchases found in selected date range',
+            backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      final pdf = pw.Document();
+      double totalAmt = 0;
+      double totalPaid = 0;
+      double totalPending = 0;
+
+      for (var p in filteredPurchases) {
+        totalAmt += p.totalAmount ?? 0;
+        totalPaid += p.paidAmount ?? 0;
+        totalPending += p.pendingAmount ?? 0;
+      }
+
+      // ૩. PDF પેજ બનાવો
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape, // Landscape રાખીએ જેથી બધું સમાઈ જાય
+          margin: const pw.EdgeInsets.all(24),
+          build: (pw.Context context) {
+            return [
+              // Header
+              pw.Container(
+                padding: const pw.EdgeInsets.all(15),
+                decoration: const pw.BoxDecoration(color: PdfColors.red900),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                        pw.Text('Purchase Summary Report', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
+                      ],
+                    ),
+                    pw.Text('Period: ${_formatDate(start)} to ${_formatDate(end)}', style: pw.TextStyle(color: PdfColors.white)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Summary Stats
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSummaryBox("TOTAL PURCHASE", totalAmt, PdfColors.grey100, PdfColors.black, PdfColors.black),
+                  pw.SizedBox(width: 10),
+                  _buildSummaryBox("TOTAL PAID", totalPaid, PdfColors.green50, PdfColors.green900, PdfColors.green900),
+                  pw.SizedBox(width: 10),
+                  _buildSummaryBox("TOTAL PENDING", totalPending, PdfColors.red50, PdfColors.red900, PdfColors.red900),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+
+              // Purchase Table
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                children: [
+                  // Header Row
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                    children: [
+                      _buildTableCell('Bill No', isHeader: true, fontSize: 8),
+                      _buildTableCell('Vendor Name', isHeader: true, fontSize: 8),
+                      _buildTableCell('Date', isHeader: true, fontSize: 8),
+                      _buildTableCell('Total Amount', isHeader: true, fontSize: 8),
+                      _buildTableCell('Paid', isHeader: true, fontSize: 8),
+                      _buildTableCell('Pending', isHeader: true, fontSize: 8),
+                      _buildTableCell('Status', isHeader: true, fontSize: 8),
+                    ],
+                  ),
+                  // Data Rows
+                  ...filteredPurchases.map((p) {
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell(p.purchaseId ?? "", fontSize: 8),
+                        _buildTableCell(p.vendorName ?? "", fontSize: 8, textAlign: pw.TextAlign.left),
+                        _buildTableCell(_formatDate(p.purchaseDate), fontSize: 8),
+                        _buildTableCell(AppUtil.formatCurrency(p.totalAmount ?? 0), fontSize: 8),
+                        _buildTableCell(AppUtil.formatCurrency(p.paidAmount ?? 0), fontSize: 8),
+                        _buildTableCell(AppUtil.formatCurrency(p.pendingAmount ?? 0), fontSize: 8),
+                        _buildTableCell(p.paymentStatus ?? "", fontSize: 8),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            ];
+          },
+        ),
+      );
+
+      // ૪. ફાઈલ સેવ અને ઓપન
+      String fileName = "Purchase_Report_${_formatDateForFilename(start)}.pdf";
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File("${dir.path}/$fileName");
+        await file.writeAsBytes(await pdf.save());
+        OpenFile.open(file.path);
+      }
+
+    } catch (e) {
+      print("❌ Purchase Export Error: $e");
+      Get.snackbar('Error', 'Failed to generate purchase report');
+    }
+  }
+
+  Future<void> exportAllInOneReport(DateTime fromDate, DateTime toDate) async {
+    try {
+      final pdf = pw.Document();
+      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      final end = DateTime(toDate.year, toDate.month, toDate.day);
+      bool showGstData = AppConstants.withGST.value;
+
+      // ૧. કંપની ડેટા અને લોગો લોડિંગ
+      final companyData = currentCompany.value;
+      pw.MemoryImage? logoProvider;
+
+      if (companyData != null && companyData['logo'] != null) {
+        final Uint8List? bytes = await _loadLogoBytes(companyData['logo'].toString());
+        if (bytes != null && bytes.isNotEmpty) {
+          logoProvider = pw.MemoryImage(bytes);
+        }
+      }
+
+      // ૨. ડેટા ફેચિંગ
+      final invoices = await GoogleSheetService.getInvoices(type: "INV");
+      final allItems = await GoogleSheetService.getInvoiceItems();
+      final purchases = await GoogleSheetService.getPurchasesList();
+      final stockItems = await GoogleSheetService.getItems(userId: AppConstants.userId);
+
+      // ફિલ્ટરિંગ લોજિક
+      final filteredInvoices = invoices.where((inv) {
+        if (inv.issueDate == null) return false;
+        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
+        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
+            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
+      }).toList();
+
+      final filteredPurchases = purchases.where((p) {
+        if (p.purchaseDate == null) return false;
+        final pDate = DateTime(p.purchaseDate!.year, p.purchaseDate!.month, p.purchaseDate!.day);
+        return (pDate.isAtSameMomentAs(start) || pDate.isAfter(start)) &&
+            (pDate.isAtSameMomentAs(end) || pDate.isBefore(end));
+      }).toList();
+
+      int currentNum = 1;
+      int salesNum = filteredInvoices.isNotEmpty ? currentNum++ : 0;
+      int purchaseNum = filteredPurchases.isNotEmpty ? currentNum++ : 0;
+      int stockNum = stockItems.isNotEmpty ? currentNum++ : 0;
+
+      final headerColor = PdfColors.blue800;
+
+      // Footer
+      pw.Widget _buildFooter(pw.Context context) {
+        return pw.Column(
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+            pw.SizedBox(height: 3),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Application By: Intelligent Tech',
+                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
+                pw.Text('252, NEO Square, Jamnagar | Mo: 7383915985',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              ],
+            ),
+          ],
+        );
+      }
+
+      // ==========================================
+      // સેક્શન ૧: SALES REPORT
+      // ==========================================
+      if (salesNum > 0) {
+        double sSubtotal = 0, sCGST = 0, sSGST = 0, sTotal = 0;
+        double tCash = 0, tUpi = 0, tCard = 0;
+
+        for (var inv in filteredInvoices) {
+          String mode = (inv.paymentMode ?? "").toLowerCase();
+          if (mode.contains("cash")) tCash += inv.totalAmount ?? 0;
+          else if (mode.contains("upi")) tUpi += inv.totalAmount ?? 0;
+          else tCard += inv.totalAmount ?? 0;
+
+          final invItems = allItems.where((it) => it.invoiceId == inv.invoiceId).toList();
+          for (var item in invItems) {
+            double sub = (item.rate ?? 0) * (item.quantity ?? 0);
+            double tax = showGstData ? (sub * (item.gstRate ?? 0) / 100) : 0;
+            sSubtotal += sub; sCGST += tax/2; sSGST += tax/2; sTotal += (sub + tax);
+          }
+        }
+
+        // ✅ ફક્ત આ પહેલા પેજ પર જ હેડર (Logo + Company Details) આવશે
+        pdf.addPage(pw.Page(
+          build: (context) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+            _buildReportHeader(companyData, "ALL-IN-ONE BUSINESS REPORT", start, end, logoProvider),
+            pw.SizedBox(height: 10),
+            pw.Text("$salesNum. SALES SUMMARY", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+              _buildSummaryBox("CASH", tCash, PdfColors.green50, PdfColors.green700, PdfColors.green900),
+              _buildSummaryBox("UPI", tUpi, PdfColors.blue50, PdfColors.blue700, PdfColors.blue900),
+              _buildSummaryBox("CARD", tCard, PdfColors.orange50, PdfColors.orange700, PdfColors.orange900),
+            ]),
+            pw.SizedBox(height: 20),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(5)),
+              child: pw.Column(children: [
+                _buildInfoRow("Total Taxable Amount", AppUtil.formatCurrency(sSubtotal)),
+                if(showGstData) _buildInfoRow("Total GST", AppUtil.formatCurrency(sCGST + sSGST)),
+                _buildInfoRow("Grand Total Revenue", AppUtil.formatCurrency(sTotal)),
+              ]),
+            ),
+            pw.Spacer(),
+            _buildFooter(context),
+          ]),
+        ));
+
+        // Detailed Sales Table
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          footer: _buildFooter,
+          build: (context) => [
+            pw.Text("Detailed Sales Report", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              children: [
+                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
+                  'ID', 'Customer', 'Item', 'Qty', 'Rate', 'Subtotal', if(showGstData) 'GST', 'Total'
+                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8, color: PdfColors.white)).toList()),
+                ...filteredInvoices.expand((inv) {
+                  final invItems = allItems.where((it) => it.invoiceId == inv.invoiceId).toList();
+                  return invItems.map((item) {
+                    double sub = (item.rate ?? 0) * (item.quantity ?? 0);
+                    double tax = showGstData ? (sub * (item.gstRate ?? 0) / 100) : 0;
+                    return pw.TableRow(children: [
+                      _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
+                      _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                      _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                      _buildTableCell("${item.quantity}", fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(item.rate ?? 0), fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(sub), fontSize: 7),
+                      if(showGstData) _buildTableCell(AppUtil.formatCurrency(tax), fontSize: 7),
+                      _buildTableCell(AppUtil.formatCurrency(sub + tax), fontSize: 7),
+                    ]);
+                  });
+                }).toList(),
+              ],
+            ),
+          ],
+        ));
+      }
+
+      // ==========================================
+      // સેક્શન ૨: PURCHASE REPORT
+      // ==========================================
+      if (purchaseNum > 0) {
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          footer: _buildFooter,
+          build: (context) => [
+            // ❌ અહીંથી _buildReportHeader કાઢી નાખ્યું છે
+            pw.Text("$purchaseNum. PURCHASE REPORT", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              children: [
+                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
+                  'Bill No', 'Vendor', 'Date', 'Total', 'Paid', 'Status'
+                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8, color: PdfColors.white)).toList()),
+                ...filteredPurchases.map((p) => pw.TableRow(children: [
+                  _buildTableCell(p.purchaseId ?? "", fontSize: 7),
+                  _buildTableCell(p.vendorName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
+                  _buildTableCell(_formatDate(p.purchaseDate), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(p.totalAmount ?? 0), fontSize: 7),
+                  _buildTableCell(AppUtil.formatCurrency(p.paidAmount ?? 0), fontSize: 7),
+                  _buildTableCell(p.paymentStatus ?? "", fontSize: 7),
+                ])),
+              ],
+            ),
+          ],
+        ));
+      }
+
+      // ==========================================
+      // સેક્શન ૩: STOCK REPORT
+      // ==========================================
+      if (stockNum > 0) {
+        pdf.addPage(pw.MultiPage(
+          footer: _buildFooter,
+          build: (context) => [
+            // ❌ અહીંથી પણ _buildReportHeader કાઢી નાખ્યું છે
+            pw.Text("$stockNum. STOCK REPORT", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+              children: [
+                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
+                  'Item Name', 'Price', 'Stock', 'Value'
+                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 9, color: PdfColors.white)).toList()),
+                ...stockItems.map((item) => pw.TableRow(children: [
+                  _buildTableCell(item.itemName, fontSize: 8, textAlign: pw.TextAlign.left),
+                  _buildTableCell(AppUtil.formatCurrency(item.price), fontSize: 8),
+                  _buildTableCell("${item.currentStock} ${item.unitOfMeasurement}", fontSize: 8),
+                  _buildTableCell(AppUtil.formatCurrency(item.currentStock * item.price), fontSize: 8),
+                ])),
+              ],
+            ),
+          ],
+        ));
+      }
+
+      // SAVE & OPEN
+      final bytes = await pdf.save();
+      if (kIsWeb) {
+        await Printing.layoutPdf(onLayout: (format) async => bytes, name: "Business_Report.pdf");
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File("${dir.path}/All_In_One_${DateTime.now().millisecondsSinceEpoch}.pdf");
+        await file.writeAsBytes(bytes);
+        OpenFile.open(file.path);
+      }
+    } catch (e) {
+      print("❌ Error: $e");
+      Get.snackbar('Error', 'Failed to generate report');
+    }
+  }
 
   void viewInvoiceDetails(Invoice invoice) {
 
