@@ -772,20 +772,9 @@ class OrderController extends GetxController {
       final total = validRows.fold<double>(
           0, (s, r) => s + r.selectedItem!.sellPrice * r.qty);
 
-      final docRef = await _firestore.collection('public_orders').add({
-        'companyId':       companyId.value,
-        'customerId':      customerId.value,
-        'customerName':    customerName.value,
-        'customerMobile':  customerMobile.value,
-        'customerAddress': customerAddress.value,
-        'customerEmail':   customerEmail.value,
-        'items':           orderItems,
-        'totalAmount':     total,
-        'status':          'pending',
-        'timestamp':       FieldValue.serverTimestamp(),
-      });
-
-      await _saveOrderToSheet(docRef.id, orderItems, total: total);
+      // ✅ Firestore `public_orders` removed — Orders sheet is source of truth
+      final orderId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
+      await _saveOrderToSheet(orderId, orderItems, total: total);
 
       orderRows.value = [OrderRow()];
       Get.offNamed(

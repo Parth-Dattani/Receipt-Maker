@@ -1,8 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../services/orders_sheet_service.dart';
 import '../services/public_order_status_sync.dart';
 import '../utils/shared_preferences_helper.dart';
 
@@ -10,8 +9,6 @@ class AdminOrdersController extends GetxController {
   var isLoading = false.obs;
   var orders = <Map<String, dynamic>>[].obs;
   var filterStatus = 'all'.obs;
-
-  final _firestore = FirebaseFirestore.instance;
 
   int get pendingCount =>
       orders.where((o) => o['status'] == 'pending').length;
@@ -40,27 +37,9 @@ class AdminOrdersController extends GetxController {
         return;
       }
       print('📦 Loading orders for uid: $uid');
-
-      _firestore
-          .collection('public_orders')
-          .where('companyId', isEqualTo: uid)
-          .snapshots()
-          .listen((snap) {
-        final docs =
-            snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-
-        docs.sort((a, b) {
-          final aTs = a['timestamp'] as Timestamp?;
-          final bTs = b['timestamp'] as Timestamp?;
-          if (aTs == null && bTs == null) return 0;
-          if (aTs == null) return 1;
-          if (bTs == null) return -1;
-          return bTs.compareTo(aTs);
-        });
-
-        orders.value = docs;
-        print('✅ Admin orders loaded: ${docs.length}');
-      });
+      final docs = await OrdersSheetService.getAdminOrders(uid);
+      orders.value = docs;
+      print('✅ Admin orders loaded (sheet): ${docs.length}');
     } catch (e) {
       print('❌ loadOrders: $e');
     } finally {
@@ -76,32 +55,21 @@ class AdminOrdersController extends GetxController {
     return FirebaseAuth.instance.currentUser?.uid ?? '';
   }
 
-  Future<void> markInvoiceCreated(String orderId) async {
-    await PublicOrderStatusSync.markInvoiceCreated(orderId);
-    print('✅ Invoice marked created: $orderId');
-  }
-
-  Future<void> markChallanCreated(String orderId) async {
-    await PublicOrderStatusSync.markChallanCreated(orderId);
-    print('✅ Challan marked created: $orderId');
-  }
-
+  // Firestore `public_orders` removed — status changes happen when
+  // invoice/challan is created (sheet sync). Manual mark/reset removed.
   Future<void> resetOrderCreated(String orderId) async {
     try {
       await PublicOrderStatusSync.resetOrderCreated(orderId);
       Get.snackbar(
         'Reset ✅',
-        'Order re-enabled for Invoice/Challan',
+        'Order re-enabled (pending)',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.blue.shade100,
-        colorText: Colors.black87,
         duration: const Duration(seconds: 2),
       );
-      print('✅ Order reset: $orderId');
+      await loadOrders();
     } catch (e) {
-      print('❌ resetOrderCreated error: $e');
       Get.snackbar('Error', 'Failed to reset: $e',
-          backgroundColor: Colors.red.shade100);
+          snackPosition: SnackPosition.BOTTOM);
     }
   }
 }
