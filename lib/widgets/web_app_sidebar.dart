@@ -147,7 +147,7 @@ class WebAppSidebar extends GetView<DashboardController> {
                   child: Obx(() => Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('invoice_sathi'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      Text('smart_biz'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
                       Text('v${controller.appVersion.value}', style: TextStyle(color: Colors.white54, fontSize: 11)),
                     ],
                   )),

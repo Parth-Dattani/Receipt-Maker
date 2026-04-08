@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../constant/constant.dart';
 import '../../../controller/controller.dart';
 import '../../../widgets/widgets.dart';
 
@@ -17,20 +18,20 @@ class RegistrationForm extends GetView<AuthController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50, // Very light teal
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.teal.shade100),
-            ),
-            child: Text(
-              "For New Registration Contact your Authorised Person",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.teal.shade800),
-            ),
-          ),
-          const SizedBox(height: 20),
+          // Container(
+          //   padding: const EdgeInsets.all(12),
+          //   decoration: BoxDecoration(
+          //     color: Colors.teal.shade50, // Very light teal
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(color: Colors.teal.shade100),
+          //   ),
+          //   child: Text(
+          //     "For New Registration Contact your Authorised Person",
+          //     textAlign: TextAlign.center,
+          //     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.teal.shade800),
+          //   ),
+          // ),
+          // const SizedBox(height: 20),
 
           _buildFormFields(),
 
@@ -114,17 +115,18 @@ class RegistrationForm extends GetView<AuthController> {
           label: "City",
           icon: Icons.location_city_outlined,
         ),
-        const SizedBox(height: 20),
-        Obx(() => CheckboxListTile(
-          value: controller.isDemo.value,
-          onChanged: (val) => controller.isDemo.value = val ?? false,
-          title: Text("Demo Account", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade900)),
-          subtitle: const Text("Check to create a test account"),
-          activeColor: Colors.teal,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-        )),
+        ///for demo Account
+        // const SizedBox(height: 20),
+        // Obx(() => CheckboxListTile(
+        //   value: controller.isDemo.value,
+        //   onChanged: (val) => controller.isDemo.value = val ?? false,
+        //   title: Text("Demo Account", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade900)),
+        //   subtitle: const Text("Check to create a test account"),
+        //   activeColor: AppColors.appTheame.withValues(alpha: 0.85),
+        //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        //   contentPadding: EdgeInsets.zero,
+        //   controlAffinity: ListTileControlAffinity.leading,
+        // )),
       ],
     );
   }
@@ -161,7 +163,7 @@ Widget _buildTealTextField({
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey.shade600),
-        prefixIcon: Icon(icon, color: Colors.teal), // Teal Icon
+        prefixIcon: Icon(icon, color: AppColors.appTheame.withValues(alpha: 0.85)), // Teal Icon
         suffixIcon: isPassword
             ? IconButton(
           icon: Icon(
@@ -209,7 +211,7 @@ Widget _buildTealDropdown({
       value: safeValue,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.teal),
+        prefixIcon: Icon(icon, color: AppColors.appTheame.withValues(alpha: 0.85)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -237,7 +239,7 @@ Widget _buildPrimaryButton({
     child: ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal, // Main Teal Color
+        backgroundColor: AppColors.appTheame.withValues(alpha: 0.88), // Main Teal Color
         foregroundColor: Colors.white,
         elevation: 5,
         shadowColor: Colors.teal.withOpacity(0.4),

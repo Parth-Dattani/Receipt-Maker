@@ -54,7 +54,7 @@ class AuthScreen extends GetView<AuthController> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Image.asset(
-                        ImagePath.splashImage,
+                        ImagePath.appLogo,
                         height: 100,
                         width: 100,
                         fit: BoxFit.contain,
@@ -639,7 +639,10 @@ class AuthScreen extends GetView<AuthController> {
       padding: const EdgeInsets.only(bottom: 30),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.teal.shade800, Colors.teal.shade400],
+          colors: [
+            AppColors.appTheame.withValues(alpha: 1.8),
+            AppColors.appTheame.withValues(alpha: 0.8),
+          ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -659,7 +662,7 @@ class AuthScreen extends GetView<AuthController> {
           children: [
             const SizedBox(height: 20),
             Image.asset(
-              ImagePath.splashImage,
+              ImagePath.appLogo,
               height: 80,
               width: 80,
               fit: BoxFit.contain,

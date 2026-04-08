@@ -62,7 +62,7 @@ class DashboardScreen extends GetView<DashboardController> {
           },
           icon: const Icon(Icons.menu),
         ),
-        title: Text('invoice_sathi'.tr),
+        title: Text('smart_biz'.tr),
         backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -184,12 +184,7 @@ class DashboardScreen extends GetView<DashboardController> {
   // 💻 WEB LAYOUT (Vertical Cards) - COMPACT VERSION
   // ===========================================================================
 // Updated _buildWebLayout method - Replace in DashboardScreen
-// Updated _buildWebLayout method - Replace in DashboardScreen
 
-
-  // Updated _buildWebLayout method - Complete restructure
-
-// Updated _buildWebLayout method - Complete restructure
 
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
@@ -811,7 +806,7 @@ class DashboardScreen extends GetView<DashboardController> {
                       Obx(() => Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('invoice_sathi'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          Text('smart_biz'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
                           Text('v${controller.appVersion.value}', style: TextStyle(color: Colors.white54, fontSize: 11)),
                         ],
                       )),
@@ -1320,7 +1315,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   ),
                   child: Text(
                     "Profit: ₹${AppUtil.formatCurrency(controller.todayProfit.value)}",
-                    style: const TextStyle(color: Color(0xFF1B5E20), fontSize: 15, fontWeight: FontWeight.bold),
+                    style:  TextStyle(color: AppColors.appTheame.withValues(alpha: 0.85), fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -2238,7 +2233,7 @@ class DashboardScreen extends GetView<DashboardController> {
                   Container(
                     decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1))),
                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                    child: Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
+                    child: Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('smart_biz'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
                   ),
                 ],
               ),

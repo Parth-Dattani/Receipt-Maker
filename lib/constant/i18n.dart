@@ -8,6 +8,7 @@ class Messages extends Translations {
   Map<String, Map<String, String>> get keys => {
     englishCode: {
       'invoice_sathi' : 'Invoice Sathi',
+      'smart_biz' : 'SmartBiz',
       'dashboard': 'Dashboard',
       'welcome_back': 'Welcome back!',
       'business_overview': 'Here\'s your business overview',
@@ -247,6 +248,7 @@ class Messages extends Translations {
 
     gujaratiCode: {
       'invoice_sathi' : 'ઇન્વોઇસ સાથી',
+      'smart_biz' : 'સ્માર્ટબિઝ',
       'dashboard': 'ડેશબોર્ડ',
       'welcome_back': 'ફરી સ્વાગત છે!',
       'business_overview': 'અહીં તમારી વ્યવસાય સારાંશ છે',

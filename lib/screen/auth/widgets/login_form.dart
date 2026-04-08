@@ -113,7 +113,7 @@ class LoginForm extends GetView<AuthController> {
                     child: Text(
                       "Forgot Password?",
                       style: TextStyle(
-                          color: Colors.teal.shade700,
+                          color:AppColors.appTheame.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600
                       ),
                     ),
@@ -364,7 +364,7 @@ Widget _buildPrimaryButton({
     child: ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal.shade700,
+        backgroundColor: AppColors.appTheame.withValues(alpha: 0.88),
         foregroundColor: Colors.white,
         elevation: 0, // Web પર ફ્લેટ બટન વધુ સારા લાગે છે
         shape: RoundedRectangleBorder(
