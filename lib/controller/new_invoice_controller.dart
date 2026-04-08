@@ -375,17 +375,29 @@ class NewInvoiceController extends GetxController {
               final qty      = double.tryParse(orderItem['quantity']?.toString() ?? '1') ?? 1.0;
               final price    = double.tryParse(orderItem['price']?.toString()    ?? '0') ?? 0.0;
 
-              // Find in item list
-              final matched = itemList.firstWhereOrNull(
-                    (i) => i.itemId == itemId ||
-                    i.itemName.toLowerCase() == itemName.toLowerCase(),
-              );
+              // Match master item: prefer name when itemId is wrong/duplicated on sheet
+              Item? matched;
+              if (itemId.isNotEmpty) {
+                final byId = itemList.where((i) => i.itemId == itemId).toList();
+                if (byId.isNotEmpty) {
+                  matched = byId.firstWhereOrNull(
+                    (i) => i.itemName.toLowerCase() == itemName.toLowerCase(),
+                  );
+                  matched ??= byId.first;
+                }
+              }
+              if (matched == null && itemName.isNotEmpty) {
+                matched = itemList.firstWhereOrNull(
+                  (i) => i.itemName.toLowerCase() == itemName.toLowerCase(),
+                );
+              }
 
               if (matched != null) {
                 // Add row + select item
                 addNewItem();
                 final idx = invoiceItems.length - 1;
-                selectRemoteItemForIndex(idx, matched);
+                // Order lines must stay separate even if sheet reused the same itemId
+                selectRemoteItemForIndex(idx, matched, skipDuplicateMerge: true);
 
                 await Future.delayed(const Duration(milliseconds: 50));
                 updateItem(idx, quantity: qty);
@@ -2475,7 +2487,8 @@ class NewInvoiceController extends GetxController {
 //     }
 //   }
 
-  void selectRemoteItemForIndex(int index, Item item) {
+  void selectRemoteItemForIndex(int index, Item item,
+      {bool skipDuplicateMerge = false}) {
     if (index >= invoiceItems.length) return;
 
     final businessType = AppConstants.businessType?.toLowerCase() ?? '';
@@ -2492,7 +2505,7 @@ class NewInvoiceController extends GetxController {
           return AppConstants.allowDuplicateItems;
         })();
 
-    if (!allowDuplicate) {
+    if (!skipDuplicateMerge && !allowDuplicate) {
       int existingIndex = -1;
       for (int i = 0; i < invoiceItems.length; i++) {
         if (i == index) continue;
@@ -2899,6 +2912,21 @@ class NewInvoiceController extends GetxController {
     };
 
     return itemData;
+  }
+
+  /// Lines in the same shape as `public_orders.items` (customer My Orders UI).
+  List<Map<String, dynamic>> _linkedPublicOrderLineMapsFromInvoice() {
+    return invoiceItems.map((item) {
+      final name =
+          item.itemName.isNotEmpty ? item.itemName : item.description;
+      return <String, dynamic>{
+        'itemId': item.itemId,
+        'itemName': name,
+        'price': item.rate,
+        'quantity': item.quantity,
+        'subtotal': item.calculatedTotalPrice,
+      };
+    }).toList();
   }
 
   void _refreshParentControllers() {
@@ -3490,7 +3518,10 @@ class NewInvoiceController extends GetxController {
       }
 
       if (_linkedPublicOrderId.isNotEmpty) {
-        await PublicOrderStatusSync.markInvoiceCreated(_linkedPublicOrderId);
+        await PublicOrderStatusSync.markInvoiceCreated(
+          _linkedPublicOrderId,
+          fulfilledLineItems: _linkedPublicOrderLineMapsFromInvoice(),
+        );
         _linkedPublicOrderId = '';
       }
 

@@ -178,10 +178,21 @@ class NewChallanController extends BaseController {
       final qty      = double.tryParse(orderItem['quantity']?.toString() ?? '1') ?? 1.0;
       final price    = double.tryParse(orderItem['price']?.toString()    ?? '0') ?? 0.0;
 
-      final matched = itemList.firstWhereOrNull(
-            (i) => i.itemId == itemId ||
-            i.itemName.toLowerCase() == itemName.toLowerCase(),
-      );
+      Item? matched;
+      if (itemId.isNotEmpty) {
+        final byId = itemList.where((i) => i.itemId == itemId).toList();
+        if (byId.isNotEmpty) {
+          matched = byId.firstWhereOrNull(
+            (i) => i.itemName.toLowerCase() == itemName.toLowerCase(),
+          );
+          matched ??= byId.first;
+        }
+      }
+      if (matched == null && itemName.isNotEmpty) {
+        matched = itemList.firstWhereOrNull(
+          (i) => i.itemName.toLowerCase() == itemName.toLowerCase(),
+        );
+      }
 
       if (matched != null) {
         final sellPrice = matched.sellPrice.toDouble();
@@ -1205,15 +1216,20 @@ class NewChallanController extends BaseController {
     violationMessages.refresh();
   }
 
-  void selectRemoteItemForIndex(int index, Item item) {
+  void selectRemoteItemForIndex(int index, Item item,
+      {bool skipDuplicateMerge = false}) {
     if (index >= challanItems.length) return;
 
     // 1. Duplicate Check Logic
     int existingIndex = -1;
-    for (int i = 0; i < challanItems.length; i++) {
-      if (i != index && challanItems[i].itemId == item.itemId && challanItems[i].itemId.isNotEmpty) {
-        existingIndex = i;
-        break;
+    if (!skipDuplicateMerge) {
+      for (int i = 0; i < challanItems.length; i++) {
+        if (i != index &&
+            challanItems[i].itemId == item.itemId &&
+            challanItems[i].itemId.isNotEmpty) {
+          existingIndex = i;
+          break;
+        }
       }
     }
 
@@ -1886,6 +1902,21 @@ class NewChallanController extends BaseController {
   //   }
   // }
 
+  /// Same shape as `public_orders.items` for customer My Orders.
+  List<Map<String, dynamic>> _linkedPublicOrderLineMapsFromChallan() {
+    return challanItems.map((item) {
+      final name =
+          item.itemName.isNotEmpty ? item.itemName : item.description;
+      return <String, dynamic>{
+        'itemId': item.itemId,
+        'itemName': name,
+        'price': item.price,
+        'quantity': item.quantity,
+        'subtotal': item.calculatedAmount,
+      };
+    }).toList();
+  }
+
   Future<bool> saveChallan({required bool isDraft}) async {
     try {
       // ---------------- VALIDATION STEPS ----------------
@@ -1994,7 +2025,10 @@ class NewChallanController extends BaseController {
       }
 
       if (_linkedPublicOrderId.isNotEmpty && !isDraft) {
-        await PublicOrderStatusSync.markChallanCreated(_linkedPublicOrderId);
+        await PublicOrderStatusSync.markChallanCreated(
+          _linkedPublicOrderId,
+          fulfilledLineItems: _linkedPublicOrderLineMapsFromChallan(),
+        );
         _linkedPublicOrderId = '';
       }
 

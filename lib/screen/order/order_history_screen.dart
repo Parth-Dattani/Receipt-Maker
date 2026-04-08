@@ -1,18 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-// ─────────────────────────────────────────────
-// OrderHistoryScreen
-// URL: /order-history?cid=...&uid=...
-// ─────────────────────────────────────────────
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import '../../services/orders_sheet_service.dart';
 
 // ─────────────────────────────────────────────
 // OrderHistoryScreen
@@ -54,82 +43,72 @@ class OrderHistoryScreen extends StatelessWidget {
           ? const Center(
           child: Text('Invalid link',
               style: TextStyle(color: Colors.grey)))
-          : StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('public_orders')
-            .where('companyId', isEqualTo: cid)
-            .where('customerId', isEqualTo: uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(
-                  color: Color(0xFF00897B)),
-            );
-          }
+          : StreamBuilder<int>(
+              stream: Stream<int>.periodic(const Duration(seconds: 6), (i) => i),
+              builder: (context, tickSnap) {
+                return FutureBuilder<List<Map<String, dynamic>>>(
+                  future: OrdersSheetService.getCustomerOrders(
+                    companyId: cid,
+                    customerId: uid,
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF00897B)),
+                      );
+                    }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: Colors.red.shade300),
-                  const SizedBox(height: 12),
-                  Text('Error loading orders',
-                      style: TextStyle(color: Colors.grey.shade600)),
-                ],
-              ),
-            );
-          }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline,
+                                size: 48, color: Colors.red.shade300),
+                            const SizedBox(height: 12),
+                            Text('Error loading orders',
+                                style: TextStyle(color: Colors.grey.shade600)),
+                          ],
+                        ),
+                      );
+                    }
 
-          // Sort by timestamp descending in Dart (no index needed)
-          final docs = (snapshot.data?.docs ?? [])
-            ..sort((a, b) {
-              final aData = a.data() as Map<String, dynamic>;
-              final bData = b.data() as Map<String, dynamic>;
-              final aTs = aData['timestamp'] as Timestamp?;
-              final bTs = bData['timestamp'] as Timestamp?;
-              if (aTs == null && bTs == null) return 0;
-              if (aTs == null) return 1;
-              if (bTs == null) return -1;
-              return bTs.compareTo(aTs); // newest first
-            });
+                    final orders = snapshot.data ?? [];
+                    if (orders.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.receipt_long_outlined,
+                                size: 64, color: Colors.grey.shade300),
+                            const SizedBox(height: 16),
+                            Text('No orders yet',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 8),
+                            Text('Your orders will appear here',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade400)),
+                          ],
+                        ),
+                      );
+                    }
 
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.receipt_long_outlined,
-                      size: 64, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text('No orders yet',
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 8),
-                  Text('Your orders will appear here',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade400)),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data =
-              docs[index].data() as Map<String, dynamic>;
-              return _OrderCard(data: data);
-            },
-          );
-        },
-      ),
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: orders.length,
+                      itemBuilder: (context, index) {
+                        return _OrderCard(data: orders[index]);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 }
@@ -171,11 +150,8 @@ class _OrderCardState extends State<_OrderCard> {
   String _formatTimestamp(dynamic ts) {
     if (ts == null) return '';
     try {
-      final dt = (ts as Timestamp).toDate();
-      return '${dt.day.toString().padLeft(2,'0')}/'
-          '${dt.month.toString().padLeft(2,'0')}/${dt.year}  '
-          '${dt.hour.toString().padLeft(2,'0')}:'
-          '${dt.minute.toString().padLeft(2,'0')}';
+      // Sheet stores timestamp as string; keep as-is.
+      return ts.toString();
     } catch (_) {
       return '';
     }
@@ -306,7 +282,6 @@ class _OrderCardState extends State<_OrderCard> {
                   ...items.map((item) {
                     final i = item as Map<String, dynamic>;
                     final qty = i['quantity'];
-                    final price = i['price'];
                     final subtotal = i['subtotal'];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),

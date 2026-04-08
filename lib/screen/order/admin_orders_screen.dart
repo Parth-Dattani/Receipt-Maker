@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -217,9 +216,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
   String _formatTs(dynamic ts) {
     if (ts == null) return '';
     try {
-      final dt = (ts as Timestamp).toDate();
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}  '
-          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      // Sheet stores timestamp as string; keep as-is.
+      return ts.toString();
     } catch (_) { return ''; }
   }
 
@@ -250,7 +248,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     });
 
     if (result == true && orderId.isNotEmpty) {
-      widget.controller.markInvoiceCreated(orderId);
+      // Sheet status is synced during invoice save.
+      widget.controller.loadOrders();
     }
   }
 
@@ -282,7 +281,8 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     });
 
     if (result == true && orderId.isNotEmpty) {
-      widget.controller.markChallanCreated(orderId);
+      // Sheet status is synced during challan save.
+      widget.controller.loadOrders();
     }
   }
 
