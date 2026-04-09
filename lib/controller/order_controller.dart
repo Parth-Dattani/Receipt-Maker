@@ -287,6 +287,8 @@ class OrderController extends GetxController {
   var itemList       = <Item>[].obs;
   var showPriceToCustomer = true.obs;
   var orderRows    = <OrderRow>[].obs;
+  /// Bumped on qty changes so cart bar updates without rebuilding the whole order list (web scroll).
+  var orderQtyTick = 0.obs;
 
   // Old cart (kept for compatibility)
   var cart = <String, int>{}.obs;
@@ -731,7 +733,7 @@ class OrderController extends GetxController {
 
   void setQty(int index, double qty) {
     orderRows[index].qty = qty;
-    orderRows.refresh();
+    orderQtyTick.value++;
   }
 
   double get orderTotalAmount {

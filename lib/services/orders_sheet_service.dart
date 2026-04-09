@@ -92,6 +92,39 @@ class OrdersSheetService {
     return lines.isNotEmpty ? _safeStr(lines.first['timestamp']) : '';
   }
 
+  static bool _isCancelledLineStatus(String raw) {
+    var s = _safeStr(raw).toLowerCase();
+    s = s.replaceAll(RegExp(r'\s+'), ' ');
+    if (s.isEmpty) return false;
+    if (s == 'cancelled' || s == 'canceled' || s == 'cancel') return true;
+    final letters = s.replaceAll(RegExp(r'[^a-z]'), '');
+    return letters == 'cancelled' ||
+        letters == 'canceled' ||
+        letters == 'cancel';
+  }
+
+  static String _canonicalLineStatus(String raw) {
+    final s = _safeStr(raw).toLowerCase();
+    if (s.isEmpty) return 'pending';
+    if (_isCancelledLineStatus(raw)) return 'cancelled';
+    if (s == 'confirmed' || s == 'confirm') return 'confirmed';
+    if (s == 'pending') return 'pending';
+    if (s == 'delivered' || s == 'deliver') return 'delivered';
+    return s;
+  }
+
+  static String _aggregateStatusFromLines(List<Map<String, dynamic>> activeLines) {
+    if (activeLines.isEmpty) return 'cancelled';
+    final set = activeLines
+        .map((l) => _canonicalLineStatus(_safeStr(l['status'])))
+        .where((s) => s.isNotEmpty && s != 'cancelled')
+        .toSet();
+    if (set.contains('delivered')) return 'delivered';
+    if (set.contains('confirmed')) return 'confirmed';
+    if (set.contains('pending')) return 'pending';
+    return 'pending';
+  }
+
   static Future<List<Map<String, dynamic>>> _readOrdersRows(
     String companyId, {
     String? customerId,
@@ -156,7 +189,9 @@ class OrdersSheetService {
           'price': _safeDbl(cell(priceIdx)),
           'subtotal': _safeDbl(cell(subtotalIdx)),
           'totalAmount': _safeDbl(cell(totalIdx)),
-          'status': cell(statusIdx).isEmpty ? 'pending' : cell(statusIdx),
+          'status': cell(statusIdx).isEmpty
+              ? 'pending'
+              : _canonicalLineStatus(cell(statusIdx)),
           'timestamp': cell(tsIdx),
         });
       }
@@ -178,9 +213,11 @@ class OrdersSheetService {
 
     final orders = <Map<String, dynamic>>[];
     byOrderId.forEach((orderId, lines) {
-      // Prefer non-cancelled lines for items list
-      final items = lines
-          .where((l) => _safeStr(l['status']).toLowerCase() != 'cancelled')
+      final activeLines = lines
+          .where((l) => !_isCancelledLineStatus(_safeStr(l['status'])))
+          .toList();
+
+      final items = activeLines
           .map((l) => <String, dynamic>{
                 'itemId': l['itemId'],
                 'itemName': l['itemName'],
@@ -190,14 +227,21 @@ class OrdersSheetService {
               })
           .toList();
 
-      final status = _safeStr(lines.first['status']).toLowerCase();
-      final totalAmount = (lines.isNotEmpty)
-          ? (_safeDbl(lines.first['totalAmount']) > 0
-              ? _safeDbl(lines.first['totalAmount'])
-              : items.fold<double>(0, (s, m) => s + _safeDbl(m['subtotal'])))
-          : 0.0;
+      var status = _aggregateStatusFromLines(activeLines).trim();
+      // Sheet can have odd spacing/spellings; never show whole order cancelled if any line is still active.
+      if (items.isNotEmpty && _isCancelledLineStatus(status)) {
+        status = 'confirmed';
+      }
 
-      // Newest line time among rows for this order (multi-line orders)
+      final fromItemsSubtotal =
+          items.fold<double>(0, (s, m) => s + _safeDbl(m['subtotal']));
+      double totalAmount = fromItemsSubtotal;
+      if (totalAmount <= 0 &&
+          activeLines.isNotEmpty &&
+          _safeDbl(activeLines.first['totalAmount']) > 0) {
+        totalAmount = _safeDbl(activeLines.first['totalAmount']);
+      }
+
       final ts = _newestTimestampRawAmongLines(lines);
 
       orders.add({
