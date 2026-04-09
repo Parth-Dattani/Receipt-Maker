@@ -7,15 +7,41 @@ import '../../services/orders_sheet_service.dart';
 // OrderHistoryScreen
 // URL: /order-history?cid=...&uid=...
 // ─────────────────────────────────────────────
-class OrderHistoryScreen extends StatelessWidget {
+class OrderHistoryScreen extends StatefulWidget {
   static const pageId = '/order-history';
   const OrderHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final cid = Get.parameters['cid'] ?? '';
-    final uid = Get.parameters['uid'] ?? '';
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
+}
 
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  late Future<List<Map<String, dynamic>>> _ordersFuture;
+  late final String _cid;
+  late final String _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _cid = Get.parameters['cid'] ?? '';
+    _uid = Get.parameters['uid'] ?? '';
+    _ordersFuture = OrdersSheetService.getCustomerOrders(
+      companyId: _cid,
+      customerId: _uid,
+    );
+  }
+
+  Future<void> _reload() async {
+    final f = OrdersSheetService.getCustomerOrders(
+      companyId: _cid,
+      customerId: _uid,
+    );
+    setState(() => _ordersFuture = f);
+    await f;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
@@ -35,82 +61,128 @@ class OrderHistoryScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.offNamed(
             '/order',
-            parameters: {'cid': cid, 'uid': uid},
+            parameters: {'cid': _cid, 'uid': _uid},
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh',
+            onPressed: _reload,
+          ),
+        ],
       ),
-      body: cid.isEmpty || uid.isEmpty
+      body: _cid.isEmpty || _uid.isEmpty
           ? const Center(
-          child: Text('Invalid link',
-              style: TextStyle(color: Colors.grey)))
-          : StreamBuilder<int>(
-              stream: Stream<int>.periodic(const Duration(seconds: 6), (i) => i),
-              builder: (context, tickSnap) {
-                return FutureBuilder<List<Map<String, dynamic>>>(
-                  future: OrdersSheetService.getCustomerOrders(
-                    companyId: cid,
-                    customerId: uid,
+              child: Text('Invalid link',
+                  style: TextStyle(color: Colors.grey)))
+          : FutureBuilder<List<Map<String, dynamic>>>(
+              future: _ordersFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                        color: Color(0xFF00897B)),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 48, color: Colors.red.shade300),
+                        const SizedBox(height: 12),
+                        Text('Error loading orders',
+                            style: TextStyle(color: Colors.grey.shade600)),
+                        const SizedBox(height: 16),
+                        TextButton.icon(
+                          onPressed: () => _reload(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final orders = snapshot.data ?? [];
+                if (orders.isEmpty) {
+                  return RefreshIndicator(
+                    color: const Color(0xFF00897B),
+                    onRefresh: _reload,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.35,
+                        ),
+                        Icon(Icons.receipt_long_outlined,
+                            size: 64, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: Text('No orders yet',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500)),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: Text('Your orders will appear here',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade400)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  color: const Color(0xFF00897B),
+                  onRefresh: _reload,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) {
+                      return _OrderCard(data: orders[index]);
+                    },
                   ),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF00897B)),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline,
-                                size: 48, color: Colors.red.shade300),
-                            const SizedBox(height: 12),
-                            Text('Error loading orders',
-                                style: TextStyle(color: Colors.grey.shade600)),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final orders = snapshot.data ?? [];
-                    if (orders.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.receipt_long_outlined,
-                                size: 64, color: Colors.grey.shade300),
-                            const SizedBox(height: 16),
-                            Text('No orders yet',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey.shade500,
-                                    fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 8),
-                            Text('Your orders will appear here',
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey.shade400)),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: orders.length,
-                      itemBuilder: (context, index) {
-                        return _OrderCard(data: orders[index]);
-                      },
-                    );
-                  },
                 );
               },
             ),
     );
   }
+}
+
+List<dynamic> _orderItemsFromData(dynamic v) {
+  if (v is List) return v;
+  return const [];
+}
+
+/// True if sheet/backend sent a cancelled-like label (spacing, punctuation, unicode noise).
+bool _statusMeansCancelledLike(String raw) {
+  var s = raw.toLowerCase().trim();
+  s = s.replaceAll(RegExp(r'\s+'), ' ');
+  if (s.isEmpty) return false;
+  if (s == 'cancelled' || s == 'canceled' || s == 'cancel') return true;
+  final letters = s.replaceAll(RegExp(r'[^a-z]'), '');
+  return letters == 'cancelled' ||
+      letters == 'canceled' ||
+      letters == 'cancel';
+}
+
+/// Order header: if any line item is still shown, never show full "cancelled" (partial line cancels).
+String _displayOrderStatus(Map<String, dynamic> data) {
+  final raw = (data['status']?.toString() ?? '').trim();
+  final items = _orderItemsFromData(data['items']);
+  if (items.isNotEmpty && _statusMeansCancelledLike(raw)) {
+    return 'confirmed';
+  }
+  return raw.isEmpty ? 'pending' : raw;
 }
 
 // ─────────────────────────────────────────────
@@ -159,10 +231,10 @@ class _OrderCardState extends State<_OrderCard> {
 
   @override
   Widget build(BuildContext context) {
-    final status      = widget.data['status']?.toString() ?? 'pending';
+    final status      = _displayOrderStatus(widget.data);
     final totalAmount = widget.data['totalAmount'];
     final timestamp   = widget.data['timestamp'];
-    final items       = (widget.data['items'] as List<dynamic>?) ?? [];
+    final items       = _orderItemsFromData(widget.data['items']);
     final statusColor = _statusColor(status);
 
     return Container(

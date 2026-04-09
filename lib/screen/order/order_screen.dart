@@ -88,7 +88,7 @@ class OrderScreen extends StatelessWidget {
               child: CircularProgressIndicator(color: Color(0xFF00897B)));
         }
 
-        // ✅ Web-Responsive Container
+        // ✅ Web-Responsive Container — list row count isolated so qty changes don't rebuild ListView
         return Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 800), // વેબ માટે લિમિટ
@@ -108,11 +108,16 @@ class OrderScreen extends StatelessWidget {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     children: [
-                      // Items List
-                      ...List.generate(controller.orderRows.length, (index) {
-                        return _OrderItemRow(
-                          index: index,
-                          controller: controller,
+                      Obx(() {
+                        final n = controller.orderRows.length;
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(n, (index) {
+                            return _OrderItemRow(
+                              index: index,
+                              controller: controller,
+                            );
+                          }),
                         );
                       }),
 
@@ -154,8 +159,9 @@ class OrderScreen extends StatelessWidget {
           ),
         );
       }),
-      // Bottom Bar (Centering for Web)
+      // Bottom Bar (Centering for Web) — orderQtyTick so qty updates don't rebuild main body list
       bottomNavigationBar: Obx(() {
+        controller.orderQtyTick.value;
         final hasItems = controller.orderRows.any((r) => r.selectedItem != null && r.qty > 0);
         if (!hasItems || controller.isLoading.value) return const SizedBox.shrink();
 
@@ -219,24 +225,25 @@ class OrderScreen extends StatelessWidget {
 
   // --- Total Items Summary Widget ---
   Widget _buildTotalItemsSummary(OrderController controller) {
-    return Obx(() {
-      final total = controller.orderRows.where((r) => r.selectedItem != null && r.qty > 0).length;
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.shade200, width: 1),
-        ),
-        child: Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200, width: 1),
+      ),
+      child: Obx(() {
+        controller.orderQtyTick.value;
+        final total = controller.orderRows.where((r) => r.selectedItem != null && r.qty > 0).length;
+        return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Total Items:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF2E7D32))),
             Text('$total', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF2E7D32))),
           ],
-        ),
-      );
-    });
+        );
+      }),
+    );
   }
 }
 
@@ -733,6 +740,7 @@ class _CartBar extends StatelessWidget {
           children: [
             Expanded(
               child: Obx(() {
+                controller.orderQtyTick.value;
                 final count = controller.orderRows
                     .where((r) => r.selectedItem != null && r.qty > 0)
                     .length;

@@ -208,10 +208,29 @@ class PublicOrderStatusSync {
         final statusIdx = idxOf('status', 10);
 
         final newTotal = _totalFromOrderLineMaps(fulfilledLineItems);
-        final fulfilledByItemId = <String, Map<String, dynamic>>{
-          for (final m in fulfilledLineItems)
-            (m['itemId']?.toString() ?? '').trim(): m,
-        };
+        final fulfilledByItemId = <String, Map<String, dynamic>>{};
+        final fulfilledByItemName = <String, Map<String, dynamic>>{};
+        for (final m in fulfilledLineItems) {
+          final id = (m['itemId']?.toString() ?? '').trim();
+          if (id.isNotEmpty) fulfilledByItemId[id] = m;
+          final nm = (m['itemName']?.toString() ?? '').trim().toLowerCase();
+          if (nm.isNotEmpty) fulfilledByItemName[nm] = m;
+        }
+
+        Map<String, dynamic>? matchedFulfilled(
+          String sheetItemId,
+          String sheetItemName,
+        ) {
+          if (sheetItemId.isNotEmpty &&
+              fulfilledByItemId.containsKey(sheetItemId)) {
+            return fulfilledByItemId[sheetItemId];
+          }
+          final key = sheetItemName.trim().toLowerCase();
+          if (key.isNotEmpty && fulfilledByItemName.containsKey(key)) {
+            return fulfilledByItemName[key];
+          }
+          return null;
+        }
 
         // Get full sheet rows (limited to A:L as current schema)
         final resp = await sheetsApi.spreadsheets.values.get(
@@ -232,7 +251,11 @@ class PublicOrderStatusSync {
           final rowNum = i + 1; // 1-based
           final existingItemId =
               itemIdIdx < row.length ? row[itemIdIdx].toString().trim() : '';
-          final keep = existingItemId.isNotEmpty && fulfilledByItemId.containsKey(existingItemId);
+          final existingItemName =
+              itemNameIdx < row.length ? row[itemNameIdx].toString().trim() : '';
+          final matched =
+              matchedFulfilled(existingItemId, existingItemName);
+          final keep = matched != null;
 
           // Always update totalAmount + status per row
           updates.add(
@@ -252,7 +275,7 @@ class PublicOrderStatusSync {
           );
 
           if (keep) {
-            final m = fulfilledByItemId[existingItemId]!;
+            final m = matched;
             final itemName = m['itemName']?.toString() ?? '';
             final qty = m['quantity'];
             final price = m['price'];
