@@ -22,6 +22,11 @@ class PurchaseListController extends BaseController {
   /// Separate loaders
   final isPurchaseLoading = false.obs;
   final isCompanyLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMore = true.obs;
+  final ScrollController scrollController = ScrollController();
+  static const int _pageSize = 50;
+  int _offset = 0;
 
   /// UI loading (for shimmer/empty state)
   bool get isDataLoading => isPurchaseLoading.value || isCompanyLoading.value;
@@ -29,23 +34,65 @@ class PurchaseListController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    loadPurchases();
+    loadFirstPage();
     loadCompanyData();
+    scrollController.addListener(_onScroll);
   }
 
-  /// Load purchases from Google Sheets
-  Future<void> loadPurchases() async {
+  void _onScroll() {
+    if (!hasMore.value) return;
+    if (isPurchaseLoading.value || isLoadingMore.value) return;
+    if (!scrollController.hasClients) return;
+    final pos = scrollController.position;
+    if (pos.pixels >= (pos.maxScrollExtent - 280)) {
+      loadNextPage();
+    }
+  }
+
+  Future<void> loadFirstPage() async {
     try {
       isPurchaseLoading.value = true;
+      _offset = 0;
+      hasMore.value = true;
+      purchaseList.clear();
+      filteredPurchaseList.clear();
 
-      List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
-      purchaseList.assignAll(purchases);
-      filteredPurchaseList.assignAll(purchases);
+      final (page, more) = await GoogleSheetService.getPurchasesPage(
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
+
+      purchaseList.assignAll(page);
+      _applyCurrentFilters();
 
     } catch (e) {
       print("❌ Error loading purchases: $e");
     } finally {
       isPurchaseLoading.value = false;
+    }
+  }
+
+  Future<void> loadNextPage() async {
+    if (!hasMore.value) return;
+    if (isPurchaseLoading.value || isLoadingMore.value) return;
+    try {
+      isLoadingMore.value = true;
+      final (page, more) = await GoogleSheetService.getPurchasesPage(
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
+      if (page.isNotEmpty) {
+        purchaseList.addAll(page);
+        _applyCurrentFilters();
+      }
+    } catch (e) {
+      print("❌ Error loading more purchases: $e");
+    } finally {
+      isLoadingMore.value = false;
     }
   }
 
@@ -79,40 +126,43 @@ class PurchaseListController extends BaseController {
 
   /// Refresh purchases
   Future<void> refreshPurchases() async {
-    await loadPurchases();
+    await loadFirstPage();
   }
 
   /// Search purchases by ID or vendor name
   void filterPurchases(String query) {
     searchQuery.value = query;
-
-    if (query.isEmpty) {
-      filteredPurchaseList.assignAll(purchaseList);
-      return;
-    }
-
-    final filtered = purchaseList.where((purchase) {
-      return (purchase.purchaseId?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
-          (purchase.vendorName?.toLowerCase().contains(query.toLowerCase()) ?? false);
-    }).toList();
-
-    filteredPurchaseList.assignAll(filtered);
+    _applyCurrentFilters();
   }
 
   /// Filter purchases by payment status
   void filterByStatus(String status) {
     selectedFilter.value = status;
+    _applyCurrentFilters();
+  }
 
-    if (status == 'All') {
-      filteredPurchaseList.assignAll(purchaseList);
-      return;
+  void _applyCurrentFilters() {
+    final q = searchQuery.value.trim().toLowerCase();
+    List<PurchaseEntry> list = purchaseList.toList();
+    if (q.isNotEmpty) {
+      list = list.where((p) {
+        final id = (p.purchaseId ?? '').toLowerCase();
+        final name = (p.vendorName ?? '').toLowerCase();
+        return id.contains(q) || name.contains(q);
+      }).toList();
     }
+    final status = selectedFilter.value;
+    if (status != 'All') {
+      list = list.where((p) => (p.paymentStatus ?? '').toLowerCase() == status.toLowerCase()).toList();
+    }
+    filteredPurchaseList.assignAll(list);
+  }
 
-    final filtered = purchaseList.where((purchase) {
-      return (purchase.paymentStatus?.toLowerCase() ?? '') == status.toLowerCase();
-    }).toList();
-
-    filteredPurchaseList.assignAll(filtered);
+  @override
+  void onClose() {
+    scrollController.removeListener(_onScroll);
+    scrollController.dispose();
+    super.onClose();
   }
 
   /// Actions for each purchase

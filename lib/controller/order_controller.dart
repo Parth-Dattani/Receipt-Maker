@@ -218,21 +218,14 @@ import '../widgets/custom_snackbar.dart';
 // }
 
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
 
-
-
-import 'package:googleapis/sheets/v4.dart' as sheets;
+import '../services/orders_sheet_service.dart';
 
 
 // ─────────────────────────────────────────────
@@ -289,6 +282,8 @@ class OrderController extends GetxController {
   var orderRows    = <OrderRow>[].obs;
   /// Bumped on qty changes so cart bar updates without rebuilding the whole order list (web scroll).
   var orderQtyTick = 0.obs;
+  /// Non-empty when customer opened `/order?...&editOrderId=ORD-...` from My Orders.
+  var editOrderIdParam = ''.obs;
 
   // Old cart (kept for compatibility)
   var cart = <String, int>{}.obs;
@@ -305,6 +300,7 @@ class OrderController extends GetxController {
         .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
     customerId.value = (Get.parameters['uid'] ?? '')
         .replaceAll(RegExp(r'[^0-9]'), '');
+    editOrderIdParam.value = (Get.parameters['editOrderId'] ?? '').trim();
 
     if (companyId.value.isEmpty || customerId.value.isEmpty) {
       Get.snackbar('Invalid Link', 'Order link is missing required parameters.',
@@ -346,13 +342,84 @@ class OrderController extends GetxController {
         _fetchCompanyName(),
       ]);
 
-      // Default 1 empty row
+      // Default 1 empty row, or load pending order for edit
       orderRows.value = [OrderRow()];
+      if (editOrderIdParam.value.isNotEmpty) {
+        await _loadPendingOrderIntoRows(editOrderIdParam.value);
+      }
 
     } catch (e) {
       print('❌ initPage error: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> _loadPendingOrderIntoRows(String orderId) async {
+    try {
+      final list = await OrdersSheetService.getCustomerOrders(
+        companyId: companyId.value,
+        customerId: customerId.value,
+      );
+      Map<String, dynamic>? found;
+      for (final o in list) {
+        if (o['orderId']?.toString() == orderId) {
+          found = o;
+          break;
+        }
+      }
+      if (found == null) {
+        Get.snackbar('Order not found',
+            'આ ઓર્ડર મળ્યો નથી અથવા કાઢી દેવાયો છે.');
+        editOrderIdParam.value = '';
+        return;
+      }
+      if (!OrdersSheetService.isPendingOrderForCustomerEdit(found)) {
+        Get.snackbar('ફેરફાર ન થઈ શકે',
+            'ફક્ત Pending ઓર્ડર જ એડિટ / ડિલીટ થઈ શકે.');
+        editOrderIdParam.value = '';
+        return;
+      }
+      final rawItems = found['items'];
+      if (rawItems is! List || rawItems.isEmpty) {
+        Get.snackbar('Order', 'આ ઓર્ડરમાં લાઇન આઇટમ નથી.');
+        editOrderIdParam.value = '';
+        return;
+      }
+
+      final newRows = <OrderRow>[];
+      for (final raw in rawItems) {
+        if (raw is! Map) continue;
+        final m = Map<String, dynamic>.from(raw);
+        final id = m['itemId']?.toString() ?? '';
+        final name = m['itemName']?.toString() ?? '';
+        final price =
+            double.tryParse(m['price']?.toString() ?? '0') ?? 0.0;
+        final qty =
+            double.tryParse(m['quantity']?.toString() ?? '0') ?? 0.0;
+        if (qty <= 0) continue;
+
+        Item? item = itemList.firstWhereOrNull((i) => i.itemId == id);
+        item ??= Item(
+          itemId: id.isEmpty ? 'unknown-${newRows.length}' : id,
+          itemName: name.isEmpty ? 'Item' : name,
+          price: price,
+          sellPrice: price,
+        );
+        newRows.add(OrderRow(selectedItem: item, qty: qty));
+      }
+
+      if (newRows.isEmpty) {
+        Get.snackbar('Order', 'આ ઓર્ડર લોડ થયો નથી.');
+        editOrderIdParam.value = '';
+        return;
+      }
+      orderRows.value = newRows;
+      orderRows.refresh();
+    } catch (e) {
+      print('❌ _loadPendingOrderIntoRows: $e');
+      Get.snackbar('Error', 'ઓર્ડર લોડ કરતાં ભૂલ.');
+      editOrderIdParam.value = '';
     }
   }
 
@@ -774,9 +841,21 @@ class OrderController extends GetxController {
       final total = validRows.fold<double>(
           0, (s, r) => s + r.selectedItem!.sellPrice * r.qty);
 
-      // ✅ Firestore `public_orders` removed — Orders sheet is source of truth
-      final orderId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
-      await _saveOrderToSheet(orderId, orderItems, total: total);
+      final editId = editOrderIdParam.value.trim();
+      if (editId.isNotEmpty) {
+        await OrdersSheetService.replacePendingOrderInSheet(
+          companyId: companyId.value,
+          customerId: customerId.value,
+          customerName: customerName.value,
+          orderId: editId,
+          orderItems: orderItems,
+          total: total,
+        );
+        editOrderIdParam.value = '';
+      } else {
+        final orderId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
+        await _saveOrderToSheet(orderId, orderItems, total: total);
+      }
 
       orderRows.value = [OrderRow()];
       Get.offNamed(

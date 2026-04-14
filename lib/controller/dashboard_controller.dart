@@ -176,6 +176,23 @@ class DashboardController extends BaseController {
         print('🔄 enableCustomerOrderFeature: $orderFeature');
       }
 
+      // ✅ Payment / Receipt + Purchase (missing Firestore field = ON)
+      final payFeature = data['enablePaymentReceiptFeature'] != false;
+      if (AppConstants.enablePaymentReceiptFeature.value != payFeature) {
+        AppConstants.enablePaymentReceiptFeature.value = payFeature;
+        AppConstants.setEnablePaymentReceiptFeature(payFeature);
+        print('🔄 enablePaymentReceiptFeature: $payFeature');
+      }
+      final bt = (data['businessType'] ?? AppConstants.businessType).toString().trim();
+      final isTrading = bt == 'Trading';
+      final purchaseFeature =
+          isTrading && (data['enablePurchaseFeature'] != false);
+      if (AppConstants.enablePurchaseFeature.value != purchaseFeature) {
+        AppConstants.enablePurchaseFeature.value = purchaseFeature;
+        AppConstants.setEnablePurchaseFeature(purchaseFeature);
+        print('🔄 enablePurchaseFeature: $purchaseFeature (trading=$isTrading)');
+      }
+
       // ✅ allowDuplicateItems real-time sync
       final allowDup = data['allowDuplicateItems'] == true;
       if (AppConstants.allowDuplicateItems != allowDup) {
@@ -210,31 +227,82 @@ class DashboardController extends BaseController {
       return;
     }
 
-
+    var bootOk = true;
     try {
       _isInitializing = true;
       isLoading.value = true;
       print("🔄 Starting dashboard initialization...");
-      // Run user and company data in parallel (faster on web)
       await Future.wait([
         _loadUserData(),
         _loadCompanyData(),
       ]);
-      await loadCompanySettings();
+      await _hydrateCompanySettingsFromCurrentCompanyOrFirestore();
       _listenCompanyFeatures();
-      /// Load dashboard data (invoices + purchases in parallel inside loadDashboardData)
-      await loadDashboardData();
+    } catch (e) {
+      print("❌ Error initializing dashboard: $e");
+      bootOk = false;
+      _hasInitialized = false;
+    } finally {
+      // First paint ASAP: sheet lists load after UI is shown (biggest win after login).
+      _isInitializing = false;
+      isLoading.value = false;
+      _shimmerAlreadyShown.value = true;
+    }
 
+    if (!bootOk) return;
+
+    try {
+      await loadDashboardData();
       _hasInitialized = true;
       print("✅ Dashboard initialization complete");
     } catch (e) {
-      print("❌ Error initializing dashboard: $e");
-      _hasInitialized = false;
-    }finally {
-      _isInitializing = false;
-      isLoading.value = false;
-      _shimmerAlreadyShown.value = true; // Never show full shimmer again
+      print("❌ loadDashboardData: $e");
+      _hasInitialized = true;
     }
+  }
+
+  /// Uses [currentCompany] from [_loadCompanyData] when possible to skip an extra Firestore read.
+  Future<void> _hydrateCompanySettingsFromCurrentCompanyOrFirestore() async {
+    final cached = currentCompany.value;
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final isChallanEnabled = cached['isChallanEnabled'] == true;
+        final isCashMemoEnabled = cached['isCashMemoEnabled'] == true;
+        final isGstEnabled = cached['isGstEnabled'] == true;
+
+        await Future.wait([
+          sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled),
+          sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled),
+          sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled),
+        ]);
+
+        AppConstants.isChallan.value = isChallanEnabled;
+        AppConstants.isCashMemo.value = isCashMemoEnabled;
+        AppConstants.withGST.value = isGstEnabled;
+
+        final businessType = (cached['businessType'] ?? 'Trading').toString();
+        await AppConstants.setBusinessType(businessType);
+        if (businessType.trim() == 'Trading') {
+          await AppConstants.setEnablePurchaseFeature(
+              cached['enablePurchaseFeature'] != false);
+        }
+        return;
+      } catch (e) {
+        print('hydrate company settings from cache: $e');
+      }
+    }
+    await loadCompanySettings();
+  }
+
+  Future<void> _tryAttachCompanyLogoFromSheet(String companyDocId) async {
+    try {
+      final url = await GoogleSheetService.getCompanyLogoUrl(companyDocId);
+      if (url != null && url.isNotEmpty && currentCompany.value != null) {
+        final m = Map<String, dynamic>.from(currentCompany.value!);
+        m['logo'] = url;
+        currentCompany.value = m;
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadUserData() async {
@@ -269,6 +337,11 @@ class DashboardController extends BaseController {
   // ✅ SILENT REFRESH (No Loading Spinner)
   Future<void> refreshDataSilently() async {
     print("🔄 Refreshing dashboard data silently...");
+
+    if (_auth.currentUser == null) {
+      print("⚠️ refreshDataSilently skipped: no signed-in user");
+      return;
+    }
 
     // નોંધ: અહીં isLoading.value = true નથી કરતા, જેથી Shimmer ના આવે.
 
@@ -518,6 +591,10 @@ class DashboardController extends BaseController {
 
           final businessType = data['businessType'] ?? 'Trading';
           await AppConstants.setBusinessType(businessType);
+          if (businessType.toString().trim() == 'Trading') {
+            await AppConstants.setEnablePurchaseFeature(
+                data['enablePurchaseFeature'] != false);
+          }
         }
       }
     } catch (e) {
@@ -546,14 +623,9 @@ class DashboardController extends BaseController {
         currentCompany.value!['id'] = doc.id;
         companyId.value = doc.id;
 
-        // If logo not in Firebase, try CompanyLogo sheet (URL stored there on free plan)
+        // Logo from sheet is slow — load after dashboard is visible.
         if (data['logo'] == null || data['logo'].toString().trim().isEmpty) {
-          try {
-            final url = await GoogleSheetService.getCompanyLogoUrl(doc.id);
-            if (url != null && url.isNotEmpty) {
-              currentCompany.value!['logo'] = url;
-            }
-          } catch (_) {}
+          unawaited(_tryAttachCompanyLogoFromSheet(doc.id));
         }
 
         String fetchedName = data['companyName'] ?? '';
@@ -604,6 +676,11 @@ class DashboardController extends BaseController {
       //   isLoading.value = true;
       // }
 
+      if (_auth.currentUser == null) {
+        print("⚠️ loadDashboardData skipped: no signed-in user (e.g. login screen)");
+        return;
+      }
+
       print("🔄 Loading dashboard data...");
 
       // Load invoices and purchases in parallel (biggest win on web)
@@ -634,12 +711,7 @@ class DashboardController extends BaseController {
 
       final currentUserId = _auth.currentUser?.uid;
       if (currentUserId == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "User not logged in",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+        print("⚠️ loadInvoices skipped: no signed-in user");
         return;
       }
 
@@ -687,12 +759,7 @@ class DashboardController extends BaseController {
 
       final currentUserId = _auth.currentUser?.uid;
       if (currentUserId == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "User not logged in",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+        print("⚠️ loadPurchases skipped: no signed-in user");
         return;
       }
 
@@ -1500,6 +1567,9 @@ class DashboardController extends BaseController {
       );
       return;
     }
+    if (!AppConstants.isTradingCompany) {
+      return;
+    }
 
     if (!Get.isRegistered<StockReportController>()) {
       Get.put(StockReportController());
@@ -1545,6 +1615,9 @@ class DashboardController extends BaseController {
   }
 
   Future<void> navigateToInventory() async {
+    if (!AppConstants.isTradingCompany || !AppConstants.enablePurchaseFeature.value) {
+      return;
+    }
     Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
     await Get.toNamed(PurchaseEntryScreen.pageId);
 
@@ -1556,6 +1629,9 @@ class DashboardController extends BaseController {
   }
 
   Future<void> navigateToPurchaseList() async {
+    if (!AppConstants.isTradingCompany || !AppConstants.enablePurchaseFeature.value) {
+      return;
+    }
     if (Get.isRegistered<PurchaseListController>()) {
     Get.delete<PurchaseListController>();
     }

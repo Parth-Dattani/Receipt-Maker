@@ -418,12 +418,7 @@ class QuotationListController extends BaseController {
 
       final currentUserId = _auth.currentUser?.uid;
       if (currentUserId == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "User not logged in",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+        print("⚠️ loadQuotations skipped: no signed-in user");
         return;
       }
 
@@ -433,7 +428,7 @@ class QuotationListController extends BaseController {
           .toList();
 
       quotationList.assignAll(userQuotations);
-      filteredQuotationList.assignAll(userQuotations);
+      _applyQuotationFilters();
 
       if (userQuotations.isEmpty) {
         Get.snackbar(
@@ -526,7 +521,7 @@ class QuotationListController extends BaseController {
         if (index != -1) {
           quotationList[index] = quotationList[index].copyWith(status: newStatus);
           quotationList.refresh();
-          filterQuotations(searchQuery.value);
+          _applyQuotationFilters();
         }
       } else {
         Get.snackbar('Warning', 'Quotation row not found in sheet to update status',
@@ -539,34 +534,45 @@ class QuotationListController extends BaseController {
   }
 
 
-  void filterQuotations(String query) {
-    searchQuery.value = query;
-    if (query.isEmpty) {
-      filteredQuotationList.assignAll(quotationList);
-      return;
+  void _applyQuotationFilters() {
+    final q = searchQuery.value.trim();
+    List<Invoice> list = quotationList.toList();
+    final status = selectedFilter.value;
+
+    if (status != 'All') {
+      final st = status.toLowerCase();
+      list = list.where((quotation) {
+        final s = quotation.status?.toLowerCase() ?? '';
+        if (st == 'accepted') {
+          return s == 'accepted' || s == 'approved';
+        }
+        if (st == 'rejected') {
+          return s == 'rejected' || s == 'declined';
+        }
+        return s == st;
+      }).toList();
     }
 
-    final filtered = quotationList.where((quotation) {
-      return quotation.invoiceId.toLowerCase().contains(query.toLowerCase()) ||
-          quotation.customerName.toLowerCase().contains(query.toLowerCase()) ||
-          quotation.totalAmount.toString().contains(query);
-    }).toList();
+    if (q.isNotEmpty) {
+      final lower = q.toLowerCase();
+      list = list.where((quotation) {
+        return quotation.invoiceId.toLowerCase().contains(lower) ||
+            quotation.customerName.toLowerCase().contains(lower) ||
+            (quotation.totalAmount?.toString().contains(q) ?? false);
+      }).toList();
+    }
 
-    filteredQuotationList.assignAll(filtered);
+    filteredQuotationList.assignAll(list);
+  }
+
+  void filterQuotations(String query) {
+    searchQuery.value = query;
+    _applyQuotationFilters();
   }
 
   void filterByStatus(String status) {
     selectedFilter.value = status;
-    if (status == 'All') {
-      filteredQuotationList.assignAll(quotationList);
-      return;
-    }
-
-    final filtered = quotationList.where((quotation) {
-      return quotation.status?.toLowerCase() == status.toLowerCase();
-    }).toList();
-
-    filteredQuotationList.assignAll(filtered);
+    _applyQuotationFilters();
   }
 
   void refreshQuotations() async {

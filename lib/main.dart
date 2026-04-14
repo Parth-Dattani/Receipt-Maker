@@ -12,11 +12,12 @@ import 'constant/constant.dart';
 import 'controller/controller.dart';
 import 'firebase_options.dart';
 import 'services/remote_service.dart';
+import 'utils/app_logger.dart';
 import 'utils/shared_preferences_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  AppLog.init();
 
   // ✅ Add this for better GetX performance in release mode
   Get.config(
@@ -63,6 +64,7 @@ class MyApp extends StatelessWidget {
     }
 
     return GetMaterialApp(
+      navigatorKey: Get.key,
       title: 'Invoice Sathi',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

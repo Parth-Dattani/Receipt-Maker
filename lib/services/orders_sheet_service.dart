@@ -285,5 +285,354 @@ class OrdersSheetService {
     final rows = await _readOrdersRows(companyId, customerId: customerId);
     return _groupRowsToOrders(rows);
   }
+
+  /// Customer may edit/delete only while the aggregated order status is pending.
+  static bool isPendingOrderForCustomerEdit(Map<String, dynamic> order) {
+    final s = _safeStr(order['status']).toLowerCase();
+    return s == 'pending';
+  }
+
+  static bool _isSafeOrderIdForMutation(String orderId) {
+    return RegExp(r'^ORD-[0-9]{10,20}$').hasMatch(orderId.trim());
+  }
+
+  static Future<int> _ordersTabSheetId(
+    sheets.SheetsApi api,
+    String spreadsheetId,
+  ) async {
+    final sp = await api.spreadsheets.get(spreadsheetId);
+    for (final s in sp.sheets ?? const <sheets.Sheet>[]) {
+      if (s.properties?.title == 'Orders') {
+        final id = s.properties?.sheetId;
+        if (id != null) return id;
+      }
+    }
+    throw Exception('Orders sheet tab not found');
+  }
+
+  static Future<void> _ensureOrdersSheetExists(
+    sheets.SheetsApi sheetsApi,
+    String spreadsheetId,
+  ) async {
+    try {
+      final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
+      final exists = spreadsheet.sheets
+              ?.any((s) => s.properties?.title == 'Orders') ??
+          false;
+      if (exists) return;
+
+      await sheetsApi.spreadsheets.batchUpdate(
+        sheets.BatchUpdateSpreadsheetRequest(
+          requests: [
+            sheets.Request(
+              addSheet: sheets.AddSheetRequest(
+                properties: sheets.SheetProperties(
+                  title: 'Orders',
+                  gridProperties: sheets.GridProperties(
+                    rowCount: 1000,
+                    columnCount: 12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        spreadsheetId,
+      );
+
+      final headerRange = sheets.ValueRange();
+      headerRange.values = [
+        <Object?>[
+          'orderId',
+          'companyId',
+          'customerId',
+          'customerName',
+          'itemId',
+          'itemName',
+          'quantity',
+          'price',
+          'subtotal',
+          'totalAmount',
+          'status',
+          'timestamp'
+        ]
+      ];
+      await sheetsApi.spreadsheets.values.update(
+        headerRange,
+        spreadsheetId,
+        'Orders!A1:L1',
+        valueInputOption: 'RAW',
+      );
+    } catch (_) {}
+  }
+
+  /// Deletes every sheet row for this order (all line items). Caller must verify pending first.
+  static Future<void> _deleteSheetRowsByIndices(
+    sheets.SheetsApi api,
+    String spreadsheetId,
+    int sheetId,
+    List<int> indices0Based,
+  ) async {
+    final sorted = [...indices0Based]..sort((a, b) => b.compareTo(a));
+    for (final idx in sorted) {
+      await api.spreadsheets.batchUpdate(
+        sheets.BatchUpdateSpreadsheetRequest(
+          requests: [
+            sheets.Request(
+              deleteDimension: sheets.DeleteDimensionRequest(
+                range: sheets.DimensionRange(
+                  sheetId: sheetId,
+                  dimension: 'ROWS',
+                  startIndex: idx,
+                  endIndex: idx + 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        spreadsheetId,
+      );
+    }
+  }
+
+  /// All rows including cancelled lines (same order id) — used to strip sheet fully before replace.
+  static Future<List<int>> _rowIndicesForOrderIncludingCancelled(
+    sheets.SheetsApi api,
+    String spreadsheetId, {
+    required String companyId,
+    required String customerId,
+    required String orderId,
+  }) async {
+    final resp = await api.spreadsheets.values.get(
+      spreadsheetId,
+      'Orders!A:L',
+    );
+    final values = resp.values ?? const <List<Object?>>[];
+    if (values.length < 2) return [];
+
+    final header = values.first.map((e) => _safeStr(e).toLowerCase()).toList();
+    int idxOf(String name, int fallback) {
+      final i = header.indexOf(name);
+      return i >= 0 ? i : fallback;
+    }
+
+    final orderIdIdx = idxOf('orderid', 0);
+    final companyIdx = idxOf('companyid', 1);
+    final customerIdx = idxOf('customerid', 2);
+
+    final out = <int>[];
+    for (var i = 1; i < values.length; i++) {
+      final r = values[i];
+      if (r.isEmpty) continue;
+      String cell(int idx) => idx < r.length ? _safeStr(r[idx]) : '';
+
+      if (cell(companyIdx) != companyId) continue;
+      if (cell(customerIdx) != customerId) continue;
+      if (cell(orderIdIdx) != orderId) continue;
+      out.add(i);
+    }
+    return out;
+  }
+
+  static Future<void> _assertLinesAllowCustomerMutation(
+    sheets.SheetsApi api,
+    String spreadsheetId, {
+    required String companyId,
+    required String customerId,
+    required String orderId,
+  }) async {
+    final resp = await api.spreadsheets.values.get(
+      spreadsheetId,
+      'Orders!A:L',
+    );
+    final values = resp.values ?? const <List<Object?>>[];
+    if (values.length < 2) {
+      throw Exception('Order not found');
+    }
+
+    final header = values.first.map((e) => _safeStr(e).toLowerCase()).toList();
+    int idxOf(String name, int fallback) {
+      final i = header.indexOf(name);
+      return i >= 0 ? i : fallback;
+    }
+
+    final orderIdIdx = idxOf('orderid', 0);
+    final companyIdx = idxOf('companyid', 1);
+    final customerIdx = idxOf('customerid', 2);
+    final statusIdx = idxOf('status', 10);
+
+    var matched = false;
+    for (var i = 1; i < values.length; i++) {
+      final r = values[i];
+      if (r.isEmpty) continue;
+      String cell(int idx) => idx < r.length ? _safeStr(r[idx]) : '';
+
+      if (cell(companyIdx) != companyId) continue;
+      if (cell(customerIdx) != customerId) continue;
+      if (cell(orderIdIdx) != orderId) continue;
+
+      matched = true;
+      final rawStatus = cell(statusIdx);
+      if (_isCancelledLineStatus(rawStatus)) continue;
+      final c = _canonicalLineStatus(rawStatus);
+      if (c != 'pending') {
+        throw Exception(
+            'આ ઓર્ડર હવે Pending નથી — ફક્ત Pending સુધી જ ફેરફાર / કાઢી શકાય.');
+      }
+    }
+    if (!matched) throw Exception('Order not found');
+  }
+
+  static Future<void> deletePendingOrderFromSheet({
+    required String companyId,
+    required String customerId,
+    required String orderId,
+  }) async {
+    final oid = orderId.trim();
+    if (!_isSafeOrderIdForMutation(oid)) {
+      throw Exception('Invalid order id');
+    }
+
+    final spreadsheetId = await _resolveSpreadsheetIdForCompany(companyId);
+    final jsonStr = await rootBundle.loadString(_serviceAccountAssetPath);
+    final credentials = json.decode(jsonStr) as Map<String, dynamic>;
+    final authClient = await clientViaServiceAccount(
+      ServiceAccountCredentials.fromJson(credentials),
+      [sheets.SheetsApi.spreadsheetsScope],
+    );
+    final api = sheets.SheetsApi(authClient);
+    try {
+      await _assertLinesAllowCustomerMutation(
+        api,
+        spreadsheetId,
+        companyId: companyId,
+        customerId: customerId,
+        orderId: oid,
+      );
+
+      final allIdx = await _rowIndicesForOrderIncludingCancelled(
+        api,
+        spreadsheetId,
+        companyId: companyId,
+        customerId: customerId,
+        orderId: oid,
+      );
+      if (allIdx.isEmpty) throw Exception('Order not found');
+
+      final sheetId = await _ordersTabSheetId(api, spreadsheetId);
+      await _deleteSheetRowsByIndices(api, spreadsheetId, sheetId, allIdx);
+    } finally {
+      authClient.close();
+    }
+  }
+
+  static Future<void> _appendOrderLines(
+    sheets.SheetsApi sheetsApi,
+    String spreadsheetId, {
+    required String orderId,
+    required String companyId,
+    required String customerId,
+    required String customerName,
+    required List<Map<String, dynamic>> orderItems,
+    required double total,
+  }) async {
+    await _ensureOrdersSheetExists(sheetsApi, spreadsheetId);
+
+    final now = DateTime.now();
+    final ts =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} '
+        '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    final rows = orderItems
+        .map<List<dynamic>>(
+          (item) => [
+            orderId,
+            companyId,
+            customerId,
+            customerName,
+            item['itemId'] ?? '',
+            item['itemName'] ?? '',
+            item['quantity'] ?? 0,
+            item['price'] ?? 0,
+            item['subtotal'] ?? 0,
+            total,
+            'pending',
+            ts,
+          ],
+        )
+        .toList();
+
+    final valueRange = sheets.ValueRange();
+    valueRange.values =
+        rows.map<List<Object?>>((r) => r.map<Object?>((e) => e).toList()).toList();
+
+    await sheetsApi.spreadsheets.values.append(
+      valueRange,
+      spreadsheetId,
+      'Orders!A:L',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+    );
+  }
+
+  /// Replace line items for an existing pending order (same [orderId]).
+  static Future<void> replacePendingOrderInSheet({
+    required String companyId,
+    required String customerId,
+    required String customerName,
+    required String orderId,
+    required List<Map<String, dynamic>> orderItems,
+    required double total,
+  }) async {
+    final oid = orderId.trim();
+    if (!_isSafeOrderIdForMutation(oid)) {
+      throw Exception('Invalid order id');
+    }
+
+    final spreadsheetId = await _resolveSpreadsheetIdForCompany(companyId);
+    final jsonStr = await rootBundle.loadString(_serviceAccountAssetPath);
+    final credentials = json.decode(jsonStr) as Map<String, dynamic>;
+    final authClient = await clientViaServiceAccount(
+      ServiceAccountCredentials.fromJson(credentials),
+      [sheets.SheetsApi.spreadsheetsScope],
+    );
+    final api = sheets.SheetsApi(authClient);
+    try {
+      await _assertLinesAllowCustomerMutation(
+        api,
+        spreadsheetId,
+        companyId: companyId,
+        customerId: customerId,
+        orderId: oid,
+      );
+
+      final allIdx = await _rowIndicesForOrderIncludingCancelled(
+        api,
+        spreadsheetId,
+        companyId: companyId,
+        customerId: customerId,
+        orderId: oid,
+      );
+      if (allIdx.isEmpty) throw Exception('Order not found');
+
+      final sheetId = await _ordersTabSheetId(api, spreadsheetId);
+      await _deleteSheetRowsByIndices(api, spreadsheetId, sheetId, allIdx);
+
+      await _appendOrderLines(
+        api,
+        spreadsheetId,
+        orderId: oid,
+        companyId: companyId,
+        customerId: customerId,
+        customerName: customerName,
+        orderItems: orderItems,
+        total: total,
+      );
+    } finally {
+      authClient.close();
+    }
+  }
 }
 

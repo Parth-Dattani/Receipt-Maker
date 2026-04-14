@@ -823,6 +823,9 @@ class CustomerRegistrationController extends GetxController {
           companyId.value = arguments['companyId'];
           currentCompany.value = arguments['companyData'];
           print("Company loaded from arguments: ${currentCompany.value?['companyName']}");
+          if (!isEditMode.value) {
+            _applyDefaultLocationFromCompany();
+          }
           return;
         }
       }
@@ -850,6 +853,9 @@ class CustomerRegistrationController extends GetxController {
         currentCompany.value = companyDocs.docs.first.data();
         currentCompany.value!['id'] = companyDocs.docs.first.id;
         companyId.value = companyDocs.docs.first.id;
+        if (!isEditMode.value) {
+          _applyDefaultLocationFromCompany();
+        }
       } else {
         showCustomSnackbar(
           title: "No Company Found",
@@ -868,6 +874,34 @@ class CustomerRegistrationController extends GetxController {
         icon: Icons.error,
       );
     }
+  }
+
+  /// New customer: pre-fill country / state / city / pincode from active company
+  /// (same idea as company registration defaults). Fields stay editable.
+  /// Falls back to India, Gujarat, Jamnagar when company values are empty.
+  void _applyDefaultLocationFromCompany() {
+    if (isEditMode.value) return;
+
+    var country = currentCompany.value?['country']?.toString().trim() ?? '';
+    if (country.isEmpty) country = 'India';
+    if (!countries.contains(country)) country = 'India';
+    selectedCountry.value = country;
+
+    final states = countryStates[selectedCountry.value] ?? [];
+    var state = currentCompany.value?['state']?.toString().trim() ?? '';
+    if (state.isEmpty || !states.contains(state)) {
+      state = states.contains('Gujarat') ? 'Gujarat' : (states.isNotEmpty ? states.first : '');
+    }
+    selectedState.value = state;
+
+    var city = currentCompany.value?['city']?.toString().trim() ?? '';
+    if (city.isEmpty) city = 'Jamnagar';
+    cityController.text = city;
+
+    pincodeController.text =
+        currentCompany.value?['pincode']?.toString().trim() ?? '';
+
+    updateProgress();
   }
 
   // Methods
@@ -895,44 +929,114 @@ class CustomerRegistrationController extends GetxController {
     Get.snackbar("Info", "Image picker functionality to be implemented");
   }
 
+  /// Uses [ScaffoldMessenger] so messages show reliably (GetX overlay snackbars can fail on newer Flutter).
+  void _showRegisterSnackBar(BuildContext context, String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      try {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+              ),
+              backgroundColor: const Color(0xFFC62828),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+      } catch (e) {
+        debugPrint('Register SnackBar failed: $e');
+      }
+    });
+  }
+
+  /// Labels for required inputs that must be present before submit (aligned with [_validateRequiredFields]).
+  List<String> _collectMissingRequiredFieldLabels() {
+    final missing = <String>[];
+    if (nameController.text.trim().isEmpty) missing.add('name');
+    if (mobile1Controller.text.trim().isEmpty) missing.add('primary mobile');
+    if (addressController.text.trim().isEmpty) missing.add('address');
+    if (selectedCountry.value.isEmpty) missing.add('country');
+    if (selectedState.value.isEmpty) missing.add('state');
+    if (cityController.text.trim().isEmpty) missing.add('city');
+    if (pincodeController.text.trim().isEmpty) missing.add('pincode');
+    if (sundryType.value.isEmpty) missing.add('sundry type');
+    return missing;
+  }
+
+  String _formatMissingFieldsMessage(List<String> labels) {
+    if (labels.isEmpty) {
+      return 'Please correct the highlighted fields.';
+    }
+    if (labels.length == 1) {
+      return 'Please fill the required field: ${labels.first}.';
+    }
+    if (labels.length == 2) {
+      return 'Please fill the required fields: ${labels[0]} and ${labels[1]}.';
+    }
+    final allButLast = labels.sublist(0, labels.length - 1).join(', ');
+    return 'Please fill the required fields: $allButLast, and ${labels.last}.';
+  }
+
   // Validate required fields
-  bool _validateRequiredFields() {
+  bool _validateRequiredFields(BuildContext context) {
     if (companyId.value.isEmpty) {
-      showCustomSnackbar(
-        title: "Error",
-        message: "No company selected. Please register a company first.",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
+      _showRegisterSnackBar(
+        context,
+        'No company selected. Please register a company first.',
       );
       return false;
     }
 
     if (nameController.text.trim().isEmpty) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Customer name is required",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
-      );
+      _showRegisterSnackBar(context, 'Customer name is required.');
       return false;
     }
 
     if (mobile1Controller.text.trim().isEmpty) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Primary mobile number is required",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
-      );
+      _showRegisterSnackBar(context, 'Primary mobile number is required.');
+      return false;
+    }
+
+    if (addressController.text.trim().isEmpty) {
+      _showRegisterSnackBar(context, 'Address is required.');
+      return false;
+    }
+
+    if (selectedCountry.value.isEmpty) {
+      _showRegisterSnackBar(context, 'Please select country.');
+      return false;
+    }
+
+    if (selectedState.value.isEmpty) {
+      _showRegisterSnackBar(context, 'Please select state.');
+      return false;
+    }
+
+    if (cityController.text.trim().isEmpty) {
+      _showRegisterSnackBar(context, 'City is required.');
+      return false;
+    }
+
+    if (pincodeController.text.trim().isEmpty) {
+      _showRegisterSnackBar(context, 'Pincode is required.');
+      return false;
+    }
+
+    if (selectedCountry.value == 'India' &&
+        !RegExp(r'^[0-9]{6}$').hasMatch(pincodeController.text.trim())) {
+      _showRegisterSnackBar(context, 'Please enter a valid 6-digit pincode.');
       return false;
     }
 
     if (!RegExp(r'^[0-9]{10}$').hasMatch(mobile1Controller.text.trim())) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Please enter a valid 10-digit mobile number",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
+      _showRegisterSnackBar(
+        context,
+        'Please enter a valid 10-digit mobile number.',
       );
       return false;
     }
@@ -940,12 +1044,7 @@ class CustomerRegistrationController extends GetxController {
     if (gstController.text.trim().isNotEmpty) {
       if (!RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$')
           .hasMatch(gstController.text.trim())) {
-        showCustomSnackbar(
-          title: "Validation Error",
-          message: "Please enter a valid GST number",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(context, 'Please enter a valid GST number.');
         return false;
       }
     }
@@ -953,42 +1052,27 @@ class CustomerRegistrationController extends GetxController {
     if (panController.text.trim().isNotEmpty) {
       if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$')
           .hasMatch(panController.text.trim())) {
-        showCustomSnackbar(
-          title: "Validation Error",
-          message: "Please enter a valid PAN number",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(context, 'Please enter a valid PAN number.');
         return false;
       }
     }
 
     if (emailController.text.trim().isNotEmpty) {
       if (!GetUtils.isEmail(emailController.text.trim())) {
-        showCustomSnackbar(
-          title: "Validation Error",
-          message: "Please enter a valid email address",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(context, 'Please enter a valid email address.');
         return false;
       }
     }
 
     if (sundryType.value.isEmpty) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Please select Sundry Type",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
-      );
+      _showRegisterSnackBar(context, 'Please select Sundry Type.');
       return false;
     }
 
     return true;
   }
 
-  Future<bool> _checkIfCustomerExists() async {
+  Future<bool> _checkIfCustomerExists(BuildContext snackContext) async {
     try {
       final user = _auth.currentUser;
       if (user == null || companyId.value.isEmpty) return false;
@@ -1036,11 +1120,9 @@ class CustomerRegistrationController extends GetxController {
         /// 3. ✅ Check Name (Optional: Prevent same name)
         // We compare lowercase to catch "Abc" vs "abc"
         if (customer['name'].toString().toLowerCase() == newName) {
-          showCustomSnackbar(
-            title: "Duplicate Name",
-            message: "Customer name '$newName' already exists. Please use a unique name.",
-            baseColor: AppColors.errorColor,
-            icon: Icons.warning_amber_rounded,
+          _showRegisterSnackBar(
+            snackContext,
+            "Customer name already exists. Please use a unique name.",
           );
           return true;
         }
@@ -1056,38 +1138,41 @@ class CustomerRegistrationController extends GetxController {
 
 
   // Main method that handles both create and update
-  void registerCustomer() async {
-    if (!formKey.currentState!.validate()) return;
-    if (!_validateRequiredFields()) return;
+  void registerCustomer(BuildContext scaffoldContext) async {
+    final formState = formKey.currentState;
+    if (formState == null || !formState.validate()) {
+      final missing = _collectMissingRequiredFieldLabels();
+      _showRegisterSnackBar(
+        scaffoldContext,
+        _formatMissingFieldsMessage(missing),
+      );
+      return;
+    }
+    if (!_validateRequiredFields(scaffoldContext)) return;
 
     if (isEditMode.value) {
-      await _updateCustomer();
+      await _updateCustomer(scaffoldContext);
     } else {
-      await _createCustomer();
+      await _createCustomer(scaffoldContext);
     }
   }
 
 /// Method 1: Create Customer
 
-  Future<void> _createCustomer() async {
+  Future<void> _createCustomer(BuildContext scaffoldContext) async {
     try {
       isLoading.value = true;
 
       final user = _auth.currentUser;
       if (user == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "Please login first!",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(scaffoldContext, 'Please login first.');
         isLoading.value = false;
         return;
       }
 
       // ✅ NEW: Check for duplicates before proceeding
       // ---------------------------------------------------------
-      bool isDuplicate = await _checkIfCustomerExists();
+      bool isDuplicate = await _checkIfCustomerExists(scaffoldContext);
 
       if (isDuplicate) {
         isLoading.value = false;
@@ -1095,12 +1180,7 @@ class CustomerRegistrationController extends GetxController {
       }
 
       if (companyId.value.isEmpty) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "No company selected.",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(scaffoldContext, 'No company selected.');
         isLoading.value = false;
         return;
       }
@@ -1182,18 +1262,13 @@ class CustomerRegistrationController extends GetxController {
 
 
 // Method 2: Update Customer
-  Future<void> _updateCustomer() async {
+  Future<void> _updateCustomer(BuildContext scaffoldContext) async {
     try {
       isLoading.value = true;
 
       final user = _auth.currentUser;
       if (user == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "Please login first!",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(scaffoldContext, 'Please login first.');
         isLoading.value = false;
         return;
       }
@@ -1202,19 +1277,14 @@ class CustomerRegistrationController extends GetxController {
       // The _checkIfCustomerExists method already handles logic
       // to ignore the *current* ID being edited.
       // ---------------------------------------------------------
-      bool isDuplicate = await _checkIfCustomerExists();
+      bool isDuplicate = await _checkIfCustomerExists(scaffoldContext);
       if (isDuplicate) {
         isLoading.value = false;
         return;
       }
 
       if (customerId.value.isEmpty) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "Customer ID not found!",
-          baseColor: AppColors.errorColor,
-          icon: Icons.error,
-        );
+        _showRegisterSnackBar(scaffoldContext, 'Customer ID not found.');
         isLoading.value = false;
         return;
       }

@@ -783,8 +783,11 @@ class _CartBar extends StatelessWidget {
                   width: 20,
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2))
-                  : const Text('Place Order',
-                  style: TextStyle(
+                  : Text(
+                  controller.editOrderIdParam.value.isNotEmpty
+                      ? 'Update order'
+                      : 'Place Order',
+                  style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
             )),

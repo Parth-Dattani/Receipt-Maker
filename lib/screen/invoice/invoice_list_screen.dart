@@ -3,12 +3,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../widgets/web_screen_wrapper.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../screen.dart';
 
@@ -87,13 +87,18 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
   // 📱 MOBILE LAYOUT
   // ===========================================================================
   Widget _buildMobileLayout() {
-    if (controller.filteredInvoiceList.isEmpty) return _buildEmptyState();
-
     return Column(
       children: [
         _buildSearchFilterSectionMobile(),
         _buildStatisticsSectionMobile(),
-        Expanded(child: _buildInvoiceListMobile()),
+        Expanded(
+          child: Obx(() {
+            if (controller.filteredInvoiceList.isEmpty) {
+              return _buildFilteredEmptyState();
+            }
+            return _buildInvoiceListMobile();
+          }),
+        ),
       ],
     );
   }
@@ -175,16 +180,29 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Obx(() {
-                    if (controller.filteredInvoiceList.isEmpty) return _buildEmptyState();
+                    if (controller.filteredInvoiceList.isEmpty) {
+                      return _buildFilteredEmptyState();
+                    }
                     return GridView.builder(
+                      controller: controller.scrollController,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         childAspectRatio: 3.2,
                         crossAxisSpacing: 10,
                         mainAxisSpacing: 10,
                       ),
-                      itemCount: controller.filteredInvoiceList.length,
+                      itemCount: controller.filteredInvoiceList.length + (controller.hasMore.value ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index >= controller.filteredInvoiceList.length) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: controller.isLoadingMore.value
+                                  ? const CircularProgressIndicator()
+                                  : const SizedBox.shrink(),
+                            ),
+                          );
+                        }
                         final invoice = controller.filteredInvoiceList[index];
                         return _buildWebInvoiceCard(invoice);
                       },
@@ -438,13 +456,24 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
 
   Widget _buildInvoiceListMobile() {
     return Obx(() => ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
-      itemCount: controller.filteredInvoiceList.length,
-      itemBuilder: (context, index) {
-        final invoice = controller.filteredInvoiceList[index];
-        return _buildMobileInvoiceListItem(invoice);
-      },
-    ));
+          controller: controller.scrollController,
+          padding: const EdgeInsets.only(bottom: 80),
+          itemCount: controller.filteredInvoiceList.length + (controller.hasMore.value ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= controller.filteredInvoiceList.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: controller.isLoadingMore.value
+                      ? const CircularProgressIndicator()
+                      : const SizedBox.shrink(),
+                ),
+              );
+            }
+            final invoice = controller.filteredInvoiceList[index];
+            return _buildMobileInvoiceListItem(invoice);
+          },
+        ));
   }
 
   // ✅ MOBILE INVOICE CARD WITH ONTAP
@@ -536,29 +565,349 @@ class InvoiceListScreen extends GetView<InvoiceListController> {
   // ===========================================================================
   // 🌫️ SHIMMER LOADING
   // ===========================================================================
-  Widget _buildWebShimmer() => const Center(child: CircularProgressIndicator());
-  Widget _buildFullShimmer() => const Center(child: CircularProgressIndicator());
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.receipt_long, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text('No invoices found', style: TextStyle(fontSize: 18, color: Colors.grey)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () async {
-              Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-              await Get.toNamed(NewInvoiceScreen.pageId);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
-            child: const Text("Create Invoice", style: TextStyle(color: Colors.white)),
+  Widget _buildFullShimmer() {
+    return Column(
+      children: [
+        _invoiceShimmerSearchSection(chipCount: 4),
+        _invoiceShimmerStatsRow(itemCount: 4),
+        Expanded(child: _invoiceShimmerList(itemCount: 6)),
+      ],
+    );
+  }
+
+  Widget _buildWebShimmer() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(
+              4,
+              (_) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: _invoiceShimmerBox(width: 72, height: 36, radius: 8),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 280,
+                margin: const EdgeInsets.only(top: 24, left: 24, bottom: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.grey.shade200, blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _invoiceShimmerBox(width: 80, height: 18, radius: 6),
+                    const SizedBox(height: 16),
+                    _invoiceShimmerBox(width: double.infinity, height: 40, radius: 8),
+                    const SizedBox(height: 24),
+                    _invoiceShimmerBox(width: 56, height: 14, radius: 6),
+                    const SizedBox(height: 12),
+                    ...List.generate(4, (_) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            children: [
+                              _invoiceShimmerBox(width: 18, height: 18, radius: 9),
+                              const SizedBox(width: 10),
+                              _invoiceShimmerBox(width: 100, height: 14, radius: 6),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 3.2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (_, __) => _invoiceShimmerWebCard(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _invoiceShimmerBox({required double width, required double height, required double radius}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
+    );
+  }
+
+  Widget _invoiceShimmerSearchSection({required int chipCount}) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _invoiceShimmerBox(width: double.infinity, height: 48, radius: 8),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(
+              chipCount,
+              (i) => Padding(
+                padding: EdgeInsets.only(right: i < chipCount - 1 ? 8 : 0),
+                child: _invoiceShimmerBox(width: 72, height: 32, radius: 16),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _invoiceShimmerStatsRow({required int itemCount}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.grey.shade50,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(itemCount, (_) => _invoiceShimmerStatPill()),
+      ),
+    );
+  }
+
+  Widget _invoiceShimmerStatPill() {
+    return Column(
+      children: [
+        _invoiceShimmerBox(width: 36, height: 16, radius: 6),
+        const SizedBox(height: 6),
+        _invoiceShimmerBox(width: 44, height: 12, radius: 6),
+      ],
+    );
+  }
+
+  Widget _invoiceShimmerList({int itemCount = 6}) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: itemCount,
+      itemBuilder: (_, __) => _invoiceShimmerMobileCard(),
+    );
+  }
+
+  Widget _invoiceShimmerMobileCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.grey.shade200, blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: 5,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _invoiceShimmerBox(width: double.infinity, height: 16, radius: 8)),
+                      const SizedBox(width: 8),
+                      _invoiceShimmerBox(width: 52, height: 22, radius: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _invoiceShimmerBox(width: 96, height: 12, radius: 6),
+                      _invoiceShimmerBox(width: 72, height: 14, radius: 6),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _invoiceShimmerWebCard() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 3)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(width: 6, height: double.infinity, color: Colors.grey.shade400),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 14, width: double.infinity, color: Colors.grey),
+                        const SizedBox(height: 8),
+                        Container(height: 10, width: 120, color: Colors.grey),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(height: 10, width: 70, color: Colors.grey),
+                        Container(height: 14, width: 64, color: Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _emptyMsgEnGu(String en, String gu) {
+    return AppConstants.isGujarati.value ? gu : en;
+  }
+
+  /// Empty list: no data at all vs filtered/search with no matches.
+  Widget _buildFilteredEmptyState() {
+    return Obx(() {
+    final hasInvoices = controller.invoiceList.isNotEmpty;
+    final filter = controller.selectedFilter.value;
+    final q = controller.searchQuery.value.trim();
+
+    late final String title;
+    late final IconData icon;
+    late final Color iconColor;
+
+    if (!hasInvoices) {
+      title = _emptyMsgEnGu('No invoices found', 'કોઈ ઇન્વૉઇસ મળી નથી');
+      icon = Icons.receipt_long;
+      iconColor = Colors.grey;
+    } else if (q.isNotEmpty) {
+      title = _emptyMsgEnGu(
+        'No invoices match your search',
+        'શોધ સાથે કોઈ ઇન્વૉઇસ મળી નથી',
+      );
+      icon = Icons.search_off;
+      iconColor = Colors.grey;
+    } else {
+      switch (filter) {
+        case 'Overdue':
+          title = _emptyMsgEnGu(
+            'No overdue invoices',
+            'કોઈ ઓવરડ્યુ ઇન્વૉઇસ નથી',
+          );
+          icon = Icons.event_busy;
+          iconColor = Colors.red.shade300;
+          break;
+        case 'Paid':
+          title = _emptyMsgEnGu('No paid invoices', 'કોઈ પેડ ઇન્વૉઇસ નથી');
+          icon = Icons.payments_outlined;
+          iconColor = Colors.green.shade300;
+          break;
+        case 'Pending':
+          title = _emptyMsgEnGu(
+            'No pending invoices',
+            'કોઈ પેન્ડિંગ ઇન્વૉઇસ નથી',
+          );
+          icon = Icons.hourglass_empty;
+          iconColor = Colors.orange.shade300;
+          break;
+        default:
+          title = _emptyMsgEnGu('No invoices found', 'કોઈ ઇન્વૉઇસ મળી નથી');
+          icon = Icons.receipt_long;
+          iconColor = Colors.grey;
+      }
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: iconColor),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 17, color: Colors.grey, height: 1.35),
+            ),
+            if (!hasInvoices) ...[
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
+                  await Get.toNamed(NewInvoiceScreen.pageId);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
+                child: Text(
+                  _emptyMsgEnGu('Create Invoice', 'ઇન્વૉઇસ બનાવો'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    });
   }
 }
 

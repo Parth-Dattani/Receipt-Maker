@@ -24,6 +24,9 @@ class AppConstants{
    static String googleWebClientId = "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com";
    static String accessKey = "";
    static String businessType = "Trading";
+   /// Purchase, stock, challan menus apply only when [businessType] is exactly `Trading`.
+   static bool get isTradingCompany => businessType.trim() == 'Trading';
+   static String appName = "Invoice Sathi";
    static final isChallan = false.obs; //isChallanEnabled
    static final isCashMemo = false.obs; // isCashMemoEnabled
    static final withGST = false.obs; //isGstEnabled
@@ -34,6 +37,10 @@ class AppConstants{
    static final RxBool isExtraNotesEnabled = false.obs;
    static bool allowDuplicateItems = false;
    static final RxBool enableCustomerOrderFeature = false.obs;
+   /// When false (Firestore), Payment / Receipt menu is hidden. Missing field = enabled.
+   static final RxBool enablePaymentReceiptFeature = true.obs;
+   /// When false (Firestore), Purchase menu is hidden (Trading). Missing field = enabled.
+   static final RxBool enablePurchaseFeature = true.obs;
    static var isWhatsappDirectShare = false.obs;
 
    /// Digits after decimal point for amounts (e.g. 2 → 350.00, 0 → 350).
@@ -73,6 +80,17 @@ class AppConstants{
       allowDuplicateItems = await sharedPreferencesHelper.retrievePrefBoolData("allowDuplicateItems") ?? false;
 
       enableCustomerOrderFeature.value = await sharedPreferencesHelper.retrievePrefBoolData("enableCustomerOrderFeature") ?? false;
+
+      enablePaymentReceiptFeature.value =
+          await sharedPreferencesHelper.retrievePrefBoolData("enablePaymentReceiptFeature") ?? true;
+      enablePurchaseFeature.value =
+          await sharedPreferencesHelper.retrievePrefBoolData("enablePurchaseFeature") ?? true;
+
+      // Non-Trading (e.g. Service) never uses Purchase — avoid stale true from prefs.
+      if (!isTradingCompany) {
+        enablePurchaseFeature.value = false;
+        await sharedPreferencesHelper.storeBoolPrefData("enablePurchaseFeature", false);
+      }
 
       isWhatsappDirectShare.value = await sharedPreferencesHelper.retrievePrefBoolData("isWhatsappDirectShare") ?? false;
    }
@@ -131,6 +149,9 @@ class AppConstants{
    static Future<void> setBusinessType(String type) async {
       businessType = type;
       await sharedPreferencesHelper.storePrefData("businessType", type);
+      if (!isTradingCompany) {
+         await setEnablePurchaseFeature(false);
+      }
    }
 
    /// 🔹 Update + persist isChallanEnabled
@@ -188,6 +209,16 @@ class AppConstants{
    static Future<void> setEnableCustomerOrderFeature(bool val) async {
       enableCustomerOrderFeature.value = val;
       await sharedPreferencesHelper.storeBoolPrefData("enableCustomerOrderFeature", val);
+   }
+
+   static Future<void> setEnablePaymentReceiptFeature(bool val) async {
+      enablePaymentReceiptFeature.value = val;
+      await sharedPreferencesHelper.storeBoolPrefData("enablePaymentReceiptFeature", val);
+   }
+
+   static Future<void> setEnablePurchaseFeature(bool val) async {
+      enablePurchaseFeature.value = val;
+      await sharedPreferencesHelper.storeBoolPrefData("enablePurchaseFeature", val);
    }
 
    static Future<void> setIsWhatsappDirectShare(bool val) async {

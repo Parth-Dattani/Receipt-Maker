@@ -121,57 +121,57 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Obx(() => Form(
+        child: Form(
           key: controller.formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildProgressIndicator(),
+              Obx(() => _buildProgressIndicator()),
               const SizedBox(height: 20),
               _buildAnimatedHeader(context),
               const SizedBox(height: 25),
 
-              _buildSectionCard(
-                title: "Personal Information",
-                icon: Icons.person,
-                isExpanded: controller.personalInfoExpanded.value,
-                onToggle: () => controller.togglePersonalInfo(),
-                children: _buildPersonalFields(),
-              ),
+              Obx(() => _buildSectionCard(
+                    title: "Personal Information",
+                    icon: Icons.person,
+                    isExpanded: controller.personalInfoExpanded.value,
+                    onToggle: () => controller.togglePersonalInfo(),
+                    children: _buildPersonalFields(),
+                  )),
               const SizedBox(height: 16),
 
-              _buildSectionCard(
-                title: "Business Information",
-                icon: Icons.business,
-                isExpanded: controller.businessInfoExpanded.value,
-                onToggle: () => controller.toggleBusinessInfo(),
-                children: _buildBusinessFields(),
-              ),
+              Obx(() => _buildSectionCard(
+                    title: "Business Information",
+                    icon: Icons.business,
+                    isExpanded: controller.businessInfoExpanded.value,
+                    onToggle: () => controller.toggleBusinessInfo(),
+                    children: _buildBusinessFields(),
+                  )),
               const SizedBox(height: 16),
 
-              _buildSectionCard(
-                title: "Contact Information",
-                icon: Icons.contact_phone,
-                isExpanded: controller.contactInfoExpanded.value,
-                onToggle: () => controller.toggleContactInfo(),
-                children: _buildContactFields(),
-              ),
+              Obx(() => _buildSectionCard(
+                    title: "Contact Information",
+                    icon: Icons.contact_phone,
+                    isExpanded: controller.contactInfoExpanded.value,
+                    onToggle: () => controller.toggleContactInfo(),
+                    children: _buildContactFields(),
+                  )),
               const SizedBox(height: 16),
 
-              _buildSectionCard(
-                title: "Additional Notes",
-                icon: Icons.notes,
-                isExpanded: controller.notesExpanded.value,
-                onToggle: () => controller.toggleNotes(),
-                children: _buildNotesFields(),
-              ),
+              Obx(() => _buildSectionCard(
+                    title: "Additional Notes",
+                    icon: Icons.notes,
+                    isExpanded: controller.notesExpanded.value,
+                    onToggle: () => controller.toggleNotes(),
+                    children: _buildNotesFields(),
+                  )),
 
               const SizedBox(height: 30),
-              _buildActionButtons(),
+              _buildActionButtons(context),
               const SizedBox(height: 20),
             ],
           ),
-        )),
+        ),
       ),
     );
   }
@@ -239,7 +239,8 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
                                 child: Container(
                                   constraints: const BoxConstraints(maxWidth: 500),
                                   padding: const EdgeInsets.symmetric(horizontal: 32),
-                                  child: _buildActionButtons(isWeb: true),
+                                  child: _buildActionButtons(context,
+                                      isWeb: true),
                                 ),
                               ),
                             ],
@@ -940,13 +941,15 @@ class CustomerRegistrationScreen extends GetView<CustomerRegistrationController>
     );
   }
 
-  Widget _buildActionButtons({bool isWeb = false}) {
+  Widget _buildActionButtons(BuildContext snackContext, {bool isWeb = false}) {
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           child: Obx(() => ElevatedButton.icon(
-            onPressed: controller.isLoading.value ? null : controller.registerCustomer,
+            onPressed: controller.isLoading.value
+                ? null
+                : () => controller.registerCustomer(snackContext),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
