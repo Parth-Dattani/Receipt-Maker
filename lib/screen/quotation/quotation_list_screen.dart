@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
@@ -85,13 +86,18 @@ class QuotationListScreen extends GetView<QuotationListController> {
   // 📱 MOBILE LAYOUT
   // ===========================================================================
   Widget _buildMobileLayout() {
-    if (controller.filteredQuotationList.isEmpty) return _buildEmptyState();
-
     return Column(
       children: [
         _buildSearchFilterSection(),
         _buildStatisticsSectionMobile(),
-        Expanded(child: _buildQuotationList()),
+        Expanded(
+          child: Obx(() {
+            if (controller.filteredQuotationList.isEmpty) {
+              return _buildFilteredEmptyState();
+            }
+            return _buildQuotationList();
+          }),
+        ),
       ],
     );
   }
@@ -175,7 +181,9 @@ class QuotationListScreen extends GetView<QuotationListController> {
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Obx(() {
-                    if (controller.filteredQuotationList.isEmpty) return _buildEmptyState();
+                    if (controller.filteredQuotationList.isEmpty) {
+                      return _buildFilteredEmptyState();
+                    }
                     return GridView.builder(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3, // 3 Columns
@@ -395,13 +403,13 @@ class QuotationListScreen extends GetView<QuotationListController> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip('all'.tr, controller.selectedFilter.value == 'All'),
+                _buildFilterChip('all'.tr, controller.selectedFilter.value == 'All', 'All'),
                 const SizedBox(width: 8),
-                _buildFilterChip('accepted'.tr, controller.selectedFilter.value == 'Accepted'),
+                _buildFilterChip('accepted'.tr, controller.selectedFilter.value == 'Accepted', 'Accepted'),
                 const SizedBox(width: 8),
-                _buildFilterChip('pending'.tr, controller.selectedFilter.value == 'Pending'),
+                _buildFilterChip('pending'.tr, controller.selectedFilter.value == 'Pending', 'Pending'),
                 const SizedBox(width: 8),
-                _buildFilterChip('rejected'.tr, controller.selectedFilter.value == 'Rejected'),
+                _buildFilterChip('rejected'.tr, controller.selectedFilter.value == 'Rejected', 'Rejected'),
               ],
             ),
           )),
@@ -410,11 +418,11 @@ class QuotationListScreen extends GetView<QuotationListController> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool selected) {
+  Widget _buildFilterChip(String label, bool selected, String filterKey) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
-      onSelected: (_) => controller.filterByStatus(label),
+      onSelected: (_) => controller.filterByStatus(filterKey),
       selectedColor: AppColors.appTheame,
       backgroundColor: Colors.white,
       labelStyle: TextStyle(
@@ -590,29 +598,351 @@ class QuotationListScreen extends GetView<QuotationListController> {
   // ===========================================================================
   // 🌫️ SHIMMER LOADING
   // ===========================================================================
-  Widget _buildWebShimmer() => const Center(child: CircularProgressIndicator());
-  Widget _buildFullShimmer() => const Center(child: CircularProgressIndicator());
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.request_quote, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text('no_quotations_found'.tr, style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () async {
-              Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
 
-              await Get.toNamed(NewInvoiceScreen.pageId);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
-            child: Text('create_quotation'.tr, style: const TextStyle(color: Colors.white)),
+  Widget _buildFullShimmer() {
+    return Column(
+      children: [
+        _quotationShimmerSearchSection(chipCount: 4),
+        _quotationShimmerStatsRow(itemCount: 4),
+        Expanded(child: _quotationShimmerList(itemCount: 6)),
+      ],
+    );
+  }
+
+  Widget _buildWebShimmer() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(
+              4,
+              (_) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: _quotationShimmerBox(width: 72, height: 36, radius: 8),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 280,
+                margin: const EdgeInsets.only(top: 24, left: 24, bottom: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.grey.shade200, blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _quotationShimmerBox(width: 80, height: 18, radius: 6),
+                    const SizedBox(height: 16),
+                    _quotationShimmerBox(width: double.infinity, height: 40, radius: 8),
+                    const SizedBox(height: 24),
+                    _quotationShimmerBox(width: 56, height: 14, radius: 6),
+                    const SizedBox(height: 12),
+                    ...List.generate(
+                      4,
+                      (_) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            _quotationShimmerBox(width: 18, height: 18, radius: 9),
+                            const SizedBox(width: 10),
+                            _quotationShimmerBox(width: 100, height: 14, radius: 6),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 3.2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: 6,
+                    itemBuilder: (_, __) => _quotationShimmerWebCard(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _quotationShimmerBox({required double width, required double height, required double radius}) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
+    );
+  }
+
+  Widget _quotationShimmerSearchSection({required int chipCount}) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _quotationShimmerBox(width: double.infinity, height: 48, radius: 8),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(
+              chipCount,
+              (i) => Padding(
+                padding: EdgeInsets.only(right: i < chipCount - 1 ? 8 : 0),
+                child: _quotationShimmerBox(width: 72, height: 32, radius: 16),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _quotationShimmerStatsRow({required int itemCount}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.grey.shade50,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(itemCount, (_) => _quotationShimmerStatPill()),
+      ),
+    );
+  }
+
+  Widget _quotationShimmerStatPill() {
+    return Column(
+      children: [
+        _quotationShimmerBox(width: 36, height: 16, radius: 6),
+        const SizedBox(height: 6),
+        _quotationShimmerBox(width: 44, height: 12, radius: 6),
+      ],
+    );
+  }
+
+  Widget _quotationShimmerList({int itemCount = 6}) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: itemCount,
+      itemBuilder: (_, __) => _quotationShimmerMobileCard(),
+    );
+  }
+
+  Widget _quotationShimmerMobileCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(color: Colors.grey.shade200, blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: 5,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _quotationShimmerBox(width: double.infinity, height: 16, radius: 8)),
+                      const SizedBox(width: 8),
+                      _quotationShimmerBox(width: 52, height: 22, radius: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _quotationShimmerBox(width: 96, height: 12, radius: 6),
+                      _quotationShimmerBox(width: 72, height: 14, radius: 6),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quotationShimmerWebCard() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 3)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(width: 6, height: double.infinity, color: Colors.grey.shade400),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 14, width: double.infinity, color: Colors.grey),
+                        const SizedBox(height: 8),
+                        Container(height: 10, width: 120, color: Colors.grey),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(height: 10, width: 70, color: Colors.grey),
+                        Container(height: 14, width: 64, color: Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _qEmptyMsgEnGu(String en, String gu) {
+    return AppConstants.isGujarati.value ? gu : en;
+  }
+
+  Widget _buildFilteredEmptyState() {
+    return Obx(() {
+      final hasData = controller.quotationList.isNotEmpty;
+      final filter = controller.selectedFilter.value;
+      final q = controller.searchQuery.value.trim();
+
+      late final String title;
+      late final IconData icon;
+      late final Color iconColor;
+
+      if (!hasData) {
+        title = 'no_quotations_found'.tr;
+        icon = Icons.request_quote;
+        iconColor = Colors.grey;
+      } else if (q.isNotEmpty) {
+        title = _qEmptyMsgEnGu(
+          'No quotations match your search',
+          'શોધ સાથે કોઈ ક્વોટેશન મળી નથી',
+        );
+        icon = Icons.search_off;
+        iconColor = Colors.grey;
+      } else {
+        switch (filter) {
+          case 'Accepted':
+            title = _qEmptyMsgEnGu(
+              'No accepted quotations',
+              'કોઈ સ્વીકૃત ક્વોટેશન નથી',
+            );
+            icon = Icons.check_circle_outline;
+            iconColor = Colors.green.shade300;
+            break;
+          case 'Pending':
+            title = _qEmptyMsgEnGu(
+              'No pending quotations',
+              'કોઈ પેન્ડિંગ ક્વોટેશન નથી',
+            );
+            icon = Icons.hourglass_empty;
+            iconColor = Colors.orange.shade300;
+            break;
+          case 'Rejected':
+            title = _qEmptyMsgEnGu(
+              'No rejected quotations',
+              'કોઈ નકારેલી ક્વોટેશન નથી',
+            );
+            icon = Icons.cancel_outlined;
+            iconColor = Colors.red.shade300;
+            break;
+          default:
+            title = 'no_quotations_found'.tr;
+            icon = Icons.request_quote;
+            iconColor = Colors.grey;
+        }
+      }
+
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 64, color: iconColor),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 17, color: Colors.grey.shade700, height: 1.35),
+              ),
+              if (!hasData) ...[
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
+                    await Get.toNamed(NewInvoiceScreen.pageId);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame),
+                  child: Text('create_quotation'.tr, style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
 

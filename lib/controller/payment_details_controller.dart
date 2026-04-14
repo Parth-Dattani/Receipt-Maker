@@ -1767,12 +1767,7 @@ class PaymentDetailsController extends GetxController {
 
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
       if (currentUserId == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "User not logged in",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+        print("⚠️ loadData skipped: no signed-in user");
         return;
       }
 

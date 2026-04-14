@@ -139,7 +139,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
   // Firebase instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  String _verificationId = "";
+  // (unused) _verificationId removed
 
   void handleRegisterTabTap() {
     tabController.animateTo(1);
@@ -285,6 +285,11 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       if (_isDisposed) return;
 
+      final currentUser = _auth.currentUser!;
+
+      // Do not block dashboard open on Google silent sign-in (can take several seconds on device).
+      unawaited(_syncGoogleSessionWithFirebaseEmail(currentUser.email));
+
       // Success Message
       showNativeSnackbar(
         title: "Success",
@@ -292,17 +297,26 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         isError: false,
       );
 
-      // Store basic user info in shared preferences
-      final currentUser = _auth.currentUser!;
-      await AppConstants.setUserId(currentUser.uid);
-      await sharedPreferencesHelper.storePrefData("email", currentUser.email ?? "");
+      await Future.wait([
+        AppConstants.setUserId(currentUser.uid),
+        sharedPreferencesHelper.storePrefData("email", currentUser.email ?? ""),
+      ]);
 
-      /// Try to get user document from Firestore
+      QuerySnapshot<Map<String, dynamic>>? companyPreloaded;
+      /// User doc + company query in parallel (faster than sequential before dashboard).
       try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection("users")
-            .doc(currentUser.uid)
-            .get();
+        final uid = currentUser.uid;
+        final results = await Future.wait([
+          FirebaseFirestore.instance.collection("users").doc(uid).get(),
+          FirebaseFirestore.instance
+              .collection("users")
+              .doc(uid)
+              .collection("companies")
+              .limit(1)
+              .get(),
+        ]);
+        final userDoc = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+        companyPreloaded = results[1] as QuerySnapshot<Map<String, dynamic>>;
 
         print("userData: ${userDoc.exists ? 'Exists' : 'Does not exist'}");
 
@@ -318,12 +332,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
             await sharedPreferencesHelper.storePrefData(
                 "spreadsheetId", userData['spreadsheetId']);
             AppConstants.spreadsheetId = userData['spreadsheetId'].toString();
-            // Auto-create Item, Customer, Invoice etc. tabs if missing
-            try {
-              await GoogleSheetService.ensureSheetsExist();
-            } catch (e) {
-              print('ensureSheetsExist after email login: $e');
-            }
+            _runSheetSetupInBackgroundAfterLogin();
           }
           print("Username stored: $username");
         } else {
@@ -334,8 +343,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         print("Warning: Could not fetch user data from Firestore: $e");
       }
 
-      // Check company registration and navigate accordingly
-      await _checkAndNavigateAfterLogin();
+      await _checkAndNavigateAfterLogin(companyQueryPreloaded: companyPreloaded);
 
     } on FirebaseAuthException catch (e) {
       // Handle Firebase specific errors (wrong password, user not found)
@@ -394,6 +402,80 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     }
 
     return true; // Validation Passed
+  }
+
+  /// Clears the device Google Sign-In session so another Firebase user does not reuse the previous account's Drive/Sheets tokens.
+  Future<void> _signOutGoogleSignInForSessionSwitch() async {
+    try {
+      final String? serverClientId =
+          AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
+      final String? webClientId =
+          kIsWeb ? (AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null) : null;
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: [
+          'email',
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/spreadsheets',
+        ],
+        serverClientId: serverClientId,
+        clientId: webClientId,
+      );
+      await googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('Google Sign-In session clear: $e');
+    }
+  }
+
+  GoogleSignIn _googleSignInForSheets() {
+    final String? serverClientId =
+        AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
+    final String? webClientId =
+        kIsWeb ? (AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null) : null;
+    return GoogleSignIn(
+      scopes: [
+        'email',
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/spreadsheets',
+      ],
+      serverClientId: serverClientId,
+      clientId: webClientId,
+    );
+  }
+
+  /// If silent Google account matches [firebaseEmail], keep session and store access token (email/password + same Gmail on device).
+  /// If it does not match (or no Firebase email), sign out Google for this app so sheets are not created in the wrong Drive.
+  Future<void> _syncGoogleSessionWithFirebaseEmail(String? firebaseEmail) async {
+    try {
+      final String? wanted = firebaseEmail?.trim().toLowerCase();
+      if (wanted == null || wanted.isEmpty) {
+        await _googleSignInForSheets().signOut();
+        AppConstants.googleAccessToken = '';
+        return;
+      }
+
+      final GoogleSignIn googleSignIn = _googleSignInForSheets();
+      final GoogleSignInAccount? account = await googleSignIn.signInSilently();
+      if (account == null) {
+        AppConstants.googleAccessToken = '';
+        return;
+      }
+
+      final String googleEmail = account.email.trim().toLowerCase();
+      if (googleEmail != wanted) {
+        await googleSignIn.signOut();
+        AppConstants.googleAccessToken = '';
+        debugPrint(
+            'Google ($googleEmail) ≠ Firebase ($wanted): signed out Google for this app so Drive uses correct account.');
+        return;
+      }
+
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? at = auth.accessToken;
+      AppConstants.googleAccessToken = (at != null && at.isNotEmpty) ? at : '';
+    } catch (e) {
+      debugPrint('_syncGoogleSessionWithFirebaseEmail: $e');
+      AppConstants.googleAccessToken = '';
+    }
   }
 
   /// Get current Google access token if user has an active Google session (for creating FY sheet in user's Drive).
@@ -502,18 +584,25 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       await AppConstants.setUserId(currentUser.uid);
       await sharedPreferencesHelper.storePrefData("email", currentUser.email ?? "");
 
+      QuerySnapshot<Map<String, dynamic>>? companyPreloaded;
       try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection("users")
-            .doc(currentUser.uid)
-            .get();
+        final uid = currentUser.uid;
+        final results = await Future.wait([
+          FirebaseFirestore.instance.collection("users").doc(uid).get(),
+          FirebaseFirestore.instance
+              .collection("users")
+              .doc(uid)
+              .collection("companies")
+              .limit(1)
+              .get(),
+        ]);
+        final userDoc = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+        companyPreloaded = results[1] as QuerySnapshot<Map<String, dynamic>>;
 
         final userData = userDoc.data();
         final hasSpreadsheetId = userData != null &&
             userData['spreadsheetId'] != null &&
             (userData['spreadsheetId'].toString().trim().isNotEmpty);
-
-        // Google login: no sheet is created here anymore. It's moved to Company Registration.
 
         if (userDoc.exists) {
           if (userData != null) {
@@ -524,27 +613,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
                   "spreadsheetId", userData['spreadsheetId']);
               AppConstants.spreadsheetId =
                   userData['spreadsheetId'].toString();
-              await Future.delayed(const Duration(seconds: 3));
-
-              try {
-                await GoogleSheetService.ensureSheetsExist();
-              } catch (e) {
-                print('ensureSheetsExist (Google existing sheet) first try: $e');
-                await Future.delayed(const Duration(seconds: 3));
-                try {
-                  await GoogleSheetService.ensureSheetsExist();
-                } catch (e2) {
-                  print(
-                      'ensureSheetsExist (Google existing sheet) retry failed: $e2');
-                  if (!_isDisposed) {
-                    showNativeSnackbar(
-                      title: "Sheet tables not created",
-                      message: _sheetFailureMessage(e2),
-                      isError: true,
-                    );
-                  }
-                }
-              }
+              _runSheetSetupInBackgroundAfterLogin();
             }
           }
         } else if (AppConstants.spreadsheetId.isEmpty) {
@@ -554,7 +623,7 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
         print("Warning: Could not fetch user data from Firestore: $e");
       }
 
-      await _checkAndNavigateAfterLogin();
+      await _checkAndNavigateAfterLogin(companyQueryPreloaded: companyPreloaded);
     } on FirebaseAuthException catch (e) {
       if (!_isDisposed) {
         showNativeSnackbar(
@@ -627,13 +696,6 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   // -----------------------------------------------------------------------
   // 3. NEW HELPER: Native Snackbar (Guaranteed to show)
   // -----------------------------------------------------------------------
-  String _sheetFailureMessage(Object e) {
-    if (GoogleSheetService.isProjectDeletedError(e)) {
-      return GoogleSheetService.projectDeletedUserMessage;
-    }
-    return "Open the sheet in Drive → Share → Add ${AppConstants.serviceAccountEmailForDisplay} as Editor, then sign in again.";
-  }
-
   void showNativeSnackbar({required String title, required String message, required bool isError}) {
     final BuildContext? ctx = Get.context;
     if (ctx == null) {
@@ -745,6 +807,9 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       );
 
       if (_isDisposed) return;
+
+      // Register email matches device Google → token for that Drive; mismatch → sign out Google for app only.
+      await _syncGoogleSessionWithFirebaseEmail(userCred.user!.email ?? email);
 
       // Save user data to Firestore
       await _saveUserDataWithRetry(userCred.user!.uid, spreadsheetId: '');
@@ -1023,8 +1088,26 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   }
 
 
+  /// Heavy Google Sheets work — same idea as [SplashController._runAllSheetTasksInBackground].
+  /// Must not block navigation to dashboard (was main cause of slow login).
+  void _runSheetSetupInBackgroundAfterLogin() {
+    Future(() async {
+      try {
+        print('⏳ Background: sheet setup after login...');
+        await GoogleSheetService.ensureSheetsExist();
+        await GoogleSheetService.testSpreadsheetAccess();
+        await GoogleSheetService.validateAndUpdateAllSheets();
+        print('✅ Background: sheet setup after login done.');
+      } catch (e) {
+        print('⚠️ Background sheet setup after login: $e');
+      }
+    });
+  }
+
   /// Check if user has registered a company after login
-  Future<void> _checkAndNavigateAfterLogin() async {
+  Future<void> _checkAndNavigateAfterLogin({
+    QuerySnapshot<Map<String, dynamic>>? companyQueryPreloaded,
+  }) async {
     print("Checking company registration after login...");
 
     try {
@@ -1036,13 +1119,14 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
 
       print("Checking company for user: ${user.uid}");
 
-      // Query nested companies collection under the user document
-      final companyQuery = await FirebaseFirestore.instance
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .limit(1)
-          .get();
+      // Query nested companies collection under the user document (or use parallel prefetch)
+      final companyQuery = companyQueryPreloaded ??
+          await FirebaseFirestore.instance
+              .collection("users")
+              .doc(user.uid)
+              .collection("companies")
+              .limit(1)
+              .get();
 
       print("Company query successful: ${companyQuery.docs.length} documents found");
 
@@ -1074,175 +1158,193 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
     final TextEditingController emailController = TextEditingController();
     final RxBool dialogIsLoading = false.obs;
 
+    void closeForgotPasswordDialog(BuildContext dialogContext) {
+      if (!dialogContext.mounted) return;
+      Navigator.of(dialogContext, rootNavigator: true).maybePop();
+    }
+
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        // ✅ વેબ માટે વિડ્થ ફિક્સ કરી (Max 450px)
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 450),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // આઈકોન અને હેડિંગ
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.lock_reset_rounded,
-                  size: 40,
-                  color: AppColors.tealColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Reset Password",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Enter your registered email address to receive a password reset link.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Email Input
-              TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(fontSize: 15),
-                decoration: InputDecoration(
-                  labelText: "Email Address",
-                  hintText: "example@gmail.com",
-                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // બટન્સ
-              Row(
+      Builder(
+        builder: (dialogContext) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            // ✅ વેબ માટે વિડ્થ ફિક્સ કરી (Max 450px)
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 450),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Text(
-                        "Cancel",
-                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+                  // આઈકોન અને હેડિંગ
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.lock_reset_rounded,
+                      size: 40,
+                      color: AppColors.tealColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Reset Password",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Enter your registered email address to receive a password reset link.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Email Input
+                  TextFormField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(fontSize: 15),
+                    decoration: InputDecoration(
+                      labelText: "Email Address",
+                      hintText: "example@gmail.com",
+                      prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Obx(
+                  const SizedBox(height: 32),
+
+                  // બટન્સ — use Navigator on this route's context (Get.back can fail to pop the dialog).
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Obx(
+                          () => TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey.shade700,
+                              minimumSize: const Size(48, 48),
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                            ),
+                            onPressed: dialogIsLoading.value
+                                ? null
+                                : () => closeForgotPasswordDialog(dialogContext),
+                            child: const Text(
+                              "Cancel",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Obx(
                           () => ElevatedButton(
                             onPressed: dialogIsLoading.value
                                 ? null
                                 : () async {
-                              final email = emailController.text.trim();
+                                    final email = emailController.text.trim();
 
-                              // ૧. વેલિડેશન
-                              if (email.isEmpty) {
-                                showNativeSnackbar(
-                                  title: "Required",
-                                  message: "Please enter your email address",
-                                  isError: true,
-                                );
-                                return;
-                              }
+                                    // ૧. વેલિડેશન
+                                    if (email.isEmpty) {
+                                      showNativeSnackbar(
+                                        title: "Required",
+                                        message: "Please enter your email address",
+                                        isError: true,
+                                      );
+                                      return;
+                                    }
 
-                              if (!GetUtils.isEmail(email)) {
-                                showNativeSnackbar(
-                                  title: "Invalid Email",
-                                  message: "Please enter a valid email address",
-                                  isError: true,
-                                );
-                                return;
-                              }
+                                    if (!GetUtils.isEmail(email)) {
+                                      showNativeSnackbar(
+                                        title: "Invalid Email",
+                                        message: "Please enter a valid email address",
+                                        isError: true,
+                                      );
+                                      return;
+                                    }
 
-                              // ૨. મેઈન લોજિક (આ લાઈન તેં લખી નહોતી)
-                              dialogIsLoading.value = true;
-                              try {
-                                await _auth.sendPasswordResetEmail(email: email);
+                                    // ૨. મેઈન લોજિક (આ લાઈન તેં લખી નહોતી)
+                                    dialogIsLoading.value = true;
+                                    try {
+                                      await _auth.sendPasswordResetEmail(email: email);
 
-                                dialogIsLoading.value = false;
-                                Get.back(); // ડાયલોગ બંધ કરો
+                                      dialogIsLoading.value = false;
+                                      closeForgotPasswordDialog(dialogContext);
 
-                                showNativeSnackbar(
-                                  title: "Success",
-                                  message: "Password reset link sent to your email!",
-                                  isError: false,
-                                );
-                              } on FirebaseAuthException catch (e) {
-                                dialogIsLoading.value = false;
-                                showNativeSnackbar(
-                                  title: "Error",
-                                  message: e.message ?? "Failed to send reset link",
-                                  isError: true,
-                                );
-                              } catch (e) {
-                                dialogIsLoading.value = false;
-                                showNativeSnackbar(
-                                  title: "Error",
-                                  message: "An unexpected error occurred",
-                                  isError: true,
-                                );
-                              }
-                            },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.tealColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                                      showNativeSnackbar(
+                                        title: "Success",
+                                        message: "Password reset link sent to your email!",
+                                        isError: false,
+                                      );
+                                    } on FirebaseAuthException catch (e) {
+                                      dialogIsLoading.value = false;
+                                      showNativeSnackbar(
+                                        title: "Error",
+                                        message: e.message ?? "Failed to send reset link",
+                                        isError: true,
+                                      );
+                                    } catch (e) {
+                                      dialogIsLoading.value = false;
+                                      showNativeSnackbar(
+                                        title: "Error",
+                                        message: "An unexpected error occurred",
+                                        isError: true,
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.tealColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                            ),
+                            child: dialogIsLoading.value
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Send Link",
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                  ),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                        ),
-                        child: dialogIsLoading.value
-                            ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                            : const Text(
-                          "Send Link",
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
       barrierDismissible: false,
     );
@@ -1537,7 +1639,13 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
       return true;
     } catch (e) {
       print('addNewFinancialYearForFy Error: $e');
-      // એરર હેન્ડલિંગ...
+      if (!_isDisposed) {
+        final is403 = e.toString().contains('403') || e.toString().toLowerCase().contains('permission');
+        final msg = is403
+            ? "Permission denied. Open Google Sheet Drive → Share → add ${AppConstants.serviceAccountEmailForDisplay} as Editor, then try again."
+            : e.toString();
+        _safeSnackbar(title: 'Error', message: msg, isError: true);
+      }
       return false;
     } finally {
       isLoadingFy.value = false;
@@ -1582,12 +1690,19 @@ class AuthController extends BaseController with GetSingleTickerProviderStateMix
   Future<void> logout() async {
     try {
       await FirebaseAuth.instance.signOut();
+      await _signOutGoogleSignInForSessionSwitch();
+      AppConstants.googleAccessToken = "";
+      GoogleSheetService.clearInvoiceListCacheForNewFy();
+
       await sharedPreferencesHelper.clearPrefData();
       AppConstants.userId = "";
       AppConstants.companyId = "";
+      AppConstants.companyName = "";
       AppConstants.appId = "";
       AppConstants.spreadsheetId = "";
+      AppConstants.activeFy = "";
       AppConstants.accessKey = "";
+      AppConstants.businessType = "Trading";
       AppConstants.isChallan.value = false;
       AppConstants.isCashMemo.value = false;
       AppConstants.withGST.value = false;

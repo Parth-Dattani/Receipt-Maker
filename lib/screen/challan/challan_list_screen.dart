@@ -68,10 +68,6 @@ class ChallanListScreen extends GetView<ChallanListController> {
               });
             }
 
-            if (controller.filteredChallanList.isEmpty) {
-              return _buildEmptyState();
-            }
-
             return LayoutBuilder(
               builder: (context, constraints) {
                 if (constraints.maxWidth > 900) {
@@ -98,7 +94,14 @@ class ChallanListScreen extends GetView<ChallanListController> {
       children: [
         _buildSearchFilterSection(),
         _buildStatisticsSection(isWeb: false),
-        Expanded(child: _buildChallanList()),
+        Expanded(
+          child: Obx(() {
+            if (controller.filteredChallanList.isEmpty) {
+              return _buildFilteredEmptyState();
+            }
+            return _buildChallanList();
+          }),
+        ),
       ],
     );
   }
@@ -119,7 +122,12 @@ class ChallanListScreen extends GetView<ChallanListController> {
               Expanded(
                 child: Scrollbar(
                   thumbVisibility: true,
-                  child: _buildChallanList(),
+                  child: Obx(() {
+                    if (controller.filteredChallanList.isEmpty) {
+                      return _buildFilteredEmptyState();
+                    }
+                    return _buildChallanList();
+                  }),
                 ),
               ),
             ],
@@ -304,41 +312,105 @@ class ChallanListScreen extends GetView<ChallanListController> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.local_shipping, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'no_challans_found'.tr,
-            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'create_your_first_challan_to_get_started'.tr,
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () async {
-              if (Get.isRegistered<NewChallanController>()) {
-                Get.delete<NewChallanController>();
-              }
-              Get.put(NewChallanController());
+  String _chEmptyMsgEnGu(String en, String gu) {
+    return AppConstants.isGujarati.value ? gu : en;
+  }
 
-              await Get.toNamed(NewChallanScreen.pageId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.appTheame,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('create_challan'.tr),
+  Widget _buildFilteredEmptyState() {
+    return Obx(() {
+      final hasData = controller.challanList.isNotEmpty;
+      final filter = controller.selectedFilter.value;
+      final q = controller.searchQuery.value.trim();
+
+      late final String title;
+      late final IconData icon;
+      late final Color iconColor;
+
+      if (!hasData) {
+        title = 'no_challans_found'.tr;
+        icon = Icons.local_shipping;
+        iconColor = Colors.grey.shade400;
+      } else if (q.isNotEmpty) {
+        title = _chEmptyMsgEnGu(
+          'No challans match your search',
+          'શોધ સાથે કોઈ ચાલણ મળી નથી',
+        );
+        icon = Icons.search_off;
+        iconColor = Colors.grey;
+      } else {
+        switch (filter) {
+          case 'Delivered':
+            title = _chEmptyMsgEnGu(
+              'No delivered challans',
+              'કોઈ ડિલિવર્ડ ચાલણ નથી',
+            );
+            icon = Icons.check_circle_outline;
+            iconColor = Colors.green.shade300;
+            break;
+          case 'Pending':
+            title = _chEmptyMsgEnGu(
+              'No pending challans',
+              'કોઈ પેન્ડિંગ ચાલણ નથી',
+            );
+            icon = Icons.hourglass_empty;
+            iconColor = Colors.orange.shade300;
+            break;
+          case 'In Transit':
+            title = _chEmptyMsgEnGu(
+              'No challans in transit',
+              'કોઈ ટ્રાન્ઝિટમાં ચાલણ નથી',
+            );
+            icon = Icons.local_shipping_outlined;
+            iconColor = Colors.purple.shade300;
+            break;
+          default:
+            title = 'no_challans_found'.tr;
+            icon = Icons.local_shipping;
+            iconColor = Colors.grey.shade400;
+        }
+      }
+
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 64, color: iconColor),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 17, color: Colors.grey.shade700, height: 1.35),
+              ),
+              if (!hasData) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'create_your_first_challan_to_get_started'.tr,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (Get.isRegistered<NewChallanController>()) {
+                      Get.delete<NewChallanController>();
+                    }
+                    Get.put(NewChallanController());
+                    await Get.toNamed(NewChallanScreen.pageId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.appTheame,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('create_challan'.tr),
+                ),
+              ],
+            ],
           ),
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 
   // Adaptive List Builder (Grid for Web, List for Mobile)
@@ -347,6 +419,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
       // Use GridView for Web, ListView for Mobile
       if (MediaQuery.of(Get.context!).size.width > 900) {
         return GridView.builder(
+          controller: controller.scrollController,
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -354,17 +427,38 @@ class ChallanListScreen extends GetView<ChallanListController> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
-          itemCount: controller.filteredChallanList.length,
+          itemCount: controller.filteredChallanList.length + (controller.hasMore.value ? 1 : 0),
           itemBuilder: (context, index) {
+            if (index >= controller.filteredChallanList.length) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: controller.isLoadingMore.value
+                      ? const CircularProgressIndicator()
+                      : const SizedBox.shrink(),
+                ),
+              );
+            }
             final challan = controller.filteredChallanList[index];
             return _buildWebChallanCard(challan);
           },
         );
       } else {
         return ListView.builder(
+          controller: controller.scrollController,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-          itemCount: controller.filteredChallanList.length,
+          itemCount: controller.filteredChallanList.length + (controller.hasMore.value ? 1 : 0),
           itemBuilder: (context, index) {
+            if (index >= controller.filteredChallanList.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: controller.isLoadingMore.value
+                      ? const CircularProgressIndicator()
+                      : const SizedBox.shrink(),
+                ),
+              );
+            }
             final challan = controller.filteredChallanList[index];
             return _buildMobileChallanListItem(challan);
           },
@@ -422,7 +516,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  challan.status?.toUpperCase() ?? 'UNKNOWN',
+                                  challan.status.toUpperCase(),
                                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
                                 ),
                               ),
@@ -518,7 +612,7 @@ class ChallanListScreen extends GetView<ChallanListController> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      challan.status?.toUpperCase() ?? "UNKNOWN",
+                                      challan.status.toUpperCase(),
                                       style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold),
                                     ),
                                   ),

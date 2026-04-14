@@ -57,6 +57,8 @@ class Messages extends Translations {
       'recent_invoices': 'Recent Invoices',
       'view_all': 'View All',
       'select_date_range_to_export': 'Select date range to export',
+      'please_select_from_and_to_date': 'Please select From date and To date before continuing.',
+      'from_date_must_not_be_after_to_date': 'From date cannot be after To date.',
       'manage_customers': 'Manage customers',
       'view_analytics': 'View analytics',
 
@@ -296,6 +298,8 @@ class Messages extends Translations {
       'recent_invoices': 'તાજેતરના ઇન્વોઇસ',
       'view_all': 'બધા જુઓ',
       'select_date_range_to_export': 'નિકાસ માટે તારીખ શ્રેણી પસંદ કરો',
+      'please_select_from_and_to_date': 'આગળ વધતાં પહેલા કૃપા કરીને શરૂઆતની તારીખ અને અંતની તારીખ પસંદ કરો.',
+      'from_date_must_not_be_after_to_date': 'શરૂઆતની તારીખ અંતની તારીખ કરતાં મોડી ન હોઈ શકે.',
       'manage_customers': 'ગ્રાહકો મેનેજ કરો',
       'view_analytics': 'વિશ્લેષણ જુઓ',
       'edit_invoice': 'ઇન્વોઇસ સંપાદિત કરો',

@@ -1,6 +1,4 @@
 
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/utils/pdf_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,14 +9,10 @@ import '../model/model.dart';
 import '../screen/screen.dart';
 import '../services/service.dart';
 import '../utils/shared_preferences_helper.dart';
-import '../widgets/widgets.dart';
 import 'controller.dart';
 
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-
-import 'package:get/get.dart';
-import 'package:flutter/material.dart';
+// (duplicate flutter/material import removed)
 //
 // class ChallanListController extends BaseController {
 //   final challanList = <Challan>[].obs;
@@ -289,7 +283,7 @@ class ChallanListController extends BaseController {
   final filteredChallanList = <Challan>[].obs;
   final searchQuery = ''.obs;
   final selectedFilter = 'All'.obs;
-  var companyData = <String, dynamic>{}.obs;
+  final RxMap<String, dynamic> companyData = <String, dynamic>{}.obs;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -297,6 +291,11 @@ class ChallanListController extends BaseController {
   /// Separate loaders
   final isChallanLoading = false.obs;
   final isCompanyLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMore = true.obs;
+  final ScrollController scrollController = ScrollController();
+  static const int _pageSize = 50;
+  int _offset = 0;
 
   /// 🔹 UI loading (for shimmer/empty state)
   bool get isDataLoading => isChallanLoading.value || isCompanyLoading.value;
@@ -304,23 +303,69 @@ class ChallanListController extends BaseController {
   @override
   void onInit() {
     super.onInit();
-    loadChallans();
+    loadFirstPage();
     loadCompanyData();
+    scrollController.addListener(_onScroll);
   }
 
-  /// 🔹 Load challans from Google Sheets
-  Future<void> loadChallans() async {
+  void _onScroll() {
+    if (!hasMore.value) return;
+    if (isChallanLoading.value || isLoadingMore.value) return;
+    if (!scrollController.hasClients) return;
+    final pos = scrollController.position;
+    if (pos.pixels >= (pos.maxScrollExtent - 280)) {
+      loadNextPage();
+    }
+  }
+
+  Future<void> loadFirstPage() async {
     try {
       isChallanLoading.value = true;
 
-      List<Challan> challans = await GoogleSheetService.getChallansList();
-      challanList.assignAll(challans);
+      _offset = 0;
+      hasMore.value = true;
+      challanList.clear();
+      filteredChallanList.clear();
+
+      final (page, more) = await GoogleSheetService.getChallansPage(
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
+
+      challanList.assignAll(page);
       _applyFilters();
 
     } catch (e) {
       print("❌ Error loading challans: $e");
     } finally {
       isChallanLoading.value = false;
+    }
+  }
+
+  /// Backward-compat alias (older code calls this).
+  Future<void> loadChallans() async => loadFirstPage();
+
+  Future<void> loadNextPage() async {
+    if (!hasMore.value) return;
+    if (isChallanLoading.value || isLoadingMore.value) return;
+    try {
+      isLoadingMore.value = true;
+      final (page, more) = await GoogleSheetService.getChallansPage(
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
+      if (page.isNotEmpty) {
+        challanList.addAll(page);
+        _applyFilters();
+      }
+    } catch (e) {
+      print("❌ Error loading more challans: $e");
+    } finally {
+      isLoadingMore.value = false;
     }
   }
 
@@ -354,7 +399,7 @@ class ChallanListController extends BaseController {
 
   /// 🔹 Refresh challans
   Future<void> refreshChallans() async {
-    await loadChallans();
+    await loadFirstPage();
   }
 
   /// 🔹 Search challans by ID or customer name
@@ -383,8 +428,8 @@ class ChallanListController extends BaseController {
     // 2) Search filter (applies on top of status filter)
     if (q.isNotEmpty) {
       results = results.where((challan) {
-        final id = (challan.challanId ?? '').toLowerCase();
-        final name = (challan.customerName ?? '').toLowerCase();
+        final id = challan.challanId.toLowerCase();
+        final name = challan.customerName.toLowerCase();
         return id.contains(q) || name.contains(q);
       });
     }
@@ -393,7 +438,7 @@ class ChallanListController extends BaseController {
   }
 
   bool _matchesStatusFilter(Challan challan, String filter) {
-    final s = (challan.status ?? '').toString().trim().toLowerCase();
+    final s = challan.status.trim().toLowerCase();
 
     // Map your real sheet statuses to UI tabs
     switch (filter) {
@@ -462,6 +507,13 @@ class ChallanListController extends BaseController {
     }
   }
 
+  @override
+  void onClose() {
+    scrollController.removeListener(_onScroll);
+    scrollController.dispose();
+    super.onClose();
+  }
+
   /// 🔹 Export challan as PDF
   Future<void> exportChallanAsPdf(Challan challan) async {
     try {
@@ -472,9 +524,7 @@ class ChallanListController extends BaseController {
       await GoogleSheetService.getChallanItemsByChallanId(challan.challanId);
 
       final cleanedItems = fetchedChallanItems.map((item) {
-        final fixedName = (item.itemName != null && item.itemName.trim().isNotEmpty)
-            ? item.itemName
-            : (item.description ?? "Goods/Service");
+        final fixedName = item.itemName.trim().isNotEmpty ? item.itemName : item.description;
 
         return ChallanItem(
           itemId: item.itemId,
@@ -491,26 +541,11 @@ class ChallanListController extends BaseController {
         );
       }).toList();
 
-      final subtotal = cleanedItems.fold<double>(0, (s, it) {
-        final qty = (it.quantity ?? 0).toDouble();
-        final rate = it.price ?? 0.0;
-        return s + (qty * rate);
-      });
-
-      final gstTotal = cleanedItems.fold<double>(0, (s, it) {
-        final qty = (it.quantity ?? 0).toDouble();
-        final rate = it.price ?? 0.0;
-        final base = qty * rate;
-        return s + ((base * (it.gstRate ?? 0)) / 100);
-      });
-
-      final grandTotal = subtotal + gstTotal;
-
       final pdfFile = await InvoiceHelper.generateDocumentPrint(
         isChallan: true,
         challan: challan,
         challanItems: cleanedItems,
-        companyData: companyData.value,
+        companyData: Map<String, dynamic>.from(companyData),
       );
 
       if (pdfFile != null) {

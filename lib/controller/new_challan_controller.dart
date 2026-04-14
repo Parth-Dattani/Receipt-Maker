@@ -1588,21 +1588,41 @@ class NewChallanController extends BaseController {
     }
   }
 
+  String _snackLang(String english, String gujarati) {
+    return AppConstants.isGujarati.value ? gujarati : english;
+  }
+
+  void _challanRequiredSnack(
+    String title,
+    String message, {
+    Color? color,
+    IconData icon = Icons.warning_amber_rounded,
+    Duration? duration,
+  }) {
+    showCustomSnackbar(
+      title: title,
+      message: message,
+      baseColor: color ?? Colors.deepOrange.shade800,
+      icon: icon,
+      duration: duration ?? const Duration(seconds: 6),
+    );
+  }
 
   /// Validates that at least one valid item exists before saving
   bool _validateChallanItems() {
-    // Check if there are any items at all
     if (challanItems.isEmpty) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Please add at least one item to the challan",
-        baseColor: Colors.red.shade700,
+      _challanRequiredSnack(
+        _snackLang('Required', 'જરૂરી'),
+        _snackLang(
+          'Add at least one line item to the challan.',
+          'ઓછામાં ઓછી એક વસ્તુ ચાલણમાં ઉમેરો.',
+        ),
+        color: Colors.red.shade700,
         icon: Icons.error_outline,
       );
       return false;
     }
 
-    // Check if there's at least one valid item (has itemId or description)
     bool hasValidItem = challanItems.any((item) {
       bool hasItemId = item.itemId != null && item.itemId!.isNotEmpty;
       bool hasDescription = item.description != null && item.description!.isNotEmpty;
@@ -1612,16 +1632,17 @@ class NewChallanController extends BaseController {
     });
 
     if (!hasValidItem) {
-      showCustomSnackbar(
-        title: "No Items Selected",
-        message: "Please select or add at least one item before creating the challan",
-        baseColor: Colors.orange.shade700,
-        icon: Icons.warning_amber_rounded,
+      _challanRequiredSnack(
+        _snackLang('Select item', 'વસ્તુ પસંદ કરો'),
+        _snackLang(
+          'Select an item or enter name. Quantity and price are required.',
+          'એક વસ્તુ પસંદ કરો અથવા નામ ભરો; quantity અને price જરૂરી.',
+        ),
+        color: Colors.orange.shade800,
       );
       return false;
     }
 
-    // Additional validation: check for items with zero quantity or price
     bool hasInvalidQuantityOrPrice = challanItems.any((item) {
       bool isValidItem = (item.itemId?.isNotEmpty ?? false) ||
           (item.description?.isNotEmpty ?? false) ||
@@ -1634,11 +1655,13 @@ class NewChallanController extends BaseController {
     });
 
     if (hasInvalidQuantityOrPrice) {
-      showCustomSnackbar(
-        title: "Invalid Item Data",
-        message: "All selected items must have quantity and price greater than 0",
-        baseColor: Colors.orange.shade700,
-        icon: Icons.warning_amber_rounded,
+      _challanRequiredSnack(
+        _snackLang('Quantity & price', 'જથ્થો અને ભાવ'),
+        _snackLang(
+          'Each line must have quantity and price greater than 0.',
+          'દરેક લાઇન માટે quantity અને price 0 કરતાં વધુ હોવા જોઈએ.',
+        ),
+        color: Colors.orange.shade800,
       );
       return false;
     }
@@ -1925,44 +1948,62 @@ class NewChallanController extends BaseController {
       }
 
       if (customerNameController.text.trim().isEmpty) {
-        showCustomSnackbar(
-            title: "Customer Required",
-            message: "Please select a customer or enter customer details",
-            baseColor: Colors.red.shade700,
-            icon: Icons.person_outline);
+        _challanRequiredSnack(
+          _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+          _snackLang(
+            'Please select a customer first. If the list is empty, tap + to add a new customer.',
+            'ગ્રાહક પસંદ કરો અથવા વિગત દાખલ કરો.',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.person_outline,
+        );
         return false;
       }
 
-      if (!formKey.currentState!.validate()) {
-        showCustomSnackbar(
-            title: "Validation Error",
-            message: "Please fill all required fields",
-            baseColor: Colors.orange.shade700,
-            icon: Icons.warning);
+      final challanFormState = formKey.currentState;
+      if (challanFormState == null || !challanFormState.validate()) {
+        _challanRequiredSnack(
+          _snackLang('Form', 'ફોર્મ'),
+          _snackLang(
+            'Fill all required fields marked with *.',
+            'જરૂરી ફીલ્ડ ભરો (* ચિહ્નવાળા).',
+          ),
+          color: Colors.orange.shade800,
+          icon: Icons.edit_note,
+        );
         return false;
       }
 
       if (!_validateChallanItems()) return false;
 
       if (hasAnyStockViolation) {
-        String violationList = violationMessages.values.join('\n• ');
-        showCustomSnackbar(
-            title: "Cannot Create Challan",
-            message: "Fix these issues first:\n• $violationList",
-            baseColor: Colors.red.shade700,
-            icon: Icons.error_outline,
-            duration: Duration(seconds: 5));
+        final violationList = violationMessages.values.join('\n• ');
+        _challanRequiredSnack(
+          _snackLang('Stock', 'સ્ટોક'),
+          _snackLang(
+            'Fix these first:\n• $violationList',
+            'પહેલાં આ સુધારો:\n• $violationList',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.error_outline,
+          duration: const Duration(seconds: 8),
+        );
         return false;
       }
 
       _removeEmptyItemsBeforeSave();
+      if (!_validateChallanItems()) return false;
 
       if (challanItems.isEmpty) {
-        showCustomSnackbar(
-            title: "No Valid Items",
-            message: "Please add at least one valid item",
-            baseColor: Colors.red.shade700,
-            icon: Icons.error_outline);
+        _challanRequiredSnack(
+          _snackLang('Items required', 'વસ્તુ જરૂરી'),
+          _snackLang(
+            'Add at least one valid item line.',
+            'ઓછામાં ઓછી એક માન્ય વસ્તુ લાઇન ઉમેરો.',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.error_outline,
+        );
         return false;
       }
 
@@ -1982,10 +2023,14 @@ class NewChallanController extends BaseController {
       if (finalCustomerId.isEmpty) {
         isLoading.value = false;
         showCustomSnackbar(
-            title: "Customer ID Error",
-            message: "Unable to determine customer ID.",
-            baseColor: Colors.red.shade700,
-            icon: Icons.error_outline);
+          title: _snackLang('Customer ID error', 'ગ્રાહક ID ભૂલ'),
+          message: _snackLang(
+            'Unable to determine customer ID.',
+            'ગ્રાહક ID નક્કી કરી શકાતી નથી.',
+          ),
+          baseColor: Colors.red.shade700,
+          icon: Icons.error_outline,
+        );
         return false;
       }
 

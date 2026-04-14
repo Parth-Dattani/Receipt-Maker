@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screen/common/in_app_webview_screen.dart';
+import 'logout_confirm_dialog.dart';
 
 /// Shared left sidebar for web. Shows on every screen when kIsWeb.
 /// [currentRoute] is used to highlight the active menu item (e.g. CustomerListScreen.pageId).
@@ -76,15 +77,17 @@ class WebAppSidebar extends GetView<DashboardController> {
               children: [
                 _buildMenuItem(Icons.dashboard, "Dashboard", _isActive(DashboardScreen.pageId), () => Get.offAllNamed(DashboardScreen.pageId)),
                 if (AppConstants.businessType == "Trading")
-                  _buildExpansionTile(
-                    icon: Icons.shopping_cart,
-                    title: "Purchase",
-                    isExpanded: _isPurchaseActive(),
-                    children: [
-                      _buildSubMenuItem(Icons.shopping_cart, "Purchase", () => controller.navigateToInventory()),
-                      _buildSubMenuItem(Icons.list_alt, "Purchase List", () => controller.navigateToPurchaseList()),
-                    ],
-                  ),
+                  Obx(() => AppConstants.enablePurchaseFeature.value
+                      ? _buildExpansionTile(
+                          icon: Icons.shopping_cart,
+                          title: "Purchase",
+                          isExpanded: _isPurchaseActive(),
+                          children: [
+                            _buildSubMenuItem(Icons.shopping_cart, "Purchase", () => controller.navigateToInventory()),
+                            _buildSubMenuItem(Icons.list_alt, "Purchase List", () => controller.navigateToPurchaseList()),
+                          ],
+                        )
+                      : const SizedBox.shrink()),
                 _buildExpansionTile(
                   icon: Icons.receipt_long,
                   title: "Sales",
@@ -100,7 +103,9 @@ class WebAppSidebar extends GetView<DashboardController> {
                 if (AppConstants.businessType == "Trading")
                   _buildMenuItem(Icons.assessment, "Stock Report", _isActive(StockReportScreen.pageId), () => controller.navigateToStockReport()),
                 _buildMenuItem(Icons.people, "customers".tr, _isActive(CustomerListScreen.pageId), () => controller.navigateToCustomerList()),
-                _buildMenuItem(Icons.payment, "payment".tr, _isActive(PaymentDetailsScreen.pageId), () => controller.navigateToPaymentDetails()),
+                Obx(() => AppConstants.enablePaymentReceiptFeature.value
+                    ? _buildMenuItem(Icons.payment, "payment".tr, _isActive(PaymentDetailsScreen.pageId), () => controller.navigateToPaymentDetails())
+                    : const SizedBox.shrink()),
                 // ✅ NEW — payment item ની નીચે
                 Obx(() => AppConstants.enableCustomerOrderFeature.value
                     ? _buildMenuItem(
@@ -140,14 +145,20 @@ class WebAppSidebar extends GetView<DashboardController> {
                 }),
                 const Divider(color: Colors.white24, height: 12),
                 _buildPrivacyPolicyTile(),
-                _buildMenuItem(Icons.logout, "logout".tr, false, () => controller.logout()),
+                _buildMenuItem(Icons.logout, "logout".tr, false, () {
+                  Get.dialog(
+                    LogoutConfirmDialog(
+                      onConfirm: () => controller.logout(),
+                    ),
+                  );
+                }),
                 const Divider(color: Colors.white24, height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Obx(() => Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('invoice_sathi'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      Text(AppConstants.appName, style: TextStyle(color: Colors.white54, fontSize: 11)),
                       Text('v${controller.appVersion.value}', style: TextStyle(color: Colors.white54, fontSize: 11)),
                     ],
                   )),

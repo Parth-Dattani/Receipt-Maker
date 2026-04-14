@@ -334,6 +334,10 @@ class SplashController extends BaseController {
       await sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled);
       await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
       await AppConstants.setBusinessType(businessType);
+      if (businessType.toString().trim() == 'Trading') {
+        await AppConstants.setEnablePurchaseFeature(
+            data['enablePurchaseFeature'] != false);
+      }
       await AppConstants.setDueDateEnabled(isDueDateEnabled);
       await AppConstants.setDueDateDays(dueDateDays is int ? dueDateDays : int.tryParse(dueDateDays.toString()) ?? 0);
 

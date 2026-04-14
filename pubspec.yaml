@@ -65,6 +65,7 @@ dependencies:
   package_info_plus:
   universal_html:
   image_picker: ^1.2.1
+  logger: ^2.5.0
 
 dev_dependencies:
   flutter_test:

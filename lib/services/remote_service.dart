@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'dart:math' as Math;
 import 'dart:typed_data';
@@ -1867,6 +1868,12 @@ class RemoteService {
 
 
 class GoogleSheetService {
+  /// Logcat (Android): filter by tag **InvoiceSathi** — `print` alone is easy to miss in Studio.
+  static void _logSheetCreate(String msg) {
+    print('[InvoiceSathi:SheetCreate] $msg');
+    developer.log(msg, name: 'InvoiceSathi');
+  }
+
   // Always use current value so after login we use the right sheet
   static String get spreadsheetId => AppConstants.spreadsheetId;
   static const itemSheetName = "Item"; // your sheet/tab name
@@ -1923,13 +1930,25 @@ class GoogleSheetService {
         String? existingFolderId,
         String? userEmail,
       }) async {
+    final bool hasToken = accessToken != null && accessToken.trim().isNotEmpty;
+    final String? emailTrim = userEmail?.trim();
+    final bool hasEmail = emailTrim != null && emailTrim.isNotEmpty;
+    _logSheetCreate(
+        'start uid=$uid hasOAuthToken=$hasToken hasUserEmail=$hasEmail path=${!hasToken && hasEmail ? "service_account" : hasToken ? "user_drive" : "none"}');
+
     // ૧. Email/password flow: Service Account logic
-    if ((accessToken == null || accessToken.isEmpty) && userEmail != null && userEmail.trim().isNotEmpty) {
-      final res = await _createSheetWithServiceAccountAndShare(uid, userEmail.trim(), username ?? 'user');
+    if (!hasToken && hasEmail) {
+      final res = await _createSheetWithServiceAccountAndShare(uid, emailTrim, username ?? 'user');
+      if (res == null) {
+        _logSheetCreate('service_account returned null (see _createSheetWithServiceAccountAndShare logs above)');
+      }
       return res != null ? (res.$1, res.$2, res.$3) : null;
     }
 
-    if (accessToken == null || accessToken.isEmpty) return null;
+    if (!hasToken) {
+      _logSheetCreate('ABORT: no OAuth token and no user email — cannot create sheet');
+      return null;
+    }
 
     try {
       final baseUrl = 'https://www.googleapis.com/drive/v3/files';
@@ -1969,11 +1988,16 @@ class GoogleSheetService {
           if (createFolderRes.statusCode == 200) {
             folderId = jsonDecode(createFolderRes.body)['id'];
             print('✅ Created main folder "$folderName": $folderId');
+          } else {
+            _logSheetCreate('Drive create folder failed HTTP ${createFolderRes.statusCode} ${createFolderRes.body}');
           }
         }
       }
 
-      if (folderId == null) return null;
+      if (folderId == null) {
+        _logSheetCreate('ABORT: no main folder id (user Drive flow)');
+        return null;
+      }
 
       // --- STEP B: Sub 'Invoices' Folder સેટઅપ કરો (PDF માટે) ---
       final pdfDriveQuery = "name='$pdfFolderName' and mimeType='application/vnd.google-apps.folder' and '$folderId' in parents and trashed=false";
@@ -2001,6 +2025,8 @@ class GoogleSheetService {
         if (createPdfRes.statusCode == 200) {
           pdfFolderId = jsonDecode(createPdfRes.body)['id'];
           print('✅ Created sub-folder "$pdfFolderName": $pdfFolderId');
+        } else {
+          _logSheetCreate('Drive create Invoices folder failed HTTP ${createPdfRes.statusCode} ${createPdfRes.body}');
         }
       }
 
@@ -2047,9 +2073,13 @@ class GoogleSheetService {
 
           return (id, folderId, pdfFolderId ?? "");
         }
+        _logSheetCreate('Drive response 200 but missing spreadsheet id body=${response.body}');
+      } else {
+        _logSheetCreate('Drive create spreadsheet failed HTTP ${response.statusCode} body=${response.body}');
       }
       return null;
     } catch (e) {
+      _logSheetCreate('exception: $e');
       print('❌ createNewUserSpreadsheet error: $e');
       return null;
     }
@@ -2291,6 +2321,7 @@ class GoogleSheetService {
       // ✅ રિટર્ન: (Spreadsheet ID, Main Folder ID, PDF Folder ID)
       return (spreadsheetId, folderId, pdfFolderId);
     } catch (e) {
+      _logSheetCreate('_createSheetWithServiceAccountAndShare Error: $e');
       print('❌ _createSheetWithServiceAccountAndShare Error: $e');
       return null;
     }
@@ -3958,6 +3989,87 @@ class GoogleSheetService {
     }
   }
 
+  /// Paged invoice fetch (reads only a slice of rows).
+  /// [offset] counts data rows (not including header). offset=0 means start at row 2.
+  /// Returns (invoices, hasMoreRows).
+  static Future<(List<Invoice> invoices, bool hasMore)> getInvoicesPage({
+    String? type,
+    required int offset,
+    int limit = 50,
+  }) async {
+    if (limit <= 0) return (<Invoice>[], false);
+    try {
+      return await _getInvoicesFromSheetPage(type: type, offset: offset, limit: limit);
+    } catch (e) {
+      final is429 = e.toString().contains('429') || e.toString().toLowerCase().contains('quota exceeded');
+      if (is429) {
+        print("⚠️ Quota exceeded (429), retrying page after 60s...");
+        await Future.delayed(const Duration(seconds: 60));
+        return await _getInvoicesFromSheetPage(type: type, offset: offset, limit: limit);
+      }
+      rethrow;
+    }
+  }
+
+  static Future<(List<Invoice> invoices, bool hasMore)> _getInvoicesFromSheetPage({
+    String? type,
+    required int offset,
+    required int limit,
+  }) async {
+    print("🔄 Fetching invoices page from Google Sheet... offset=$offset limit=$limit");
+
+    final client = await _getAuthClient();
+    final sheetsApi = SheetsApi(client);
+
+    // Headers
+    final headerResponse = await sheetsApi.spreadsheets.values.get(
+      spreadsheetId,
+      "$invoiceSheetName!1:1",
+    );
+    if (headerResponse.values == null || headerResponse.values!.isEmpty) {
+      return (<Invoice>[], false);
+    }
+    final headers = headerResponse.values![0];
+
+    // Data range slice
+    final startRow = 2 + offset;
+    final endRow = startRow + limit - 1;
+    final range = "$invoiceSheetName!A$startRow:Z$endRow";
+    final response = await sheetsApi.spreadsheets.values.get(spreadsheetId, range);
+    final rows = response.values ?? const <List<Object?>>[];
+    if (rows.isEmpty) return (<Invoice>[], false);
+
+    final invoices = <Invoice>[];
+    for (final row in rows) {
+      if (row.isEmpty || (row.length == 1 && row[0].toString().trim().isEmpty)) continue;
+      try {
+        final rowData = <String, dynamic>{};
+        for (int j = 0; j < min(row.length, headers.length); j++) {
+          final headerKey = headers[j].toString();
+          final cellValue = row[j];
+          if (headerKey.toLowerCase() == 'issuedate' || headerKey.toLowerCase() == 'duedate') {
+            rowData[headerKey] = (cellValue != null && cellValue.toString().isNotEmpty) ? _parseDate(cellValue.toString()) : null;
+          } else if (headerKey.toLowerCase().replaceAll(' ', '').replaceAll('_', '') == 'updatedat') {
+            rowData['updatedAt'] = (cellValue != null && cellValue.toString().trim().isNotEmpty) ? _parseDateOrDateTime(cellValue.toString()) : null;
+          } else {
+            rowData[headerKey] = cellValue;
+          }
+        }
+
+        final invoice = Invoice.fromMap(rowData);
+        if (invoice.isDeleted == 1) continue;
+        if (type == "INV" && !invoice.invoiceId.startsWith("INV")) continue;
+        if (type == "QUO" && !invoice.invoiceId.startsWith("QUO")) continue;
+        invoices.add(invoice);
+      } catch (_) {
+        continue;
+      }
+    }
+
+    final hasMore = rows.length == limit;
+    return (invoices, hasMore);
+  }
+
   static Future<List<Invoice>> _getInvoicesFromSheet({String? type, required String cacheKey}) async {
     print("🔄 Fetching invoices from Google Sheet...");
 
@@ -5518,6 +5630,58 @@ class GoogleSheetService {
       print("⚠️ Error in getChallansList(): $e");
       // Don't throw, return empty list instead
       return <Challan>[];
+    }
+  }
+
+  /// Paged challan fetch (reads only a slice of rows).
+  /// [offset] counts data rows (not including header). offset=0 means start at row 2.
+  /// Returns (challans, hasMoreRows).
+  static Future<(List<Challan> challans, bool hasMore)> getChallansPage({
+    required int offset,
+    int limit = 50,
+  }) async {
+    if (limit <= 0) return (<Challan>[], false);
+    print("🔄 Fetching challans page... offset=$offset limit=$limit");
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      final sheetExists = await _sheetExists(sheetsApi, challanSheetName);
+      if (!sheetExists) return (<Challan>[], false);
+
+      final headerRes = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$challanSheetName!1:1",
+      );
+      if (headerRes.values == null || headerRes.values!.isEmpty) return (<Challan>[], false);
+      final headers = headerRes.values![0].map((h) => h.toString().trim()).toList();
+
+      final startRow = 2 + offset;
+      final endRow = startRow + limit - 1;
+      final range = "$challanSheetName!A$startRow:Z$endRow";
+      final res = await sheetsApi.spreadsheets.values.get(spreadsheetId, range);
+      final rows = res.values ?? const <List<Object?>>[];
+      if (rows.isEmpty) return (<Challan>[], false);
+
+      final challans = <Challan>[];
+      for (final row in rows) {
+        if (row.isEmpty || row[0].toString().trim().isEmpty) continue;
+        final challanMap = <String, dynamic>{};
+        for (int j = 0; j < headers.length && j < row.length; j++) {
+          challanMap[headers[j]] = row[j].toString();
+        }
+        try {
+          challans.add(Challan.fromMap(challanMap));
+        } catch (_) {
+          continue;
+        }
+      }
+
+      final hasMore = rows.length == limit;
+      return (challans, hasMore);
+    } catch (e) {
+      print("⚠️ Error in getChallansPage(): $e");
+      rethrow;
     }
   }
 
@@ -7385,6 +7549,55 @@ class GoogleSheetService {
       return purchases;
     } catch (e) {
       print("❌ Error in getPurchasesList(): $e");
+      rethrow;
+    }
+  }
+
+  /// Paged purchase fetch (reads only a slice of rows).
+  /// [offset] counts data rows (not including header). offset=0 means start at row 2.
+  /// Returns (purchases, hasMoreRows).
+  static Future<(List<PurchaseEntry> purchases, bool hasMore)> getPurchasesPage({
+    required int offset,
+    int limit = 50,
+  }) async {
+    if (limit <= 0) return (<PurchaseEntry>[], false);
+    try {
+      final client = await _getAuthClient();
+      final sheetsApi = SheetsApi(client);
+
+      // Headers
+      final headerRes = await sheetsApi.spreadsheets.values.get(
+        spreadsheetId,
+        "$purchaseSheetName!1:1",
+      );
+      if (headerRes.values == null || headerRes.values!.isEmpty) return (<PurchaseEntry>[], false);
+      final headers = headerRes.values![0].map((h) => h.toString().trim()).toList();
+
+      final startRow = 2 + offset;
+      final endRow = startRow + limit - 1;
+      final range = "$purchaseSheetName!A$startRow:Z$endRow";
+      final res = await sheetsApi.spreadsheets.values.get(spreadsheetId, range);
+      final rows = res.values ?? const <List<Object?>>[];
+      if (rows.isEmpty) return (<PurchaseEntry>[], false);
+
+      final purchases = <PurchaseEntry>[];
+      for (final row in rows) {
+        if (row.isEmpty || row[0].toString().trim().isEmpty) continue;
+        final purchaseMap = <String, dynamic>{};
+        for (int j = 0; j < headers.length && j < row.length; j++) {
+          purchaseMap[headers[j]] = row[j].toString();
+        }
+        try {
+          purchases.add(PurchaseEntry.fromJson(purchaseMap));
+        } catch (_) {
+          continue;
+        }
+      }
+
+      final hasMore = rows.length == limit;
+      return (purchases, hasMore);
+    } catch (e) {
+      print("❌ Error in getPurchasesPage(): $e");
       rethrow;
     }
   }

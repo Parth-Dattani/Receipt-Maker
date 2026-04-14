@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -64,7 +65,6 @@ class CompanyController extends BaseController {
   String? existingCompanyId;
 
   var selectedBusinessType = ''.obs;
-  final List<String> businessTypes = ['Trading', 'Service', 'Client'];
 
   /// Logo: URL or data URL (base64). Used for preview in registration screen.
   var logoPreviewUrl = Rxn<String>();
@@ -81,6 +81,7 @@ class CompanyController extends BaseController {
     selectedCountry.value = 'India';
     selectedState.value = 'Gujarat';
     cityController.text = 'Jamnagar';
+    selectedBusinessType.value = 'Service';
 
     logoController.addListener(() {
       final t = logoController.text.trim();
@@ -121,7 +122,14 @@ class CompanyController extends BaseController {
         currentCompany.value!['id'] = companyDocs.docs.first.id;
         _populateFields(currentCompany.value!);
 
-        await AppConstants.setBusinessType(currentCompany.value!['businessType'] ?? 'Trading');
+        await AppConstants.setBusinessType(
+            currentCompany.value!['businessType']?.toString().trim().isNotEmpty == true
+                ? currentCompany.value!['businessType'].toString()
+                : 'Service');
+        if (AppConstants.isTradingCompany) {
+          await AppConstants.setEnablePurchaseFeature(
+              currentCompany.value!['enablePurchaseFeature'] != false);
+        }
 
         final spreadsheetId = currentCompany.value!['spreadsheetId'] as String?;
         if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
@@ -132,6 +140,7 @@ class CompanyController extends BaseController {
             message: "Google Sheet not found. Please click 'Update' below to generate your data sheets.",
             icon: Icons.info,
             baseColor: AppColors.appColor,
+            position: SnackPosition.BOTTOM,
           );
         }
       }
@@ -154,7 +163,8 @@ class CompanyController extends BaseController {
     logoController.text = companyData['logo'] ?? '';
     logoPreviewUrl.value = companyData['logo']?.toString().trim().isNotEmpty == true ? companyData['logo'].toString() : null;
     businessCategoryController.text = companyData['businessCategory'] ?? '';
-    selectedBusinessType.value = companyData['businessType'] ?? '';
+    final bt = companyData['businessType']?.toString().trim() ?? '';
+    selectedBusinessType.value = bt.isEmpty ? 'Service' : bt;
     gstController.text = companyData['gst'] ?? '';
     panController.text = companyData['pan'] ?? '';
     phoneController.text = companyData['phone'] ?? '';
@@ -225,13 +235,15 @@ class CompanyController extends BaseController {
         message: "Could not pick image. Try using a logo URL instead.",
         icon: Icons.error,
         baseColor: AppColors.errorColor,
+        position: SnackPosition.BOTTOM,
       );
     }
   }
 
-  Future<bool> _isCompanyCodeUnique(String companyCode) async {
+  /// `true` = code is free; `false` = same code already exists for this user; `null` = check failed (e.g. network).
+  Future<bool?> checkCompanyCodeAvailability(String companyCode) async {
     final user = _auth.currentUser;
-    if (user == null) return false;
+    if (user == null) return null;
 
     try {
       Query query = _firestore
@@ -248,61 +260,120 @@ class CompanyController extends BaseController {
       return querySnapshot.docs.isEmpty;
     } catch (e) {
       print("Error checking company code uniqueness: $e");
-      return false;
+      return null;
     }
   }
 
-  bool _validateRequiredFields() {
-    // ... existing validations ...
+  /// Same rules as the company [Form] validators + invoice / due date / extra notes.
+  List<String> _collectCompanyFormIssues() {
+    final issues = <String>[];
 
-    // 🆕 NEW: Validate invoice starting number
-    final invoiceNumber = int.tryParse(invoiceStartingNumberController.text.trim());
-    if (invoiceNumber == null || invoiceNumber < 1) {
-      showCustomSnackbar(
-        title: "",
-        message: "Invoice starting number must be a positive number",
-        icon: Icons.close,
-        baseColor: AppColors.appColor,
-      );
-      return false;
+    if (companyCodeController.text.trim().isEmpty) {
+      issues.add('Company code');
     }
-    // 🆕 NEW: Validate due date days if enabled
+    if (companyNameController.text.trim().isEmpty) {
+      issues.add('Company name');
+    }
+    if (phoneController.text.trim().isEmpty) {
+      issues.add('Phone number');
+    }
+    if (selectedCountry.value.isEmpty) {
+      issues.add('Country');
+    }
+    if (selectedCountry.value.isNotEmpty && selectedState.value.isEmpty) {
+      issues.add('State');
+    }
+    if (cityController.text.trim().isEmpty) {
+      issues.add('City');
+    }
+    if (pincodeController.text.trim().isEmpty) {
+      issues.add('Pincode');
+    }
+    if (businessCategoryController.text.trim().isEmpty) {
+      issues.add('Business category');
+    }
+
+    final logo = logoController.text.trim();
+    if (logo.isNotEmpty &&
+        !logo.startsWith('data:') &&
+        !logo.startsWith('http://') &&
+        !logo.startsWith('https://')) {
+      issues.add('Logo URL (https://… or use Pick image)');
+    }
+
+    final invRaw = invoiceStartingNumberController.text.trim();
+    final invoiceNum = int.tryParse(invRaw);
+    if (invRaw.isEmpty || invoiceNum == null || invoiceNum < 1) {
+      issues.add('Invoice starting number (positive whole number, e.g. 1)');
+    }
+
     if (isDueDateEnabled.value) {
-      final dueDays = int.tryParse(dueDateDaysController.text.trim());
-      if (dueDays == null || dueDays < 1) {
-        showCustomSnackbar(
-          title: "",
-          message: "Due date days must be a positive number",
-          icon: Icons.close,
-          baseColor: AppColors.appColor,
-        );
-        return false;
+      final dueRaw = dueDateDaysController.text.trim();
+      final dueDays = int.tryParse(dueRaw);
+      if (dueRaw.isEmpty || dueDays == null || dueDays < 1) {
+        issues.add('Due date in days (positive number when due date is on)');
       }
     }
 
     if (isExtraNotesEnabled.value) {
-      final note1 = extraNote1Controller.text.trim();
-      final note2 = extraNote2Controller.text.trim();
-      final note3 = extraNote3Controller.text.trim();
-
-      if (note1.isEmpty && note2.isEmpty && note3.isEmpty) {
-        showCustomSnackbar(
-          title: "",
-          message: "At least one extra note is required when Extra Notes is enabled",
-          icon: Icons.close,
-          baseColor: AppColors.appColor,
-        );
-        return false;
+      if (extraNote1Controller.text.trim().isEmpty &&
+          extraNote2Controller.text.trim().isEmpty &&
+          extraNote3Controller.text.trim().isEmpty) {
+        issues.add('At least one extra note (Extra Notes is enabled)');
       }
     }
 
+    return issues;
+  }
+
+  bool _applyCompanyFormValidationGate() {
+    final formState = formKey.currentState;
+    final issues = _collectCompanyFormIssues();
+    final formOk = formState?.validate() ?? false;
+
+    if (issues.isNotEmpty) {
+      final seconds = (4 + issues.length).clamp(5, 12);
+      showCustomSnackbar(
+        title: 'Please complete',
+        message: '• ${issues.join('\n• ')}',
+        baseColor: AppColors.errorColor,
+        icon: Icons.edit_note,
+        duration: Duration(seconds: seconds),
+        position: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
+
+    if (!formOk) {
+      showCustomSnackbar(
+        title: 'Form',
+        message:
+            'Fix invalid values in fields marked in red (e.g. format or logo URL).',
+        baseColor: AppColors.errorColor,
+        icon: Icons.edit_note,
+        duration: const Duration(seconds: 4),
+        position: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
 
     return true;
   }
 
+  /// Firebase [User.email] is sometimes null; prefs may still have registration email.
+  Future<String?> _resolveUserEmailForSheets(User user) async {
+    final authEmail = user.email?.trim();
+    if (authEmail != null && authEmail.isNotEmpty) return authEmail;
+    try {
+      final pref = await sharedPreferencesHelper.getPrefData('email');
+      final p = pref?.trim();
+      if (p != null && p.isNotEmpty) return p;
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> registerCompany() async {
-    if (!formKey.currentState!.validate()) return;
-    if (!_validateRequiredFields()) return;
+    if (!_applyCompanyFormValidationGate()) return;
 
     final user = _auth.currentUser;
     if (user == null) {
@@ -311,6 +382,7 @@ class CompanyController extends BaseController {
         message: "Please login first!",
         baseColor: AppColors.errorColor,
         icon: Icons.error,
+        position: SnackPosition.BOTTOM,
       );
       return;
     }
@@ -318,13 +390,30 @@ class CompanyController extends BaseController {
     try {
       isLoading.value = true;
 
-      final isUnique = await _isCompanyCodeUnique(companyCodeController.text);
-      if (!isUnique) {
+      final codeOk = await checkCompanyCodeAvailability(companyCodeController.text);
+      if (codeOk == null) {
+        isLoading.value = false;
         showCustomSnackbar(
-          title: "Error",
-          message: "Company code already exists. Please choose a different one.",
+          title: "Could not verify code",
+          message:
+              "Company code check failed. Check internet and try again. / કોડ તપાસ ન થઈ શકી — ઇન્ટરનેટ તપાસો.",
           baseColor: AppColors.errorColor,
-          icon: Icons.error,
+          icon: Icons.wifi_off_outlined,
+          duration: const Duration(seconds: 5),
+          position: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+      if (!codeOk) {
+        isLoading.value = false;
+        showCustomSnackbar(
+          title: "Same company code",
+          message:
+              "આ company code તમારા એકાઉન્ટમાં પહેલેથી નોંધાયેલો છે — બીજો code લખો.\nThis code is already used on your account. Please choose a different company code.",
+          baseColor: AppColors.errorColor,
+          icon: Icons.business_center_outlined,
+          duration: const Duration(seconds: 6),
+          position: SnackPosition.BOTTOM,
         );
         return;
       }
@@ -374,6 +463,7 @@ class CompanyController extends BaseController {
         'isChallanEnabled': isChallanEnabled.value,
         'isCashMemoEnabled': isCashMemoEnabled.value,
         'isGstEnabled': isGstEnabled.value,
+        'enablePurchaseFeature': selectedBusinessType.value.trim() == 'Trading',
 
         // 🆕 NEW: Store invoice starting number
         'invoiceStartingNumber': invoiceStartNum,
@@ -395,19 +485,14 @@ class CompanyController extends BaseController {
       isCompanyRegistered.value = true;
       currentCompany.value = companyData;
 
-      showCustomSnackbar(
-        title: "Success",
-        message: "Company registered successfully!",
-        icon: Icons.done_all,
-        baseColor: AppColors.greenColor2,
-      );
-
       AppConstants.isChallan.value = isChallanEnabled.value;
       AppConstants.withGST.value = isGstEnabled.value;
       await AppConstants.setChallanEnabled(isChallanEnabled.value);
       await AppConstants.setCashMemoEnabled(isCashMemoEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
+      await AppConstants.setEnablePurchaseFeature(
+          selectedBusinessType.value.trim() == 'Trading');
 
       // 🆕 NEW: Save due date settings to AppConstants
       await AppConstants.setDueDateEnabled(isDueDateEnabled.value);
@@ -428,6 +513,9 @@ class CompanyController extends BaseController {
 
       // After company registration, go to Dashboard (not Customer Registration)
 
+      /// Shown after navigation — Get.offAll clears overlays; snackbar before it never appears.
+      String? sheetSetupWarning;
+
       // 🆕 Create Google Sheet using Service Account flow since it's missing (or user Drive if Google Token exists)
       if (AppConstants.spreadsheetId.isEmpty) {
         try {
@@ -441,52 +529,85 @@ class CompanyController extends BaseController {
             } catch (_) {}
           }
 
-          // 🚀 ૧. નવી મેથડ કોલ કરો જે Spreadsheet અને Invoices ફોલ્ડર બંને બનાવશે
-          // હવે આ (spreadsheetId, folderId, pdfFolderId) રિટર્ન કરશે
-          final result = await GoogleSheetService.createNewUserSpreadsheet(
-            user.uid,
-            accessToken: accessToken,
-            userEmail: user.email,
-            username: user.displayName ?? user.email?.split('@').first ?? 'user',
-          );
+          final sheetEmail = await _resolveUserEmailForSheets(user);
+          if (sheetEmail == null || sheetEmail.isEmpty) {
+            print('[InvoiceSathi:SheetCreate] skip: no email for user ${user.uid} (auth + prefs empty)');
+            sheetSetupWarning =
+                'Google Sheet બન્યું નથી: એકાઉન્ટ પર email નથી. Firebase Auth માં email ઉમેરો અથવા ફરી login કરો.';
+          } else {
+            // 🚀 ૧. નવી મેથડ કોલ કરો જે Spreadsheet અને Invoices ફોલ્ડર બંને બનાવશે
+            final result = await GoogleSheetService.createNewUserSpreadsheet(
+              user.uid,
+              accessToken: accessToken,
+              userEmail: sheetEmail,
+              username: user.displayName ?? sheetEmail.split('@').first,
+            );
 
-          if (result != null && result.$1.isNotEmpty) {
-            final newSpreadsheetId = result.$1;
-            final mainFolderId = result.$2;
-            final pdfFolderId = result.$3; // 🔥 આ આપણું નવું PDF ફોલ્ડર ID
+            if (result != null && result.$1.isNotEmpty) {
+              final newSpreadsheetId = result.$1;
+              final mainFolderId = result.$2;
+              final pdfFolderId = result.$3;
 
-            AppConstants.spreadsheetId = newSpreadsheetId;
-            await sharedPreferencesHelper.storePrefData("spreadsheetId", newSpreadsheetId);
+              AppConstants.spreadsheetId = newSpreadsheetId;
+              await sharedPreferencesHelper.storePrefData("spreadsheetId", newSpreadsheetId);
 
-            final fy = FinancialYearHelper.currentFy();
-            await AppConstants.setActiveFy(fy);
+              final fy = FinancialYearHelper.currentFy();
+              await AppConstants.setActiveFy(fy);
 
-            // ૨. Firestore - Users કલેક્શનમાં બધી ID સેવ કરો
-            await _firestore.collection("users").doc(user.uid).update({
-              "spreadsheetId": newSpreadsheetId,
-              "activeFy": fy,
-              "spreadsheetIdsByFy": {fy: newSpreadsheetId},
-              "mainFolderId": mainFolderId, // સેફ્ટી માટે સાચવી લઈએ
-              "pdfFolderId": pdfFolderId,   // 📂 આ ખાસ PDF અપલોડ માટે કામ લાગશે
-            });
+              await _firestore.collection("users").doc(user.uid).update({
+                "spreadsheetId": newSpreadsheetId,
+                "activeFy": fy,
+                "spreadsheetIdsByFy": {fy: newSpreadsheetId},
+                "mainFolderId": mainFolderId,
+                "pdfFolderId": pdfFolderId,
+              });
 
-            // ૩. Firestore - Company ડોક્યુમેન્ટમાં પણ ID સેવ કરો
-            await companyRef.update({
-              "spreadsheetId": newSpreadsheetId,
-              "pdfFolderId": pdfFolderId,
-            });
+              await companyRef.update({
+                "spreadsheetId": newSpreadsheetId,
+                "pdfFolderId": pdfFolderId,
+              });
 
-            // ૪. શીટમાં ટેબ્સ બનાવો
-            await GoogleSheetService.ensureSheetsExist();
+              await GoogleSheetService.ensureSheetsExist();
 
-            print("✅ Drive Setup Complete: Sheet and PDF folder created.");
+              print("✅ Drive Setup Complete: Sheet and PDF folder created.");
+            } else {
+              print('[InvoiceSathi:SheetCreate] company registration: createNewUserSpreadsheet returned null');
+              sheetSetupWarning =
+                  'Google Sheet બન્યું નથી. Logcat માં ફિલ્ટર: InvoiceSathi (અથવા tag InvoiceSathi). Service Account JSON અને Google Cloud APIs તપાસો.';
+            }
           }
         } catch (e) {
           print('createNewUserSpreadsheet during company registration failed: $e');
+          sheetSetupWarning = 'Google Sheet setup error: $e';
         }
       }
 
-      Get.offAllNamed(DashboardScreen.pageId);
+      await Get.offAllNamed(DashboardScreen.pageId);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showCustomSnackbar(
+          title: "Success",
+          message: "Company registered successfully!",
+          icon: Icons.done_all,
+          baseColor: AppColors.greenColor2,
+          position: SnackPosition.BOTTOM,
+        );
+      });
+
+      if (sheetSetupWarning != null && sheetSetupWarning.isNotEmpty) {
+        final String sheetMsg = sheetSetupWarning;
+        await Future.delayed(const Duration(milliseconds: 900));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showCustomSnackbar(
+            title: 'Google Sheet',
+            message: sheetMsg,
+            baseColor: AppColors.errorColor,
+            icon: Icons.warning_amber_rounded,
+            duration: const Duration(seconds: 8),
+            position: SnackPosition.BOTTOM,
+          );
+        });
+      }
 
     } catch (e) {
       showCustomSnackbar(
@@ -494,6 +615,7 @@ class CompanyController extends BaseController {
         message: "Registration failed: ${e.toString()}",
         icon: Icons.close,
         baseColor: AppColors.appColor,
+        position: SnackPosition.BOTTOM,
       );
       print('Company registration error: $e');
     } finally {
@@ -502,8 +624,7 @@ class CompanyController extends BaseController {
   }
 
   Future<void> updateCompany() async {
-    if (!formKey.currentState!.validate()) return;
-    if (!_validateRequiredFields()) return;
+    if (!_applyCompanyFormValidationGate()) return;
 
     final user = _auth.currentUser;
     if (user == null) {
@@ -512,6 +633,7 @@ class CompanyController extends BaseController {
         message: "Please login first!",
         baseColor: AppColors.errorColor,
         icon: Icons.error,
+        position: SnackPosition.BOTTOM,
       );
       return;
     }
@@ -532,6 +654,7 @@ class CompanyController extends BaseController {
           message: "Company document not found.",
           baseColor: AppColors.errorColor,
           icon: Icons.error,
+          position: SnackPosition.BOTTOM,
         );
         return;
       }
@@ -539,6 +662,9 @@ class CompanyController extends BaseController {
       final invoiceStartNum = int.tryParse(invoiceStartingNumberController.text.trim()) ?? 1;
       final existingData = docSnapshot.data() ?? {};
       final currentInvoiceNum = existingData['currentInvoiceNumber'] as int?;
+      final bool purchaseFeatureForFirestore = selectedBusinessType.value.trim() == 'Trading'
+          ? (existingData['enablePurchaseFeature'] != false)
+          : false;
 
       final updateData = {
         'companyName': companyNameController.text.trim(),
@@ -571,6 +697,7 @@ class CompanyController extends BaseController {
         'isCashMemoEnabled': isCashMemoEnabled.value,
         'isGstEnabled': isGstEnabled.value,
         'invoiceStartingNumber': invoiceStartNum,
+        'enablePurchaseFeature': purchaseFeatureForFirestore,
       };
 
       if (currentInvoiceNum == null || currentInvoiceNum < invoiceStartNum) {
@@ -608,11 +735,15 @@ class CompanyController extends BaseController {
             } catch (_) {}
           }
 
+          final sheetEmail = await _resolveUserEmailForSheets(user);
+          if (sheetEmail == null || sheetEmail.isEmpty) {
+            print('[InvoiceSathi:SheetCreate] update company: no email for sheets');
+          } else {
           final result = await GoogleSheetService.createNewUserSpreadsheet(
             user.uid,
             accessToken: accessToken,
-            userEmail: user.email,
-            username: user.displayName ?? user.email?.split('@').first ?? 'user',
+            userEmail: sheetEmail,
+            username: user.displayName ?? sheetEmail.split('@').first,
           );
           
           if (result != null && result.$1.isNotEmpty) {
@@ -640,6 +771,17 @@ class CompanyController extends BaseController {
             });
 
             await GoogleSheetService.ensureSheetsExist();
+          } else {
+            print('[InvoiceSathi:SheetCreate] company update: createNewUserSpreadsheet returned null');
+            showCustomSnackbar(
+              title: 'Google Sheet',
+              message:
+                  'Sheet was not created. Search logs for: InvoiceSathi:SheetCreate',
+              baseColor: AppColors.errorColor,
+              icon: Icons.warning_amber_rounded,
+              position: SnackPosition.BOTTOM,
+            );
+          }
           }
         } catch (e) {
           print('createNewUserSpreadsheet during company update failed: $e');
@@ -687,6 +829,7 @@ class CompanyController extends BaseController {
         message: "Company updated successfully!",
         baseColor: AppColors.greenColor2,
         icon: Icons.done_all,
+        position: SnackPosition.BOTTOM,
       );
 
       AppConstants.isChallan.value = isChallanEnabled.value;
@@ -695,6 +838,7 @@ class CompanyController extends BaseController {
       await AppConstants.setCashMemoEnabled(isCashMemoEnabled.value);
       await AppConstants.setGstEnabled(isGstEnabled.value);
       await AppConstants.setBusinessType(selectedBusinessType.value); // 🆕 NEW
+      await AppConstants.setEnablePurchaseFeature(purchaseFeatureForFirestore);
       // 🆕 NEW: Save due date settings to AppConstants
       await AppConstants.setDueDateEnabled(isDueDateEnabled.value);
       await AppConstants.setDueDateDays(
@@ -725,6 +869,7 @@ class CompanyController extends BaseController {
         message: "Update failed: ${e.toString()}",
         baseColor: AppColors.errorColor,
         icon: Icons.close,
+        position: SnackPosition.BOTTOM,
       );
     } finally {
       isLoading.value = false;

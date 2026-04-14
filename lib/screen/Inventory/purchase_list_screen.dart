@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
@@ -126,9 +125,6 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
   // 💻 WEB LAYOUT (Split View)
   // ===========================================================================
   Widget _buildWebLayout() {
-    // 1. ✅ Create a ScrollController here
-    final ScrollController scrollController = ScrollController();
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -141,10 +137,10 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
               Expanded(
                 // 2. ✅ Connect Scrollbar to Controller
                 child: Scrollbar(
-                  controller: scrollController,
+                  controller: controller.scrollController,
                   thumbVisibility: true,
                   // 3. ✅ Pass Controller to List
-                  child: _buildPurchaseList(scrollController: scrollController),
+                  child: _buildPurchaseList(scrollController: controller.scrollController),
                 ),
               ),
             ],
@@ -203,17 +199,38 @@ class PurchaseListScreen extends GetView<PurchaseListController> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
-          itemCount: controller.filteredPurchaseList.length,
+          itemCount: controller.filteredPurchaseList.length + (controller.hasMore.value ? 1 : 0),
           itemBuilder: (context, index) {
+            if (index >= controller.filteredPurchaseList.length) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: controller.isLoadingMore.value
+                      ? const CircularProgressIndicator()
+                      : const SizedBox.shrink(),
+                ),
+              );
+            }
             final purchase = controller.filteredPurchaseList[index];
             return _buildWebPurchaseCard(purchase);
           },
         );
       } else {
         return ListView.builder(
+          controller: controller.scrollController,
           padding: const EdgeInsets.only(bottom: 80),
-          itemCount: controller.filteredPurchaseList.length,
+          itemCount: controller.filteredPurchaseList.length + (controller.hasMore.value ? 1 : 0),
           itemBuilder: (context, index) {
+            if (index >= controller.filteredPurchaseList.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: controller.isLoadingMore.value
+                      ? const CircularProgressIndicator()
+                      : const SizedBox.shrink(),
+                ),
+              );
+            }
             final purchase = controller.filteredPurchaseList[index];
             return _buildMobilePurchaseListItem(purchase);
           },

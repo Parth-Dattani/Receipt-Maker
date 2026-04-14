@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../controller/order_controller.dart';
 import '../../services/orders_sheet_service.dart';
+import 'order_screen.dart';
 
 // ─────────────────────────────────────────────
 // OrderHistoryScreen
@@ -148,7 +150,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: orders.length,
                     itemBuilder: (context, index) {
-                      return _OrderCard(data: orders[index]);
+                      return _OrderCard(
+                        data: orders[index],
+                        companyId: _cid,
+                        customerId: _uid,
+                        onOrdersChanged: _reload,
+                      );
                     },
                   ),
                 );
@@ -185,12 +192,25 @@ String _displayOrderStatus(Map<String, dynamic> data) {
   return raw.isEmpty ? 'pending' : raw;
 }
 
+bool _customerMayEditOrDelete(Map<String, dynamic> data) {
+  return _displayOrderStatus(data).toLowerCase() == 'pending';
+}
+
 // ─────────────────────────────────────────────
 // Order Card
 // ─────────────────────────────────────────────
 class _OrderCard extends StatefulWidget {
   final Map<String, dynamic> data;
-  const _OrderCard({required this.data});
+  final String companyId;
+  final String customerId;
+  final Future<void> Function() onOrdersChanged;
+
+  const _OrderCard({
+    required this.data,
+    required this.companyId,
+    required this.customerId,
+    required this.onOrdersChanged,
+  });
 
   @override
   State<_OrderCard> createState() => _OrderCardState();
@@ -198,6 +218,61 @@ class _OrderCard extends StatefulWidget {
 
 class _OrderCardState extends State<_OrderCard> {
   bool _expanded = false;
+  bool _deleting = false;
+
+  Future<void> _confirmAndDeleteOrder() async {
+    final oid = widget.data['orderId']?.toString() ?? '';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      await OrdersSheetService.deletePendingOrderFromSheet(
+        companyId: widget.companyId,
+        customerId: widget.customerId,
+        orderId: oid,
+      );
+      if (!mounted) return;
+      Get.snackbar(
+        'ડિલીટ થયું',
+        'ઓર્ડર કાઢી નાખ્યો.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF00897B),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      await widget.onOrdersChanged();
+    } catch (e) {
+      if (mounted) {
+        Get.snackbar(
+          'ભૂલ',
+          e.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
@@ -332,6 +407,75 @@ class _OrderCardState extends State<_OrderCard> {
                       ),
                     ],
                   ),
+                  if (_customerMayEditOrDelete(widget.data)) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _deleting
+                                ? null
+                                : () {
+                                    final oid = widget.data['orderId']
+                                            ?.toString() ??
+                                        '';
+                                    Get.delete<OrderController>(
+                                        force: true);
+                                    Get.toNamed(
+                                      OrderScreen.pageId,
+                                      parameters: {
+                                        'cid': widget.companyId,
+                                        'uid': widget.customerId,
+                                        'editOrderId': oid,
+                                      },
+                                    );
+                                  },
+                            icon: const Icon(Icons.edit_outlined,
+                                size: 18,
+                                color: Color(0xFF00897B)),
+                            label: const Text('Edit',
+                                style: TextStyle(
+                                    color: Color(0xFF00897B),
+                                    fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: Color(0xFF00897B)),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                _deleting ? null : _confirmAndDeleteOrder,
+                            icon: _deleting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.red),
+                                  )
+                                : const Icon(Icons.delete_outline,
+                                    size: 18, color: Colors.red),
+                            label: Text(
+                                _deleting ? '…' : 'Delete',
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(
+                              side:
+                                  const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

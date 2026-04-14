@@ -10,6 +10,7 @@ import '../../constant/constant.dart';
 import '../../controller/controller.dart';
 import '../../utils/calculations.dart';
 import '../../widgets/account_status_wrapper.dart';
+import '../../widgets/logout_confirm_dialog.dart';
 import '../screen.dart';
 import '../setting/setting_screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -62,7 +63,7 @@ class DashboardScreen extends GetView<DashboardController> {
           },
           icon: const Icon(Icons.menu),
         ),
-        title: Text('invoice_sathi'.tr),
+        title: Text(AppConstants.appName),
         backgroundColor: AppColors.appTheame,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -691,7 +692,7 @@ class DashboardScreen extends GetView<DashboardController> {
               children: [
                 const Icon(Icons.dashboard_customize, color: Colors.white, size: 20), // Smaller Icon
                 const SizedBox(width: 10),
-                const Text('Invoice Sathi', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), // Smaller Text
+                 Text(AppConstants.appName, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), // Smaller Text
               ],
             ),
           ),
@@ -704,14 +705,16 @@ class DashboardScreen extends GetView<DashboardController> {
                 _buildWebMenuItem(Icons.dashboard, "Dashboard", true, () {}),
 
                 if (AppConstants.businessType == "Trading")
-                  _buildWebExpansionTile(
-                    icon: Icons.shopping_cart,
-                    title: "Purchase",
-                    children: [
-                      _buildWebSubMenuItem(Icons.shopping_cart, "Purchase", () => controller.navigateToInventory()),
-                      _buildWebSubMenuItem(Icons.list_alt, "Purchase List", () => controller.navigateToPurchaseList()),
-                    ],
-                  ),
+                  Obx(() => AppConstants.enablePurchaseFeature.value
+                      ? _buildWebExpansionTile(
+                          icon: Icons.shopping_cart,
+                          title: "Purchase",
+                          children: [
+                            _buildWebSubMenuItem(Icons.shopping_cart, "Purchase", () => controller.navigateToInventory()),
+                            _buildWebSubMenuItem(Icons.list_alt, "Purchase List", () => controller.navigateToPurchaseList()),
+                          ],
+                        )
+                      : const SizedBox.shrink()),
 
                 // SALES SECTION (Expandable)
                 _buildWebExpansionTile(
@@ -730,7 +733,9 @@ class DashboardScreen extends GetView<DashboardController> {
                   _buildWebMenuItem(Icons.assessment, "Stock Report", false, () => controller.navigateToStockReport()),
 
                 _buildWebMenuItem(Icons.people, "customers".tr, false, () => controller.navigateToCustomerList()),
-                _buildWebMenuItem(Icons.payment, "payment".tr, false, () => controller.navigateToPaymentDetails()),
+                Obx(() => AppConstants.enablePaymentReceiptFeature.value
+                    ? _buildWebMenuItem(Icons.payment, "payment".tr, false, () => controller.navigateToPaymentDetails())
+                    : const SizedBox.shrink()),
                 Obx(() => AppConstants.enableCustomerOrderFeature.value
                     ?_buildWebMenuItem(
                   Icons.receipt_long,
@@ -811,7 +816,7 @@ class DashboardScreen extends GetView<DashboardController> {
                       Obx(() => Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('invoice_sathi'.tr, style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          Text(AppConstants.appName, style: TextStyle(color: Colors.white54, fontSize: 11)),
                           Text('v${controller.appVersion.value}', style: TextStyle(color: Colors.white54, fontSize: 11)),
                         ],
                       )),
@@ -1035,34 +1040,8 @@ class DashboardScreen extends GetView<DashboardController> {
                       onSelected: (String value) {
                         if (value == 'logout') {
                           Get.dialog(
-                            AlertDialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              title: Row(
-                                children: [
-                                  Icon(Icons.logout, color: Colors.red.shade600),
-                                  SizedBox(width: 12),
-                                  Text("confirm_logout".tr),
-                                ],
-                              ),
-                              content: Text("logout_message".tr),
-                              actions: [
-                                TextButton(
-                                  child: Text("cancel".tr),
-                                  onPressed: () => Get.back(),
-                                ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red.shade600,
-                                  ),
-                                  onPressed: () async {
-                                    Get.back();
-                                    await controller.logout();
-                                  },
-                                  child: Text("logout".tr),
-                                ),
-                              ],
+                            LogoutConfirmDialog(
+                              onConfirm: () => controller.logout(),
                             ),
                           );
                         } else if (value == 'edit_company') {
@@ -1678,6 +1657,7 @@ class DashboardScreen extends GetView<DashboardController> {
   Future<void> showExportDialog(BuildContext context) async {
     DateTime? fromDate;
     DateTime? toDate;
+    String? exportDateError;
 
     await showDialog(
       context: context,
@@ -1753,7 +1733,12 @@ class DashboardScreen extends GetView<DashboardController> {
                                 firstDate: startLimit,
                                 lastDate: endLimit,
                               );
-                              if (picked != null) setState(() => fromDate = picked);
+                              if (picked != null) {
+                                setState(() {
+                                  fromDate = picked;
+                                  exportDateError = null;
+                                });
+                              }
                             },
                           ),
                           const SizedBox(height: 16),
@@ -1785,10 +1770,19 @@ class DashboardScreen extends GetView<DashboardController> {
                                 firstDate: effectiveFirst,
                                 lastDate: endLimit,
                               );
-                              if (picked != null) setState(() => toDate = picked);
+                              if (picked != null) {
+                                setState(() {
+                                  toDate = picked;
+                                  exportDateError = null;
+                                });
+                              }
                             },
                           ),
                           const SizedBox(height: 24),
+                          if (exportDateError != null) ...[
+                            _buildDialogValidationBanner(exportDateError!),
+                            const SizedBox(height: 16),
+                          ],
                           if (fromDate != null && toDate != null)
                             Container(
                               padding: const EdgeInsets.all(16),
@@ -1818,9 +1812,14 @@ class DashboardScreen extends GetView<DashboardController> {
                               ),
                               onPressed: () async {
                                 if (fromDate == null || toDate == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Please select both dates"), backgroundColor: Colors.red.shade600));
+                                  setState(() => exportDateError = 'please_select_from_and_to_date'.tr);
                                   return;
                                 }
+                                if (fromDate!.isAfter(toDate!)) {
+                                  setState(() => exportDateError = 'from_date_must_not_be_after_to_date'.tr);
+                                  return;
+                                }
+                                setState(() => exportDateError = null);
                                 Navigator.pop(context);
                                 await controller.exportInvoiceDataWithDateFilter(fromDate!, toDate!);
                               },
@@ -1851,6 +1850,8 @@ class DashboardScreen extends GetView<DashboardController> {
     DateTime? fromDate;
     DateTime? toDate;
     String selectedReport = "Sales";
+    bool isGeneratingReport = false;
+    String? reportValidationError;
 
     await showDialog(
       context: context,
@@ -1877,7 +1878,10 @@ class DashboardScreen extends GetView<DashboardController> {
                           const SizedBox(width: 12),
                           const Text("Business Reports", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                           const Spacer(),
-                          IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: isGeneratingReport ? null : () => Navigator.pop(context),
+                          ),
                         ],
                       ),
                     ),
@@ -1887,6 +1891,11 @@ class DashboardScreen extends GetView<DashboardController> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          AbsorbPointer(
+                            absorbing: isGeneratingReport,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                           const Text("Select Report Type", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
                           const SizedBox(height: 12),
 
@@ -1895,7 +1904,10 @@ class DashboardScreen extends GetView<DashboardController> {
                             title: "Sales Report",
                             icon: Icons.receipt_long,
                             isSelected: selectedReport == "Sales",
-                            onTap: () => setState(() => selectedReport = "Sales"),
+                            onTap: () => setState(() {
+                              selectedReport = "Sales";
+                              reportValidationError = null;
+                            }),
                           ),
 
                           if(AppConstants.businessType == "Trading") ...[
@@ -1905,7 +1917,10 @@ class DashboardScreen extends GetView<DashboardController> {
                               title: "Purchase Report",
                               icon: Icons.shopping_bag,
                               isSelected: selectedReport == "Purchase",
-                              onTap: () => setState(() => selectedReport = "Purchase"),
+                              onTap: () => setState(() {
+                                selectedReport = "Purchase";
+                                reportValidationError = null;
+                              }),
                             ),
                             const SizedBox(height: 10),
                             // Stock Report
@@ -1913,7 +1928,10 @@ class DashboardScreen extends GetView<DashboardController> {
                               title: "Stock Report",
                               icon: Icons.inventory_2,
                               isSelected: selectedReport == "Stock",
-                              onTap: () => setState(() => selectedReport = "Stock"),
+                              onTap: () => setState(() {
+                                selectedReport = "Stock";
+                                reportValidationError = null;
+                              }),
                             ),
                           ],
 
@@ -1923,7 +1941,10 @@ class DashboardScreen extends GetView<DashboardController> {
                             title: "All-in-One Report",
                             icon: Icons.auto_awesome_motion,
                             isSelected: selectedReport == "All",
-                            onTap: () => setState(() => selectedReport = "All"),
+                            onTap: () => setState(() {
+                              selectedReport = "All";
+                              reportValidationError = null;
+                            }),
                           ),
 
                           const SizedBox(height: 24),
@@ -1945,7 +1966,12 @@ class DashboardScreen extends GetView<DashboardController> {
                                   firstDate: DateTime(2000),
                                   lastDate: DateTime.now(),
                                 );
-                                if (picked != null) setState(() => fromDate = picked);
+                                if (picked != null) {
+                                  setState(() {
+                                    fromDate = picked;
+                                    reportValidationError = null;
+                                  });
+                                }
                               },
                             ),
                             const SizedBox(height: 12),
@@ -1962,7 +1988,12 @@ class DashboardScreen extends GetView<DashboardController> {
                                   firstDate: fromDate ?? DateTime(2000),
                                   lastDate: DateTime.now(),
                                 );
-                                if (picked != null) setState(() => toDate = picked);
+                                if (picked != null) {
+                                  setState(() {
+                                    toDate = picked;
+                                    reportValidationError = null;
+                                  });
+                                }
                               },
                             ),
                           ] else ...[
@@ -1976,6 +2007,15 @@ class DashboardScreen extends GetView<DashboardController> {
                             ),
                           ],
 
+                              ],
+                            ),
+                          ),
+
+                          if (reportValidationError != null) ...[
+                            const SizedBox(height: 16),
+                            _buildDialogValidationBanner(reportValidationError!),
+                          ],
+
                           const SizedBox(height: 24),
 
                           // Generate Button
@@ -1986,28 +2026,63 @@ class DashboardScreen extends GetView<DashboardController> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.tealColor,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                disabledBackgroundColor: AppColors.tealColor.withOpacity(0.85),
                               ),
-                              onPressed: () async {
-                                // Validation
-                                if (selectedReport != "Stock" && (fromDate == null || toDate == null)) {
-                                  Get.snackbar("Required", "Please select From and To dates",
-                                      snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
-                                  return;
-                                }
+                              onPressed: isGeneratingReport
+                                  ? null
+                                  : () async {
+                                      if (selectedReport != "Stock" && (fromDate == null || toDate == null)) {
+                                        setState(() => reportValidationError = 'please_select_from_and_to_date'.tr);
+                                        return;
+                                      }
+                                      if (selectedReport != "Stock" &&
+                                          fromDate != null &&
+                                          toDate != null &&
+                                          fromDate!.isAfter(toDate!)) {
+                                        setState(() => reportValidationError = 'from_date_must_not_be_after_to_date'.tr);
+                                        return;
+                                      }
 
-                                Navigator.pop(context);
-
-                                if (selectedReport == "Sales") {
-                                  await controller.exportGSTReportWithDateFilter(fromDate!, toDate!);
-                                } else if (selectedReport == "Purchase") {
-                                  await controller.exportPurchaseReport(fromDate!, toDate!);
-                                } else if (selectedReport == "Stock") {
-                                  await controller.exportStockReport();
-                                } else if (selectedReport == "All") {
-                                  await controller.exportAllInOneReport(fromDate!, toDate!);
-                                }
-                              },
-                              child: const Text("Generate Report", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      setState(() {
+                                        isGeneratingReport = true;
+                                        reportValidationError = null;
+                                      });
+                                      try {
+                                        if (selectedReport == "Sales") {
+                                          await controller.exportGSTReportWithDateFilter(fromDate!, toDate!);
+                                        } else if (selectedReport == "Purchase") {
+                                          await controller.exportPurchaseReport(fromDate!, toDate!);
+                                        } else if (selectedReport == "Stock") {
+                                          await controller.exportStockReport();
+                                        } else if (selectedReport == "All") {
+                                          await controller.exportAllInOneReport(fromDate!, toDate!);
+                                        }
+                                      } finally {
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                        }
+                                      }
+                                    },
+                              child: isGeneratingReport
+                                  ? const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          "Report Generating...",
+                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    )
+                                  : const Text("Generate Report", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -2020,6 +2095,35 @@ class DashboardScreen extends GetView<DashboardController> {
           },
         );
       },
+    );
+  }
+
+  /// Shown inside [showDialog] — [SnackBar] on the root scaffold stays *under* the modal and is often invisible.
+  Widget _buildDialogValidationBanner(String message) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline, color: Colors.red.shade700, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: Colors.red.shade900, fontSize: 14, height: 1.35),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2165,15 +2269,16 @@ class DashboardScreen extends GetView<DashboardController> {
                 padding: EdgeInsets.only(top: 8, bottom: 20),
                 children: [
                   if (AppConstants.businessType == "Trading")
-                    _buildExpansionTile(
-                      icon: Icons.inventory_2, iconColor: Colors.blue.shade600, title: "purchase".tr,
-                      children: [
-                        _buildSubMenuItem(icon: Icons.shopping_cart, iconColor: Colors.blue.shade700, title: "purchase".tr, onTap: () {
-                          //Get.back();
-                          controller.navigateToInventory(); }),
-                        _buildSubMenuItem(icon: Icons.list_alt, iconColor: Colors.blue.shade700, title: "Purchase List", onTap: () { Get.back(); controller.navigateToPurchaseList(); }),
-                      ],
-                    ),
+                    Obx(() => AppConstants.enablePurchaseFeature.value
+                        ? _buildExpansionTile(
+                            icon: Icons.inventory_2, iconColor: Colors.blue.shade600, title: "purchase".tr,
+                            children: [
+                              _buildSubMenuItem(icon: Icons.shopping_cart, iconColor: Colors.blue.shade700, title: "purchase".tr, onTap: () {
+                                controller.navigateToInventory(); }),
+                              _buildSubMenuItem(icon: Icons.list_alt, iconColor: Colors.blue.shade700, title: "Purchase List", onTap: () { Get.back(); controller.navigateToPurchaseList(); }),
+                            ],
+                          )
+                        : const SizedBox.shrink()),
                   _buildExpansionTile(
                     icon: Icons.receipt_long, iconColor: Colors.purple.shade600, title: "sales".tr,
                     children: [
@@ -2189,7 +2294,9 @@ class DashboardScreen extends GetView<DashboardController> {
                       title:
                       AppConstants.businessType == "Trading" ?
                       "customers".tr :  "clients".tr, onTap: () { Get.back(); controller.navigateToCustomerList(); }),
-                  _buildMenuItem(icon: Icons.account_balance_wallet, iconColor: Colors.indigo.shade600, title: "payment".tr, onTap: () { Get.back(); controller.navigateToPaymentDetails(); }),
+                  Obx(() => AppConstants.enablePaymentReceiptFeature.value
+                      ? _buildMenuItem(icon: Icons.account_balance_wallet, iconColor: Colors.indigo.shade600, title: "payment".tr, onTap: () { Get.back(); controller.navigateToPaymentDetails(); })
+                      : const SizedBox.shrink()),
                   Obx(() => AppConstants.enableCustomerOrderFeature.value
                       ?   _buildMenuItem(
                       icon: Icons.receipt_long,
@@ -2233,12 +2340,26 @@ class DashboardScreen extends GetView<DashboardController> {
                       }
                     },
                   ),
-                  _buildMenuItem(icon: Icons.logout, iconColor: Colors.red.shade600, title: "logout".tr, titleStyle: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600), onTap: () { Get.dialog(AlertDialog(title: Row(children: [Icon(Icons.logout, color: Colors.red.shade600), SizedBox(width: 12), Text("confirm_logout".tr)]), content: Text("logout_message".tr), actions: [TextButton(child: Text("cancel".tr), onPressed: () => Get.back()), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600), onPressed: () async { Get.back(); await controller.logout(); }, child: Text("logout".tr))])); }),
+                  _buildMenuItem(
+                      icon: Icons.logout,
+                      iconColor: Colors.red.shade600,
+                      title: "logout".tr,
+                      titleStyle: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.w600),
+                      onTap: () {
+                        Get.dialog(
+                          LogoutConfirmDialog(
+                            onConfirm: () => controller.logout(),
+                          ),
+                        );
+                      }),
                   SizedBox(height: 20),
                   Container(
                     decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1))),
                     padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                    child: Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('invoice_sathi'.tr, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
+                    child: Obx(() => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text(AppConstants.appName, style: TextStyle(fontSize: 12)), Text('v${controller.appVersion.value}', style: TextStyle(fontSize: 12))])),
                   ),
                 ],
               ),

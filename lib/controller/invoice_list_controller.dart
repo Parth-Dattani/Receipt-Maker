@@ -1,6 +1,3 @@
-// controllers/invoice_list_controller.dart
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:GetYourInvoice/constant/app_colors.dart';
 import 'package:GetYourInvoice/screen/screen.dart';
@@ -8,14 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:open_file/open_file.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:GetYourInvoice/constant/app_constant.dart';
 import '../model/model.dart';
 import '../services/service.dart';
 import '../utils/utils.dart';
-import '../widgets/custom_snackbar.dart';
 import 'controller.dart';
 import 'new_invoice_controller.dart' show InvoiceType;
+import '../utils/financial_year_helper.dart';
 
 
 ///8-10
@@ -385,6 +381,8 @@ import 'new_invoice_controller.dart' show InvoiceType;
 
 class InvoiceListController extends BaseController {
   final isLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMore = true.obs;
   final invoiceList = <Invoice>[].obs;
   final filteredInvoiceList = <Invoice>[].obs;
   final invoiceItems = <InvoiceItem>[].obs;
@@ -394,12 +392,27 @@ class InvoiceListController extends BaseController {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ScrollController scrollController = ScrollController();
+
+  static const int _pageSize = 50;
+  int _offset = 0; // data-row offset (row2 = offset0)
 
   @override
   void onInit() {
     super.onInit();
     // Load both in parallel without showing loader initially
     _initializeData();
+    scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!hasMore.value) return;
+    if (isLoading.value || isLoadingMore.value) return;
+    if (!scrollController.hasClients) return;
+    final pos = scrollController.position;
+    if (pos.pixels >= (pos.maxScrollExtent - 280)) {
+      loadNextPage();
+    }
   }
 
   // ✅ Initialize data without premature loading state
@@ -407,7 +420,7 @@ class InvoiceListController extends BaseController {
     // Load company data silently in background
     loadCompanyData();
     // Load invoices with loading state
-    await loadInvoices();
+    await loadFirstPage();
   }
 
   Future<void> loadCompanyData() async {
@@ -436,49 +449,35 @@ class InvoiceListController extends BaseController {
     // ❌ REMOVED: finally block that sets isLoading = false
   }
 
-  Future<void> loadInvoices() async {
+  Future<void> loadFirstPage() async {
     try {
       isLoading.value = true;
       print("=== LOADING INVOICES ===");
 
       final currentUserId = _auth.currentUser?.uid;
       if (currentUserId == null) {
-        showCustomSnackbar(
-          title: "Error",
-          message: "User not logged in",
-          baseColor: Colors.red.shade700,
-          icon: Icons.error_outline,
-        );
+        print("⚠️ loadFirstPage skipped: no signed-in user");
         return;
       }
 
-      List<Invoice> invoices = await GoogleSheetService.getInvoices(type: "INV");
+      _offset = 0;
+      hasMore.value = true;
+      invoiceList.clear();
+      filteredInvoiceList.clear();
 
-      // If no invoices found, try alternative method
-      if (invoices.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        invoices = await GoogleSheetService.getInvoices();
-      }
+      final (page, more) = await GoogleSheetService.getInvoicesPage(
+        type: "INV",
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
 
-      // Filter invoices by current user ID
-      List<Invoice> userInvoices = invoices.where((invoice) {
-        return invoice.userId == currentUserId;
-      }).toList();
-      print("=============usrInvoice----${userInvoices}");
+      final fyFiltered = _applyUserAndFyFilters(page, currentUserId);
+      invoiceList.assignAll(fyFiltered);
+      _applyCurrentFilters();
 
-      // If no invoices found, try alternative methods
-      if (userInvoices.isEmpty) {
-        print("Standard method failed, trying alternative...");
-        invoices = await GoogleSheetService.getInvoices();
-        userInvoices = invoices.where((invoice) => invoice.userId == currentUserId).toList();
-      }
-
-      invoiceList.assignAll(userInvoices);
-      filteredInvoiceList.assignAll(userInvoices);
-
-      print("✅ Loaded ${invoices.length} invoices");
-
-      if (userInvoices.isEmpty) {
+      if (invoiceList.isEmpty) {
         Get.snackbar(
           'No Invoices',
           'No invoices found in the system',
@@ -501,41 +500,102 @@ class InvoiceListController extends BaseController {
     }
   }
 
-  void filterInvoices(String query) {
-    searchQuery.value = query;
+  /// Backward-compat alias (older code calls this).
+  Future<void> loadInvoices() async => loadFirstPage();
 
-    if (query.isEmpty) {
-      filteredInvoiceList.assignAll(invoiceList);
-      return;
+  Future<void> loadNextPage() async {
+    if (!hasMore.value) return;
+    if (isLoading.value || isLoadingMore.value) return;
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    try {
+      isLoadingMore.value = true;
+      final (page, more) = await GoogleSheetService.getInvoicesPage(
+        type: "INV",
+        offset: _offset,
+        limit: _pageSize,
+      );
+      hasMore.value = more;
+      _offset += _pageSize;
+
+      final fyFiltered = _applyUserAndFyFilters(page, currentUserId);
+      if (fyFiltered.isNotEmpty) {
+        invoiceList.addAll(fyFiltered);
+        _applyCurrentFilters();
+      }
+    } catch (e) {
+      print("❌ Error loading more invoices: $e");
+    } finally {
+      isLoadingMore.value = false;
     }
+  }
 
-    final filtered = invoiceList.where((invoice) {
-      return invoice.invoiceId.toLowerCase().contains(query.toLowerCase()) == true ||
-          invoice.customerName.toLowerCase().contains(query.toLowerCase()) == true ||
-          invoice.totalAmount.toString().contains(query) ||
-          (invoice.itemName!.toLowerCase().contains(query.toLowerCase()) ?? false);
+  List<Invoice> _applyUserAndFyFilters(List<Invoice> invoices, String currentUserId) {
+    // User filter (backward compat: empty uid allowed)
+    final userInvoices = invoices.where((invoice) {
+      final uid = invoice.userId?.toString().trim() ?? '';
+      return uid.isEmpty || uid == currentUserId;
     }).toList();
 
-    filteredInvoiceList.assignAll(filtered);
+    // FY filter
+    final fy = AppConstants.activeFy.isNotEmpty ? AppConstants.activeFy : FinancialYearHelper.currentFy();
+    final fyRange = FinancialYearHelper.parseFy(fy);
+    if (fyRange == null) return userInvoices;
+    final start = DateTime(fyRange.$1, 4, 1);
+    final end = DateTime(fyRange.$2, 3, 31, 23, 59, 59, 999);
+    return userInvoices.where((inv) {
+      final d = inv.issueDate ?? inv.updatedAt;
+      if (d == null) return false;
+      return !d.isBefore(start) && !d.isAfter(end);
+    }).toList();
+  }
+
+  void _applyCurrentFilters() {
+    // Apply search
+    final q = searchQuery.value.trim();
+    List<Invoice> list = invoiceList.toList();
+    if (q.isNotEmpty) {
+      list = list.where((invoice) {
+        final name = invoice.customerName.toLowerCase();
+        final id = invoice.invoiceId.toLowerCase();
+        final itemName = (invoice.itemName ?? '').toLowerCase();
+        return id.contains(q.toLowerCase()) ||
+            name.contains(q.toLowerCase()) ||
+            itemName.contains(q.toLowerCase()) ||
+            (invoice.totalAmount?.toString().contains(q) ?? false);
+      }).toList();
+    }
+
+    // Apply status filter
+    final status = selectedFilter.value;
+    if (status != 'All') {
+      list = list.where((inv) => (inv.status ?? '').toLowerCase() == status.toLowerCase()).toList();
+    }
+    filteredInvoiceList.assignAll(list);
+  }
+
+  void filterInvoices(String query) {
+    searchQuery.value = query;
+    _applyCurrentFilters();
   }
 
   void filterByStatus(String status) {
     selectedFilter.value = status;
-
-    if (status == 'All') {
-      filteredInvoiceList.assignAll(invoiceList);
-      return;
-    }
-
-    final filtered = invoiceList.where((invoice) {
-      return invoice.status?.toLowerCase() == status.toLowerCase();
-    }).toList();
-
-    filteredInvoiceList.assignAll(filtered);
+    _applyCurrentFilters();
   }
 
   void refreshInvoices() async {
-    await loadInvoices();
+    // Force fresh read (avoid showing stale cached list)
+    GoogleSheetService.clearInvoiceListCacheForNewFy();
+    await loadFirstPage();
+  }
+
+  @override
+  void onClose() {
+    scrollController.removeListener(_onScroll);
+    scrollController.dispose();
+    super.onClose();
   }
 
   void viewInvoiceDetails(Invoice invoice) {
@@ -645,15 +705,15 @@ class InvoiceListController extends BaseController {
 
       final invoiceModels = cleanedItems.map((item) {
         return Invoice(
-          invoiceId: invoice.invoiceId ?? '',
+          invoiceId: invoice.invoiceId,
           itemId: item.itemId,
           itemName: item.itemName,
           qty: item.quantity,
           price: item.rate,
           gst: item.gstRate ?? 0.0,
-          mobile: invoice.mobile ?? '',
-          customerName: invoice.customerName ?? '',
-          customerId: invoice.customerId ?? '',
+          mobile: invoice.mobile,
+          customerName: invoice.customerName,
+          customerId: invoice.customerId,
           customerEmail: invoice.customerEmail,
           customerPan: invoice.customerPan,
           customerGst: invoice.customerGst,

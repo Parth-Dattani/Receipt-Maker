@@ -387,26 +387,16 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
             Row(
               children: [
                 Expanded(
-                  child: Obx(() {
-                    if (controller.isEditMode.value) {
-                      return CustomTextFormField(
-                        controller: TextEditingController(text: controller.selectedBusinessType.value),
+                  child: Obx(() => CustomTextFormField(
+                        controller: TextEditingController(
+                          text: controller.selectedBusinessType.value.isEmpty
+                              ? 'Service'
+                              : controller.selectedBusinessType.value,
+                        ),
                         label: "Business Type *",
                         prefixIcon: Icons.business_center,
                         readOnly: true,
-                      );
-                    } else {
-                      return _customDropdown(
-                        label: "Business Type *",
-                        prefixIcon: Icons.business_center,
-                        value: controller.selectedBusinessType.value.isEmpty ? null : controller.selectedBusinessType.value,
-                        items: controller.businessTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
-                        onChanged: (val) => controller.selectedBusinessType.value = val ?? '',
-                        isRequired: true,
-                        hint: "Select Business Type",
-                      );
-                    }
-                  }),
+                      )),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -657,26 +647,16 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
           children: [
             _sectionTitle("Business Info", Icons.pie_chart),
             const SizedBox(height: 16),
-            Obx(() {
-              if (controller.isEditMode.value) {
-                return CustomTextFormField(
-                  controller: TextEditingController(text: controller.selectedBusinessType.value),
+            Obx(() => CustomTextFormField(
+                  controller: TextEditingController(
+                    text: controller.selectedBusinessType.value.isEmpty
+                        ? 'Service'
+                        : controller.selectedBusinessType.value,
+                  ),
                   label: "Business Type *",
                   prefixIcon: Icons.business_center,
                   readOnly: true,
-                );
-              } else {
-                return _customDropdown(
-                  label: "Business Type *",
-                  prefixIcon: Icons.business_center,
-                  value: controller.selectedBusinessType.value.isEmpty ? null : controller.selectedBusinessType.value,
-                  items: controller.businessTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
-                  onChanged: (val) => controller.selectedBusinessType.value = val ?? '',
-                  isRequired: true,
-                  hint: "Select Business Type",
-                );
-              }
-            }),
+                )),
             CustomTextFormField(controller: controller.businessCategoryController, label: "Business Category *", prefixIcon: Icons.category, isRequired: true),
             CustomTextFormField(controller: controller.gstController, label: "G.S.T. Number", prefixIcon: Icons.confirmation_number),
             CustomTextFormField(controller: controller.panController, label: "PAN No", prefixIcon: Icons.credit_card),
@@ -1058,23 +1038,15 @@ class CompanyRegistrationScreen extends GetView<CompanyController> {
 
   void _showLogoutDialog(BuildContext context) {
     Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Row(children: [Icon(Icons.logout, color: Colors.red), SizedBox(width: 10), Text('Logout')]),
-        content: const Text('Are you sure you want to logout?', style: TextStyle(fontSize: 16)),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            onPressed: () async {
-              Get.back();
-              await FirebaseAuth.instance.signOut();
-              // await sharedPreferencesHelper.clearPrefData(); // Ensure this service exists
-              Get.offAllNamed(AuthScreen.pageId);
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      LogoutConfirmDialog(
+        title: 'Logout',
+        message: 'Are you sure you want to logout?',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Logout',
+        onConfirm: () async {
+          await FirebaseAuth.instance.signOut();
+          Get.offAllNamed(AuthScreen.pageId);
+        },
       ),
     );
   }

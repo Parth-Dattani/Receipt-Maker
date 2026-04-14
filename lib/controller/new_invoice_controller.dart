@@ -2967,20 +2967,44 @@ class NewInvoiceController extends GetxController {
     }
   }
 
+  /// Validation snack text: English when Gujarati is off; Gujarati only when enabled in settings.
+  String _snackLang(String english, String gujarati) {
+    return AppConstants.isGujarati.value ? gujarati : english;
+  }
+
+  /// Long, visible snack when required invoice fields/items are missing (alert-style).
+  void _invoiceRequiredSnack(
+    String title,
+    String message, {
+    Color? color,
+    IconData icon = Icons.warning_amber_rounded,
+    Duration? duration,
+  }) {
+    showCustomSnackbar(
+      title: title,
+      message: message,
+      baseColor: color ?? Colors.deepOrange.shade800,
+      icon: icon,
+      duration: duration ?? const Duration(seconds: 6),
+      position: SnackPosition.BOTTOM,
+    );
+  }
+
   /// Validates that at least one valid item exists before saving
   bool _validateInvoiceItems() {
-    // Check if there are any items at all
     if (invoiceItems.isEmpty) {
-      showCustomSnackbar(
-        title: "Validation Error",
-        message: "Please add at least one item to the invoice",
-        baseColor: Colors.red.shade700,
+      _invoiceRequiredSnack(
+        _snackLang('Required', 'જરૂરી'),
+        _snackLang(
+          'Add at least one line item to the invoice.',
+          'ઓછામાં ઓછી એક વસ્તુ ઇન્વૉઇસમાં ઉમેરો.',
+        ),
+        color: Colors.red.shade700,
         icon: Icons.error_outline,
       );
       return false;
     }
 
-    // Check if there's at least one valid item (has itemId or description)
     bool hasValidItem = invoiceItems.any((item) {
       bool hasItemId = item.itemId != null && item.itemId!.isNotEmpty;
       bool hasDescription = item.description != null && item.description!.isNotEmpty;
@@ -2990,34 +3014,36 @@ class NewInvoiceController extends GetxController {
     });
 
     if (!hasValidItem) {
-      showCustomSnackbar(
-        title: "No Items Selected",
-        message: "Please select or add at least one item before creating the invoice",
-        baseColor: Colors.orange.shade700,
-        icon: Icons.warning_amber_rounded,
+      _invoiceRequiredSnack(
+        _snackLang('Select item', 'વસ્તુ પસંદ કરો'),
+        _snackLang(
+          'Select an item or enter name/description. Quantity and rate must be filled.',
+          'એક વસ્તુ પસંદ કરો અથવા નામ/વર્ણન ભરો. quantity અને rate જરૂરી.',
+        ),
+        color: Colors.orange.shade800,
       );
       return false;
     }
 
-    // ✅ FIXED: Changed challanItems to invoiceItems
     bool hasInvalidQuantityOrPrice = invoiceItems.any((item) {
       bool isValidItem = (item.itemId?.isNotEmpty ?? false) ||
           (item.description?.isNotEmpty ?? false) ||
           (item.itemName?.isNotEmpty ?? false);
 
       if (isValidItem) {
-        // ✅ FIXED: Changed item.price to item.rate (invoices use 'rate')
         return item.quantity <= 0 || item.rate <= 0;
       }
       return false;
     });
 
     if (hasInvalidQuantityOrPrice) {
-      showCustomSnackbar(
-        title: "Invalid Item Data",
-        message: "All selected items must have quantity and rate greater than 0",
-        baseColor: Colors.orange.shade700,
-        icon: Icons.warning_amber_rounded,
+      _invoiceRequiredSnack(
+        _snackLang('Quantity & rate', 'જથ્થો અને ભાવ'),
+        _snackLang(
+          'Each line must have quantity and rate greater than 0.',
+          'દરેક લાઇન માટે quantity અને rate 0 કરતાં વધુ હોવા જોઈએ.',
+        ),
+        color: Colors.orange.shade800,
       );
       return false;
     }
@@ -3030,54 +3056,78 @@ class NewInvoiceController extends GetxController {
       // ✅ Quick Invoice validation - only mobile required
       if (invoiceType.value.isQuickMode) {
         if (customerMobileController.text.trim().isEmpty) {
-          showCustomSnackbar(
-            title: "Mobile Required",
-            message: "Please enter customer mobile number for Quick Invoice",
-            baseColor: Colors.red.shade700,
+          _invoiceRequiredSnack(
+            _snackLang('Mobile required', 'મોબાઇલ જરૂરી'),
+            _snackLang(
+              'Enter customer mobile for Quick Invoice.',
+              'Quick invoice માટે મોબાઇલ નંબર દાખલ કરો.',
+            ),
+            color: Colors.red.shade700,
             icon: Icons.phone_missed,
           );
           return false;
         }
 
-        // Validate mobile number format
         String mobile = customerMobileController.text.trim();
         if (mobile.length < 10) {
-          showCustomSnackbar(
-            title: "Invalid Mobile",
-            message: "Please enter a valid 10-digit mobile number",
-            baseColor: Colors.orange.shade700,
+          _invoiceRequiredSnack(
+            _snackLang('Invalid mobile', 'અમાન્ય મોબાઇલ'),
+            _snackLang(
+              'Enter a valid 10-digit mobile number.',
+              '૧૦ અંકનો માન્ય નંબર દાખલ કરો.',
+            ),
+            color: Colors.orange.shade800,
             icon: Icons.warning,
           );
           return false;
         }
 
-        // Auto-populate customer name as "Customer-{last 4 digits}" if empty
         if (customerNameController.text.trim().isEmpty) {
           customerNameController.text = "Customer-${mobile.substring(mobile.length - 4)}";
         }
       } else {
-        // Regular invoice/quotation validation
+        if (!isEditMode.value &&
+            !showCustomerForm.value &&
+            selectedCustomerId.value.trim().isEmpty) {
+          _invoiceRequiredSnack(
+            _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+            _snackLang(
+              'Please select a customer first. If the list is empty, tap + to add a new customer.',
+              'લીસ્ટમાંથી ગ્રાહક પસંદ કરો અથવા Add New Customer ખોલો.',
+            ),
+            color: Colors.red.shade700,
+            icon: Icons.person_outline,
+          );
+          return false;
+        }
         if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
           validateManualCustomerEntry();
         }
 
         if (customerNameController.text.trim().isEmpty) {
-          showCustomSnackbar(
-            title: "Customer Required",
-            message: "Please select a customer or enter customer details",
-            baseColor: Colors.red.shade700,
+          _invoiceRequiredSnack(
+            _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+            _snackLang(
+              'Select a customer or enter customer details.',
+              'ગ્રાહક પસંદ કરો અથવા વિગત દાખલ કરો.',
+            ),
+            color: Colors.red.shade700,
             icon: Icons.person_outline,
           );
           return false;
         }
       }
 
-      if (!formKey.currentState!.validate()) {
-        showCustomSnackbar(
-          title: "Validation Error",
-          message: "Please fill all required fields",
-          baseColor: Colors.orange.shade700,
-          icon: Icons.warning,
+      final formStateOld = formKey.currentState;
+      if (formStateOld == null || !formStateOld.validate()) {
+        _invoiceRequiredSnack(
+          _snackLang('Form', 'ફોર્મ'),
+          _snackLang(
+            'Fill all required fields marked with *.',
+            'જરૂરી ફીલ્ડ ભરો (* ચિહ્નવાળા).',
+          ),
+          color: Colors.orange.shade800,
+          icon: Icons.edit_note,
         );
         return false;
       }
@@ -3086,26 +3136,33 @@ class NewInvoiceController extends GetxController {
         return false;
       }
       _removeEmptyItemsBeforeSave();
+      if (!_validateInvoiceItems()) {
+        return false;
+      }
 
-      // ✅ Check for ANY stock violations
       if (hasAnyStockViolation) {
-        String violationList = violationMessages.values.join('\n• ');
-
-        showCustomSnackbar(
-          title: "Cannot Create Invoice",
-          message: "Fix these issues first:\n• $violationList",
-          baseColor: Colors.red.shade700,
+        final violationList = violationMessages.values.join('\n• ');
+        _invoiceRequiredSnack(
+          _snackLang('Stock', 'સ્ટોક'),
+          _snackLang(
+            'Fix these first:\n• $violationList',
+            'પહેલાં આ સુધારો:\n• $violationList',
+          ),
+          color: Colors.red.shade700,
           icon: Icons.error_outline,
-          duration: Duration(seconds: 5),
+          duration: const Duration(seconds: 8),
         );
         return false;
       }
 
       if (invoiceItems.isEmpty) {
-        showCustomSnackbar(
-          title: "No Valid Items",
-          message: "Please add at least one valid item to the invoice",
-          baseColor: Colors.red.shade700,
+        _invoiceRequiredSnack(
+          _snackLang('Items required', 'વસ્તુ જરૂરી'),
+          _snackLang(
+            'Add at least one valid item line.',
+            'ઓછામાં ઓછી એક માન્ય વસ્તુ લાઇન ઉમેરો.',
+          ),
+          color: Colors.red.shade700,
           icon: Icons.error_outline,
         );
         return false;
@@ -3117,6 +3174,19 @@ class NewInvoiceController extends GetxController {
       calculateTotals();
 
       String finalCustomerId = _getValidCustomerId();
+      if (!invoiceType.value.isQuickMode && finalCustomerId.trim().isEmpty) {
+        isLoading.value = false;
+        _invoiceRequiredSnack(
+          _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+          _snackLang(
+            'Select the customer again or use Add New Customer, then save.',
+            'ગ્રાહક ફરીથી પસંદ કરો અથવા Add New Customer વાપરો.',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.person_outline,
+        );
+        return false;
+      }
 
       Map<String, dynamic> invoiceData = {
         'invoiceId': invoiceNumberController.text,
@@ -3403,40 +3473,108 @@ class NewInvoiceController extends GetxController {
       // ---------------- VALIDATION STEPS (SAME AS BEFORE) ----------------
       if (invoiceType.value.isQuickMode) {
         if (customerMobileController.text.trim().isEmpty) {
-          showCustomSnackbar(title: "Mobile Required", message: "Please enter customer mobile number", baseColor: Colors.red.shade700, icon: Icons.phone_missed);
+          _invoiceRequiredSnack(
+            _snackLang('Mobile required', 'મોબાઇલ જરૂરી'),
+            _snackLang(
+              'Enter customer mobile number for Quick Invoice.',
+              'Quick invoice માટે ગ્રાહકનો મોબાઇલ નંબર દાખલ કરો.',
+            ),
+            color: Colors.red.shade700,
+            icon: Icons.phone_missed,
+          );
           return false;
         }
         String mobile = customerMobileController.text.trim();
         if (mobile.length < 10) {
-          showCustomSnackbar(title: "Invalid Mobile", message: "Please enter valid mobile number", baseColor: Colors.orange.shade700, icon: Icons.warning);
+          _invoiceRequiredSnack(
+            _snackLang('Invalid mobile', 'અમાન્ય મોબાઇલ'),
+            _snackLang(
+              'Enter a valid 10-digit mobile number.',
+              '૧૦ અંકનો માન્ય મોબાઇલ નંબર દાખલ કરો.',
+            ),
+            color: Colors.orange.shade800,
+            icon: Icons.warning,
+          );
           return false;
         }
         if (customerNameController.text.trim().isEmpty) {
           customerNameController.text = "Customer-${mobile.substring(mobile.length - 4)}";
         }
       } else {
-        if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) validateManualCustomerEntry();
+        if (!isEditMode.value &&
+            !showCustomerForm.value &&
+            selectedCustomerId.value.trim().isEmpty) {
+          _invoiceRequiredSnack(
+            _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+            _snackLang(
+              'Please select a customer first. If the list is empty, tap + to add a new customer.',
+              'લીસ્ટમાંથી ગ્રાહક પસંદ કરો અથવા Add New Customer ખોલો.',
+            ),
+            color: Colors.red.shade700,
+            icon: Icons.person_outline,
+          );
+          return false;
+        }
+        if (showCustomerForm.value && customerNameController.text.trim().isNotEmpty) {
+          validateManualCustomerEntry();
+        }
         if (customerNameController.text.trim().isEmpty) {
-          showCustomSnackbar(title: "Customer Required", message: "Select or enter customer details", baseColor: Colors.red.shade700, icon: Icons.person_outline);
+          _invoiceRequiredSnack(
+            _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+            _snackLang(
+              'Select a customer or enter details in Add New Customer.',
+              'ગ્રાહક પસંદ કરો અથવા Add New Customer માં વિગત ભરો.',
+            ),
+            color: Colors.red.shade700,
+            icon: Icons.person_outline,
+          );
           return false;
         }
       }
 
-      if (!formKey.currentState!.validate()) {
-        showCustomSnackbar(title: "Validation Error", message: "Fill all required fields", baseColor: Colors.orange.shade700, icon: Icons.warning);
+      final formState = formKey.currentState;
+      if (formState == null || !formState.validate()) {
+        _invoiceRequiredSnack(
+          _snackLang('Form', 'ફોર્મ'),
+          _snackLang(
+            'Fill all required fields marked with *.',
+            'જરૂરી ફીલ્ડ ભરો (* ચિહ્નવાળા).',
+          ),
+          color: Colors.orange.shade800,
+          icon: Icons.edit_note,
+        );
         return false;
       }
 
       if (!_validateInvoiceItems()) return false;
       _removeEmptyItemsBeforeSave();
+      if (!_validateInvoiceItems()) return false;
 
       if (hasAnyStockViolation) {
-        showCustomSnackbar(title: "Cannot Create Invoice", message: "Fix stock issues first", baseColor: Colors.red.shade700, icon: Icons.error_outline);
+        final violationList = violationMessages.values.join('\n• ');
+        _invoiceRequiredSnack(
+          _snackLang('Stock', 'સ્ટોક'),
+          _snackLang(
+            'Fix these first:\n• $violationList',
+            'પહેલાં આ સુધારો:\n• $violationList',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.error_outline,
+          duration: const Duration(seconds: 8),
+        );
         return false;
       }
 
       if (invoiceItems.isEmpty) {
-        showCustomSnackbar(title: "No Valid Items", message: "Add at least one valid item", baseColor: Colors.red.shade700, icon: Icons.error_outline);
+        _invoiceRequiredSnack(
+          _snackLang('Items required', 'વસ્તુ જરૂરી'),
+          _snackLang(
+            'Add at least one valid item line.',
+            'ઓછામાં ઓછી એક માન્ય વસ્તુ લાઇન ઉમેરો.',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.error_outline,
+        );
         return false;
       }
 
@@ -3446,6 +3584,19 @@ class NewInvoiceController extends GetxController {
       calculateTotals();
 
       String finalCustomerId = _getValidCustomerId();
+      if (!invoiceType.value.isQuickMode && finalCustomerId.trim().isEmpty) {
+        isLoading.value = false;
+        _invoiceRequiredSnack(
+          _snackLang('Customer required', 'ગ્રાહક જરૂરી'),
+          _snackLang(
+            'Select the customer again or use Add New Customer, then save.',
+            'ગ્રાહક ફરીથી પસંદ કરો અથવા Add New Customer વાપરો.',
+          ),
+          color: Colors.red.shade700,
+          icon: Icons.person_outline,
+        );
+        return false;
+      }
       double calculatedInvoiceProfit = 0.0;
       for (var item in invoiceItems) {
         double sellTotal = item.rate * item.quantity;
@@ -3768,38 +3919,6 @@ class NewInvoiceController extends GetxController {
 
     if (reinitialize) {
       initializeInvoice();
-    }
-  }
-
-  void showCustomSnackbar({
-    required String title,
-    required String message,
-    required Color baseColor,
-    required IconData icon,
-    Duration? duration,
-  }) {
-    try {
-      // ✅ Check if we're still on a valid route
-      if (Get.context == null) {
-        print("⚠️ No context available for snackbar");
-        return;
-      }
-
-      Get.snackbar(
-        title,
-        message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: baseColor,
-        colorText: Colors.white,
-        icon: Icon(icon, color: Colors.white),
-        duration: duration ?? Duration(seconds: 3),
-        margin: EdgeInsets.all(10),
-        borderRadius: 8,
-        isDismissible: true,
-        dismissDirection: DismissDirection.horizontal,
-      );
-    } catch (e) {
-      print("⚠️ Error showing snackbar: $e");
     }
   }
 

@@ -20,8 +20,7 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   int _selectedIndex = 0;
   static const int _overview = 0;
-  static const int _users = 1;
-  static const int _companies = 2;
+  static const int _usersAndCompanies = 1;
 
   static const double _sidebarWidth = 280;
   static const double _breakpoint = 900;
@@ -121,16 +120,60 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   bool get _isWide => MediaQuery.of(context).size.width >= _breakpoint;
 
+  String get _sectionTitle {
+    switch (_selectedIndex) {
+      case _overview:
+        return 'Overview';
+      case _usersAndCompanies:
+        return 'Users & Companies';
+      default:
+        return 'Admin Dashboard';
+    }
+  }
+
   Widget _buildResponsiveLayout(BuildContext context) {
     if (_isWide) {
-      return Row(
-        children: [
-          _buildSidebar(context),
-          Expanded(child: _buildContent(context)),
-        ],
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F8FA),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.grey.shade900,
+          titleSpacing: 20,
+          title: Text(
+            _sectionTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: TextButton.icon(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                label: const Text('Back to app'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade800,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: Row(
+          children: [
+            _buildSidebar(context),
+            Expanded(
+              child: Container(
+                color: const Color(0xFFF6F8FA),
+                child: _buildContent(context),
+              ),
+            ),
+          ],
+        ),
       );
     }
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F8FA),
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         backgroundColor: AppColors.tealColor,
@@ -150,51 +193,120 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Widget _buildSidebar(BuildContext context) {
     final width = _isWide ? _sidebarWidth : MediaQuery.of(context).size.width * 0.78;
+    final currentUser = FirebaseAuth.instance.currentUser;
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: _isWide ? const Color(0xFF004D4D) : null,
+        color: _isWide ? const Color(0xFF003D3D) : Colors.white,
         boxShadow: _isWide ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(-2, 0))] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_isWide)
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              decoration: BoxDecoration(
-                color: AppColors.tealColor,
-                borderRadius: const BorderRadius.only(bottomRight: Radius.circular(12)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 26),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Text(
-                      'Admin Dashboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
+          Container(
+            padding: EdgeInsets.fromLTRB(_isWide ? 24 : 18, _isWide ? 28 : 18, _isWide ? 24 : 18, _isWide ? 20 : 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.tealColor,
+                  AppColors.tealColor.withOpacity(0.85),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: _isWide ? const BorderRadius.only(bottomRight: Radius.circular(16)) : null,
             ),
+            child: currentUser == null
+                ? const SizedBox.shrink()
+                : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance.collection('users').doc(currentUser.uid).snapshots(),
+                    builder: (context, snap) {
+                      final d = snap.data?.data();
+                      final name = (d?['userName']?.toString().trim().isNotEmpty == true)
+                          ? d!['userName'].toString().trim()
+                          : (d?['username']?.toString().trim().isNotEmpty == true)
+                              ? d!['username'].toString().trim()
+                              : (currentUser.displayName?.trim().isNotEmpty == true ? currentUser.displayName!.trim() : '—');
+                      final email = (d?['userEmail']?.toString().trim().isNotEmpty == true)
+                          ? d!['userEmail'].toString().trim()
+                          : (d?['email']?.toString().trim().isNotEmpty == true)
+                              ? d!['email'].toString().trim()
+                              : (currentUser.email?.trim().isNotEmpty == true ? currentUser.email!.trim() : '');
+                      final companyName = AppConstants.companyName.trim().isNotEmpty ? AppConstants.companyName.trim() : 'Select company';
+                      final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.22),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white.withOpacity(0.25)),
+                            ),
+                            child: Center(
+                              child: Text(
+                                initial,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                                ),
+                                if (email.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    email,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.white.withOpacity(0.92), fontSize: 12.5, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.22)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.business, size: 16, color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          companyName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
           const SizedBox(height: 16),
           _navItem(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Overview', _overview),
-          _navItem(Icons.people_outline, Icons.people_rounded, 'User Management', _users),
-          _navItem(Icons.business_outlined, Icons.business_rounded, 'All Companies', _companies),
+          _navItem(Icons.groups_2_outlined, Icons.groups_2_rounded, 'Users & Companies', _usersAndCompanies),
           const Spacer(),
           if (!_isWide) const Divider(height: 1),
           Container(
@@ -204,8 +316,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
               label: const Text('Back to app'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _isWide ? Colors.white70 : Colors.grey.shade700,
-                side: BorderSide(color: _isWide ? Colors.white38 : Colors.grey.shade400),
+                foregroundColor: _isWide ? Colors.white70 : Colors.grey.shade800,
+                side: BorderSide(color: _isWide ? Colors.white24 : Colors.grey.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
@@ -253,10 +365,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     switch (_selectedIndex) {
       case _overview:
         return _AdminOverviewSection();
-      case _users:
+      case _usersAndCompanies:
+        // Merged view: user rows with expandable companies + feature toggles.
         return _AdminUsersSection();
-      case _companies:
-        return _AdminCompaniesSection();
       default:
         return _AdminOverviewSection();
     }
@@ -782,7 +893,10 @@ class _AdminUsersSectionState extends State<_AdminUsersSection> {
                   : ListView.builder(
                       padding: EdgeInsets.fromLTRB(_isWide(context) ? 28 : 18, 0, _isWide(context) ? 28 : 18, 24),
                       itemCount: filtered.length,
-                      itemBuilder: (context, index) => _UserTile(documentSnapshot: filtered[index]),
+                      itemBuilder: (context, index) => _UserWithCompaniesTile(
+                        documentSnapshot: filtered[index],
+                        searchQuery: _searchController.text.trim().toLowerCase(),
+                      ),
                     ),
             ),
           ],
@@ -792,10 +906,14 @@ class _AdminUsersSectionState extends State<_AdminUsersSection> {
   }
 }
 
-class _UserTile extends StatelessWidget {
-  const _UserTile({required this.documentSnapshot});
+class _UserWithCompaniesTile extends StatelessWidget {
+  const _UserWithCompaniesTile({
+    required this.documentSnapshot,
+    required this.searchQuery,
+  });
 
   final QueryDocumentSnapshot<Map<String, dynamic>> documentSnapshot;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -807,6 +925,9 @@ class _UserTile extends StatelessWidget {
     final isAdmin = data['isAdmin'] == true;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
+    final q = searchQuery.trim().toLowerCase();
+    final userMatches = q.isEmpty || name.toLowerCase().contains(q) || email.toLowerCase().contains(q);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
@@ -814,76 +935,73 @@ class _UserTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade200),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: isActive ? AppColors.tealColor.withOpacity(0.2) : Colors.grey.shade300,
-              child: Text(
-                initial,
-                style: TextStyle(
-                  color: isActive ? AppColors.tealColor : Colors.grey.shade700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: CircleAvatar(
+            radius: 24,
+            backgroundColor: isActive ? AppColors.tealColor.withOpacity(0.2) : Colors.grey.shade300,
+            child: Text(
+              initial,
+              style: TextStyle(
+                color: isActive ? AppColors.tealColor : Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          title: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isAdmin) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.tealColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.tealColor.withOpacity(0.5)),
-                          ),
-                          child: Text('Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.tealColor)),
-                        ),
-                      ],
-                      if (!isActive) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text('Inactive', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.orange.shade800)),
-                        ),
-                      ],
-                    ],
+              if (isAdmin) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.tealColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.tealColor.withOpacity(0.5)),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    email,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                    overflow: TextOverflow.ellipsis,
+                  child: Text('Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.tealColor)),
+                ),
+              ],
+              if (!isActive) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                ],
-              ),
-            ),
-            Switch(
-              value: isActive,
-              onChanged: (value) => _updateIsActive(id, value),
-              activeTrackColor: AppColors.tealColor,
-              activeColor: Colors.white,
+                  child: Text('Inactive', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.orange.shade800)),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            email,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Switch(
+            value: isActive,
+            onChanged: (value) => _updateIsActive(id, value),
+            activeTrackColor: AppColors.tealColor,
+            activeColor: Colors.white,
+          ),
+          children: [
+            _UserCompaniesInlineList(
+              uid: id,
+              searchQuery: q,
+              userMatches: userMatches,
             ),
           ],
         ),
@@ -913,6 +1031,165 @@ class _UserTile extends StatelessWidget {
     } catch (e) {
       Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
     }
+  }
+}
+
+class _UserCompaniesInlineList extends StatelessWidget {
+  const _UserCompaniesInlineList({
+    required this.uid,
+    required this.searchQuery,
+    required this.userMatches,
+  });
+
+  final String uid;
+  final String searchQuery;
+  final bool userMatches;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).collection('companies').snapshots(),
+      builder: (context, companiesSnap) {
+        if (companiesSnap.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+          );
+        }
+        if (companiesSnap.hasError) {
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text('Error loading companies', style: TextStyle(color: Colors.red.shade600)),
+          );
+        }
+
+        final allCompanies = companiesSnap.data?.docs ?? [];
+        final displayList = (searchQuery.isEmpty || userMatches)
+            ? allCompanies
+            : allCompanies.where((doc) {
+                final d = doc.data();
+                final name = (d['companyName']?.toString() ?? '').toLowerCase();
+                final code = (d['companyCode']?.toString() ?? '').toLowerCase();
+                return name.contains(searchQuery) || code.contains(searchQuery);
+              }).toList();
+
+        if (displayList.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text('No companies found', style: TextStyle(color: Colors.grey.shade600)),
+          );
+        }
+
+        return Column(
+          children: displayList.map((doc) {
+            final d = doc.data();
+            final companyId = doc.id;
+            final name = d['companyName']?.toString() ?? '—';
+            final code = d['companyCode']?.toString() ?? '';
+            final customerOrderEnabled = d['enableCustomerOrderFeature'] == true;
+            final paymentEnabled = d['enablePaymentReceiptFeature'] != false;
+            final purchaseEnabled = d['enablePurchaseFeature'] != false;
+
+            return Card(
+              margin: const EdgeInsets.fromLTRB(0, 6, 0, 6),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: AppColors.tealColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.business_outlined, size: 18, color: AppColors.tealColor),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Colors.grey.shade900),
+                              ),
+                              if (code.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(code, style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Features', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.grey.shade800)),
+                          const SizedBox(height: 8),
+                          _AdminCompanyFeatureToggle(
+                            label: 'Customer Orders',
+                            icon: Icons.shopping_cart_outlined,
+                            enabled: customerOrderEnabled,
+                            onChanged: (val) async {
+                              await FirebaseFirestore.instance.collection('users').doc(uid).collection('companies').doc(companyId).update({
+                                'enableCustomerOrderFeature': val,
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          _AdminCompanyFeatureToggle(
+                            label: 'Payment / Receipt',
+                            icon: Icons.payment,
+                            enabled: paymentEnabled,
+                            onChanged: (val) async {
+                              await FirebaseFirestore.instance.collection('users').doc(uid).collection('companies').doc(companyId).update({
+                                'enablePaymentReceiptFeature': val,
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          _AdminCompanyFeatureToggle(
+                            label: 'Purchase',
+                            icon: Icons.shopping_cart,
+                            enabled: purchaseEnabled,
+                            onChanged: (val) async {
+                              await FirebaseFirestore.instance.collection('users').doc(uid).collection('companies').doc(companyId).update({
+                                'enablePurchaseFeature': val,
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
   }
 }
 
@@ -1108,85 +1385,163 @@ class _UserCompaniesTile extends StatelessWidget {
               final companyId = doc.id;
               final name = d['companyName']?.toString() ?? '—';
               final code = d['companyCode']?.toString() ?? '';
-              final enabled = d['enableCustomerOrderFeature'] == true;
+              final customerOrderEnabled = d['enableCustomerOrderFeature'] == true;
+              final paymentEnabled = d['enablePaymentReceiptFeature'] != false;
+              final purchaseEnabled = d['enablePurchaseFeature'] != false;
 
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
+              return Card(
+                margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
                 ),
-                child: ListTile(
-                  dense: true,
-                  leading: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.tealColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.business_outlined, size: 18, color: Color(0xFF00897B)),
-                  ),
-                  title: Text(
-                    name,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Column(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (code.isNotEmpty)
-                        Text(code, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 13,
-                            color: enabled ? Colors.green.shade600 : Colors.grey.shade500,
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.tealColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.business_outlined, size: 18, color: Color(0xFF00897B)),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            enabled ? 'Customer Orders: ON' : 'Customer Orders: OFF',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: enabled ? Colors.green.shade600 : Colors.grey.shade500,
-                              fontWeight: FontWeight.w500,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Colors.grey.shade900,
+                                  ),
+                                ),
+                                if (code.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      code,
+                                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Features',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _AdminCompanyFeatureToggle(
+                              label: 'Customer Orders',
+                              icon: Icons.shopping_cart_outlined,
+                              enabled: customerOrderEnabled,
+                              onChanged: (val) async {
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('companies')
+                                      .doc(companyId)
+                                      .update({'enableCustomerOrderFeature': val});
+                                  Get.snackbar(
+                                    val ? 'Feature Enabled ✅' : 'Feature Disabled',
+                                    '$name: Customer Orders ${val ? "ON" : "OFF"}',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: val ? Colors.green.shade100 : Colors.orange.shade100,
+                                    colorText: Colors.black87,
+                                    duration: const Duration(seconds: 2),
+                                  );
+                                } catch (e) {
+                                  Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            _AdminCompanyFeatureToggle(
+                              label: 'Payment / Receipt',
+                              icon: Icons.payment,
+                              enabled: paymentEnabled,
+                              onChanged: (val) async {
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('companies')
+                                      .doc(companyId)
+                                      .update({'enablePaymentReceiptFeature': val});
+                                  Get.snackbar(
+                                    val ? 'Feature Enabled ✅' : 'Feature Disabled',
+                                    '$name: Payment / Receipt ${val ? "ON" : "OFF"}',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: val ? Colors.green.shade100 : Colors.orange.shade100,
+                                    colorText: Colors.black87,
+                                    duration: const Duration(seconds: 2),
+                                  );
+                                } catch (e) {
+                                  Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            _AdminCompanyFeatureToggle(
+                              label: 'Purchase',
+                              icon: Icons.shopping_cart,
+                              enabled: purchaseEnabled,
+                              onChanged: (val) async {
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('companies')
+                                      .doc(companyId)
+                                      .update({'enablePurchaseFeature': val});
+                                  Get.snackbar(
+                                    val ? 'Feature Enabled ✅' : 'Feature Disabled',
+                                    '$name: Purchase ${val ? "ON" : "OFF"}',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: val ? Colors.green.shade100 : Colors.orange.shade100,
+                                    colorText: Colors.black87,
+                                    duration: const Duration(seconds: 2),
+                                  );
+                                } catch (e) {
+                                  Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  trailing: Switch(
-                    value: enabled,
-                    activeColor: Colors.white,
-                    activeTrackColor: const Color(0xFF00897B),
-                    onChanged: (val) async {
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(uid)
-                            .collection('companies')
-                            .doc(companyId)
-                            .update({'enableCustomerOrderFeature': val});
-
-                        Get.snackbar(
-                          val ? 'Feature Enabled ✅' : 'Feature Disabled',
-                          '$name: Customer Order ${val ? "ON" : "OFF"}',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: val
-                              ? Colors.green.shade100
-                              : Colors.orange.shade100,
-                          colorText: Colors.black87,
-                          duration: const Duration(seconds: 2),
-                        );
-                      } catch (e) {
-                        Get.snackbar('Error', e.toString(),
-                            backgroundColor: Colors.red.shade100);
-                      }
-                    },
-                  ),
-                  isThreeLine: true,
                 ),
               );
             }).toList(),
@@ -1194,6 +1549,74 @@ class _UserCompaniesTile extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _AdminCompanyFeatureToggle extends StatelessWidget {
+  const _AdminCompanyFeatureToggle({
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleColor = enabled ? Colors.grey.shade900 : Colors.grey.shade700;
+    final subColor = enabled ? Colors.green.shade700 : Colors.grey.shade600;
+    final iconBg = enabled ? Colors.green.shade50 : Colors.grey.shade100;
+    final iconFg = enabled ? Colors.green.shade700 : Colors.grey.shade600;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 16, color: iconFg),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: titleColor),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  enabled ? 'Enabled' : 'Disabled',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: subColor),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: enabled,
+            onChanged: onChanged,
+            activeColor: const Color(0xFF00897B),
+          ),
+        ],
+      ),
     );
   }
 }

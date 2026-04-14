@@ -2,14 +2,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../constant/constant.dart';
+import '../../constant/app_constant.dart';
 import '../../controller/controller.dart';
 import '../../model/model.dart';
 import '../../services/service.dart';
 import '../../utils/utils.dart';
 import '../../widgets/web_screen_wrapper.dart';
-import 'dart:io';
 
 
 
@@ -100,13 +99,26 @@ class PaymentDetailsScreen extends GetView<PaymentDetailsController> {
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Obx(() => Row(
-        children: [
-          Expanded(child: _buildTabButton('Invoice', controller.selectedTab.value == 'Invoice', Icons.receipt_long)),
-          const SizedBox(width: 8),
-          Expanded(child: _buildTabButton('Purchase', controller.selectedTab.value == 'Purchase', Icons.shopping_cart)),
-        ],
-      )),
+      child: Obx(() {
+        final purchaseEnabled = AppConstants.isTradingCompany &&
+            AppConstants.enablePurchaseFeature.value;
+        if (!purchaseEnabled && controller.selectedTab.value == 'Purchase') {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (controller.selectedTab.value == 'Purchase') {
+              controller.switchTab('Invoice');
+            }
+          });
+        }
+        return Row(
+          children: [
+            Expanded(child: _buildTabButton('Invoice', controller.selectedTab.value == 'Invoice', Icons.receipt_long)),
+            if (purchaseEnabled) ...[
+              const SizedBox(width: 8),
+              Expanded(child: _buildTabButton('Purchase', controller.selectedTab.value == 'Purchase', Icons.shopping_cart)),
+            ],
+          ],
+        );
+      }),
     );
   }
 
@@ -591,7 +603,6 @@ class PaymentDetailsBottomSheet {
     final double alreadyPending = currentPending ?? totalAmount;
 
     double receivedAmount = 0.0;
-    double pendingAmount = alreadyPending;
     String errorMessage = '';
 
     // ✅ NEW Variable for Payment Mode Selection
@@ -684,7 +695,6 @@ class PaymentDetailsBottomSheet {
                           } else {
                             errorMessage = '';
                           }
-                          pendingAmount = alreadyPending - receivedAmount;
                         });
                       },
                     ),

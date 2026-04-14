@@ -13,7 +13,13 @@ import 'package:flutter/services.dart';
 
 bool _isWholeNumberUnit(String unit) {
   final u = unit.trim().toLowerCase();
-  return u == 'pcs' || u == 'box';
+  // Units that should not allow decimal quantities (match invoice behavior)
+  return u == 'pcs' ||
+      u == 'box' ||
+      u == 'pack' ||
+      u == 'dozen' ||
+      u == 'piece' ||
+      u == 'pieces';
 }
 
 class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
@@ -1186,42 +1192,9 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                 flex: 4,
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 8),
-                                  child: controller.useItemMaster.value
-                                      ? Builder(
-                                    builder: (context) {
-                                      final activeItems = controller.itemList
-                                          .where((i) => i.isActive == true)
-                                          .toList();
-                                      Item? selectedItem;
-                                      try {
-                                        selectedItem = activeItems.firstWhere(
-                                                (element) => element.itemId == item.itemId);
-                                      } catch (e) {
-                                        selectedItem = null;
-                                      }
-                                      return SearchableDropdown<Item>(
-                                        value: selectedItem,
-                                        items: activeItems,
-                                        itemLabel: (item) => item.itemName.toUpperCase(),
-                                        hintText: 'Select Item',
-                                        searchHintText: 'Search items...',
-                                        itemBuilder: (item) => Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(item.itemName.toUpperCase(),
-                                                style: TextStyle(
-                                                    fontWeight: FontWeight.w600, fontSize: 14)),
-                                          ],
-                                        ),
-                                        onChanged: (selectedItem) {
-                                          if (selectedItem != null) {
-                                            controller.selectItemForIndex(index, selectedItem);
-                                          }
-                                        },
-                                      );
-                                    },
-                                  )
-                                      : TextFormField(
+                                  child: Obx(() {
+                                    if (!controller.useItemMaster.value) {
+                                      return TextFormField(
                                     initialValue: item.itemName,
                                     decoration: InputDecoration(
                                       hintText: 'Enter item name',
@@ -1229,7 +1202,39 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
                                     onChanged: (value) => controller.updateItem(index, itemName: value, itemId: ''),
-                                  ),
+                                      );
+                                    }
+
+                                    final activeItems = controller.itemList.where((i) => i.isActive).toList();
+                                    Item? selectedItem;
+                                    try {
+                                      selectedItem = activeItems.firstWhere((e) => e.itemId == item.itemId);
+                                    } catch (_) {
+                                      selectedItem = null;
+                                    }
+
+                                    return SearchableDropdown<Item>(
+                                      value: selectedItem,
+                                      items: activeItems,
+                                      itemLabel: (item) => item.itemName.toUpperCase(),
+                                      hintText: 'Select Item',
+                                      searchHintText: 'Search items...',
+                                      itemBuilder: (item) => Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.itemName.toUpperCase(),
+                                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
+                                      onChanged: (selectedItem) {
+                                        if (selectedItem != null) {
+                                          controller.selectItemForIndex(index, selectedItem);
+                                        }
+                                      },
+                                    );
+                                  }),
                                 ),
                               ),
 
@@ -1425,45 +1430,9 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (controller.useItemMaster.value)
-                                          Builder(
-                                            builder: (context) {
-                                              final activeItems = controller.itemList
-                                                  .where((i) => i.isActive == true)
-                                                  .toList();
-                                              Item? selectedItem;
-                                              try {
-                                                selectedItem = activeItems.firstWhere(
-                                                        (element) => element.itemId == item.itemId);
-                                              } catch (e) {
-                                                selectedItem = null;
-                                              }
-                                              return SearchableDropdown<Item>(
-                                                value: selectedItem,
-                                                items: activeItems,
-                                                itemLabel: (item) => item.itemName.toUpperCase(),
-                                                hintText: 'Select Item',
-                                                searchHintText: 'Search items...',
-                                                itemBuilder: (item) => Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(item.itemName.toUpperCase(),
-                                                        style: TextStyle(
-                                                            fontWeight: FontWeight.w600,
-                                                            fontSize: 14)),
-                                                  ],
-                                                ),
-                                                onChanged: (selectedItem) {
-                                                  if (selectedItem != null) {
-                                                    controller.selectItemForIndex(
-                                                        index, selectedItem);
-                                                  }
-                                                },
-                                              );
-                                            },
-                                          ),
-                                        if (!controller.useItemMaster.value)
-                                          SizedBox(
+                                        Obx(() {
+                                          if (!controller.useItemMaster.value) {
+                                            return SizedBox(
                                             height: 40,
                                             child: TextFormField(
                                               initialValue: item.itemName,
@@ -1477,7 +1446,39 @@ class PurchaseEntryScreen extends GetView<PurchaseEntryController> {
                                               onChanged: (value) => controller.updateItem(
                                                   index, itemName: value, itemId: ''),
                                             ),
-                                          ),
+                                            );
+                                          }
+
+                                          final activeItems = controller.itemList.where((i) => i.isActive).toList();
+                                          Item? selectedItem;
+                                          try {
+                                            selectedItem = activeItems.firstWhere((e) => e.itemId == item.itemId);
+                                          } catch (_) {
+                                            selectedItem = null;
+                                          }
+
+                                          return SearchableDropdown<Item>(
+                                            value: selectedItem,
+                                            items: activeItems,
+                                            itemLabel: (item) => item.itemName.toUpperCase(),
+                                            hintText: 'Select Item',
+                                            searchHintText: 'Search items...',
+                                            itemBuilder: (item) => Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.itemName.toUpperCase(),
+                                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                            onChanged: (selectedItem) {
+                                              if (selectedItem != null) {
+                                                controller.selectItemForIndex(index, selectedItem);
+                                              }
+                                            },
+                                          );
+                                        }),
                                       ],
                                     ),
                                   ),

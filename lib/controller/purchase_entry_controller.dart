@@ -882,10 +882,12 @@ class PurchaseEntryController extends BaseController {
       }
     }
 
-    Future.microtask(() {
-      loadCompanyData();
-      loadCustomersAsVendors();
-      fetchItems();
+    Future.microtask(() async {
+      // Ensure prefs (spreadsheetId/userId) are loaded before hitting Sheets.
+      await AppConstants.loadFromPrefs();
+      await loadCompanyData();
+      await loadCustomersAsVendors();
+      await fetchItems();
     });
   }
 
@@ -998,16 +1000,16 @@ class PurchaseEntryController extends BaseController {
       purchaseItems.clear();
       for (var item in existingItems) {
         purchaseItems.add(PurchaseItem(
-          vendorId: item.vendorId ?? '',
-          itemId: item.itemId ?? '',
-          itemName: item.itemName ?? '',
-          description: item.description ?? '',
-          quantity: item.quantity ?? 1,
-          purchasePrice: item.purchasePrice ?? 0.0,
-          unit: item.unit ?? 'pcs',
-          totalPrice: item.totalPrice ?? 0.0,
-          gstRate: item.gstRate ?? 0.0,
-          createdAt: item.createdAt ?? DateTime.now(),
+          vendorId: item.vendorId,
+          itemId: item.itemId,
+          itemName: item.itemName,
+          description: item.description,
+          quantity: item.quantity,
+          purchasePrice: item.purchasePrice,
+          unit: item.unit,
+          totalPrice: item.totalPrice,
+          gstRate: item.gstRate,
+          createdAt: item.createdAt,
         ));
       }
 
@@ -1129,7 +1131,6 @@ class PurchaseEntryController extends BaseController {
           : (initialValue % 1 == 0 ? initialValue.toInt().toString() : initialValue.toString());
       if (controller.text != newText) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!controller.hasListeners) return;
           controller.text = newText;
         });
       }
@@ -1385,9 +1386,14 @@ class PurchaseEntryController extends BaseController {
   Future<void> fetchItems() async {
     try {
       isLoading.value = true;
-      // Ensure we have latest userId (e.g. after login/prefs load)
-      if (AppConstants.userId.isEmpty) {
+      // Ensure we have latest prefs (userId + spreadsheetId) before hitting Sheets
+      if (AppConstants.userId.isEmpty || AppConstants.spreadsheetId.trim().isEmpty) {
         await AppConstants.loadFromPrefs();
+      }
+      if (AppConstants.spreadsheetId.trim().isEmpty) {
+        print("⚠️ Purchase Entry: spreadsheetId empty, cannot load items yet.");
+        itemList.clear();
+        return;
       }
       final userId = AppConstants.userId.trim();
       // When userId is empty, pass null so getItems returns all items (no filter)
@@ -1588,11 +1594,13 @@ class PurchaseEntryController extends BaseController {
       purchaseItems.removeAt(index);
 
       // Dispose the controller at removed index
-      priceControllers[index]?.dispose();
+      if (index < priceControllers.length) {
+        priceControllers[index].dispose();
+        priceControllers.removeAt(index);
+      }
       qtyControllers[index]?.dispose();
+      qtyControllers.remove(index);
 
-      // Create new maps with reindexed controllers
-      Map<int, TextEditingController> newPriceControllers = {};
       Map<int, TextEditingController> newQtyControllers = {};
 
       // Reindex controllers after the removed index
@@ -1610,8 +1618,6 @@ class PurchaseEntryController extends BaseController {
         }
       }
 
-      // Replace old maps with reindexed ones
-      priceControllers.clear();
       qtyControllers.clear();
 
       qtyControllers.addAll(newQtyControllers);
@@ -1807,8 +1813,7 @@ class PurchaseEntryController extends BaseController {
     }
 
     bool hasValidItem = purchaseItems.any((item) {
-      return (item.itemName != null && item.itemName!.isNotEmpty) ||
-          (item.description != null && item.description!.isNotEmpty);
+      return item.itemName.isNotEmpty || item.description.isNotEmpty;
     });
 
     if (!hasValidItem) {
@@ -1822,8 +1827,7 @@ class PurchaseEntryController extends BaseController {
     }
 
     bool hasInvalidData = purchaseItems.any((item) {
-      bool isValidItem = (item.itemName?.isNotEmpty ?? false) ||
-          (item.description?.isNotEmpty ?? false);
+      bool isValidItem = item.itemName.isNotEmpty || item.description.isNotEmpty;
       if (isValidItem) {
         return item.quantity <= 0 || item.purchasePrice <= 0;
       }
@@ -1852,15 +1856,15 @@ class PurchaseEntryController extends BaseController {
     return {
       'purchaseId': purchaseNumberController.text,
       'vendorId': vendorId,
-      'itemId': item.itemId ?? '',
-      'itemName': item.itemName ?? '',
-      'description': item.description ?? '',
+      'itemId': item.itemId,
+      'itemName': item.itemName,
+      'description': item.description,
       'quantity': item.quantity.toString(),
       'purchasePrice': item.purchasePrice.toString(),
       'purchaseDate': _formatDate(purchaseDate.value),
       'gstRate': item.gstRate.toString(),
       'totalPrice': item.totalPrice.toString(),
-      'unit': item.unit ?? 'pcs',
+      'unit': item.unit,
       'userId': AppConstants.userId,
     };
   }
@@ -1921,9 +1925,9 @@ class PurchaseEntryController extends BaseController {
           gstPercent: purchaseItem.gstRate,
           unitOfMeasurement: purchaseItem.unit,
           currentStock: purchaseItem.quantity.toDouble(),
-          detailRequirement: purchaseItem.description.isNotEmpty
-              ? "Auto-created from purchase: ${purchaseItem.description}"
-              : "Auto-created from purchase entry",
+          // Keep master detail clean: don't inject auto-created text.
+          // If user typed description, store it; otherwise leave empty.
+          detailRequirement: purchaseItem.description.trim(),
           isActive: true,
         );
 
@@ -2009,6 +2013,9 @@ class PurchaseEntryController extends BaseController {
           AppConstants.userId,
         );
 
+        // Keep Item master prices in sync with latest purchase prices (for dropdown items).
+        await _syncItemMasterPricesFromPurchase();
+
         showCustomSnackbar(
           title: "Success",
           message: "Purchase updated successfully!",
@@ -2024,6 +2031,8 @@ class PurchaseEntryController extends BaseController {
         await GoogleSheetService.addPurchaseItemsBatch(itemsData, AppConstants.userId);
 
         await _createMissingItemsInItemMaster(purchaseItems);
+        // Keep Item master prices in sync with latest purchase prices (for dropdown items).
+        await _syncItemMasterPricesFromPurchase();
         await GoogleSheetService.updateStockAfterPurchase(purchaseItems);
 
         showCustomSnackbar(
@@ -2061,5 +2070,63 @@ class PurchaseEntryController extends BaseController {
     paymentStatus.value = 'Pending';
     calculateTotals();
     initializePurchase();
+  }
+
+  /// If user enters a new purchase price for an existing master item, update that item's `price`
+  /// in the Item sheet so next time it auto-fills.
+  Future<void> _syncItemMasterPricesFromPurchase() async {
+    try {
+      // Only makes sense when using item master dropdown.
+      if (!useItemMaster.value) return;
+
+      // Ensure prefs loaded (userId/spreadsheetId)
+      if (AppConstants.userId.trim().isEmpty || AppConstants.spreadsheetId.trim().isEmpty) {
+        await AppConstants.loadFromPrefs();
+      }
+      final userId = AppConstants.userId.trim();
+      if (userId.isEmpty) return;
+
+      // Build map for quick lookup of current master items.
+      final Map<String, Item> byId = {
+        for (final it in itemList) it.itemId: it,
+      };
+
+      for (final p in purchaseItems) {
+        final id = p.itemId.trim();
+        if (id.isEmpty) continue;
+        final newPrice = p.purchasePrice;
+        if (newPrice <= 0) continue;
+
+        final master = byId[id];
+        if (master == null) continue;
+
+        // Avoid unnecessary API calls.
+        if ((master.price - newPrice).abs() < 0.000001) continue;
+
+        final updated = Item(
+          itemId: master.itemId,
+          itemName: master.itemName,
+          price: newPrice,
+          sellPrice: master.sellPrice,
+          gstPercent: master.gstPercent,
+          unitOfMeasurement: master.unitOfMeasurement,
+          currentStock: master.currentStock,
+          detailRequirement: master.detailRequirement,
+          isActive: master.isActive,
+          userId: master.userId,
+        );
+
+        await GoogleSheetService.editItemAlternative3(userId, updated);
+        // Update local cache so UI stays consistent.
+        final idx = itemList.indexWhere((x) => x.itemId == id);
+        if (idx != -1) {
+          itemList[idx] = updated;
+          itemList.refresh();
+        }
+      }
+    } catch (e) {
+      print("⚠️ Could not sync item master prices: $e");
+      // Non-blocking: purchase save should still succeed.
+    }
   }
 }
