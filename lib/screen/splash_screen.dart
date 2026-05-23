@@ -1,137 +1,9 @@
-import 'dart:math';
-
-import 'package:GetYourInvoice/controller/controller.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
-import 'package:get/get.dart';
 import 'dart:async';
-
-import '../../controller/splash_controller.dart';
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controller/splash_controller.dart';
 import '../constant/constant.dart';
-
-// class SplashScreen extends GetView<SplashController> {
-//   static const pageId = "/SplashScreen";
-//
-//   const SplashScreen({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: AppColors.appTheame, // Teal (same as auth left panel)
-//       body: Center(
-//         child: _AnimatedLogo(),
-//       ),
-//     );
-//   }
-// }
-//
-// class _AnimatedLogo extends StatefulWidget {
-//   @override
-//   State<_AnimatedLogo> createState() => _AnimatedLogoState();
-// }
-//
-// class _AnimatedLogoState extends State<_AnimatedLogo>
-//     with SingleTickerProviderStateMixin {
-//   late AnimationController _controller;
-//   late Animation<double> _scaleAnimation;
-//   late Animation<double> _fadeAnimation;
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//
-//     // Setup animation
-//     _controller = AnimationController(
-//       vsync: this,
-//       duration: const Duration(seconds: 2),
-//     );
-//
-//     _scaleAnimation =
-//         CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
-//
-//     _fadeAnimation =
-//         CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-//
-//     _controller.forward();
-//
-//     // Navigate after 3 seconds
-//     Timer(const Duration(seconds: 3), () {
-//       //Get.find<SplashController>().goToNext();
-//     });
-//   }
-//
-//   @override
-//   void dispose() {
-//     _controller.dispose();
-//     super.dispose();
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return FadeTransition(
-//       opacity: _fadeAnimation,
-//       child: ScaleTransition(
-//         scale: _scaleAnimation,
-//         child: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             Image.asset(
-//               ImagePath.splashImage,
-//               height: 280,
-//             //  width: 120,
-//               fit: BoxFit.cover,
-//               errorBuilder: (_, __, ___) => Icon(
-//                 Icons.receipt_long_rounded,
-//                 size: 120,
-//                 color: Colors.white,
-//               ),
-//             ),
-//             const SizedBox(height: 24),
-//             Text(
-//               "Invoice Sathi",
-//               style: TextStyle(
-//                 fontSize: 28,
-//                 fontWeight: FontWeight.bold,
-//                 color: Colors.white,
-//                 letterSpacing: 1.5,
-//               ),
-//             ),
-//             const SizedBox(height: 10),
-//             const Text(
-//               "Simple • Fast • Reliable",
-//               style: TextStyle(
-//                 fontSize: 16,
-//                 color: Colors.white70,
-//                 letterSpacing: 1.2,
-//               ),
-//             ),
-//             const SizedBox(height: 30),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-// ══════════════════════════════════════════════════════════════
-// SPLASH SCREEN - Elegant Animated Version
-// ══════════════════════════════════════════════════════════════
-
-import 'dart:async';
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-
-import 'dart:math';
-import 'package:flutter/material.dart';
-
-import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-// તારા કંટ્રોલર અને પાથ અહીં ઇમ્પોર્ટ કરજે
 
 class SplashScreen extends StatefulWidget {
   static const pageId = "/SplashScreen";
@@ -142,10 +14,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  // Controller ને ફાઇન્ડ કરો
   final SplashController controller = Get.find<SplashController>();
-
-  static const Color appTheme = Color(0xff3B3B98);
 
   late AnimationController _mainController;
   late AnimationController _pulseController;
@@ -209,7 +78,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _mainController.forward();
 
-    // 🔥 એનિમેશન પૂરું થયા પછી તારા કંટ્રોલરનું ફંક્શન કોલ થશે
     _mainController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         controller.goToNext();
@@ -227,7 +95,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    // build મેથડનો કોડ એજ રહેશે જે મેં પહેલા આપ્યો હતો...
     return Scaffold(
       body: AnimatedBuilder(
         animation: Listenable.merge([_mainController, _pulseController, _floatingController]),
@@ -240,8 +107,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 begin: Alignment(_bgGradient.value, -1),
                 end: Alignment(-_bgGradient.value, 1),
                 colors: [
-                  appTheme,
-                  appTheme.withBlue(180),
+                  AppColors.appTheame,
+                  AppColors.appTheame.withBlue(180),
                   const Color(0xFF0A0A2E),
                 ],
               ),
@@ -279,9 +146,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           child: Opacity(
                             opacity: _logoOpacity.value,
                             child: Image.asset(
-                              "assets/images/app_logo_2.png",
+                              ImagePath.appLogo,
                               height: 180,
                               fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.receipt_long_rounded,
+                                size: 120,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -310,10 +182,21 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                   transform: _SlidingGradientTransform(percent: _shimmerMove.value),
                                 ).createShader(bounds);
                               },
-                              child: Image.asset(
-                                "assets/images/smartBiz.png",
-                                height: 85,
-                                fit: BoxFit.contain,
+                              child: Text(
+                                'Noor Receipt',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -370,9 +253,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     return AnimatedBuilder(
       animation: _floatingController,
       builder: (context, child) {
-        double xOffset = sin((_floatingController.value * 2 * pi) + index) * 25;
-        double yOffset = cos((_floatingController.value * 2 * pi) + index) * 25;
-        double op = 0.02 + (sin(_floatingController.value * pi * 2 + index) * 0.02).abs();
+        double xOffset = math.sin((_floatingController.value * 2 * math.pi) + index) * 25;
+        double yOffset = math.cos((_floatingController.value * 2 * math.pi) + index) * 25;
+        double op = 0.02 + (math.sin(_floatingController.value * math.pi * 2 + index) * 0.02).abs();
         return Positioned(
           top: (160 * index) % MediaQuery.of(context).size.height + yOffset,
           left: (110 * index) % MediaQuery.of(context).size.width + xOffset,

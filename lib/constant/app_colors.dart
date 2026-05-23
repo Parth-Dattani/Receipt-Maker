@@ -55,6 +55,10 @@ class AppColors{
   ///Invice App Colors
   static Color appTheame2 = const Color(0xFF008080);
   static Color appTheame = const Color(0xff3B3B98);
+  static Color whatsappColor = const Color(0xFF25D366);
+
+  static Color get primary => appTheame;
+  static Color get background => whiteColor;
 
   static const Color bgGradientStart = Color(0xFFE0E7FF);
   static const Color bgGradientEnd = Color(0xFFD1D5FF);

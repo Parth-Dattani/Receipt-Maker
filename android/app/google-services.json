@@ -1,84 +1,48 @@
 {
   "project_info": {
-    "project_number": "134369591951",
-    "project_id": "getyourinvoice-8f128",
-    "storage_bucket": "getyourinvoice-8f128.firebasestorage.app"
+    "project_number": "710899897768",
+    "project_id": "receipt-maker-398a8",
+    "storage_bucket": "receipt-maker-398a8.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:134369591951:android:156b53ff86bb97dcd8a6fa",
+        "mobilesdk_app_id": "1:710899897768:android:a3ebb97dd2530fe768b99d",
         "android_client_info": {
-          "package_name": "com.example.GetYourInvoice"
+          "package_name": "com.pixelperfect.receipt"
         }
       },
       "oauth_client": [
         {
-          "client_id": "134369591951-gsm283uk67jnqmogbbila3sv53re8oqi.apps.googleusercontent.com",
+          "client_id": "710899897768-q4uk2bv3otp464p5vtqhp5845a220ud5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.GetYourInvoice",
+            "package_name": "com.pixelperfect.receipt",
             "certificate_hash": "3cea97c88a95ec43b53d37aa68779a60cd835a46"
           }
         },
         {
-          "client_id": "134369591951-bof97o0hvnce5n2128bh4q8hfug45uul.apps.googleusercontent.com",
+          "client_id": "710899897768-5v9fst3j5ol287cmk5mro5q14jmdp3g4.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4"
+          "current_key": "AIzaSyBFU_FCvUxuw85gOamQBwdyI_DhtIhxnEk"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com",
+              "client_id": "710899897768-5v9fst3j5ol287cmk5mro5q14jmdp3g4.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com",
+              "client_id": "710899897768-ejumt1k220mvlok6n015j3866na4q0pk.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.GetYourInvoice"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:134369591951:android:536ea25e6c2cfb69d8a6fa",
-        "android_client_info": {
-          "package_name": "com.example.invoice_sathi"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "134369591951-bof97o0hvnce5n2128bh4q8hfug45uul.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.GetYourInvoice"
+                "bundle_id": "com.pixelperfect.receipt"
               }
             }
           ]

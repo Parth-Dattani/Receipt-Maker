@@ -1,9 +1,1 @@
-{
-  "firestore": {
-    "rules": "firestore.rules"
-  },
-  "functions": {
-    "source": "functions"
-  },
-  "flutter": {"platforms":{"android":{"default":{"projectId":"getyourinvoice-8f128","appId":"1:134369591951:android:156b53ff86bb97dcd8a6fa","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"getyourinvoice-8f128","configurations":{"android":"1:134369591951:android:156b53ff86bb97dcd8a6fa","ios":"1:134369591951:ios:85b0ef501be1f4c3d8a6fa","web":"1:134369591951:web:5cf271caa468b073d8a6fa"}}}}},"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]}
-}
+{"flutter":{"platforms":{"android":{"default":{"projectId":"receipt-maker-398a8","appId":"1:710899897768:android:a3ebb97dd2530fe768b99d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"receipt-maker-398a8","configurations":{"android":"1:710899897768:android:a3ebb97dd2530fe768b99d","ios":"1:710899897768:ios:43f775ac8496944d68b99d","macos":"1:710899897768:ios:24f1a3a78babf72a68b99d","web":"1:710899897768:web:297fc955a7da536468b99d"}}}}}}

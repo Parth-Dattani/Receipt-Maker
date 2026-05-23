@@ -25,10 +25,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
@@ -47,31 +44,43 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBTWh86tWbhygufUosvn7OGwYdrMycCPzA',
-    appId: '1:134369591951:web:5cf271caa468b073d8a6fa',
-    messagingSenderId: '134369591951',
-    projectId: 'getyourinvoice-8f128',
-    authDomain: 'getyourinvoice-8f128.firebaseapp.com',
-    storageBucket: 'getyourinvoice-8f128.firebasestorage.app',
-    measurementId: 'G-CSDLF9TJ6C',
+    apiKey: 'AIzaSyD8bgMQ8MF64-G3dWACdWcxswTG_uH5XuM',
+    appId: '1:710899897768:web:297fc955a7da536468b99d',
+    messagingSenderId: '710899897768',
+    projectId: 'receipt-maker-398a8',
+    authDomain: 'receipt-maker-398a8.firebaseapp.com',
+    storageBucket: 'receipt-maker-398a8.firebasestorage.app',
+    measurementId: 'G-WZW7KQ9QG7',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAU6Pp4h8ulxUhVn-DTyCZt9b-eOMeb6p4',
-    appId: '1:134369591951:android:156b53ff86bb97dcd8a6fa',
-    messagingSenderId: '134369591951',
-    projectId: 'getyourinvoice-8f128',
-    storageBucket: 'getyourinvoice-8f128.firebasestorage.app',
+    apiKey: 'AIzaSyBFU_FCvUxuw85gOamQBwdyI_DhtIhxnEk',
+    appId: '1:710899897768:android:a3ebb97dd2530fe768b99d',
+    messagingSenderId: '710899897768',
+    projectId: 'receipt-maker-398a8',
+    storageBucket: 'receipt-maker-398a8.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA4HE8NPhFb3QG3yJSrFNZWE0xfkyHBbZ4',
-    appId: '1:134369591951:ios:85b0ef501be1f4c3d8a6fa',
-    messagingSenderId: '134369591951',
-    projectId: 'getyourinvoice-8f128',
-    storageBucket: 'getyourinvoice-8f128.firebasestorage.app',
-    iosClientId: '134369591951-878kqutvaoeh0bh62pi3rk41lar125sn.apps.googleusercontent.com',
-    iosBundleId: 'com.example.GetYourInvoice',
+    apiKey: 'AIzaSyB-AFY_5L4VF3XFHnPaXBIgaGBdJpM1f1Y',
+    appId: '1:710899897768:ios:43f775ac8496944d68b99d',
+    messagingSenderId: '710899897768',
+    projectId: 'receipt-maker-398a8',
+    storageBucket: 'receipt-maker-398a8.firebasestorage.app',
+    androidClientId: '710899897768-q4uk2bv3otp464p5vtqhp5845a220ud5.apps.googleusercontent.com',
+    iosClientId: '710899897768-ejumt1k220mvlok6n015j3866na4q0pk.apps.googleusercontent.com',
+    iosBundleId: 'com.pixelperfect.receipt',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyB-AFY_5L4VF3XFHnPaXBIgaGBdJpM1f1Y',
+    appId: '1:710899897768:ios:24f1a3a78babf72a68b99d',
+    messagingSenderId: '710899897768',
+    projectId: 'receipt-maker-398a8',
+    storageBucket: 'receipt-maker-398a8.firebasestorage.app',
+    androidClientId: '710899897768-q4uk2bv3otp464p5vtqhp5845a220ud5.apps.googleusercontent.com',
+    iosClientId: '710899897768-t2h22vtiaoqp74b3jhp0unf7o220l85m.apps.googleusercontent.com',
+    iosBundleId: 'com.example.demoPracGetx',
   );
 
 }

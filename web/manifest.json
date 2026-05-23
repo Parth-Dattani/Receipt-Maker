@@ -1,6 +1,6 @@
 {
-    "name": "GetYourInvoice",
-    "short_name": "GetYourInvoice",
+    "name": "Receipt Maker",
+    "short_name": "ReceiptMaker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",

@@ -66,6 +66,7 @@ dependencies:
   universal_html:
   image_picker: ^1.2.1
   logger: ^2.5.0
+  skeletonizer:
 
 dev_dependencies:
   flutter_test:

@@ -26,7 +26,7 @@ class AppConstants{
    static String businessType = "Trading";
    /// Purchase, stock, challan menus apply only when [businessType] is exactly `Trading`.
    static bool get isTradingCompany => businessType.trim() == 'Trading';
-   static String appName = "Invoice Sathi";
+   static String appName = "Noor Receipt";
    static final isChallan = false.obs; //isChallanEnabled
    static final isCashMemo = false.obs; // isCashMemoEnabled
    static final withGST = false.obs; //isGstEnabled
@@ -57,7 +57,18 @@ class AppConstants{
       companyName = await sharedPreferencesHelper.getPrefData("companyName") ?? ""; // ✅ Load Company Name
       appId = await sharedPreferencesHelper.getPrefData("appId") ?? "";
       spreadsheetId = await sharedPreferencesHelper.getPrefData("spreadsheetId") ?? "";
-      activeFy = await sharedPreferencesHelper.getPrefData("activeFy") ?? "";
+      
+      String savedFY = await sharedPreferencesHelper.getPrefData("active_fy") ?? "2026-27";
+      // 🛡️ Normalization: Ensure 2026-2027 becomes 2026-27
+      if (savedFY.length == 9 && savedFY.contains('-')) {
+        List<String> parts = savedFY.split('-');
+        if (parts[1].length == 4) {
+          savedFY = "${parts[0]}-${parts[1].substring(2)}";
+          await sharedPreferencesHelper.storePrefData("active_fy", savedFY);
+        }
+      }
+      activeFy = savedFY;
+
       accessKey = await sharedPreferencesHelper.getPrefData("accessKey") ?? "";
       businessType = await sharedPreferencesHelper.getPrefData("businessType") ?? "Trading"; // 🆕 Load businessType
 
@@ -129,7 +140,7 @@ class AppConstants{
    /// 🔹 Update + persist activeFy (e.g. "2024-25")
    static Future<void> setActiveFy(String fy) async {
       activeFy = fy;
-      await sharedPreferencesHelper.storePrefData("activeFy", fy);
+      await sharedPreferencesHelper.storePrefData("active_fy", fy);
    }
 
    /// 🔹 Update + persist companyId
@@ -226,4 +237,19 @@ class AppConstants{
       await sharedPreferencesHelper.storeBoolPrefData("isWhatsappDirectShare", val);
       print("💾 WhatsApp Direct Share Saved: $val");
    }
+}
+
+class AppStrings {
+  static const String appName = 'Noor Receipt';
+  static const String trustName = 'Noor Education Trust - Jamnagar';
+  static const String trustReg1 = 'Registered Under Section 80 (G) of the Income Tax Act 1961';
+  static const String trustReg2 = 'Regn. No. CIT (Exemption), Ahmedabad / 80 G / 2019-20/A/11023';
+  static const String trustReg3 = 'Registered Under the Bombay Public Trust Act 1956';
+  static const String trustRegNo = 'Reg. No. E/4326/Jamnagar';
+  static const String trustAddress = 'Office Address: Nr. Bus Stand, Darbargadh, Jamnagar   M.: 98248 68786';
+  static const String bankName = 'PUNJAB NATIONAL BANK';
+  static const String bankAcNo = '04912413000575';
+  static const String bankIfsc = 'PUNB0049110';
+  static const String taxNote = 'Donation are Qualified for Deduction\nFrom Income Tax Under 80 (G) (50%)';
+  static const String appsScriptUrl = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
 }

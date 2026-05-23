@@ -1,3267 +1,590 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:io' as io;
-import 'dart:typed_data';
-import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:GetYourInvoice/controller/bash_controller.dart';
-import 'package:GetYourInvoice/screen/Inventory/inventory_management_screen.dart';
-import 'package:GetYourInvoice/screen/customer/customer_registration_screen.dart';
-import 'package:GetYourInvoice/screen/item_screen.dart';
-import 'package:GetYourInvoice/screen/payment/payment_details_screen.dart';
-import 'package:GetYourInvoice/screen/setting/setting_screen.dart';
-import 'package:excel/excel.dart' show Excel, Sheet, TextCellValue, IntCellValue, DoubleCellValue;
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/widgets.dart' show Font;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:open_file/open_file.dart';
-import 'package:printing/printing.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:universal_html/html.dart' as html;
-import '../constant/constant.dart';
-import '../model/model.dart';
-import '../screen/dashboard/widgets/revenue_chart_card.dart';
-import '../screen/screen.dart';
-import '../screen/setting/widgets/widgets.dart';
-import '../services/service.dart';
-import '../utils/shared_preferences_helper.dart';
-import '../utils/utils.dart';
-import '../widgets/widgets.dart';
-import 'controller.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import '../../model/receipt_model.dart';
+import '../../services/google_sheets_service.dart';
+import '../utils/shared_preferences_helper.dart';
+import '../constant/app_colors.dart';
+import '../constant/app_constant.dart';
 
-class DashboardController extends BaseController {
-  // Observable variables
-  var monthlyRevenueData = <RevenueData>[].obs;
-  var totalInvoices = 0.obs;
-  var paidInvoices = 0.obs;
-  var unpaidInvoices = 0.obs;
-  var overdueInvoices = 0.obs;
-  var draftInvoices = 0.obs;
-  var totalRevenue = 0.0.obs;
-  var totalProfit = 0.0.obs;
-  var todayProfit = 0.0.obs;
-  var pendingAmount = 0.0.obs;
-  var overdueAmount = 0.0.obs;
-  var customerCount = 0.obs;
+class DashboardController extends GetxController {
+  var isLoading = true.obs;
 
-  var pendingCount = 0.obs;
-  var paidCount = 0.obs;
-  var overdueCount = 0.obs;
+  // 📊 ઓબ્ઝર્વેબલ સ્ટેટ્સ વેરીએબલ્સ
+  var totalReceipts = 0.obs;
+  var totalAmount = 0.0.obs;
+  var monthAmount = 0.0.obs;
+  var todayAmount = 0.0.obs;
+  var recentReceipts = <ReceiptModel>[].obs;
+  var allReceiptsList = <ReceiptModel>[].obs;
 
-  var recentInvoices = <Invoice>[].obs;
+  // 📅 Report Date Range variables
+  var fromDate = Rxn<DateTime>();
+  var toDate = Rxn<DateTime>();
+  var selectedReportType = 'Detailed Report'.obs;
 
-  // Chart data
-  var monthlyRevenue = <double>[].obs;
-  var invoiceStatusData = <ChartData>[].obs;
-
-  // Company data
-  var currentCompany = Rxn<Map<String, dynamic>>();
-  var companyId = ''.obs;
-  var allUserCompanies = <Map<String, dynamic>>[].obs; // Store all companies
-  var hasMultipleCompanies = false.obs; // Track if user has multiple companies
-  var invoiceList = <Invoice>[].obs;
-
-  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // Firebase instances
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  bool _isInitializing = true;
-  bool _hasInitialized = false;
-  /// Once first load is done, never show full-page shimmer again (only first open).
-  final _shimmerAlreadyShown = false.obs;
-
-  /// True when we should show shimmer (initial load, loading, empty list). Content shows after shimmer.
-  bool get showInitialShimmer =>
-      isLoading.value && invoiceList.isEmpty && !_shimmerAlreadyShown.value;
-
-  // Method to check if company is registered
-  bool get isCompanyRegistered => companyId.value.isNotEmpty;
-
-  // Method to get company name for display
-  String get companyName => currentCompany.value?['companyName'] ?? 'No Company';
-
-// Purchase data observables
-  var totalPurchases = 0.obs;
-  var paidPurchases = 0.obs;
-  var pendingPurchases = 0.obs;
-  var totalPurchaseAmount = 0.0.obs;
-  var pendingPurchaseAmount = 0.0.obs;
-  var purchaseList = <PurchaseEntry>[].obs;
-  var overduePurchases = 0.obs;
-  var overduePurchaseAmount = 0.0.obs;
-  var appVersion = '1.0.0'.obs;
-  var userName = ''.obs;
-  var userEmail = ''.obs;
-  StreamSubscription<DocumentSnapshot>? _subscriptionListener;
-  var todayCashAmount = 0.0.obs;
-  var todayCashInvoices = 0.obs;
-  var todayUpiAmount = 0.0.obs;
-  var todayUpiInvoices = 0.obs;
-  var todayCardAmount = 0.0.obs;
-  var todayCardInvoices = 0.obs;
-  var purchaseStatusData = <ChartData>[].obs;
-  StreamSubscription? _companyFeaturesListener;
+  // 👤 કરંટ યુઝર ઈમેલ ગેટર
+  String get userEmail => FirebaseAuth.instance.currentUser?.email ?? '';
 
   @override
   void onInit() {
     super.onInit();
-    // 🔹 Initialize chart data with zeros
-    invoiceStatusData.assignAll([
-      ChartData("Paid", 0.0, Colors.green),
-      ChartData("Pending", 0.0, Colors.orange),
-      ChartData("Overdue", 0.0, Colors.red),
-    ]);
-
-    // Purchase Data Init
-    purchaseStatusData.assignAll([
-      ChartData("Paid", 0.0, Colors.green),
-      ChartData("Pending", 0.0, Colors.orange),
-      ChartData("Overdue", 0.0, Colors.red),
-    ]);
-    // Sheet validation runs from splash; skip here to avoid ANR and duplicate work
-    checkSubscriptionStatus();
-
-    _initializeDashboard();
-    _loadAppVersion();
-    ever(invoiceList, (_) {
-      if (!_isInitializing && _hasInitialized) {
-        calculateStats();
-      }
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startOverdueChecker());
-    _setupLifecycleObserver();
+    initAndLoadStats(); // 🚀 રીસ્ટાર્ટ વખતે ઓટો-કનેક્ટ અને સ્ટેટ્સ લોડ કરશે
   }
 
-
-  void _listenCompanyFeatures() {
-    final user = FirebaseAuth.instance.currentUser;
-    // ✅ Use companyId.value (set in _loadCompanyData)
-    final cid = companyId.value.isNotEmpty
-        ? companyId.value
-        : AppConstants.companyId;
-
-    if (user == null || cid.isEmpty) {
-      print('⚠️ _listenCompanyFeatures: no user or companyId');
-      return;
-    }
-
-    // Cancel previous listener if any
-    _companyFeaturesListener?.cancel();
-
-    print('🎧 Listening company features: $cid');
-
-    _companyFeaturesListener = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('companies')
-        .doc(cid)
-        .snapshots()
-        .listen((snap) {
-      if (!snap.exists) return;
-      final data = snap.data() ?? {};
-
-      // ✅ enableCustomerOrderFeature real-time sync
-      final orderFeature = data['enableCustomerOrderFeature'] == true;
-      if (AppConstants.enableCustomerOrderFeature.value != orderFeature) {
-        AppConstants.enableCustomerOrderFeature.value = orderFeature;
-        AppConstants.setEnableCustomerOrderFeature(orderFeature);
-        print('🔄 enableCustomerOrderFeature: $orderFeature');
-      }
-
-      // ✅ Payment / Receipt + Purchase (missing Firestore field = ON)
-      final payFeature = data['enablePaymentReceiptFeature'] != false;
-      if (AppConstants.enablePaymentReceiptFeature.value != payFeature) {
-        AppConstants.enablePaymentReceiptFeature.value = payFeature;
-        AppConstants.setEnablePaymentReceiptFeature(payFeature);
-        print('🔄 enablePaymentReceiptFeature: $payFeature');
-      }
-      final bt = (data['businessType'] ?? AppConstants.businessType).toString().trim();
-      final isTrading = bt == 'Trading';
-      final purchaseFeature =
-          isTrading && (data['enablePurchaseFeature'] != false);
-      if (AppConstants.enablePurchaseFeature.value != purchaseFeature) {
-        AppConstants.enablePurchaseFeature.value = purchaseFeature;
-        AppConstants.setEnablePurchaseFeature(purchaseFeature);
-        print('🔄 enablePurchaseFeature: $purchaseFeature (trading=$isTrading)');
-      }
-
-      // ✅ allowDuplicateItems real-time sync
-      final allowDup = data['allowDuplicateItems'] == true;
-      if (AppConstants.allowDuplicateItems != allowDup) {
-        AppConstants.allowDuplicateItems = allowDup;
-        AppConstants.setAllowDuplicateItems(allowDup);
-        print('🔄 allowDuplicateItems: $allowDup');
-      }
-    }, onError: (e) {
-      print('❌ _listenCompanyFeatures error: $e');
-    });
-  }
-
-
-// ✅ NEW: Add lifecycle observer
-  void _setupLifecycleObserver() {
-    WidgetsBinding.instance.addObserver(
-      _DashboardLifecycleObserver(
-        onResumed: () {
-          if (_hasInitialized) {
-            print("🔄 App resumed, refreshing dashboard silently...");
-            refreshDataSilently();
-          }
-        },
-      ),
-    );
-  }
-
-  Future<void> _initializeDashboard() async {
-    // 🆕 Prevent multiple initializations
-    if (_hasInitialized) {
-      print("⚠️ Dashboard already initialized, skipping...");
-      return;
-    }
-
-    var bootOk = true;
+  /// 🔄 એપ રીસ્ટાર્ટ થાય ત્યારે ગૂગલ ડ્રાઈવ સાઇલન્ટ કનેક્ટ કરીને ડેટા લાવવાનું ફંક્શન
+  Future<void> initAndLoadStats() async {
     try {
-      _isInitializing = true;
       isLoading.value = true;
-      print("🔄 Starting dashboard initialization...");
-      await Future.wait([
-        _loadUserData(),
-        _loadCompanyData(),
-      ]);
-      await _hydrateCompanySettingsFromCurrentCompanyOrFirestore();
-      _listenCompanyFeatures();
+
+      // SharedPreferences માંથી બધું લોડ કરો
+      await sharedPreferencesHelper.getSharedPreferencesInstance();
+      await AppConstants.loadFromPrefs();
+
+      String currentYear = AppConstants.activeFy;
+
+      if (!GoogleSheetsService.isSignedIn && userEmail.isNotEmpty) {
+        bool isConnected = await GoogleSheetsService.signInSilentlyWithEmail(userEmail);
+        if (isConnected) {
+          String uId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+
+          // Google Sheets માં એક્ટિવ શીટ સેટ કરો
+          GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
+
+          await GoogleSheetsService.setupUserDriveAndSheet(uId, currentYear);
+        }
+      }
+      
+      // Ensure active sheet is correct even if already signed in
+      GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
+
+      await loadStats();
     } catch (e) {
-      print("❌ Error initializing dashboard: $e");
-      bootOk = false;
-      _hasInitialized = false;
+      debugPrint('[DashboardController] Initialization Error: $e');
     } finally {
-      // First paint ASAP: sheet lists load after UI is shown (biggest win after login).
-      _isInitializing = false;
       isLoading.value = false;
-      _shimmerAlreadyShown.value = true;
-    }
-
-    if (!bootOk) return;
-
-    try {
-      await loadDashboardData();
-      _hasInitialized = true;
-      print("✅ Dashboard initialization complete");
-    } catch (e) {
-      print("❌ loadDashboardData: $e");
-      _hasInitialized = true;
     }
   }
 
-  /// Uses [currentCompany] from [_loadCompanyData] when possible to skip an extra Firestore read.
-  Future<void> _hydrateCompanySettingsFromCurrentCompanyOrFirestore() async {
-    final cached = currentCompany.value;
-    if (cached != null && cached.isNotEmpty) {
-      try {
-        final isChallanEnabled = cached['isChallanEnabled'] == true;
-        final isCashMemoEnabled = cached['isCashMemoEnabled'] == true;
-        final isGstEnabled = cached['isGstEnabled'] == true;
+  /// 📊 ગૂગલ શીટમાંથી લાઈવ ડેટા ખેંચીને ગણતરી કરવાનું મુખ્ય ફંક્શન
+  Future<void> loadStats() async {
+    try {
+      isLoading.value = true;
 
-        await Future.wait([
-          sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled),
-          sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled),
-          sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled),
-        ]);
+      final allReceipts = await GoogleSheetsService.fetchAllReceipts();
+      allReceiptsList.value = allReceipts;
 
-        AppConstants.isChallan.value = isChallanEnabled;
-        AppConstants.isCashMemo.value = isCashMemoEnabled;
-        AppConstants.withGST.value = isGstEnabled;
+      if (allReceipts.isNotEmpty) {
+        totalReceipts.value = allReceipts.length;
 
-        final businessType = (cached['businessType'] ?? 'Trading').toString();
-        await AppConstants.setBusinessType(businessType);
-        if (businessType.trim() == 'Trading') {
-          await AppConstants.setEnablePurchaseFeature(
-              cached['enablePurchaseFeature'] != false);
+        final now = DateTime.now();
+        final String todayStr = DateFormat('dd/MM/yyyy').format(now);
+        final String currentMonthStr = DateFormat('MM/yyyy').format(now);
+
+        double calcTotalAmount = 0.0;
+        double calcMonthAmount = 0.0;
+        double calcTodayAmount = 0.0;
+
+        for (var receipt in allReceipts) {
+          final amt = receipt.amount;
+          calcTotalAmount += amt;
+
+          if (receipt.date == todayStr) {
+            calcTodayAmount += amt;
+          }
+
+          if (receipt.date.endsWith(currentMonthStr)) {
+            calcMonthAmount += amt;
+          }
         }
-        return;
-      } catch (e) {
-        print('hydrate company settings from cache: $e');
-      }
-    }
-    await loadCompanySettings();
-  }
 
-  Future<void> _tryAttachCompanyLogoFromSheet(String companyDocId) async {
-    try {
-      final url = await GoogleSheetService.getCompanyLogoUrl(companyDocId);
-      if (url != null && url.isNotEmpty && currentCompany.value != null) {
-        final m = Map<String, dynamic>.from(currentCompany.value!);
-        m['logo'] = url;
-        currentCompany.value = m;
-      }
-    } catch (_) {}
-  }
+        totalAmount.value = calcTotalAmount;
+        todayAmount.value = calcTodayAmount;
+        monthAmount.value = calcMonthAmount;
 
-  Future<void> _loadUserData() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        userEmail.value = user.email ?? '';
-
-        // Try to get user name from Firestore
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          userName.value = data?['username'] ?? data?['displayName'] ??
-              user.displayName ??
-              user.email!.split('@').first;
-        } else {
-          userName.value = user.displayName ?? user.email!.split('@').first;
-        }
+        final reversedList = allReceipts.reversed.toList();
+        recentReceipts.value = reversedList.take(5).toList();
+      } else {
+        _resetStats();
       }
     } catch (e) {
-      print('Error loading user data: $e');
-      final user = FirebaseAuth.instance.currentUser;
-      userName.value = user?.displayName ?? user?.email?.split('@').first ?? 'User';
-      userEmail.value = user?.email ?? '';
+      debugPrint('[DashboardController] Error calculation stats: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  // ✅ SILENT REFRESH (No Loading Spinner)
-  Future<void> refreshDataSilently() async {
-    print("🔄 Refreshing dashboard data silently...");
+  void _resetStats() {
+    totalReceipts.value = 0;
+    totalAmount.value = 0.0;
+    monthAmount.value = 0.0;
+    todayAmount.value = 0.0;
+    recentReceipts.clear();
+    allReceiptsList.clear();
+  }
 
-    if (_auth.currentUser == null) {
-      print("⚠️ refreshDataSilently skipped: no signed-in user");
+  void refreshDashboard() => initAndLoadStats();
+
+  // DashboardController.dart માં ઉમેરો
+  void updateDashboardAfterSettings() {
+    // સેટિંગ્સ બદલાયા પછી, જૂનો ડેટા સાફ કરીને નવું લોડ કરો
+    _resetStats();
+    initAndLoadStats();
+  }
+
+  // 📅 Report Logic
+  Future<void> selectFromDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: fromDate.value ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      fromDate.value = picked;
+    }
+  }
+
+  Future<void> selectToDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: toDate.value ?? DateTime.now(),
+      firstDate: fromDate.value ?? DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      toDate.value = picked;
+    }
+  }
+
+  String formatDate(DateTime? date) {
+    if (date == null) return "Select date";
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  int get selectedDaysCount {
+    if (fromDate.value == null || toDate.value == null) return 0;
+    return toDate.value!.difference(fromDate.value!).inDays + 1;
+  }
+
+  Future<void> exportToPdf() async {
+    if (fromDate.value == null || toDate.value == null) {
+      Get.snackbar("Error", "Please select date range first", 
+        backgroundColor: Colors.red.shade100, colorText: Colors.red.shade900);
       return;
     }
 
-    // નોંધ: અહીં isLoading.value = true નથી કરતા, જેથી Shimmer ના આવે.
-
     try {
-      // બધો ડેટા બેકગ્રાઉન્ડમાં અપડેટ કરો
-      await Future.wait([
-        loadInvoices(),       // Invoices અને તેના Stats અપડેટ થશે
-        loadPurchases(),      // Purchases અને તેના Stats અપડેટ થશે
-        loadCustomerCount(),  // Customer Count અપડેટ થશે
-        getMonthlyRevenueData() // Chart Data અપડેટ થશે
-      ]);
-
-      print("✅ Silent refresh completed successfully");
-    } catch (e) {
-      print("❌ Error in silent refresh: $e");
-    }
-  }
-
-  // Add this method to save the challan preference to SharedPreferences
-  Future<void> saveChallanPreference(bool isEnabled) async {
-    print("Is Enable Valure : --------- ${isEnabled}");
-
-    try {
-      await updateCompanyPreference('isChallanEnabled', isEnabled);
-
-      /// Also update in Firestore
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null && companyId.isNotEmpty) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('companies')
-            .doc(companyId.toString())
-            .update({'isChallanEnabled': isEnabled});
-      }
-
-      print('Challan preference saved: $isEnabled');
-    } catch (e) {
-      print('Error saving challan preference to SharedPreferences: $e');
-    }
-  }
-
-  void _startOverdueChecker() {
-    // Check once immediately
-    _updateOverdueInvoices();
-    _updateOverduePurchases();
-
-    // Then check every hour
-    Timer.periodic(Duration(hours: 1), (timer) {
-      _updateOverdueInvoices();
-      _updateOverduePurchases(); // ← Add this line
-    });
-  }
-
-  Future<void> _updateOverdueInvoices() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    bool hasChanges = false;
-
-    for (var invoice in invoiceList) {
-      final status = invoice.status?.toLowerCase().trim();
-
-      // Check if pending invoice is now overdue
-      if ((status == "pending" || status == "unpaid") && invoice.dueDate != null) {
-        final dueDate = DateTime(
-          invoice.dueDate!.year,
-          invoice.dueDate!.month,
-          invoice.dueDate!.day,
-        );
-
-        // 🔹 FIXED: Check if TODAY is AFTER due date (not before)
-        if (today.isAfter(dueDate) && status != "overdue") {
-          print("⚠️ Invoice ${invoice.invoiceId} is now overdue! "
-              "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
-          hasChanges = true;
-
-        }
-      }
-    }
-
-    if (hasChanges) {
-      // Recalculate stats
-      calculateStats();
-    }
-  }
-
-  Future<void> _updateOverduePurchases() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    bool hasChanges = false;
-
-    for (var purchase in purchaseList) {
-      final status = purchase.paymentStatus?.toLowerCase().trim();
-
-      // Check if pending purchase is now overdue
-      if ((status == "pending" || status == "unpaid") && purchase.dueDate != null) {
-        final dueDate = DateTime(
-          purchase.dueDate!.year,
-          purchase.dueDate!.month,
-          purchase.dueDate!.day,
-        );
-
-        if (today.isAfter(dueDate) && status != "overdue") {
-          print("⚠️ Purchase ${purchase.purchaseId ?? 'N/A'} is now overdue! "
-              "Due: ${_formatDate(dueDate)}, Today: ${_formatDate(today)}");
-          hasChanges = true;
-
-        }
-      }
-    }
-
-    if (hasChanges) {
-      // Recalculate stats
-      _calculatePurchaseStats();
-    }
-  }
-
-  Future<void> updateCompanyPreference(String key, bool value) async {
-    // Update local cache
-    await sharedPreferencesHelper.storeBoolPrefData(key, value);
-
-    // Update local observable
-    if (key == 'isChallanEnabled') AppConstants.isChallan.value = value;
-    if (key == 'isCashMemoEnabled') AppConstants.isCashMemo.value = value;
-    if (key == 'isGstEnabled') AppConstants.withGST.value = value;
-
-    // Update Firestore
-    final user = _auth.currentUser;
-    if (user != null && companyId.value.isNotEmpty) {  // ✅ use companyId.value
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('companies')
-          .doc(companyId.value) // ✅ not AppConstants.companyId
-          .update({key: value});
-    }
-
-    print("✅ Company Preference Updated → $key = $value "
-        "(Local: ${AppConstants.isChallan.value}, GST: ${AppConstants.withGST.value})");
-  }
-
-
-
-  Future<void> checkSubscriptionStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    print("🎧 Starting Real-time Subscription Listener...");
-
-    _subscriptionListener = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .snapshots()
-        .listen((snapshot) {
-
-      if (snapshot.exists) {
-        final data = snapshot.data();
-        // Get the endDate from Firestore
-        final endDateTimestamp = data?['endDate'] as Timestamp?;
-
-        if (endDateTimestamp != null) {
-          final endDate = endDateTimestamp.toDate();
-          final now = DateTime.now();
-
-          print("🔄 Real-time Status Check: Now($now) vs EndDate($endDate)");
-
-          // Check if subscription has EXPIRED
-          if (now.isAfter(endDate)) {
-            print("❌ Subscription EXPIRED. Locking App.");
-
-            if (Get.isDialogOpen != true) {
-              Get.dialog(
-                WillPopScope(
-                  onWillPop: () async => false,
-                  child: const SubscriptionDialog(),
-                ),
-                barrierDismissible: false, // Prevents clicking outside to close
-              );
-            }
-          } else {
-            print("✅ Subscription ACTIVE.");
-
-            if (Get.isDialogOpen == true) {
-              Get.back(); // Close the blocking dialog
-            }
-          }
-        } else {
-          print("⚠️ No 'endDate' field found in user document.");
-        }
-      }
-    }, onError: (e) {
-      print("❌ Error in subscription listener: $e");
-    });
-  }
-
-
-  // Set current company and save to preferences
-  void _setCurrentCompany(Map<String, dynamic> company) {
-    currentCompany.value = company;
-    companyId.value = company['id'];
-
-    sharedPreferencesHelper.storePrefData("CompanyId" , company['id']);
-    AppConstants.companyId = company['id'];
-
-    print("Current company set: ${company['companyName']} (${company['id']})");
-  }
-
-  Future<void> _loadAppVersion() async {
-    try {
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      appVersion.value = '${packageInfo.version} (${packageInfo.buildNumber})';
-      print("📱 App Version: ${appVersion.value}");
-    } catch (e) {
-      print('❌ Error loading package info: $e');
-      appVersion.value = '1.0.0';
-    }
-  }
-
-  Future<void> loadCompanySettings() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || companyId.value.isEmpty) return;
-
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('companies')
-          .doc(companyId.value)
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data();
-        if (data != null) {
-          final isChallanEnabled = data['isChallanEnabled'] ?? false;
-          final isCashMemoEnabled = data['isCashMemoEnabled'] ?? false;
-          final isGstEnabled = data['isGstEnabled'] ?? false;
-
-          await sharedPreferencesHelper.storeBoolPrefData('isChallanEnabled', isChallanEnabled);
-          await sharedPreferencesHelper.storeBoolPrefData('isCashMemoEnabled', isCashMemoEnabled);
-          await sharedPreferencesHelper.storeBoolPrefData('isGstEnabled', isGstEnabled);
-
-          AppConstants.isChallan.value = isChallanEnabled;
-          AppConstants.isCashMemo.value = isCashMemoEnabled;
-          AppConstants.withGST.value = isGstEnabled;
-
-          final businessType = data['businessType'] ?? 'Trading';
-          await AppConstants.setBusinessType(businessType);
-          if (businessType.toString().trim() == 'Trading') {
-            await AppConstants.setEnablePurchaseFeature(
-                data['enablePurchaseFeature'] != false);
-          }
-        }
-      }
-    } catch (e) {
-      print('Error loading company settings: $e');
-    }
-  }
-
-  Future<void> _loadCompanyData() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      final companyDocs = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .where('isActive', isEqualTo: true)
-          .limit(1)
-          .get();
-
-      if (companyDocs.docs.isNotEmpty) {
-        final doc = companyDocs.docs.first;
-        final data = doc.data();
-
-        currentCompany.value = data;
-        currentCompany.value!['id'] = doc.id;
-        companyId.value = doc.id;
-
-        // Logo from sheet is slow — load after dashboard is visible.
-        if (data['logo'] == null || data['logo'].toString().trim().isEmpty) {
-          unawaited(_tryAttachCompanyLogoFromSheet(doc.id));
-        }
-
-        String fetchedName = data['companyName'] ?? '';
-        if (fetchedName.isNotEmpty) {
-          await AppConstants.setCompanyName(fetchedName);
-        }
-
-        AppConstants.companyId = companyId.value;
-        await sharedPreferencesHelper.storePrefData("CompanyId", doc.id);
-
-        print("Active company loaded: ${data['companyName'] ?? 'Unknown'}");
-      }
-    } catch (e) {
-      print("Error loading active company: $e");
-    }
-  }
-
-  /// URL અથવા Base64 સ્ટ્રિંગમાંથી લોગોના બાઈટ્સ લોડ કરવા માટે
-  Future<Uint8List?> _loadLogoBytes(String? logo) async {
-    if (logo == null || logo.trim().isEmpty) return null;
-    final s = logo.trim();
-    try {
-      // ૧. જો ડેટા Base64 ફોર્મેટમાં હોય
-      if (s.startsWith('data:') && s.contains('base64,')) {
-        final idx = s.indexOf('base64,');
-        if (idx >= 0) {
-          final base64String = s.substring(idx + 7).trim();
-          if (base64String.isNotEmpty) return Uint8List.fromList(base64Decode(base64String));
-        }
-        return null;
-      }
-
-      // ૨. જો ડેટા HTTP/HTTPS URL હોય
-      if (s.startsWith('http://') || s.startsWith('https://')) {
-        final response = await http.get(Uri.parse(s)).timeout(const Duration(seconds: 10));
-        if (response.statusCode == 200) return response.bodyBytes;
-      }
-    } catch (e) {
-      print("❌ Error loading logo bytes: $e");
-    }
-    return null;
-  }
-
-  Future<void> loadDashboardData() async {
-    try {
-      // Shimmer only from _initializeDashboard(); don't set here to avoid double shimmer
-      // if (!_hasInitialized) {
-      //   isLoading.value = true;
-      // }
-
-      if (_auth.currentUser == null) {
-        print("⚠️ loadDashboardData skipped: no signed-in user (e.g. login screen)");
-        return;
-      }
-
-      print("🔄 Loading dashboard data...");
-
-      // Load invoices and purchases in parallel (biggest win on web)
-      await Future.wait([
-        loadInvoices(),
-        loadPurchases(),
-      ]);
-
-      // Then customer count and revenue chart in parallel
-      await Future.wait([
-        loadCustomerCount(),
-        getMonthlyRevenueData(),
-      ]);
-
-    } catch (error) {
-      print("Failed to load dashboard data: ${error.toString()}");
-
-    } finally {
-      if (!_isInitializing) {
+      isLoading.value = true;
+      final pdf = pw.Document();
+
+      // Load Logo
+      pw.MemoryImage? logo;
+      try {
+        final data = await rootBundle.load('assets/images/app_logo_2.png');
+        logo = pw.MemoryImage(data.buffer.asUint8List());
+      } catch (_) {}
+
+      // Filter Data
+      List<ReceiptModel> filteredList = allReceiptsList.where((r) {
+        DateTime receiptDate = DateFormat('dd/MM/yyyy').parse(r.date);
+        return receiptDate.isAfter(fromDate.value!.subtract(const Duration(days: 1))) && 
+               receiptDate.isBefore(toDate.value!.add(const Duration(days: 1)));
+      }).toList();
+
+      if (filteredList.isEmpty) {
+        Get.snackbar("Info", "No data found for selected range",
+          backgroundColor: Colors.orange.shade100, colorText: Colors.orange.shade900);
         isLoading.value = false;
-      }
-    }
-  }
-
-  Future<void> loadInvoices() async {
-    try {
-      print("=== ATTEMPTING TO FETCH INVOICES ===");
-
-      final currentUserId = _auth.currentUser?.uid;
-      if (currentUserId == null) {
-        print("⚠️ loadInvoices skipped: no signed-in user");
         return;
       }
 
-      List<Invoice> invoices = [];
-
-      // Try Google Sheets first
-      try {
-        invoices = await GoogleSheetService.getInvoices(type: "INV");
-      } catch (e) {
-        print("Google Sheets failed: $e");
-        invoices = await GoogleSheetService.getInvoices();
-      }
-
-      await Future.delayed(Duration.zero);
-
-      List<Invoice> userInvoices = invoices
-          .where((invoice) => invoice.userId == currentUserId)
-          .toList();
-
-      if (userInvoices.isEmpty) {
-        invoiceList.clear();
-        totalRevenue.value = 0.0;
-        _clearStats();
-        return;
-      }
-
-      await Future.delayed(Duration.zero);
-      invoiceList.assignAll(userInvoices);
-
-      Future.microtask(() {
-        if (!_isInitializing) {
-          calculateStats();
-        } else {
-          _calculateStatsInternal();
-        }
-      });
-    } catch (e) {
-      print("Error in loadInvoices(): $e");
-    }
-  }
-
-  Future<void> loadPurchases() async {
-    try {
-      print("=== ATTEMPTING TO FETCH PURCHASES ===");
-
-      final currentUserId = _auth.currentUser?.uid;
-      if (currentUserId == null) {
-        print("⚠️ loadPurchases skipped: no signed-in user");
-        return;
-      }
-
-      List<PurchaseEntry> purchases = await GoogleSheetService.getPurchasesList();
-
-      await Future.delayed(Duration.zero);
-
-      List<PurchaseEntry> userPurchases = purchases
-          .where((purchase) => purchase.userId == currentUserId)
-          .toList();
-
-      if (userPurchases.isEmpty) {
-        _clearPurchaseStats();
-        return;
-      }
-
-      await Future.delayed(Duration.zero);
-      purchaseList.assignAll(userPurchases);
-
-      Future.microtask(() => _calculatePurchaseStats());
-    } catch (e) {
-      print("Error in loadPurchases(): $e");
-    }
-  }
-
-  void _clearPurchaseStats() {
-    totalPurchases.value = 0;
-    paidPurchases.value = 0;
-    pendingPurchases.value = 0;
-    totalPurchaseAmount.value = 0.0;
-    pendingPurchaseAmount.value = 0.0;
-    overduePurchases.value = 0;
-    overduePurchaseAmount.value = 0.0;
-
-    print("🧹 Purchase stats cleared");
-  }
-
-  void _calculatePurchaseStats() {
-    int totalCount = 0;
-    int paidCount = 0;
-    int pendingCount = 0;
-    int overdueCount = 0;
-
-    double totalAmount = 0.0;
-    double pendingAmount = 0.0;
-    double overdueAmount = 0.0;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    for (var purchase in purchaseList) {
-      totalCount++;
-      totalAmount += purchase.totalAmount ?? 0.0;
-
-      final status = purchase.paymentStatus?.toLowerCase().trim();
-      final amount = purchase.totalAmount ?? 0.0;
-      final pendingAmt = purchase.pendingAmount ?? amount;
-
-      if (status == "paid" || status == "completed") {
-        paidCount++;
-      } else {
-        bool isOverdue = false;
-
-        if (purchase.dueDate != null) {
-          final dueDate = DateTime(
-            purchase.dueDate!.year,
-            purchase.dueDate!.month,
-            purchase.dueDate!.day,
-          );
-          isOverdue = today.isAfter(dueDate);
-
-          if (isOverdue) {
-            overdueCount++;
-            overdueAmount += pendingAmt;
-          } else {
-            pendingCount++;
-            pendingAmount += pendingAmt;
-          }
-        } else {
-          pendingCount++;
-          pendingAmount += pendingAmt;
-        }
-        if (isOverdue) {
-          pendingAmount += pendingAmt;
-        }
-      }
-    }
-
-    totalPurchases.value = totalCount;
-    paidPurchases.value = paidCount;
-    pendingPurchases.value = pendingCount;
-    totalPurchaseAmount.value = totalAmount;
-    pendingPurchaseAmount.value = pendingAmount;
-    overduePurchases.value = overdueCount;
-    overduePurchaseAmount.value = overdueAmount;
-
-    purchaseStatusData.assignAll([
-      ChartData('Paid', paidCount.toDouble(), Colors.green),
-      ChartData('Pending', pendingCount.toDouble(), Colors.orange),
-      ChartData('Overdue', overdueCount.toDouble(), Colors.red),
-    ]);
-  }
-
-  void _calculateTodayPaymentMethods() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    double cashTotal = 0.0;
-    int cashCount = 0;
-
-    double upiTotal = 0.0;
-    int upiCount = 0;
-
-    double cardTotal = 0.0;
-    int cardCount = 0;
-
-    double todayProf = 0.0;
-
-    for (var invoice in invoiceList) {
-      final paymentMode = (invoice.paymentMode ?? "").toLowerCase().trim();
-      final status = (invoice.status ?? "").toLowerCase().trim();
-      final received = invoice.receivedAmount ?? 0.0;
-      final total = invoice.totalAmount ?? 0.0;
-
-      // 1) Payment received today: updatedAt = today and (Paid or Partial) with receivedAmount > 0
-      final updatedAt = invoice.updatedAt;
-      final updatedAtDate = updatedAt != null
-          ? DateTime(updatedAt.year, updatedAt.month, updatedAt.day)
-          : null;
-      final isPaidOrPartial = status == 'paid' || status == 'partial' || status == 'completed' || status == 'accepted';
-      final paymentReceivedToday = isPaidOrPartial && received > 0 && updatedAtDate != null && updatedAtDate.isAtSameMomentAs(today);
-
-      // 2) Issued today (backward compatibility: when no updatedAt, use issueDate for today's collection)
-      final issueDate = invoice.issueDate;
-      final issueDateOnly = issueDate != null
-          ? DateTime(issueDate.year, issueDate.month, issueDate.day)
-          : null;
-      final issuedToday = issueDateOnly != null && issueDateOnly.isAtSameMomentAs(today);
-
-      double amountToAdd = 0.0;
-      bool countToday = false;
-      if (paymentReceivedToday) {
-        amountToAdd = received;
-        countToday = true;
-        // Profit proportional to received amount (partial payment = only that share of profit for today)
-        final invProfit = invoice.profit ?? 0.0;
-        final ratio = (total > 0) ? (received / total).clamp(0.0, 1.0) : 0.0;
-        todayProf += invProfit * ratio;
-      } else if (issuedToday && paymentMode.isNotEmpty) {
-        // Old behaviour: invoice issued today, use totalAmount by mode (when no updatedAt paid-today)
-        amountToAdd = total;
-        countToday = true;
-        todayProf += (invoice.profit ?? 0.0);
-      }
-
-      if (!countToday || amountToAdd <= 0) continue;
-
-      if (paymentMode == "cash") {
-        cashTotal += amountToAdd;
-        cashCount++;
-      } else if (paymentMode == "upi") {
-        upiTotal += amountToAdd;
-        upiCount++;
-      } else if (paymentMode == "card") {
-        cardTotal += amountToAdd;
-        cardCount++;
-      }
-    }
-
-    todayCashAmount.value = cashTotal;
-    todayCashInvoices.value = cashCount;
-    todayUpiAmount.value = upiTotal;
-    todayUpiInvoices.value = upiCount;
-    todayCardAmount.value = cardTotal;
-    todayCardInvoices.value = cardCount;
-    todayProfit.value = todayProf;
-  }
-
-  void _clearStats() {
-    paidCount.value = 0;
-    pendingCount.value = 0;
-    overdueCount.value = 0;
-    totalRevenue.value = 0.0;
-    pendingAmount.value = 0.0;
-    overdueAmount.value = 0.0;
-
-    totalPurchases.value = 0;
-    paidPurchases.value = 0;
-    overduePurchases.value = 0;
-    pendingPurchases.value = 0;
-    totalPurchaseAmount.value = 0.0;
-    pendingPurchaseAmount.value = 0.0;
-    overduePurchaseAmount.value = 0.0;
-    totalProfit.value = 0.0;
-    todayProfit.value = 0.0;
-    // 🔹 FIXED: Initialize with zero values instead of clearing
-    invoiceStatusData.assignAll([
-      ChartData("Paid", 0.0, Colors.green),
-      ChartData("Pending", 0.0, Colors.orange),
-      ChartData("Overdue", 0.0, Colors.red),
-    ]);
-  }
-
-  // 🔹 NEW: Internal stats calculation (doesn't trigger reactive updates)
-  void _calculateStatsInternal() {
-    int paidCnt = 0;
-    int pendingCnt = 0;
-    int overdueCnt = 0;
-
-    double totalRev = 0.0;
-    double pendingAmt = 0.0;
-    double overdueAmt = 0.0;
-    double totalProf = 0.0;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    for (var invoice in invoiceList) {
-      // 1. ડેટા મેળવો
-      String status = invoice.status?.toLowerCase().trim() ?? '';
-      final amount = invoice.totalAmount ?? 0.0;
-      final pending = invoice.pendingAmount ?? amount;
-      final received = invoice.receivedAmount ?? 0.0;
-
-      totalProf += (invoice.profit ?? 0.0);
-
-      // 🔹 FIX: જો Sheet માં Status ખાલી હોય, તો રકમ પરથી નક્કી કરો
-      if (status.isEmpty) {
-        if (pending <= 0.1) {
-          status = 'paid'; // બાકી 0 હોય તો Paid
-        } else if (received > 0) {
-          status = 'partial'; // થોડા મળ્યા હોય તો Partial
-        } else {
-          status = 'pending'; // કંઈ ન મળ્યું હોય તો Pending
-        }
-      }
-
-      totalRev += amount;
-
-      // 2. ગણતરી (Calculation)
-      if (status == "paid" || status == "completed" || status == "accepted") {
-        paidCnt++;
-      } else {
-        // Due Date ચેક કરો
-        bool isOverdue = false;
-        if (invoice.dueDate != null) {
-          final dueDate = DateTime(
-            invoice.dueDate!.year,
-            invoice.dueDate!.month,
-            invoice.dueDate!.day,
-          );
-          // જો આજની તારીખ Due Date પછીની હોય તો Overdue ગણવું
-          isOverdue = today.isAfter(dueDate);
-        }
-
-        if (isOverdue) {
-          overdueCnt++;
-          overdueAmt += pending;
-        } else {
-          // Pending, Unpaid અથવા Partial હોય તો Pending માં ગણવું
-          pendingCnt++;
-          pendingAmt += pending;
-        }
-      }
-    }
-
-    // 3. અપડેટ કરો (Update Variables)
-    paidCount.value = paidCnt;
-    pendingCount.value = pendingCnt;
-    overdueCount.value = overdueCnt;
-    totalRevenue.value = totalRev;
-    pendingAmount.value = pendingAmt;
-    overdueAmount.value = overdueAmt;
-    paidInvoices.value = paidCnt;
-    unpaidInvoices.value = pendingCnt;
-    overdueInvoices.value = overdueCnt;
-    totalProfit.value = totalProf;
-
-    print("--------------Tot ProFit:----- ${totalProfit.value}");
-    // Chart Data Update
-    invoiceStatusData.assignAll([
-      ChartData("Paid", paidCnt.toDouble(), Colors.green),
-      ChartData("Pending", pendingCnt.toDouble(), Colors.orange),
-      ChartData("Overdue", overdueCnt.toDouble(), Colors.red),
-    ]);
-
-    // Payment Methods Update
-    _calculateTodayPaymentMethods();
-
-    print("✅ Stats Calculated: Paid=$paidCnt, Pending=$pendingCnt, Overdue=$overdueCnt");
-  }
-
-  double calculateTotalRevenue() {
-    double total = 0.0;
-    for (var invoice in invoiceList) {
-      total += invoice.totalAmount ?? 0.0;
-    }
-    return total;
-  }
-
-  void calculateStats() {
-    _calculateStatsInternal();
-    _calculateTodayPaymentMethods();
-  }
-
-
-  double calculatePendingAmount() {
-    double total = 0.0;
-    for (var invoice in invoiceList) {
-      if (invoice.status?.toLowerCase() == "pending" ||
-          invoice.status?.toLowerCase() == "unpaid") {
-        total += invoice.totalAmount ?? 0.0;
-      }
-    }
-    pendingAmount.value = total; // update observable
-    return total;
-  }
-
-  double calculatePaidAmount() {
-    double total = 0.0;
-    for (var invoice in invoiceList) {
-      if (invoice.status?.toLowerCase() == "paid") {
-        total += invoice.totalAmount ?? 0.0;
-      }
-    }
-    return total;
-  }
-
-  double calculateOverdueAmount() {
-    double total = 0.0;
-    for (var invoice in invoiceList) {
-      if (invoice.status?.toLowerCase() == "overdue") {
-        total += invoice.totalAmount ?? 0.0;
-      }
-    }
-    overdueAmount.value = total;
-    return total;
-  }
-
-
-
-// You can also add a reactive getter
-  double get totalRevenueFromList => calculateTotalRevenue();
-
-  // Switch to a different company
-  Future<void> switchCompany(Map<String, dynamic> newCompany) async {
-    try {
-      isLoading.value = true;
-
-      // Set new current company
-      _setCurrentCompany(newCompany);
-
-      // Reload dashboard data for new company
-      loadDashboardData();
-
-
-      showCustomSnackbar(
-        title: "Company Switched",
-        message: "Switched to ${newCompany['companyName']}",
-        baseColor: AppColors.greenColor2,
-        icon: Icons.business,
+      double totalRangeAmount = filteredList.fold(0.0, (sum, item) => sum + item.amount);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(30),
+          header: (context) => pw.Column(
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  if (logo != null) pw.Image(logo, width: 48, height: 48),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(AppStrings.trustName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 2),
+                      pw.Text(
+                          selectedReportType.value == 'Full Report' 
+                              ? "Collection Report (Detailed)" 
+                              : "Collection Report (Category-wise)", 
+                          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue700)),
+                      pw.Text("Period: ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}", style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                    ]
+                  ),
+                  if (logo != null) pw.Image(logo, width: 48, height: 48),
+                ]
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(thickness: 1, color: PdfColors.grey300),
+              pw.SizedBox(height: 10),
+            ]
+          ),
+          footer: (context) => pw.Column(
+            children: [
+              pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+              pw.SizedBox(height: 5),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Application By: iNTELLIGENT tECH", style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
+                  pw.Text("252, NEO Square, Jamnagar | Mo: 7383915985", style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                  pw.Text("Page ${context.pageNumber} of ${context.pagesCount}", style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
+                ],
+              ),
+            ]
+          ),
+          build: (context) {
+            if (selectedReportType.value == 'Full Report') {
+              return [
+                _buildReportTable(context, filteredList),
+                pw.SizedBox(height: 15),
+                _buildSummary(filteredList.length, totalRangeAmount),
+              ];
+            } else {
+              // Group by category (Normalized to handle case-insensitivity)
+              Map<String, List<ReceiptModel>> groupedData = {};
+              for (var r in filteredList) {
+                // Normalize key: Trim and uppercase to group 'general' and 'General' together
+                String normalizedCategory = r.donationType.trim().toUpperCase();
+                groupedData.putIfAbsent(normalizedCategory, () => []).add(r);
+              }
+
+              List<pw.Widget> content = [];
+              groupedData.forEach((category, items) {
+                double categoryTotal = items.fold(0.0, (sum, item) => sum + item.amount);
+                
+                // Use pw.Header to ensure category name stays with its table
+                content.add(
+                  pw.Header(
+                    level: 1,
+                    decoration: const pw.BoxDecoration(), // No bottom line
+                    padding: const pw.EdgeInsets.only(top: 15, bottom: 8),
+                    child: pw.Text(
+                      category,
+                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                    ),
+                  )
+                );
+                
+                content.add(_buildReportTable(context, items));
+                
+                content.add(
+                  pw.Container(
+                    alignment: pw.Alignment.centerRight,
+                    padding: const pw.EdgeInsets.only(top: 4, bottom: 15),
+                    child: pw.Text(
+                      "Category Total: Rs. ${NumberFormat('#,##,###.##').format(categoryTotal)}",
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                    ),
+                  )
+                );
+              });
+
+              content.add(pw.SizedBox(height: 10));
+              content.add(pw.Divider(thickness: 1, color: PdfColors.blue900));
+              content.add(_buildSummary(filteredList.length, totalRangeAmount));
+              return content;
+            }
+          },
+        ),
       );
 
+      // Save and Share
+      final directory = await getApplicationDocumentsDirectory();
+      String typeSuffix = selectedReportType.value == 'Detailed Report' ? "Detailed" : "Category";
+      String fileName = "Receipts_${typeSuffix}_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.pdf";
+      String filePath = "${directory.path}/$fileName";
+      
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+
+      isLoading.value = false;
+      
+      // Open Share Sheet
+      await Share.shareXFiles([XFile(filePath)], text: "Receipts Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}");
+
     } catch (e) {
-      print("Error switching company: $e");
-      showCustomSnackbar(
-        title: "Error",
-        message: "Failed to switch company",
-        baseColor: AppColors.errorColor,
-        icon: Icons.error,
-      );
+      debugPrint("Export Error: $e");
+      Get.snackbar("Export Failed", e.toString(),
+        backgroundColor: Colors.red.shade100, colorText: Colors.red.shade900);
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Show company selection dialog
-  void showCompanySwitcher() {
-    if (!hasMultipleCompanies.value) {
-      showCustomSnackbar(
-        title: "Info",
-        message: "You only have one company registered",
-        baseColor: AppColors.appColor,
-        icon: Icons.info,
-      );
-      return;
-    }
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [Colors.blue.shade50, Colors.white],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Icon(Icons.swap_horiz, color: Colors.blue.shade700, size: 24),
-                  SizedBox(width: 12),
-                  Text(
-                    "Switch Company",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
-                  Spacer(),
-                  IconButton(
-                    onPressed: () => Get.back(),
-                    icon: Icon(Icons.close, color: Colors.grey),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: 16),
-
-              // Company list
-              Container(
-                constraints: BoxConstraints(maxHeight: 300),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: allUserCompanies.map((company) {
-                      final isCurrentCompany = company['id'] == companyId.value;
-
-                      return Container(
-                        margin: EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          onTap: isCurrentCompany ? null : () {
-                            Get.back();
-                            switchCompany(company);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isCurrentCompany
-                                  ? Colors.blue.shade100
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isCurrentCompany
-                                    ? Colors.blue.shade300
-                                    : Colors.grey.shade300,
-                                width: isCurrentCompany ? 2 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: isCurrentCompany
-                                        ? Colors.blue.shade700
-                                        : Colors.grey.shade400,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.business,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        company['companyName'] ?? 'Unknown Company',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isCurrentCompany
-                                              ? Colors.blue.shade700
-                                              : Colors.black87,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        company['companyCode'] ?? '',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (isCurrentCompany)
-                                  Container(
-                                    padding: EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade700,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // Add new company button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Get.back();
-                    Get.toNamed(CompanyRegistrationScreen.pageId);
-                  },
-                  icon: Icon(Icons.add_business),
-                  label: Text("Add New Company"),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    foregroundColor: Colors.blue.shade700,
-                    side: BorderSide(color: Colors.blue.shade700),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: true,
-    );
-  }
-
-
-  // Load actual dashboard statistics from Firebase
-  Future<void> _loadDashboardStatistics() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || companyId.value.isEmpty) {
-        // Use mock data if no company
-        _loadMockData();
-        return;
-      }
-
-      // Load actual invoices from Firebase
-      final invoicesSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId.value)
-          .collection("invoices")
-          .get();
-
-      // Calculate statistics from actual data
-      int totalCount = invoicesSnapshot.docs.length;
-      int paidCount = 0;
-      int unpaidCount = 0;
-      int overdueCount = 0;
-      int draftCount = 0;
-      double totalRev = 0.0;
-      double pendingAmt = 0.0;
-      double overdueAmt = 0.0;
-
-      List<Invoice> recentInvoicesList = [];
-
-      for (var doc in invoicesSnapshot.docs) {
-        final data = doc.data();
-        final status = data['status'] ?? 'draft';
-        final amount = (data['totalAmount'] ?? 0.0).toDouble();
-
-        // Add to total revenue regardless of status
-        totalRev += amount;
-
-        switch (status.toLowerCase()) {
-          case 'paid':
-            paidCount++;
-            //totalRev += amount;
-            break;
-          case 'pending':
-          case 'unpaid':
-            unpaidCount++;
-            pendingAmt += amount;
-            break;
-          case 'overdue':
-            overdueCount++;
-            overdueAmt += amount;
-            break;
-          case 'draft':
-            draftCount++;
-            break;
-        }
-
-        // Add to recent invoices (limit to 10)
-        if (recentInvoicesList.length < 10) {
-          recentInvoicesList.add(Invoice(
-            invoiceId: data['invoiceId'] ?? doc.id,
-            customerName: data['customerName'] ?? 'Unknown',
-            price: amount,
-            itemId: data['itemId'] ?? '',
-            qty: data['qty'] ?? 1,
-            mobile: data['customerMobile'] ?? '',
-            itemName: data['itemName'] ?? '',
-            totalAmount: amount,
-          ));
-        }
-      }
-
-      // Update observable variables
-      totalInvoices.value = totalCount;
-      paidInvoices.value = paidCount;
-      unpaidInvoices.value = unpaidCount;
-      overdueInvoices.value = overdueCount;
-      draftInvoices.value = draftCount;
-      totalRevenue.value = totalRev;
-      pendingAmount.value = pendingAmt;
-      overdueAmount.value = overdueAmt;
-      recentInvoices.value = recentInvoicesList;
-
-      // Update chart data
-      invoiceStatusData.value = [
-        ChartData('Paid', paidCount.toDouble(), Colors.green),
-        ChartData('Pending', unpaidCount.toDouble(), Colors.orange),
-        ChartData('Overdue', overdueCount.toDouble(), Colors.red),
-        ChartData('Draft', draftCount.toDouble(), Colors.grey),
-      ];
-
-      // Mock monthly revenue for now (you can implement actual monthly calculation)
-      monthlyRevenue.value = [15000, 18500, 22000, 19500, 25000, totalRev];
-
-    } catch (e) {
-      print("Error loading dashboard statistics: $e");
-      _loadMockData(); // Fallback to mock data
-    }
-  }
-
-  // Fallback mock data
-  void _loadMockData() {
-    totalInvoices.value = 0;
-    paidInvoices.value = 0;
-    unpaidInvoices.value = 0;
-    overdueInvoices.value = 0;
-    draftInvoices.value = 0;
-    totalRevenue.value = 0.0;
-    pendingAmount.value = 0.0;
-    overdueAmount.value = 0.0;
-
-    recentInvoices.value = [
-      Invoice(
-        invoiceId: 'INV-001',
-        customerName: 'John Doe',
-        price: 1500.0,
-        itemId: '',
-        qty: 11,
-        mobile: '',
-        itemName: '',
-      ),
-      Invoice(
-        invoiceId: 'INV-002',
-        customerName: 'Jane Smith',
-        price: 160.0,
-        itemId: '',
-        qty: 1,
-        mobile: '',
-        itemName: '',
-      ),
-    ];
-
-    monthlyRevenue.value = [15000, 18500, 22000, 19500, 25000, 28000];
-    invoiceStatusData.value = [
-      ChartData('Paid', paidInvoices.value.toDouble(), Colors.green),
-      ChartData('Pending', unpaidInvoices.value.toDouble(), Colors.orange),
-      ChartData('Overdue', overdueInvoices.value.toDouble(), Colors.red),
-      ChartData('Draft', draftInvoices.value.toDouble(), Colors.grey),
-    ];
-  }
-
-  // 🔹 FIXED: refreshDashboard now properly reloads
-  /// 🆕 IMPROVED: Better refresh management
-  // Future<void> refreshDashboard() async {
-  //   // 🆕 Prevent multiple simultaneous refreshes
-  //   if (isLoading.value) {
-  //     print("⚠️ Refresh already in progress, skipping...");
-  //     return;
-  //   }
-  //
-  //   try {
-  //     print("🔄 Refreshing dashboard...");
-  //     _isInitializing = true;
-  //     isLoading.value = true;
-  //
-  //     await _loadCompanyData();
-  //     await loadDashboardData();
-  //     print("✅ Dashboard refreshed successfully");
-  //
-  //   } catch (e) {
-  //     print("❌ Error refreshing dashboard: $e");
-  //
-  //   } finally {
-  //     _isInitializing = false;
-  //     isLoading.value = false;
-  //   }
-  // }
-// ============================================
-  Future<void> refreshDashboard() async {
-    if (isLoading.value) {
-      print("⚠️ Refresh already in progress, skipping...");
-      return;
-    }
-
-    try {
-      print("🔄 Refreshing dashboard...");
-      // Don't show full shimmer on refresh - only first load shows shimmer
-      // isLoading.value = true;
-
-      // ✅ Load company data
-      await _loadCompanyData();
-      await loadCompanySettings();
-
-      // ✅ Load purchases AND invoices
-      await Future.wait([
-        loadPurchases(),
-        loadInvoices(),
-        loadCustomerCount(),
-        getMonthlyRevenueData(),
-      ]);
-
-      print("✅ Dashboard refreshed");
-      print("   📦 Purchases: ${totalPurchases.value}, ₹${totalPurchaseAmount.value.toStringAsFixed(2)}");
-      print("   📄 Invoices: ${invoiceList.length}, ₹${totalRevenue.value.toStringAsFixed(2)}");
-      print("   👥 Customers: ${customerCount.value}");
-
-    } catch (e) {
-      print("❌ Error refreshing dashboard: $e");
-    } finally {
-      // isLoading.value = false;
-    }
-  }
-
-  ///working
-  Future<void> navigateToCreateInvoice() async {
-    print("Compny--------:${companyId.value}");
-    if (companyId.value.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please register a company first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      Get.toNamed(CompanyRegistrationScreen.pageId);
-      return;
-    }
-    Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
-
-    await Get.toNamed(NewInvoiceScreen.pageId, arguments: null);
-    print("🔄 Returned from Invoice Creation, refreshing...");
-    await refreshDashboard();
-  }
-
-  void navigateToCreateInvoice22() {
-    print("Company--------:${companyId.value}");
-    if (companyId.value.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please register a company first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      // Get.toNamed(CompanyRegistrationScreen.pageId);
-      return;
-    }
-    // Show the preview dialog before navigating
-    showInvoiceOptions();
-  }
-
-  /// Navigate to Stock Report Screen
-  Future<void> navigateToStockReport() async {
-    if (companyId.value.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please register a company first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-    if (!AppConstants.isTradingCompany) {
-      return;
-    }
-
-    if (!Get.isRegistered<StockReportController>()) {
-      Get.put(StockReportController());
-    }
-
-    await Get.toNamed(StockReportScreen.pageId);
-
-    print("🔄 Returned from Stock Report, refreshing...");
-    await refreshDashboard();
-  }
-
-  Future<void> navigateToInventoryMangment() async {
-    Get.lazyPut<ItemController>(() => ItemController());
-
-    // ✅ Wait for result from Purchase Entry screen
-    final result = await Get.toNamed(InventoryManagementScreen.pageId);
-
-    /// ✅ If purchase was saved successfully, refresh dashboard
-    //if (result == true) {
-    print("🔄 Purchase saved, refreshing dashboard...");
-    await refreshDashboard();
-    //}
-  }
-
-  void showInvoiceOptions() {
-    Get.dialog(
-      InvoicePreviewScreen(
-        // onOptionSelected: (option) {
-        //   Get.back(); // Close the dialog
-        //   Get.lazyPut<NewInvoiceController>(() => NewInvoiceController());
-        //   //Get.to(() => NewInvoiceScreen(pdfOption: option));
-        // },
-      ),
-    );
-  }
-
-  Future<void> navigateToInvoiceList() async {
-    Get.lazyPut<InvoiceListController>(() => InvoiceListController());
-    await Get.toNamed(InvoiceListScreen.pageId);
-    // ✅ Always refresh when returning
-    print("🔄 Returned from Invoice List, refreshing...");
-    await refreshDashboard();
-  }
-
-  Future<void> navigateToInventory() async {
-    if (!AppConstants.isTradingCompany || !AppConstants.enablePurchaseFeature.value) {
-      return;
-    }
-    Get.lazyPut<PurchaseEntryController>(() => PurchaseEntryController());
-    await Get.toNamed(PurchaseEntryScreen.pageId);
-
-    /// ✅ If purchase was saved successfully, refresh dashboard
-    //if (result == true) {
-      print("🔄 Purchase saved, refreshing dashboard...");
-      await refreshDashboard();
-    //}
-  }
-
-  Future<void> navigateToPurchaseList() async {
-    if (!AppConstants.isTradingCompany || !AppConstants.enablePurchaseFeature.value) {
-      return;
-    }
-    if (Get.isRegistered<PurchaseListController>()) {
-    Get.delete<PurchaseListController>();
-    }
-    Get.put(PurchaseListController());
-    await Get.toNamed(PurchaseListScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Challan List, refreshing...");
-    await refreshDashboard();
-  }
-  // Updated method to navigate to customer registration with company selection
-  void navigateToCustomers() {
-    /// Always show company selection screen
-    Get.toNamed(CustomerRegistrationScreen.pageId);
-  }
-
-  /// New method specifically for adding a new customer
-  // void navigateToAddNewCustomer() {
-  //   // Always show company selection first
-  //   Get.toNamed(CompanySelectionScreen.pageId);
-  // }
-
-  // Updated method for adding new customer
-  Future<void> navigateToAddNewCustomer() async {
-    if (companyId.value.isEmpty) {
-      Get.snackbar(
-        'Company Required',
-        'Please register a company first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      Get.toNamed(CompanyRegistrationScreen.pageId);
-      return;
-    }
-
-    // Navigate directly to company selection or customer registration
-    await Get.toNamed(CompanySelectionScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Add Customer, refreshing...");
-    await loadCustomerCount();
-  }
-
-  // Updated method to get customer count and load it in dashboard
-  Future<void> loadCustomerCount() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || companyId.value.isEmpty) {
-        customerCount.value = 0;
-        return;
-      }
-
-      final customersSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId.value)
-          .collection("customers")
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      customerCount.value = customersSnapshot.docs.length;
-    } catch (e) {
-      print("Error getting customer count: $e");
-      customerCount.value = 0;
-    }
-  }
-
-  // Updated method to navigate to customer list
-  Future<void> navigateToCustomerList() async {
-    if (companyId.value.isEmpty) {
-      print("companyId.value: ${companyId.value}");
-      Get.snackbar(
-        'Company Required',
-        'Please register a company first',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      Get.toNamed(CompanyRegistrationScreen.pageId);
-      return;
-    }
-
-    print("Navigating to Customer List Screen");
-
-    try {
-      if (!Get.isRegistered<CustomerListController>()) {
-        Get.put(CustomerListController());
-      }
-
-      // ✅ Wait for result from Customer List
-      await Get.toNamed(CustomerListScreen.pageId);
-
-      // ✅ Refresh customer count when returning
-      print("🔄 Returned from Customer List, refreshing count...");
-      await loadCustomerCount();
-
-    } catch (e) {
-      print("Error navigating to customer list: $e");
-      _showSimpleCustomerDialog();
-    }
-  }
-
-  // 3. Add this fallback method to your DashboardController:
-  void _showSimpleCustomerDialog() async {
-    // Load customer count first
-    await loadCustomerCount();
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Icon(Icons.people, color: Colors.orange.shade700, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Customer Information',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Get.back(),
-                    icon: Icon(Icons.close),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: 20),
-
-              // Customer Count Display
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange.shade100, Colors.orange.shade50],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.people,
-                      size: 40,
-                      color: Colors.orange.shade700,
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Total Customers',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Obx(() => Text(
-                      '${customerCount.value}',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
-                      ),
-                    )),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 20),
-
-              // Add New Customer Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Get.back(); // Close dialog
-                    navigateToAddNewCustomer();
-                  },
-                  icon: Icon(Icons.person_add),
-                  label: Text('Add New Customer'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 12),
-
-              // View All Customers Button (if you want to try navigation again)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Get.back(); // Close dialog
-                    // Try to navigate to full customer list
-                    Get.toNamed(CustomerListScreen.pageId);
-                  },
-                  icon: Icon(Icons.list),
-                  label: Text('View All Customers'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange.shade700,
-                    side: BorderSide(color: Colors.orange.shade700),
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void onClose() {
-    print("🔒 Closing DashboardController");
-    _companyFeaturesListener?.cancel();
-    _hasInitialized = false;
-    _isInitializing = false;
-    super.onClose();
-  }
-
-  Future<void> navigateToItems() async {
-   await Get.toNamed(ItemScreen.pageId);
-   // ✅ Refresh when returning
-   print("🔄 Returned from Items, refreshing...");
-   await refreshDashboard();
-  }
-
-  Future<void> navigateToChallanList() async {
-    if (Get.isRegistered<ChallanListController>()) {
-      Get.delete<ChallanListController>();
-    }
-    Get.put(ChallanListController());
-    await Get.toNamed(ChallanListScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Challan List, refreshing...");
-    await refreshDashboard();
-  }
-
-
-  Future<void> navigateToQuotList() async {
-    if (Get.isRegistered<QuotationListController>()) {
-      Get.delete<QuotationListController>();
-    }
-    Get.put(QuotationListController());
-    await Get.toNamed(QuotationListScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Quotation List, refreshing...");
-    await refreshDashboard();
-  }
-
-  Future<void> navigateToPaymentDetails() async {
-    if (Get.isRegistered<PaymentDetailsController>()) {
-      Get.delete<PaymentDetailsController>();
-    }
-    Get.put(PaymentDetailsController());
-    await Get.toNamed(PaymentDetailsScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from Payment Details, refreshing...");
-    await refreshDashboard();
-  }
-
-
-  Future<void> navigateToNewChallan() async {
-    if (Get.isRegistered<NewChallanController>()) {
-      Get.delete<NewChallanController>();
-    }
-    Get.put(NewChallanController());
-
-    await Get.toNamed(NewChallanScreen.pageId);
-
-    // ✅ Refresh when returning
-    print("🔄 Returned from New Challan, refreshing...");
-    await refreshDashboard();
-    // Get.to(
-    //       () => NewChallanScreen(),
-    //   transition: Transition.rightToLeft,
-    //   duration: Duration(milliseconds: 300),
-    // );
-  }
-
-  void navigateToEditCompany(Map<String, dynamic> companyData, String companyId) async {
-    final result = await Get.toNamed(
-      CompanyRegistrationScreen.pageId,
-      arguments: {
-        'isEdit': true,
-        'companyData': companyData,
-        'companyId': companyId,
+  pw.Widget _buildReportTable(pw.Context context, List<ReceiptModel> data) {
+    return pw.TableHelper.fromTextArray(
+      context: context,
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 9),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey700),
+      rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
+      cellStyle: const pw.TextStyle(fontSize: 8),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(40),  // No
+        1: const pw.FixedColumnWidth(60),  // Date
+        2: const pw.FlexColumnWidth(3),    // Donor Name
+        3: const pw.FixedColumnWidth(70),  // PAN
+        4: const pw.FixedColumnWidth(70),  // Mobile
+        5: const pw.FixedColumnWidth(60),  // Amount
+        6: const pw.FixedColumnWidth(60),  // Payment
+        7: const pw.FlexColumnWidth(2),    // Donation Type
       },
-    );
-
-    // If update was successful, refresh dashboard and wait so UI shows updated data
-    if (result == true) {
-      print("Company updated, refreshing dashboard...");
-      await refreshDashboard();
-    }
-  }
-
-  // ✅ Updated Export Function for Traders App (Web + Mobile)
-  Future<void> exportInvoiceDataWithDateFilter(DateTime fromDate, DateTime toDate) async {
-    try {
-      // 1. Get Data
-      final invoices = await GoogleSheetService.getInvoices(type: "INV");
-      final items = await GoogleSheetService.getInvoiceItems();
-
-      if (invoices.isEmpty) {
-        Get.snackbar("Error", "No invoices found");
-        return;
-      }
-
-      // 2. Filter Logic
-      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-      final end = DateTime(toDate.year, toDate.month, toDate.day);
-
-      print("📅 Filtering invoices from ${_formatDate(start)} to ${_formatDate(end)}");
-
-      final filteredInvoices = invoices.where((inv) {
-        if (inv.issueDate == null) return false;
-        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
-        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
-            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
-      }).toList();
-
-      if (filteredInvoices.isEmpty) {
-        Get.snackbar("Info", "No invoices found in date range");
-        return;
-      }
-
-      // 3. Create Excel
-      var excel = Excel.createExcel();
-      Sheet sheetObject = excel['Invoice_Export'];
-
-      // Add Headers
-      sheetObject.appendRow([
-        TextCellValue('Invoice ID'),
-        TextCellValue('Customer Name'),
-        TextCellValue('Issue Date'),
-        TextCellValue('Status'),
-        TextCellValue('Item Name'),
-        TextCellValue('Quantity'),
-        TextCellValue('Rate'),
-        TextCellValue('Total'),
-        TextCellValue('GST Rate'),
-        TextCellValue('GST Amount'),
-        TextCellValue('Amount With GST'),
-      ]);
-
-      // Add Data Rows
-      int rowCount = 0;
-      for (var inv in filteredInvoices) {
-        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
-        String dateStr = _formatDate(inv.issueDate);
-
-        if (invItems.isEmpty) {
-          sheetObject.appendRow([
-            TextCellValue(inv.invoiceId ?? ""),
-            TextCellValue(inv.customerName ?? ""),
-            TextCellValue(dateStr),
-            TextCellValue(inv.status ?? ""),
-            TextCellValue(""),
-            DoubleCellValue(0), DoubleCellValue(0), DoubleCellValue(0),
-            DoubleCellValue(0), DoubleCellValue(0), DoubleCellValue(0),
-          ]);
-          rowCount++;
-        } else {
-          for (var item in invItems) {
-            sheetObject.appendRow([
-              TextCellValue(inv.invoiceId ?? ""),
-              TextCellValue(inv.customerName ?? ""),
-              TextCellValue(dateStr),
-              TextCellValue(inv.status ?? ""),
-              TextCellValue(item.itemName ?? ""),
-              DoubleCellValue(item.quantity ?? 0),
-              DoubleCellValue(item.rate ?? 0),
-              DoubleCellValue(item.totalPrice ?? 0),
-              DoubleCellValue(item.gstRate ?? 0),
-              DoubleCellValue(item.gstAmount ?? 0),
-              DoubleCellValue(item.amountWithGst ?? 0),
-            ]);
-            rowCount++;
-          }
-        }
-      }
-      print("✅ Exported $rowCount rows");
-
-      // ---------------------------------------------------------
-      // ✅ 4. SAVE FILE (Unified Filename Logic)
-      // ---------------------------------------------------------
-      String fromDateStr = _formatDateForFilename(start);
-      String toDateStr = _formatDateForFilename(end);
-      String fileName = "Invoice_Export_${fromDateStr}_to_${toDateStr}.xlsx";
-
-      // 🔹 Use encode() instead of save() to prevent auto-download of 'FlutterExcel.xlsx'
-      var fileBytes = excel.encode();
-
-      if (fileBytes == null) {
-        Get.snackbar("Error", "Failed to generate excel file");
-        return;
-      }
-
-      if (kIsWeb) {
-        // 🌐 WEB LOGIC
-        final blob = html.Blob([fileBytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-
-        final anchor = html.document.createElement('a') as html.AnchorElement
-          ..href = url
-          ..style.display = 'none'
-          ..download = fileName; // ✅ Web Filename
-
-        html.document.body?.children.add(anchor);
-        anchor.click();
-
-        html.document.body?.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
-
-        Get.snackbar('Success', 'Excel downloaded: $fileName', backgroundColor: Colors.green.shade100);
-      } else {
-        // 📱 MOBILE LOGIC
-        final dir = await getApplicationDocumentsDirectory();
-        String outputFile = "${dir.path}/$fileName"; // ✅ Mobile Filename
-
-        File(outputFile)
-          ..createSync(recursive: true)
-          ..writeAsBytesSync(fileBytes);
-
-        print("✅ Export saved at $outputFile");
-        Get.snackbar('Success', 'Saved to Documents', backgroundColor: Colors.green.shade100);
-        OpenFile.open(outputFile);
-      }
-
-    } catch (e) {
-      print("❌ Error exporting excel: $e");
-      Get.snackbar('Error', 'Failed to export: $e', backgroundColor: Colors.red.shade100);
-    }
-  }
-
-// 🔹 Helper function to format date as dd/MM/yyyy for display
-  String _formatDate(DateTime? date) {
-    if (date == null) return "";
-    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
-  }
-
-// 🔹 Helper function to format date for filename (dd-MM-yyyy)
-  String _formatDateForFilename(DateTime date) {
-    return "${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}";
-  }
-
-
-  Future<void> exportGSTReportWithDateFilter(DateTime fromDate, DateTime toDate) async {
-    try {
-      // ૧. ડેટા ફેચ કરવો
-      final invoices = await GoogleSheetService.getInvoices(type: "INV");
-      final items = await GoogleSheetService.getInvoiceItems();
-
-      if (invoices.isEmpty) {
-        Get.snackbar('No Data', 'No invoices found to export',
-            backgroundColor: Colors.orange.shade100);
-        return;
-      }
-
-      // ૨. તારીખ ફિલ્ટર કરવી
-      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-      final end = DateTime(toDate.year, toDate.month, toDate.day);
-
-      final filteredInvoices = invoices.where((inv) {
-        if (inv.issueDate == null) return false;
-        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
-        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
-            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
-      }).toList();
-
-      if (filteredInvoices.isEmpty) {
-        Get.snackbar('No Data', 'No invoices found in selected date range',
-            backgroundColor: Colors.orange.shade100);
-        return;
-      }
-
-      final pdf = pw.Document();
-
-      // ૩. ગણતરી માટેના વેરીએબલ્સ
-      double grandSubtotal = 0, grandCGST = 0, grandSGST = 0, grandTotal = 0;
-      int totalItemsSold = 0;
-      double totalCash = 0, totalUpi = 0, totalCard = 0;
-
-      bool showGstData = AppConstants.withGST.value;
-      Map<double, Map<String, double>> gstRateSummary = {};
-
-      for (var inv in filteredInvoices) {
-        String mode = (inv.paymentMode ?? "").toLowerCase().trim();
-        double invAmount = inv.totalAmount ?? 0.0;
-        if (mode == "cash") totalCash += invAmount;
-        else if (mode == "upi") totalUpi += invAmount;
-        else if (mode == "card") totalCard += invAmount;
-
-        final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
-
-        for (var item in invItems) {
-          double qty = item.quantity ?? 0;
-          double rate = item.rate ?? 0;
-          double subtotal = rate * qty;
-          double itemGstRate = (item.gstRate ?? 0.0).toDouble();
-
-          double totalGST = showGstData ? (subtotal * itemGstRate / 100) : 0;
-          double cgst = totalGST / 2;
-          double sgst = totalGST / 2;
-          double total = subtotal + totalGST;
-
-          grandSubtotal += subtotal;
-          grandCGST += cgst;
-          grandSGST += sgst;
-          grandTotal += total;
-          totalItemsSold++;
-
-          if (showGstData) {
-            gstRateSummary.putIfAbsent(itemGstRate, () => {'subtotal': 0, 'cgst': 0, 'sgst': 0, 'total': 0});
-            gstRateSummary[itemGstRate]!['subtotal'] = gstRateSummary[itemGstRate]!['subtotal']! + subtotal;
-            gstRateSummary[itemGstRate]!['cgst'] = gstRateSummary[itemGstRate]!['cgst']! + cgst;
-            gstRateSummary[itemGstRate]!['sgst'] = gstRateSummary[itemGstRate]!['sgst']! + sgst;
-            gstRateSummary[itemGstRate]!['total'] = gstRateSummary[itemGstRate]!['total']! + total;
-          }
-        }
-      }
-
-      // ========== PAGE 1: SUMMARY REPORT (Original UI) ==========
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(20),
-                  decoration: const pw.BoxDecoration(color: PdfColors.blue900),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                      pw.SizedBox(height: 5),
-                      pw.Text('SALES SUMMARY REPORT ${showGstData ? "(GST)" : ""}', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
-                      pw.Text('Period: ${_formatDate(start)} to ${_formatDate(end)}', style: pw.TextStyle(fontSize: 11, color: PdfColors.white)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(15),
-                  decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(5)),
-                  child: pw.Column(children: [
-                    _buildInfoRow('Total Invoices:', '${filteredInvoices.length}'),
-                    _buildInfoRow('Total Items Sold:', '$totalItemsSold'),
-                    _buildInfoRow('Invoice Range:', '${filteredInvoices.first.invoiceId ?? "N/A"} to ${filteredInvoices.last.invoiceId ?? "N/A"}'),
-                  ]),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                  _buildSummaryBox("CASH", totalCash, PdfColors.green50, PdfColors.green700, PdfColors.green900),
-                  pw.SizedBox(width: 10),
-                  _buildSummaryBox("UPI", totalUpi, PdfColors.blue50, PdfColors.blue700, PdfColors.blue900),
-                  pw.SizedBox(width: 10),
-                  _buildSummaryBox("CARD", totalCard, PdfColors.orange50, PdfColors.orange700, PdfColors.orange900),
-                ]),
-                if (showGstData && gstRateSummary.isNotEmpty) ...[
-                  pw.SizedBox(height: 20),
-                  pw.Text('GST Rate-wise Summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 10),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey400),
-                    children: [
-                      pw.TableRow(decoration: const pw.BoxDecoration(color: PdfColors.grey300), children: [
-                        _buildTableCell('GST Rate (%)', isHeader: true),
-                        _buildTableCell('Taxable Amount', isHeader: true),
-                        _buildTableCell('CGST', isHeader: true),
-                        _buildTableCell('SGST', isHeader: true),
-                        _buildTableCell('Total Amount', isHeader: true),
-                      ]),
-                      ...((gstRateSummary.keys.toList()..sort()).map((rate) {
-                        var data = gstRateSummary[rate]!;
-                        return pw.TableRow(children: [
-                          _buildTableCell('${rate.toStringAsFixed(2)}%'),
-                          _buildTableCell(AppUtil.formatCurrency(data['subtotal']!)),
-                          _buildTableCell(AppUtil.formatCurrency(data['cgst']!)),
-                          _buildTableCell(AppUtil.formatCurrency(data['sgst']!)),
-                          _buildTableCell(AppUtil.formatCurrency(data['total']!)),
-                        ]);
-                      }).toList()),
-                      pw.TableRow(decoration: const pw.BoxDecoration(color: PdfColors.grey200), children: [
-                        _buildTableCell('TOTAL', isHeader: true),
-                        _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true),
-                        _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true),
-                        _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true),
-                        _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true),
-                      ]),
-                    ],
-                  ),
-                ],
-              ],
-            );
-          },
-        ),
-      );
-
-      // ========== PAGE 2+: DETAILED REPORT (Multi-page Fix with Original UI) ==========
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape,
-          margin: const pw.EdgeInsets.all(32),
-          header: (context) => context.pageNumber > 1
-              ? pw.Column(children: [
-            pw.Text('Detailed Sales Report (Continued)', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-            pw.SizedBox(height: 10)
-          ]) : pw.SizedBox(),
-          build: (pw.Context context) => [
-            pw.Text('Detailed Sales Report', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 15),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-              columnWidths: showGstData
-                  ? {0: const pw.FixedColumnWidth(40), 1: const pw.FixedColumnWidth(55), 2: const pw.FixedColumnWidth(40), 3: const pw.FixedColumnWidth(70), 4: const pw.FixedColumnWidth(25), 5: const pw.FixedColumnWidth(35), 6: const pw.FixedColumnWidth(40), 7: const pw.FixedColumnWidth(25), 8: const pw.FixedColumnWidth(35), 9: const pw.FixedColumnWidth(35), 10: const pw.FixedColumnWidth(40)}
-                  : {0: const pw.FixedColumnWidth(60), 1: const pw.FixedColumnWidth(80), 2: const pw.FixedColumnWidth(50), 3: const pw.FixedColumnWidth(100), 4: const pw.FixedColumnWidth(30), 5: const pw.FixedColumnWidth(50), 6: const pw.FixedColumnWidth(60), 7: const pw.FixedColumnWidth(70)},
-              children: [
-                // Header Row
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-                  children: [
-                    'ID', 'Customer', 'Date', 'Item', 'Qty', 'Rate', 'Subtotal',
-                    if (showGstData) ...['GST%', 'CGST', 'SGST'],
-                    'Total'
-                  ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8)).toList(),
-                ),
-                // Data Rows
-                ...filteredInvoices.expand((inv) {
-                  final invItems = items.where((it) => it.invoiceId == inv.invoiceId).toList();
-                  String dateStr = _formatDate(inv.issueDate);
-                  return invItems.map((item) {
-                    double sub = (item.rate ?? 0) * (item.quantity ?? 0);
-                    double taxRate = showGstData ? (item.gstRate ?? 0) : 0;
-                    double taxAmt = sub * taxRate / 100;
-                    return pw.TableRow(children: [
-                      _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
-                      _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                      _buildTableCell(dateStr, fontSize: 7),
-                      _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                      _buildTableCell(item.quantity?.toString() ?? "0", fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(item.rate ?? 0), fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(sub), fontSize: 7),
-                      if (showGstData) ...[
-                        _buildTableCell('$taxRate%', fontSize: 7),
-                        _buildTableCell(AppUtil.formatCurrency(taxAmt / 2), fontSize: 7),
-                        _buildTableCell(AppUtil.formatCurrency(taxAmt / 2), fontSize: 7),
-                      ],
-                      _buildTableCell(AppUtil.formatCurrency(sub + taxAmt), fontSize: 7),
-                    ]);
-                  });
-                }).toList(),
-                // ✅ GRAND TOTAL ROW (Bold & Original UI)
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  children: [
-                    _buildTableCell('', fontSize: 7),
-                    _buildTableCell('', fontSize: 7),
-                    _buildTableCell('', fontSize: 7),
-                    _buildTableCell('GRAND TOTAL', isHeader: true, fontSize: 8, textAlign: pw.TextAlign.left),
-                    _buildTableCell('', fontSize: 7),
-                    _buildTableCell('', fontSize: 7),
-                    _buildTableCell(AppUtil.formatCurrency(grandSubtotal), isHeader: true, fontSize: 8),
-                    if (showGstData) ...[
-                      _buildTableCell('', fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(grandCGST), isHeader: true, fontSize: 8),
-                      _buildTableCell(AppUtil.formatCurrency(grandSGST), isHeader: true, fontSize: 8),
-                    ],
-                    _buildTableCell(AppUtil.formatCurrency(grandTotal), isHeader: true, fontSize: 8),
-                  ],
-                ),
-              ],
-            ),
-          ],
-          footer: (pw.Context context) => pw.Container(
-            alignment: pw.Alignment.centerRight,
-            margin: const pw.EdgeInsets.only(top: 20),
-            child: pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-          ),
-        ),
-      );
-
-      String fileName = "Sales_Report_${_formatDateForFilename(start)}.pdf";
-      if (kIsWeb) {
-        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
-      } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File("${dir.path}/$fileName");
-        await file.writeAsBytes(await pdf.save());
-        OpenFile.open(file.path);
-      }
-    } catch (e) {
-      print("❌ Export Error: $e");
-      Get.snackbar('Error', 'Failed to generate report');
-    }
-  }
-
-// --- HELPER WIDGETS ---
-  pw.Widget _buildSummaryBox(String label, double amount, PdfColor bgColor, PdfColor borderColor, PdfColor textColor) {
-    return pw.Expanded(
-      child: pw.Container(
-        padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: pw.BoxDecoration(color: bgColor, border: pw.Border.all(color: borderColor), borderRadius: pw.BorderRadius.circular(4)),
-        child: pw.Column(children: [
-          pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: textColor, fontSize: 10)),
-          pw.SizedBox(height: 4),
-          pw.Text(AppUtil.formatCurrency(amount), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-        ]),
-      ),
+      headers: ['No', 'Date', 'Donor Name', 'PAN', 'Mobile', 'Amount', 'Payment', 'Category'],
+      data: data.map((r) => [
+        r.recNo.toString(),
+        r.date,
+        r.donorName,
+        r.panNo,
+        r.mobileNo,
+        NumberFormat('#,##,###.##').format(r.amount),
+        r.paymentType,
+        r.donationType,
+      ]).toList(),
     );
   }
 
-// --- નવું Header Helper ---
-
-// ==========================================
-// હેડર ફંક્શન (Logo Left - Details Right)
-// ==========================================
-  pw.Widget _buildReportHeader(Map<String, dynamic>? company, String title, DateTime start, DateTime end, pw.MemoryImage? logo) {
-    String cName = company?['companyName'] ?? "YOUR BUSINESS";
-    String cAddress = company?['address'] ?? "";
-    String cPhone = company?['phone'] ?? "";
-    String cGst = company?['gst'] ?? "";
-
-    return pw.Column(
-      children: [
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // ✅ ૧. લોગો - ડાબી બાજુ (Left Side)
-            if (logo != null)
-              pw.Container(
-                height: 120, // સાઈઝ જરૂર મુજબ એડજસ્ટ કરી છે
-                width: 190,
-                child: pw.Image(logo, fit: pw.BoxFit.contain),
-              )
-            else
-              pw.SizedBox(width: 150), // જો લોગો ન હોય તો જગ્યા ખાલી રાખશે
-
-            // ✅ ૨. કંપની વિગતો - જમણી બાજુ (Right Side)
-            pw.Expanded(
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end, // બધું જમણી બાજુ એલાઈન થશે
-                children: [
-                  pw.Text(
-                    cName.toUpperCase(),
-                    style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800),
-                    textAlign: pw.TextAlign.right,
-                  ),
-                  pw.SizedBox(height: 4),
-                  if (cAddress.isNotEmpty)
-                    pw.Text(
-                      cAddress,
-                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
-                      textAlign: pw.TextAlign.right,
-                    ),
-                  if (cPhone.isNotEmpty)
-                    pw.Text(
-                      "Phone: $cPhone",
-                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
-                      textAlign: pw.TextAlign.right,
-                    ),
-                  if (cGst.isNotEmpty)
-                    pw.Text(
-                      "GST: $cGst",
-                      style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
-                      textAlign: pw.TextAlign.right,
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        pw.SizedBox(height: 15),
-
-        // ✅ રિપોર્ટ ટાઇટલ અને સમયગાળો (Title Line)
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Text(title, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
-            pw.Text(
-              'Period: ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
-              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
-            ),
-          ],
-        ),
-
-        pw.SizedBox(height: 4),
-        pw.Container(height: 1.5, color: PdfColors.blue800), // બ્લુ ડિવાઈડર લાઈન
-        pw.SizedBox(height: 10),
-      ],
-    );
-  }
-
-  // ✅ સુધારેલું Cell Helper જે કલર સપોર્ટ કરે છે
-  pw.Widget _buildTableCell(String text, {bool isHeader = false, double fontSize = 10, pw.TextAlign? textAlign, PdfColor color = PdfColors.black}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(5),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: fontSize,
-          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color, // હેડર માટે વ્હાઇટ કલર આવશે
-        ),
-        textAlign: textAlign ?? pw.TextAlign.center,
-      ),
-    );
-  }
-
-  pw.Widget _buildSectionHeader(String title) {
+  pw.Widget _buildSummary(int count, double total) {
     return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(10),
-      decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-      child: pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-    );
-  }
-
-
-  pw.Widget _buildInfoRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4),
-      child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-        pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-        pw.Text(value),
-      ]),
-    );
-  }
-
-  Future<void> exportStockReport() async {
-    try {
-      // ૧. ડેટા ફેચ કરવો
-      final items = await GoogleSheetService.getItems(userId: AppConstants.userId);
-
-      if (items.isEmpty) {
-        Get.snackbar('No Data', 'No items found in stock',
-            backgroundColor: Colors.orange.shade100);
-        return;
-      }
-
-      final pdf = pw.Document();
-      double totalStockValue = 0;
-      int activeItems = 0;
-
-      // ૨. કેલ્ક્યુલેશન
-      for (var item in items) {
-        if (item.isActive) {
-          activeItems++;
-          // સ્ટોકની કુલ વેલ્યુ (Current Stock * Price)
-          totalStockValue += (item.currentStock * item.price);
-        }
-      }
-
-      // ૩. PDF પેજ બનાવો
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (pw.Context context) {
-            return [
-              // Header
-              pw.Container(
-                padding: const pw.EdgeInsets.all(15),
-                decoration: const pw.BoxDecoration(color: PdfColors.teal900),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                        pw.Text('Inventory / Stock Report', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
-                      ],
-                    ),
-                    pw.Text('Date: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}', style: pw.TextStyle(color: PdfColors.white)),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Summary Info
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildInfoRow('Total Active Items:', '$activeItems'),
-                  _buildInfoRow('Total Stock Value:', 'INR ${AppUtil.formatCurrency(totalStockValue)}'),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-
-              // Stock Table
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-                columnWidths: {
-                  0: const pw.FixedColumnWidth(150), // Item Name
-                  1: const pw.FixedColumnWidth(60),  // Price
-                  2: const pw.FixedColumnWidth(60),  // GST %
-                  3: const pw.FixedColumnWidth(60),  // Stock
-                  4: const pw.FixedColumnWidth(80),  // Value
-                },
-                children: [
-                  // Header Row
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-                    children: [
-                      _buildTableCell('Item Name', isHeader: true),
-                      _buildTableCell('Purchase Price', isHeader: true),
-                      _buildTableCell('GST %', isHeader: true),
-                      _buildTableCell('Current Stock', isHeader: true),
-                      _buildTableCell('Stock Value', isHeader: true),
-                    ],
-                  ),
-                  // Data Rows
-                  ...items.map((item) {
-                    double stockVal = item.currentStock * item.price;
-                    return pw.TableRow(
-                      children: [
-                        _buildTableCell(item.itemName, textAlign: pw.TextAlign.left),
-                        _buildTableCell(AppUtil.formatCurrency(item.price)),
-                        _buildTableCell('${item.gstPercent}%'),
-                        _buildTableCell('${item.currentStock} ${item.unitOfMeasurement}'),
-                        _buildTableCell(AppUtil.formatCurrency(stockVal)),
-                      ],
-                    );
-                  }).toList(),
-                ],
-              ),
-            ];
-          },
-        ),
-      );
-
-      // ૪. ફાઈલ સેવ અને ઓપન કરવી
-      String fileName = "Stock_Report_${DateFormat('dd-MM-yyyy').format(DateTime.now())}.pdf";
-      if (kIsWeb) {
-        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
-      } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File("${dir.path}/$fileName");
-        await file.writeAsBytes(await pdf.save());
-        OpenFile.open(file.path);
-      }
-
-    } catch (e) {
-      print("❌ Stock Export Error: $e");
-      Get.snackbar('Error', 'Failed to generate stock report');
-    }
-  }
-
-  Future<void> exportPurchaseReport(DateTime fromDate, DateTime toDate) async {
-    try {
-      // ૧. ડેટા ફેચ કરવો
-      final purchases = await GoogleSheetService.getPurchasesList();
-
-      if (purchases.isEmpty) {
-        Get.snackbar('No Data', 'No purchases found to export',
-            backgroundColor: Colors.orange.shade100);
-        return;
-      }
-
-      // ૨. તારીખ નોર્મલાઈઝ અને ફિલ્ટર કરવી
-      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-      final end = DateTime(toDate.year, toDate.month, toDate.day);
-
-      final filteredPurchases = purchases.where((p) {
-        if (p.purchaseDate == null) return false;
-        final pDate = DateTime(p.purchaseDate!.year, p.purchaseDate!.month, p.purchaseDate!.day);
-        return (pDate.isAtSameMomentAs(start) || pDate.isAfter(start)) &&
-            (pDate.isAtSameMomentAs(end) || pDate.isBefore(end)) &&
-            p.userId == AppConstants.userId;
-      }).toList();
-
-      if (filteredPurchases.isEmpty) {
-        Get.snackbar('No Data', 'No purchases found in selected date range',
-            backgroundColor: Colors.orange.shade100);
-        return;
-      }
-
-      final pdf = pw.Document();
-      double totalAmt = 0;
-      double totalPaid = 0;
-      double totalPending = 0;
-
-      for (var p in filteredPurchases) {
-        totalAmt += p.totalAmount ?? 0;
-        totalPaid += p.paidAmount ?? 0;
-        totalPending += p.pendingAmount ?? 0;
-      }
-
-      // ૩. PDF પેજ બનાવો
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape, // Landscape રાખીએ જેથી બધું સમાઈ જાય
-          margin: const pw.EdgeInsets.all(24),
-          build: (pw.Context context) {
-            return [
-              // Header
-              pw.Container(
-                padding: const pw.EdgeInsets.all(15),
-                decoration: const pw.BoxDecoration(color: PdfColors.red900),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(companyName.toUpperCase(), style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                        pw.Text('Purchase Summary Report', style: pw.TextStyle(fontSize: 14, color: PdfColors.white)),
-                      ],
-                    ),
-                    pw.Text('Period: ${_formatDate(start)} to ${_formatDate(end)}', style: pw.TextStyle(color: PdfColors.white)),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Summary Stats
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildSummaryBox("TOTAL PURCHASE", totalAmt, PdfColors.grey100, PdfColors.black, PdfColors.black),
-                  pw.SizedBox(width: 10),
-                  _buildSummaryBox("TOTAL PAID", totalPaid, PdfColors.green50, PdfColors.green900, PdfColors.green900),
-                  pw.SizedBox(width: 10),
-                  _buildSummaryBox("TOTAL PENDING", totalPending, PdfColors.red50, PdfColors.red900, PdfColors.red900),
-                ],
-              ),
-              pw.SizedBox(height: 20),
-
-              // Purchase Table
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-                children: [
-                  // Header Row
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-                    children: [
-                      _buildTableCell('Bill No', isHeader: true, fontSize: 8),
-                      _buildTableCell('Vendor Name', isHeader: true, fontSize: 8),
-                      _buildTableCell('Date', isHeader: true, fontSize: 8),
-                      _buildTableCell('Total Amount', isHeader: true, fontSize: 8),
-                      _buildTableCell('Paid', isHeader: true, fontSize: 8),
-                      _buildTableCell('Pending', isHeader: true, fontSize: 8),
-                      _buildTableCell('Status', isHeader: true, fontSize: 8),
-                    ],
-                  ),
-                  // Data Rows
-                  ...filteredPurchases.map((p) {
-                    return pw.TableRow(
-                      children: [
-                        _buildTableCell(p.purchaseId ?? "", fontSize: 8),
-                        _buildTableCell(p.vendorName ?? "", fontSize: 8, textAlign: pw.TextAlign.left),
-                        _buildTableCell(_formatDate(p.purchaseDate), fontSize: 8),
-                        _buildTableCell(AppUtil.formatCurrency(p.totalAmount ?? 0), fontSize: 8),
-                        _buildTableCell(AppUtil.formatCurrency(p.paidAmount ?? 0), fontSize: 8),
-                        _buildTableCell(AppUtil.formatCurrency(p.pendingAmount ?? 0), fontSize: 8),
-                        _buildTableCell(p.paymentStatus ?? "", fontSize: 8),
-                      ],
-                    );
-                  }).toList(),
-                ],
-              ),
-            ];
-          },
-        ),
-      );
-
-      // ૪. ફાઈલ સેવ અને ઓપન
-      String fileName = "Purchase_Report_${_formatDateForFilename(start)}.pdf";
-      if (kIsWeb) {
-        await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: fileName);
-      } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File("${dir.path}/$fileName");
-        await file.writeAsBytes(await pdf.save());
-        OpenFile.open(file.path);
-      }
-
-    } catch (e) {
-      print("❌ Purchase Export Error: $e");
-      Get.snackbar('Error', 'Failed to generate purchase report');
-    }
-  }
-
-  Future<void> exportAllInOneReport(DateTime fromDate, DateTime toDate) async {
-    try {
-      final pdf = pw.Document();
-      final start = DateTime(fromDate.year, fromDate.month, fromDate.day);
-      final end = DateTime(toDate.year, toDate.month, toDate.day);
-      bool showGstData = AppConstants.withGST.value;
-
-      // ૧. કંપની ડેટા અને લોગો લોડિંગ
-      final companyData = currentCompany.value;
-      pw.MemoryImage? logoProvider;
-
-      if (companyData != null && companyData['logo'] != null) {
-        final Uint8List? bytes = await _loadLogoBytes(companyData['logo'].toString());
-        if (bytes != null && bytes.isNotEmpty) {
-          logoProvider = pw.MemoryImage(bytes);
-        }
-      }
-
-      // ૨. ડેટા ફેચિંગ
-      final invoices = await GoogleSheetService.getInvoices(type: "INV");
-      final allItems = await GoogleSheetService.getInvoiceItems();
-      final purchases = await GoogleSheetService.getPurchasesList();
-      final stockItems = await GoogleSheetService.getItems(userId: AppConstants.userId);
-
-      // ફિલ્ટરિંગ લોજિક
-      final filteredInvoices = invoices.where((inv) {
-        if (inv.issueDate == null) return false;
-        final issueDate = DateTime(inv.issueDate!.year, inv.issueDate!.month, inv.issueDate!.day);
-        return (issueDate.isAtSameMomentAs(start) || issueDate.isAfter(start)) &&
-            (issueDate.isAtSameMomentAs(end) || issueDate.isBefore(end));
-      }).toList();
-
-      final filteredPurchases = purchases.where((p) {
-        if (p.purchaseDate == null) return false;
-        final pDate = DateTime(p.purchaseDate!.year, p.purchaseDate!.month, p.purchaseDate!.day);
-        return (pDate.isAtSameMomentAs(start) || pDate.isAfter(start)) &&
-            (pDate.isAtSameMomentAs(end) || pDate.isBefore(end));
-      }).toList();
-
-      int currentNum = 1;
-      int salesNum = filteredInvoices.isNotEmpty ? currentNum++ : 0;
-      int purchaseNum = filteredPurchases.isNotEmpty ? currentNum++ : 0;
-      int stockNum = stockItems.isNotEmpty ? currentNum++ : 0;
-
-      final headerColor = PdfColors.blue800;
-
-      // Footer
-      pw.Widget _buildFooter(pw.Context context) {
-        return pw.Column(
-          mainAxisSize: pw.MainAxisSize.min,
-          children: [
-            pw.Divider(thickness: 0.5, color: PdfColors.grey400),
-            pw.SizedBox(height: 3),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Application By: Intelligent Tech',
-                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
-                pw.Text('252, NEO Square, Jamnagar | Mo: 7383915985',
-                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-                pw.Text('Page ${context.pageNumber} of ${context.pagesCount}',
-                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-              ],
-            ),
-          ],
-        );
-      }
-
-      // ==========================================
-      // સેક્શન ૧: SALES REPORT
-      // ==========================================
-      if (salesNum > 0) {
-        double sSubtotal = 0, sCGST = 0, sSGST = 0, sTotal = 0;
-        double tCash = 0, tUpi = 0, tCard = 0;
-
-        for (var inv in filteredInvoices) {
-          String mode = (inv.paymentMode ?? "").toLowerCase();
-          if (mode.contains("cash")) tCash += inv.totalAmount ?? 0;
-          else if (mode.contains("upi")) tUpi += inv.totalAmount ?? 0;
-          else tCard += inv.totalAmount ?? 0;
-
-          final invItems = allItems.where((it) => it.invoiceId == inv.invoiceId).toList();
-          for (var item in invItems) {
-            double sub = (item.rate ?? 0) * (item.quantity ?? 0);
-            double tax = showGstData ? (sub * (item.gstRate ?? 0) / 100) : 0;
-            sSubtotal += sub; sCGST += tax/2; sSGST += tax/2; sTotal += (sub + tax);
-          }
-        }
-
-        // ✅ ફક્ત આ પહેલા પેજ પર જ હેડર (Logo + Company Details) આવશે
-        pdf.addPage(pw.Page(
-          build: (context) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            _buildReportHeader(companyData, "ALL-IN-ONE BUSINESS REPORT", start, end, logoProvider),
-            pw.SizedBox(height: 10),
-            pw.Text("$salesNum. SALES SUMMARY", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-              _buildSummaryBox("CASH", tCash, PdfColors.green50, PdfColors.green700, PdfColors.green900),
-              _buildSummaryBox("UPI", tUpi, PdfColors.blue50, PdfColors.blue700, PdfColors.blue900),
-              _buildSummaryBox("CARD", tCard, PdfColors.orange50, PdfColors.orange700, PdfColors.orange900),
-            ]),
-            pw.SizedBox(height: 20),
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(5)),
-              child: pw.Column(children: [
-                _buildInfoRow("Total Taxable Amount", AppUtil.formatCurrency(sSubtotal)),
-                if(showGstData) _buildInfoRow("Total GST", AppUtil.formatCurrency(sCGST + sSGST)),
-                _buildInfoRow("Grand Total Revenue", AppUtil.formatCurrency(sTotal)),
-              ]),
-            ),
-            pw.Spacer(),
-            _buildFooter(context),
-          ]),
-        ));
-
-        // Detailed Sales Table
-        pdf.addPage(pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape,
-          footer: _buildFooter,
-          build: (context) => [
-            pw.Text("Detailed Sales Report", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-              children: [
-                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
-                  'ID', 'Customer', 'Item', 'Qty', 'Rate', 'Subtotal', if(showGstData) 'GST', 'Total'
-                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8, color: PdfColors.white)).toList()),
-                ...filteredInvoices.expand((inv) {
-                  final invItems = allItems.where((it) => it.invoiceId == inv.invoiceId).toList();
-                  return invItems.map((item) {
-                    double sub = (item.rate ?? 0) * (item.quantity ?? 0);
-                    double tax = showGstData ? (sub * (item.gstRate ?? 0) / 100) : 0;
-                    return pw.TableRow(children: [
-                      _buildTableCell(inv.invoiceId ?? "", fontSize: 7),
-                      _buildTableCell(inv.customerName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                      _buildTableCell(item.itemName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                      _buildTableCell("${item.quantity}", fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(item.rate ?? 0), fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(sub), fontSize: 7),
-                      if(showGstData) _buildTableCell(AppUtil.formatCurrency(tax), fontSize: 7),
-                      _buildTableCell(AppUtil.formatCurrency(sub + tax), fontSize: 7),
-                    ]);
-                  });
-                }).toList(),
-              ],
-            ),
-          ],
-        ));
-      }
-
-      // ==========================================
-      // સેક્શન ૨: PURCHASE REPORT
-      // ==========================================
-      if (purchaseNum > 0) {
-        pdf.addPage(pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape,
-          footer: _buildFooter,
-          build: (context) => [
-            // ❌ અહીંથી _buildReportHeader કાઢી નાખ્યું છે
-            pw.Text("$purchaseNum. PURCHASE REPORT", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-              children: [
-                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
-                  'Bill No', 'Vendor', 'Date', 'Total', 'Paid', 'Status'
-                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 8, color: PdfColors.white)).toList()),
-                ...filteredPurchases.map((p) => pw.TableRow(children: [
-                  _buildTableCell(p.purchaseId ?? "", fontSize: 7),
-                  _buildTableCell(p.vendorName ?? "", fontSize: 7, textAlign: pw.TextAlign.left),
-                  _buildTableCell(_formatDate(p.purchaseDate), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(p.totalAmount ?? 0), fontSize: 7),
-                  _buildTableCell(AppUtil.formatCurrency(p.paidAmount ?? 0), fontSize: 7),
-                  _buildTableCell(p.paymentStatus ?? "", fontSize: 7),
-                ])),
-              ],
-            ),
-          ],
-        ));
-      }
-
-      // ==========================================
-      // સેક્શન ૩: STOCK REPORT
-      // ==========================================
-      if (stockNum > 0) {
-        pdf.addPage(pw.MultiPage(
-          footer: _buildFooter,
-          build: (context) => [
-            // ❌ અહીંથી પણ _buildReportHeader કાઢી નાખ્યું છે
-            pw.Text("$stockNum. STOCK REPORT", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-              children: [
-                pw.TableRow(decoration: pw.BoxDecoration(color: headerColor), children: [
-                  'Item Name', 'Price', 'Stock', 'Value'
-                ].map((h) => _buildTableCell(h, isHeader: true, fontSize: 9, color: PdfColors.white)).toList()),
-                ...stockItems.map((item) => pw.TableRow(children: [
-                  _buildTableCell(item.itemName, fontSize: 8, textAlign: pw.TextAlign.left),
-                  _buildTableCell(AppUtil.formatCurrency(item.price), fontSize: 8),
-                  _buildTableCell("${item.currentStock} ${item.unitOfMeasurement}", fontSize: 8),
-                  _buildTableCell(AppUtil.formatCurrency(item.currentStock * item.price), fontSize: 8),
-                ])),
-              ],
-            ),
-          ],
-        ));
-      }
-
-      // SAVE & OPEN
-      final bytes = await pdf.save();
-      if (kIsWeb) {
-        await Printing.layoutPdf(onLayout: (format) async => bytes, name: "Business_Report.pdf");
-      } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File("${dir.path}/All_In_One_${DateTime.now().millisecondsSinceEpoch}.pdf");
-        await file.writeAsBytes(bytes);
-        OpenFile.open(file.path);
-      }
-    } catch (e) {
-      print("❌ Error: $e");
-      Get.snackbar('Error', 'Failed to generate report');
-    }
-  }
-
-  void viewInvoiceDetails(Invoice invoice) {
-
-    Get.lazyPut<InvoiceDetailsController>(() => InvoiceDetailsController());
-    Get.toNamed(InvoiceDetailsScreen.pageId, arguments: invoice);
-  }
-
-  // Method to get customer count for dashboard display
-  Future<int> getCustomerCount() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null || companyId.value.isEmpty) return 0;
-
-      final customersSnapshot = await _firestore
-          .collection("users")
-          .doc(user.uid)
-          .collection("companies")
-          .doc(companyId.value)
-          .collection("customers")
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      return customersSnapshot.docs.length;
-    } catch (e) {
-      print("Error getting customer count: $e");
-      return 0;
-    }
-  }
-
-  Future<void> updateLanguagePreference(bool isGujarati) async {
-    await AppConstants.setLanguage(isGujarati);
-
-    // Also update in Firestore
-    final user = _auth.currentUser;
-    if (user != null && companyId.value.isNotEmpty) {
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('companies')
-          .doc(companyId.value)
-          .update({'isGujarati': isGujarati});
-    }
-
-    print("✅ Language Updated → Gujarati: $isGujarati");
-  }
-
-  Future<void> logout() async {
-    await Get.find<AuthController>().logout();
-  }
-
-  final List<RevenueData> revenueData = [
-    RevenueData(month: 'Jan',year: 2025, revenue: 5000),
-    RevenueData(month: 'Feb',year: 2025, revenue: 7500),
-    RevenueData(month: 'Mar', year: 2025,revenue: 10000),
-    RevenueData(month: 'Apr',year: 2025, revenue: 8200),
-
-  ];
-
-
-  /// Method to generate month-based revenue data
-  Future<List<RevenueData>> getMonthlyRevenueData({
-    int monthsBack = 12,
-    String? statusFilter,
-    bool includeCurrentMonth = true,
-  }) async {
-    try {
-      if (invoiceList.isEmpty) return [];
-
-      final now = DateTime.now();
-      final List<RevenueData> result = [];
-
-      int startMonth = includeCurrentMonth ? monthsBack - 1 : monthsBack;
-
-      for (int i = startMonth; i >= 0; i--) {
-        final monthDate = DateTime(now.year, now.month - i, 1);
-        final monthName = DateFormat('MMM yyyy').format(monthDate);
-        final year = monthDate.year;
-
-        double monthlyTotal = 0;
-        for (var invoice in invoiceList) {
-          final isSameMonth = invoice.issueDate != null &&
-              invoice.issueDate!.year == monthDate.year &&
-              invoice.issueDate!.month == monthDate.month;
-
-          final matchesStatus = statusFilter == null ||
-              (invoice.status?.toLowerCase() == statusFilter.toLowerCase());
-
-          if (isSameMonth && matchesStatus) {
-            monthlyTotal += invoice.totalAmount ?? 0;
-          }
-        }
-
-        result.add(RevenueData(
-          month: monthName,
-          revenue: monthlyTotal,
-          year: year,
-        ));
-      }
-
-      monthlyRevenueData.assignAll(result);
-      return result;
-
-    } catch (e) {
-      print("Error in getMonthlyRevenueData: $e");
-      return [];
-    }
-  }
-
-
-  // Get total revenue for current month
-  double get currentMonthRevenue {
-    if (monthlyRevenueData.isEmpty) return 0;
-    return monthlyRevenueData.last.revenue;
-  }
-
-// Get revenue growth compared to previous month
-  double get monthlyGrowth {
-    if (monthlyRevenueData.length < 2) return 0;
-
-    final current = monthlyRevenueData.last.revenue;
-    final previous = monthlyRevenueData[monthlyRevenueData.length - 2].revenue;
-
-    if (previous == 0) return current > 0 ? 100 : 0;
-
-    return ((current - previous) / previous * 100);
-  }
-
-// Get best performing month
-  RevenueData? get bestPerformingMonth {
-    if (monthlyRevenueData.isEmpty) return null;
-
-    return monthlyRevenueData.reduce((a, b) =>
-    a.revenue > b.revenue ? a : b
-    );
-  }
-}
-
-// ============================================
-class _DashboardLifecycleObserver extends WidgetsBindingObserver {
-  final VoidCallback onResumed;
-
-  _DashboardLifecycleObserver({required this.onResumed});
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      onResumed();
-    }
-  }
-}
-
-
-class ChartData {
-  final String label;
-  final double value;
-  final Color color;
-
-  ChartData(this.label, this.value, this.color);
-}
-
-class InvoicePreviewScreen extends StatefulWidget {
-  @override
-  _InvoicePreviewScreenState createState() => _InvoicePreviewScreenState();
-}
-
-class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
-  PdfOption _selectedOption = PdfOption.standard;
-
-  Widget _buildStandardInvoicePreview() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Standard Invoice Preview',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-          // In a real app, you would use: Image.asset("assets/images/inv_1.png")
-          // For this example, I'm creating a placeholder
-          Container(
-            width: 300,
-            height: 400,
-            color: Colors.grey.shade100,
-            child: Image.asset("assets/images/inv_2.png"),
-          ),
+          pw.Text("Grand Summary", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+          pw.SizedBox(height: 5),
+          pw.Text("Total Receipts: $count", style: const pw.TextStyle(fontSize: 9)),
+          pw.Text("Total Collection: Rs. ${NumberFormat('#,##,###.##').format(total)}", 
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: PdfColors.blue900)),
         ],
       ),
     );
   }
 
-  Widget _buildDetailedInvoicePreview() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Detailed Invoice Preview',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+  void showExportDialog(BuildContext context) {
+    fromDate.value = null;
+    toDate.value = null;
+    selectedReportType.value = 'Full Report';
+    
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Container(
+          width: 420,
+          padding: const EdgeInsets.all(0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+                decoration: BoxDecoration(
+                  color: AppColors.appTheame,
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.assessment_rounded, color: Colors.white, size: 24),
+                        const SizedBox(width: 14),
+                        const Text("Business Reports", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Select Report Type", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 14),
+                    
+                    // Report Type Selection
+                    _buildReportTypeTile(
+                      title: "Full Report",
+                      subtitle: "Complete chronological list of receipts",
+                      icon: Icons.receipt_long_rounded,
+                      type: 'Full Report',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildReportTypeTile(
+                      title: "Donation Type Wise",
+                      subtitle: "Grouped by category (Education, etc.)",
+                      icon: Icons.category_rounded,
+                      type: 'Donation Type Wise',
+                    ),
+
+                    const SizedBox(height: 28),
+                    const Text("Select Duration", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 14),
+
+                    // From Date Picker
+                    _buildDateTile(
+                      context: context,
+                      label: "From Date",
+                      onTap: () => selectFromDate(context),
+                      icon: Icons.calendar_today_rounded,
+                      dateObs: fromDate,
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    _buildDateTile(
+                      context: context,
+                      label: "To Date",
+                      onTap: () => selectToDate(context),
+                      icon: Icons.event_rounded,
+                      dateObs: toDate,
+                    ),
+
+                    const SizedBox(height: 28),
+                    
+                    // Export Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (fromDate.value == null || toDate.value == null) {
+                            Get.snackbar("Range Required", "Please select both dates", 
+                                snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade50);
+                            return;
+                          }
+                          Get.back();
+                          exportToPdf();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.appTheame,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 2,
+                          shadowColor: AppColors.appTheame.withOpacity(0.3),
+                        ),
+                        child: const Text("Generate Report", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ],
           ),
-          // In a real app, you would use: Image.asset("assets/images/inv_3.png")
-          // For this example, I'm creating a placeholder
-          Container(
-            width: 300,
-            height: 400,
-            color: Colors.grey.shade100,
-            child: Image.asset("assets/images/inv_3.png"),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Invoice Preview'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildReportTypeTile({required String title, required String subtitle, required IconData icon, required String type}) {
+    return Obx(() {
+      bool isSelected = selectedReportType.value == type;
+      return InkWell(
+        onTap: () => selectedReportType.value = type,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.appTheame.withOpacity(0.04) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isSelected ? AppColors.appTheame : Colors.grey.shade200, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.appTheame : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: isSelected ? Colors.white : Colors.grey.shade600, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isSelected ? AppColors.appTheame : Colors.black87)),
+                    Text(subtitle, style: TextStyle(fontSize: 11, color: isSelected ? AppColors.appTheame.withOpacity(0.7) : Colors.grey)),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle_rounded, color: AppColors.appTheame, size: 20),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildDateTile({required BuildContext context, required String label, required VoidCallback onTap, required IconData icon, required Rxn<DateTime> dateObs}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
           children: [
-            Text(
-              'Select Invoice Type:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)]),
+              child: Icon(icon, color: AppColors.appTheame, size: 20),
             ),
-            SizedBox(height: 16),
-            Row(
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: RadioListTile<PdfOption>(
-                    title: Text('Standard Invoice'),
-                    value: PdfOption.standard,
-                    groupValue: _selectedOption,
-                    onChanged: (PdfOption? value) {
-                      setState(() {
-                        _selectedOption = value!;
-                      });
-                    },
+                Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Obx(() => Text(
+                  formatDate(dateObs.value),
+                  style: TextStyle(
+                    fontSize: 15, 
+                    fontWeight: FontWeight.bold, 
+                    color: dateObs.value != null ? Colors.black87 : Colors.grey.shade400
                   ),
-                ),
-                Expanded(
-                  child: RadioListTile<PdfOption>(
-                    title: Text('Detailed Invoice'),
-                    value: PdfOption.detailed,
-                    groupValue: _selectedOption,
-                    onChanged: (PdfOption? value) {
-                      setState(() {
-                        _selectedOption = value!;
-                      });
-                    },
-                  ),
-                ),
+                )),
               ],
             ),
-            SizedBox(height: 32),
-            Center(
-              child: _selectedOption == PdfOption.standard
-                  ? _buildStandardInvoicePreview()
-                  : _buildDetailedInvoicePreview(),
-            ),
-            SizedBox(height: 32),
-            Center(
-              child: Text(
-                'Note: Make sure to add your images to the assets/images folder\nand update the pubspec.yaml file accordingly.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-              ),
-            ),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey.shade400, size: 14),
           ],
         ),
       ),
     );
   }
 }
-
-enum PdfOption { standard, detailed }
