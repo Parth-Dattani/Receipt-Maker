@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -73,8 +74,14 @@ class GoogleSheetsService {
 
       _currentUserId = userId;
       _currentFY = financialYear;
-      return {'spreadsheetId': _spreadsheetId!};
+      
+      return {
+        'spreadsheetId': _spreadsheetId!,
+        'folderId': _mainFolderId!,
+        'financialYear': financialYear,
+      };
     } catch (e) {
+      debugPrint('[GSheetsService] Setup Error: $e');
       return null;
     }
   }
@@ -288,19 +295,18 @@ class GoogleSheetsService {
     print('[GSheetsService] ✅ Active sheet switched to: $title');
   }
 
-  static Future<String?> uploadPdfToDrive(File file) async {
+  static Future<String?> uploadPdfToDrive(Uint8List bytes, String fileName) async {
     if (!isSignedIn || _mainFolderId == null) return null;
     try {
       final pdfFolderId = await _getOrCreateSubFolder('PDF', _mainFolderId!);
       
       final driveFile = drive.File()
-        ..name = file.path.split('/').last
+        ..name = fileName
         ..parents = [pdfFolderId];
 
-      final media = drive.Media(file.openRead(), file.lengthSync());
+      final media = drive.Media(Stream.value(bytes), bytes.length);
       final uploadedFile = await _driveApi!.files.create(driveFile, uploadMedia: media);
       
-      // Make file viewable by anyone with link (optional but common for sharing)
       await _driveApi!.permissions.create(
         drive.Permission()..type = 'anyone'..role = 'reader',
         uploadedFile.id!,

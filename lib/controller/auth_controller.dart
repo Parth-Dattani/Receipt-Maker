@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -19,12 +20,7 @@ class AuthController extends GetxController {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/spreadsheets',
-    ],
-  );
+  late final GoogleSignIn _googleSignIn;
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -44,6 +40,25 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    // Initialize GoogleSignIn based on platform
+    if (kIsWeb) {
+      _googleSignIn = GoogleSignIn(
+        clientId: AppConstants.googleWebClientId,
+        scopes: [
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/spreadsheets',
+        ],
+      );
+    } else {
+      _googleSignIn = GoogleSignIn(
+        scopes: [
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/spreadsheets',
+        ],
+      );
+    }
+
     _auth.authStateChanges().listen((user) async {
       if (user != null) {
         await AppConstants.setUserId(user.uid);
@@ -101,8 +116,14 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Ensure we are signed out first to force a fresh account picker
+      await _googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) {
+        isLoading.value = false;
+        return;
+      }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
@@ -114,27 +135,32 @@ class AuthController extends GetxController {
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
       if (userCredential.user != null) {
-        final uid = userCredential.user!.uid;
-        final userDoc = await _db.collection('users').doc(uid).get();
-
-        if (!userDoc.exists) {
-          await _db.collection('users').doc(uid).set({
-            'email': userCredential.user!.email,
-            'createdAt': FieldValue.serverTimestamp(),
-            'lastLogin': FieldValue.serverTimestamp(),
-            'uid': uid,
-            'authMethod': 'Google',
-          }, SetOptions(merge: true));
-        } else {
-          await _db.collection('users').doc(uid).update({
-            'lastLogin': FieldValue.serverTimestamp(),
-          });
-        }
+        await _handleUserSetup(userCredential.user!, 'Google');
       }
     } catch (e) {
-      _showSnack('Error', 'Google Sign-In Failed: $e', Colors.red);
+      debugPrint('[Google Login Error] $e');
+      _showSnack('Error', 'Google Sign-In Failed: ${e.toString()}', Colors.red);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> _handleUserSetup(User user, String method) async {
+    final uid = user.uid;
+    final userDoc = await _db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      await _db.collection('users').doc(uid).set({
+        'email': user.email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLogin': FieldValue.serverTimestamp(),
+        'uid': uid,
+        'authMethod': method,
+      }, SetOptions(merge: true));
+    } else {
+      await _db.collection('users').doc(uid).update({
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
     }
   }
 
@@ -224,23 +250,44 @@ class AuthController extends GetxController {
   // ── Logout ─────────────────────────────────────────────────────────────────
   Future<void> logout() async {
     try {
-      await _googleSignIn.signOut();
+      // 0. Unfocus everything to prevent keyboard/controller race conditions
+      FocusManager.instance.primaryFocus?.unfocus();
+
+      // 1. Google Sign Out (Critical for Web/Mobile)
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        debugPrint('[Google SignOut Error] $e');
+      }
+
+      // 2. Firebase Sign Out
       await _auth.signOut();
       
-      // 🚀 Clear local cache to prevent old receipts from loading on next login
-      await sharedPreferencesHelper.clearPrefData();
+      // 3. Reset Services
       GoogleSheetsService.reset();
       
-      if (Get.isRegistered<DashboardController>()) {
-        Get.delete<DashboardController>();
-      }
-      if (Get.isRegistered<ReceiptController>()) {
-        Get.delete<ReceiptController>();
-      }
+      // 4. Clear Local Cache (SharedPreferences)
+      await sharedPreferencesHelper.clearPrefData();
       
-      debugPrint('[Logout] ✅ Local session cleared successfully.');
+      debugPrint('[Logout] ✅ Full cleanup successful.');
+
+      // 5. Redirect to Login FIRST. 
+      // This removes the active screens that might be using the controllers we're about to delete.
+      Get.offAllNamed(LoginScreen.pageId);
+      
+      // 6. Clean up Controllers AFTER navigation starts
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (Get.isRegistered<DashboardController>()) {
+          Get.delete<DashboardController>(force: true);
+        }
+        if (Get.isRegistered<ReceiptController>()) {
+          Get.delete<ReceiptController>(force: true);
+        }
+      });
+      
     } catch (e) {
       debugPrint('[Logout Error] $e');
+      _showSnack('Error', 'Failed to logout: $e', Colors.red);
     }
   }
 

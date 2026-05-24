@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../constant/constant.dart';
 import '../../controller/receipt_controller.dart';
+import '../../widgets/custom_text_form_field.dart';
+import '../../widgets/web_app_sidebar.dart';
 
 class NewReceiptScreen extends GetView<ReceiptController> {
   static const pageId = "/new-receipt";
@@ -11,6 +13,26 @@ class NewReceiptScreen extends GetView<ReceiptController> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
+    bool isWeb = screenWidth > 900;
+
+    if (isWeb) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Row(
+          children: [
+            const WebAppSidebar(selectedItem: SidebarItem.newReceipt),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildWebHeader(),
+                  Expanded(child: _buildMainContent(context, screenWidth)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.whiteColor2,
@@ -32,40 +54,161 @@ class NewReceiptScreen extends GetView<ReceiptController> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 850),
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: Obx(() => Skeletonizer( // 🚀 અહીં Skeletonizer આખા ફોર્મ પર લાગી ગયું
-                enabled: controller.isLoading.value,
-                child: Column(
-                  children: [
-                    _headerBanner(screenWidth),
+      body: _buildMainContent(context, screenWidth),
+    );
+  }
+
+  Widget _buildWebHeader() {
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE)))),
+      child: Row(
+        children: [
+          Obx(() => Text(
+              controller.isEditMode.value ? 'Update Receipt' : 'Generate New Receipt',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          )),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.grey),
+            onPressed: controller.resetForm,
+            tooltip: "Reset Form",
+          ),
+          const SizedBox(width: 16),
+          const VerticalDivider(width: 1, indent: 20, endIndent: 20),
+          const SizedBox(width: 16),
+          CircleAvatar(
+            backgroundColor: AppColors.appTheame.withValues(alpha: 0.1),
+            radius: 18,
+            child: Icon(Icons.add_box_rounded, color: AppColors.appTheame, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainContent(BuildContext context, double screenWidth) {
+    bool isWeb = screenWidth > 900;
+    return SafeArea(
+      child: Center(
+        child: Container(
+          constraints: BoxConstraints(maxWidth: isWeb ? 1000 : 850),
+          child: SingleChildScrollView(
+            padding: isWeb ? const EdgeInsets.symmetric(vertical: 32) : EdgeInsets.zero,
+            physics: const ClampingScrollPhysics(),
+            child: Obx(() => Skeletonizer(
+              enabled: controller.isLoading.value,
+              child: Column(
+                children: [
+                  if (!isWeb) _headerBanner(screenWidth),
+                  if (isWeb) ...[
                     Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Form(
-                        key: controller.formKey,
-                        child: Column(
-                          children: [
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_circle_outline_rounded, size: 28, color: AppColors.appTheame),
+                          const SizedBox(width: 14),
+                          Text(
+                            controller.isEditMode.value ? 'Update Receipt Details' : 'Create New Collection Receipt',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: controller.formKey,
+                      child: Column(
+                        children: [
+                          // Top Sections Row for Web
+                          if (isWeb)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 1,
+                                  child: _sectionCard(
+                                    title: 'Receipt Info',
+                                    icon: Icons.receipt_long_rounded,
+                                    children: [
+                                      CustomTextFormField(
+                                        controller: controller.recNoCtrl,
+                                        label: 'Receipt No.',
+                                        prefixIcon: Icons.numbers_rounded,
+                                        readOnly: true,
+                                      ),
+                                      CustomTextFormField(
+                                        controller: controller.dateCtrl,
+                                        label: 'Date',
+                                        prefixIcon: Icons.calendar_today_rounded,
+                                        readOnly: true,
+                                        onTap: () => controller.pickDate(context),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  flex: 2,
+                                  child: _sectionCard(
+                                    title: 'Donor Details',
+                                    icon: Icons.person_rounded,
+                                    children: [
+                                      CustomTextFormField(
+                                        controller: controller.donorNameCtrl,
+                                        label: 'Full Name / Donor Name',
+                                        prefixIcon: Icons.badge_rounded,
+                                        isRequired: true,
+                                      ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: CustomTextFormField(
+                                              controller: controller.panNoCtrl,
+                                              label: 'PAN No.',
+                                              prefixIcon: Icons.credit_card_rounded,
+                                              textCapitalization: TextCapitalization.characters,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: CustomTextFormField(
+                                              controller: controller.mobileNoCtrl,
+                                              label: 'Mobile No.',
+                                              prefixIcon: Icons.phone_android_rounded,
+                                              keyboardType: TextInputType.phone,
+                                              maxLength: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          else ...[
                             _sectionCard(
                               title: 'Receipt Information',
                               icon: Icons.receipt_long_rounded,
                               children: [
                                 _buildResponsiveRow(
                                   screenWidth,
-                                  child1: _customField(
+                                  child1: CustomTextFormField(
                                     controller: controller.recNoCtrl,
                                     label: 'Receipt No.',
-                                    icon: Icons.numbers_rounded,
+                                    prefixIcon: Icons.numbers_rounded,
                                     keyboardType: TextInputType.number,
                                     readOnly: true,
                                   ),
-                                  child2: _customField(
+                                  child2: CustomTextFormField(
                                     controller: controller.dateCtrl,
                                     label: 'Date',
-                                    icon: Icons.calendar_today_rounded,
+                                    prefixIcon: Icons.calendar_today_rounded,
                                     readOnly: true,
                                     onTap: () => controller.pickDate(context),
                                   ),
@@ -73,117 +216,117 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                               ],
                             ),
                             const SizedBox(height: 20),
-
                             _sectionCard(
                               title: 'Donor Details',
                               icon: Icons.person_rounded,
                               children: [
-                                _customField(
+                                CustomTextFormField(
                                   controller: controller.donorNameCtrl,
                                   label: 'Full Name / Donor Name',
-                                  icon: Icons.badge_rounded,
-                                  required: true,
-                                  textInputAction: TextInputAction.next,
+                                  prefixIcon: Icons.badge_rounded,
+                                  isRequired: true,
                                 ),
-                                const SizedBox(height: 16),
                                 _buildResponsiveRow(
                                   screenWidth,
-                                  child1: _customField(
+                                  child1: CustomTextFormField(
                                     controller: controller.panNoCtrl,
                                     label: 'PAN No.',
-                                    icon: Icons.credit_card_rounded,
-                                    caps: TextCapitalization.characters,
-                                    textInputAction: TextInputAction.next,
+                                    prefixIcon: Icons.credit_card_rounded,
+                                    textCapitalization: TextCapitalization.characters,
                                   ),
-                                  child2: _customField(
+                                  child2: CustomTextFormField(
                                     controller: controller.mobileNoCtrl,
                                     label: 'Mobile No.',
-                                    icon: Icons.phone_android_rounded,
+                                    prefixIcon: Icons.phone_android_rounded,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
-
-                                    textInputAction: TextInputAction.next,
-                                    validator: (v) {                                    // ← આ add કરો
-                                      if (v == null || v.trim().isEmpty) return 'Mobile No. required';
-                                      if (v.trim().length != 10) return '10 digits mobile no.';
-                                      if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v.trim()))
-                                        return 'please enter valid  mobile no';
-                                      return null;
-                                    },
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
+                          ],
+                          const SizedBox(height: 20),
 
-                            _sectionCard(
-                              title: 'Payment Details',
-                              icon: Icons.account_balance_wallet_rounded,
-                              children: [
-                                _buildResponsiveRow(
-                                  screenWidth,
-                                  child1: _customField(
-                                    controller: controller.amountCtrl,
-                                    label: 'Amount (₹)',
-                                    icon: Icons.currency_rupee_rounded,
-                                    keyboardType: TextInputType.number,
-                                    required: true,
-                                    textInputAction: TextInputAction.next,
+                          _sectionCard(
+                            title: 'Payment & Collection Details',
+                            icon: Icons.account_balance_wallet_rounded,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: CustomTextFormField(
+                                      controller: controller.amountCtrl,
+                                      label: 'Amount (₹)',
+                                      prefixIcon: Icons.currency_rupee_rounded,
+                                      keyboardType: TextInputType.number,
+                                      isRequired: true,
+                                    ),
                                   ),
-                                  child2: _paymentTypeDropdown(),
-                                ),
-                                const SizedBox(height: 16),
-                                _donationTypeDropdown(),
-                                Obx(() {
-                                  final pType = controller.selectedPaymentType.value;
-                                  if (pType == 'Cheque' || pType == 'Bank Transfer' || pType == 'Online') {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 16),
-                                      child: _buildResponsiveRow(
-                                        screenWidth,
-                                        child1: _customField(
-                                          controller: controller.bankNameCtrl,
-                                          label: 'Bank Name',
-                                          icon: Icons.account_balance_rounded,
-                                          required: pType == 'Cheque',
-                                          textInputAction: TextInputAction.next,
+                                  const SizedBox(width: 16),
+                                  Expanded(child: _paymentTypeDropdown()),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(child: _donationTypeDropdown()),
+                                  if (isWeb) const Spacer(),
+                                ],
+                              ),
+                              Obx(() {
+                                final pType = controller.selectedPaymentType.value;
+                                if (pType == 'Cheque' || pType == 'Bank Transfer' || pType == 'Online') {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: CustomTextFormField(
+                                            controller: controller.bankNameCtrl,
+                                            label: 'Bank Name',
+                                            prefixIcon: Icons.account_balance_rounded,
+                                            isRequired: pType == 'Cheque',
+                                          ),
                                         ),
-                                        child2: _customField(
-                                          controller: controller.chequeNoCtrl,
-                                          label: pType == 'Cheque' ? 'Cheque No.' : 'Transaction Ref No.',
-                                          icon: Icons.confirmation_number_rounded,
-                                          required: pType == 'Cheque',
-                                          textInputAction: TextInputAction.done,
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: CustomTextFormField(
+                                            controller: controller.chequeNoCtrl,
+                                            label: pType == 'Cheque' ? 'Cheque No.' : 'Transaction Ref No.',
+                                            prefixIcon: Icons.confirmation_number_rounded,
+                                            isRequired: pType == 'Cheque',
+                                            textInputAction: TextInputAction.done,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                }),
-                                const SizedBox(height: 16),
-                                _customField(
-                                  controller: controller.remarksCtrl,
-                                  label: 'Remarks / Narration (Optional)',
-                                  icon: Icons.notes_rounded,
-                                  maxLines: 2,
-                                  textInputAction: TextInputAction.done,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 35),
-                            Container(
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }),
+                              CustomTextFormField(
+                                controller: controller.remarksCtrl,
+                                label: 'Remarks / Narration (Optional)',
+                                prefixIcon: Icons.notes_rounded,
+                                maxLines: 2,
+                                textInputAction: TextInputAction.done,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+                          Center(
+                            child: Container(
                               constraints: const BoxConstraints(maxWidth: 400),
                               child: _generateButton(),
                             ),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 60),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              )),
-            ),
+                  ),
+                ],
+              ),
+            )),
           ),
         ),
       ),
@@ -249,93 +392,82 @@ class NewReceiptScreen extends GetView<ReceiptController> {
     if (width > 550) {
       return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: child1), const SizedBox(width: 16), Expanded(child: child2)]);
     } else {
-      return Column(children: [child1, const SizedBox(height: 14), child2]);
+      return Column(children: [child1, child2]);
     }
   }
 
-  Widget _customField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    bool required = false,
-    String? Function(String?)? validator,
-    TextCapitalization caps = TextCapitalization.words,
-    int maxLines = 1,
-    int? maxLength,
-    TextInputAction textInputAction = TextInputAction.next,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      onTap: onTap,
-      textCapitalization: caps,
-      maxLines: maxLines,
-      maxLength: maxLength,
-      textInputAction: textInputAction,
-      validator: validator ?? (required ? (v) => v!.isEmpty ? 'This field is required' : null : null),
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 18, color: AppColors.appTheame.withOpacity(0.7)),
-        labelStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        counterText: '',
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.appTheame, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.redAccent)),
-      ),
-    );
-  }
-
   Widget _paymentTypeDropdown() {
-    return Obx(() => DropdownButtonFormField<String>(
-      value: controller.selectedPaymentType.value,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
-      decoration: InputDecoration(
-        labelText: 'Payment Mode',
-        prefixIcon: Icon(Icons.account_balance_wallet_rounded, size: 18, color: AppColors.appTheame.withOpacity(0.7)),
-        labelStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.appTheame, width: 1.5)),
-      ),
-      items: controller.paymentTypes
-          .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
-          .toList(),
-      onChanged: (v) => controller.selectedPaymentType.value = v!,
-    ));
+    return Obx(() {
+      final uniqueTypes = controller.paymentTypes.toSet().toList();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6, left: 2),
+              child: Text("Payment Mode", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.black87)),
+            ),
+            DropdownButtonFormField<String>(
+              value: controller.selectedPaymentType.value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.account_balance_wallet_rounded, size: 18, color: Colors.grey.shade400),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.appTheame.withValues(alpha: 0.5), width: 1.5)),
+              ),
+              items: uniqueTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
+                  .toList(),
+              onChanged: (v) => controller.selectedPaymentType.value = v!,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _donationTypeDropdown() {
-    return Obx(() => DropdownButtonFormField<String>(
-      value: controller.selectedDonationType.value,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
-      decoration: InputDecoration(
-        labelText: 'Donation Type',
-        prefixIcon: Icon(Icons.volunteer_activism_rounded, size: 18, color: AppColors.appTheame.withOpacity(0.7)),
-        labelStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.appTheame, width: 1.5)),
-      ),
-      items: controller.donationTypes
-          .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
-          .toList(),
-      onChanged: (v) => controller.selectedDonationType.value = v!,
-    ));
+    return Obx(() {
+      final uniqueTypes = controller.donationTypes.toSet().toList();
+      if (uniqueTypes.isNotEmpty && !uniqueTypes.contains(controller.selectedDonationType.value)) {
+        controller.selectedDonationType.value = uniqueTypes.first;
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6, left: 2),
+              child: Text("Donation Type", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.black87)),
+            ),
+            DropdownButtonFormField<String>(
+              value: controller.selectedDonationType.value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.volunteer_activism_rounded, size: 18, color: Colors.grey.shade400),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.appTheame.withValues(alpha: 0.5), width: 1.5)),
+              ),
+              items: uniqueTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 14))))
+                  .toList(),
+              onChanged: (v) => controller.selectedDonationType.value = v!,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _generateButton() {

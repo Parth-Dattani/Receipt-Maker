@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -16,9 +17,8 @@ class ReceiptPdfHelper {
     return val.trim();
   }
 
-  // isPrint: true  → print/share ready (same output, caller decides action)
-  // isPrint: false → save to file only
-  static Future<File> generate(ReceiptModel receipt, {bool isPrint = false}) async {
+  // Returns bytes instead of File to support Web
+  static Future<Uint8List> generateBytes(ReceiptModel receipt, {bool isPrint = false}) async {
     final pdf = pw.Document();
 
     pw.MemoryImage? logo;
@@ -33,13 +33,11 @@ class ReceiptPdfHelper {
       qrImage = pw.MemoryImage(qrData.buffer.asUint8List());
     } catch (_) {}
 
-    // Share: receipt content height adjusted for all fields (approx 380pt)
-    // Print: full A4 for 2 copies with divider
     final pageFormat = isPrint
         ? PdfPageFormat.a4
         : PdfPageFormat(
       PdfPageFormat.a4.width,
-      380 * PdfPageFormat.point, // increased from 330 to 380 to fit signature/bank info
+      380 * PdfPageFormat.point,
       marginAll: 0,
     );
 
@@ -59,7 +57,6 @@ class ReceiptPdfHelper {
               mainAxisSize: pw.MainAxisSize.min,
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // ─── Header Section ───
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -82,8 +79,6 @@ class ReceiptPdfHelper {
                   ],
                 ),
                 pw.SizedBox(height: 6),
-
-                // ─── Address Bar ───
                 pw.Container(
                   width: double.infinity,
                   padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
@@ -92,8 +87,6 @@ class ReceiptPdfHelper {
                       textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: _trustBlue)),
                 ),
                 pw.SizedBox(height: 10),
-
-                // ─── Meta Row (No & Date) ───
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -102,8 +95,6 @@ class ReceiptPdfHelper {
                   ],
                 ),
                 pw.SizedBox(height: 8),
-
-                // ─── Donor Details Fields ───
                 _dottedField("Mr. / Ms. :", _formatValue(receipt.donorName)),
                 pw.SizedBox(height: 8),
                 pw.Row(
@@ -118,7 +109,7 @@ class ReceiptPdfHelper {
                   children: [
                     pw.Expanded(child: _dottedField("Donation Type :", _formatValue(receipt.donationType))),
                     pw.SizedBox(width: 20),
-                    pw.Expanded(child: pw.SizedBox()), // Empty space to align
+                    pw.Expanded(child: pw.SizedBox()), 
                   ],
                 ),
                 pw.SizedBox(height: 8),
@@ -132,8 +123,6 @@ class ReceiptPdfHelper {
                   ],
                 ),
                 pw.SizedBox(height: 12),
-
-                // ─── LOWER OPERATION AREA ───
                 pw.Row(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -203,46 +192,42 @@ class ReceiptPdfHelper {
         }
 
         if (isPrint) {
-          // Print mode: 2 equal parts on A4 page (donor + office)
           return pw.Column(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Expanded(
-                flex: 1,
-                child: pw.Center(child: buildReceiptCard()),
-              ),
+              pw.Expanded(flex: 1, child: pw.Center(child: buildReceiptCard())),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(vertical: 10),
-                child: pw.Text(
-                  "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ",
-                  style: pw.TextStyle(color: PdfColors.grey400, fontSize: 10),
-                ),
+                child: pw.Text("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ",
+                  style: pw.TextStyle(color: PdfColors.grey400, fontSize: 10)),
               ),
-              pw.Expanded(
-                flex: 1,
-                child: pw.Center(child: buildReceiptCard()),
-              ),
+              pw.Expanded(flex: 1, child: pw.Center(child: buildReceiptCard())),
             ],
           );
         } else {
-          // Save/share mode: 1 copy only
-          return pw.Container(
-            alignment: pw.Alignment.topCenter,
-            child: buildReceiptCard(),
-          );
+          return pw.Container(alignment: pw.Alignment.topCenter, child: buildReceiptCard());
         }
       },
     ));
 
+    return pdf.save();
+  }
+
+  // Legacy method for mobile compatibility
+  static Future<File> generate(ReceiptModel receipt, {bool isPrint = false}) async {
+    final bytes = await generateBytes(receipt, isPrint: isPrint);
+    
+    if (kIsWeb) {
+      throw UnsupportedError("dart:io File is not supported on Web. Use generateBytes instead.");
+    }
+
     final dir = await getApplicationDocumentsDirectory();
     final receiptDir = Directory('${dir.path}/Receipts/PDF');
-    if (!await receiptDir.exists()) {
-      await receiptDir.create(recursive: true);
-    }
+    if (!await receiptDir.exists()) await receiptDir.create(recursive: true);
 
     final suffix = isPrint ? '_print' : '_share';
     final file = File('${receiptDir.path}/receipt_${receipt.recNo}$suffix.pdf');
-    await file.writeAsBytes(await pdf.save());
+    await file.writeAsBytes(bytes);
     return file;
   }
 

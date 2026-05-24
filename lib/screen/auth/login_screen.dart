@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../constant/constant.dart'; // તમારા પ્રોજેક્ટ મુજબ પાથ ચેક કરી લેવો
+import '../../constant/constant.dart';
 import '../../controller/auth_controller.dart';
+import '../../widgets/custom_text_form_field.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends GetView<AuthController> {
@@ -10,110 +11,115 @@ class LoginScreen extends GetView<AuthController> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 વેબ રિસ્પોન્સિવનેસ માટે ડિવાઇસની વિડ્થ ચેક કરવી
     double screenWidth = MediaQuery.of(context).size.width;
+    bool isWideScreen = screenWidth > 900;
 
     return Scaffold(
-      backgroundColor: AppColors.whiteColor2,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: controller.loginFormKey,
+      backgroundColor: isWideScreen ? Colors.white : AppColors.whiteColor2,
+      body: Row(
+        children: [
+          // ─── Left Side: Branding (Visible only on Web/Desktop) ───
+          if (isWideScreen)
+            Expanded(
+              flex: 5,
               child: Container(
-                // 🌟 જો વેબ કે ટેબ્લેટ મોટી સ્ક્રીન હોય તો મેક્સિમમ 450 width આપવી jethi card ખેંચાય નહિ
-                constraints: const BoxConstraints(maxWidth: 450),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.appTheame, AppColors.appTheame.withValues(alpha: 0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(60.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        child: Image.asset(ImagePath.appLogo, height: 80),
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        AppStrings.appName.toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Empowering Trust. Simplifying Contribution.\nYour Entire Management, In Your Pocket.",
+                        style: TextStyle(color: Colors.white70, fontSize: 20, height: 1.5),
+                      ),
+                      const SizedBox(height: 60),
 
-                    // 🏢 Logo & Trust Name Section
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.appTheame,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                              color: AppColors.appTheame.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 4
-                          )
+                      // Feature List
+                      _buildFeatureRow(Icons.verified_user_rounded, "Secure Data Access"),
+                      _buildFeatureRow(Icons.print_rounded, "Print & Digital Receipts"),
+                      _buildFeatureRow(Icons.analytics_rounded, "Advanced Collection Reports"),
+                      _buildFeatureRow(Icons.cloud_sync_rounded, "Live Google Sheet Sync"),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // ─── Right Side: Login Form ───
+          Expanded(
+            flex: 4,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Form(
+                    key: controller.loginFormKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (!isWideScreen) ...[
+                          Image.asset(ImagePath.appLogo, height: 70),
+                          const SizedBox(height: 16),
                         ],
-                      ),
-                      child: const Icon(Icons.account_balance, color: Colors.white, size: 48),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      AppStrings.trustName,
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.appTheame),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      AppStrings.trustRegNo,
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.appTheame.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Receipt Manager',
-                        style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+                        const Text(
+                          "Welcome Back",
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 32),
 
-                    // 📑 Login Credentials Card
-                    Container(
-                      padding: const EdgeInsets.all(28),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6)
-                          )
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              'Login',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.appTheame)
-                          ),
-                          const SizedBox(height: 24),
-
-                          // ✉️ Email Field
-                          TextFormField(
+                          // Email Field
+                          CustomTextFormField(
+                            label: "Email Address",
+                            hintText: "Enter your Email",
+                            prefixIcon: Icons.email_outlined,
                             controller: controller.emailController,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: _inputDecoration('Email', Icons.email_outlined),
                             validator: (v) => v!.isEmpty ? 'Email required' : (GetUtils.isEmail(v) ? null : 'Invalid email'),
                           ),
-                          const SizedBox(height: 16),
 
-                          // 🔒 Password Field
-                          Obx(() => TextFormField(
+                          // Password Field
+                          Obx(() => CustomTextFormField(
+                            label: "Password",
+                            hintText: "Enter your Password",
+                            prefixIcon: Icons.lock_outline,
                             controller: controller.passwordController,
                             obscureText: controller.obscurePassword.value,
-                            decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(controller.obscurePassword.value
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined),
-                                onPressed: () => controller.obscurePassword.toggle(),
-                              ),
+                            suffixIcon: IconButton(
+                              icon: Icon(controller.obscurePassword.value ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                              onPressed: () => controller.obscurePassword.toggle(),
                             ),
                             validator: (v) => v!.isEmpty ? 'Password required' : null,
                           )),
@@ -122,137 +128,113 @@ class LoginScreen extends GetView<AuthController> {
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: controller.resetPassword,
-                              child: Text('Forgot Password?', style: TextStyle(color: AppColors.appTheame, fontSize: 13, fontWeight: FontWeight.w500)),
+                              child: Text('Forgot password?', style: TextStyle(color: AppColors.appTheame, fontSize: 13, fontWeight: FontWeight.w600)),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 20),
 
-                          // 🚀 Regular Login Button
+                          // Login Button
                           Obx(() => SizedBox(
                             width: double.infinity,
-                            height: 50,
+                            height: 52,
                             child: ElevatedButton(
                               onPressed: controller.isLoading.value ? null : controller.login,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.appTheame,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                elevation: 2,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
                               ),
                               child: controller.isLoading.value
-                                  ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                              )
-                                  : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                  : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             ),
                           )),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 30),
+                          _buildDivider(),
+                          const SizedBox(height: 30),
 
-                          // ── 🌟 OR Divider ──────────────────────────────────────
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text("OR", style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.bold)),
-                              ),
-                              Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1.5)),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // ── 🌟 Google Sign-In Button (With Obx Loader) ─────────
-                          // ── 🌟 Google Sign-In Button (વિથ સેફ આઈકોન અને ઓવરફ્લો સોલ્યુશન) ─────────
+                          // Google Sign-In
                           Obx(() => SizedBox(
                             width: double.infinity,
-                            height: 50,
+                            height: 52,
                             child: OutlinedButton(
                               onPressed: controller.isLoading.value ? null : () => controller.loginWithGoogle(),
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                backgroundColor: Colors.grey.shade50,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min, // 🌟 ઓવરફ્લો અટકાવવા માટે મિનિમમ સાઈઝ
                                 children: [
-                                  // 🌟 નેટવર્ક ઈમેજની જગ્યાએ સેફ ગૂગલ બ્રાન્ડ આઈકોન લુક
-                                  Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.g_mobiledata_rounded, // ફ્લટરનું ઇનબિલ્ટ આઇકોન જે ક્યારેય ક્રેશ નહીં થાય
-                                      color: Colors.blue,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Flexible( // 🌟 ટેક્સ્ટ જો મોટી થાય તો પણ ઓવરફ્લો નહિ થાય
-                                    child: Text(
-                                      'Sign in with Google',
-                                      style: TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
+                                  const Icon(Icons.g_mobiledata_rounded, color: Colors.blue, size: 28),
+                                  const SizedBox(width: 12),
+                                  const Text('Sign in with Google', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),
                           )),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 40),
 
-                          // 📝 Register Redirection
+                          // Footer Links
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text("Don't have an account?", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              const Text("Don't have an account?", style: TextStyle(color: Colors.black54, fontSize: 14)),
                               TextButton(
                                 onPressed: () {
                                   controller.clearControllers();
                                   Get.toNamed(RegisterScreen.pageId);
                                 },
-                                child: Text('Register', style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold, fontSize: 13)),
+                                child: Text('Register', style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold, fontSize: 14)),
                               ),
                             ],
+                          ),
+
+                          const SizedBox(height: 60),
+                          Text(
+                            "© 2026 Noor Receipt. All rights reserved.\nDeveloped by Intelligent Tech",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade400, height: 1.5),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          
+        ],
       ),
     );
   }
 
-  // 🎨 Input Fields Styling
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-      prefixIcon: Icon(icon, color: AppColors.appTheame, size: 20),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.appTheame, width: 1.5)),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+  Widget _buildFeatureRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 25),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(width: 15),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1)),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text("or", style: TextStyle(color: Colors.grey, fontSize: 14)),
+        ),
+        Expanded(child: Divider(color: Colors.grey.shade200, thickness: 1)),
+      ],
     );
   }
 }

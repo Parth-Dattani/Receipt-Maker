@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../constant/constant.dart';
 import '../../controller/receipt_controller.dart';
+import '../../controller/dashboard_controller.dart';
 import '../../model/receipt_model.dart';
 import '../../utils/receipt_pdf_helper.dart';
+import '../../widgets/web_app_sidebar.dart';
+import '../receipt/new_receipt_screen.dart';
 import '../screen.dart';
 
 class HistoryScreen extends GetView<ReceiptController> {
@@ -14,6 +17,28 @@ class HistoryScreen extends GetView<ReceiptController> {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    bool isWeb = screenWidth > 900;
+
+    if (isWeb) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Row(
+          children: [
+            const WebAppSidebar(selectedItem: SidebarItem.history),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildWebHeader(context),
+                  Expanded(child: _buildMainContent()),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.whiteColor2,
       appBar: AppBar(
@@ -23,39 +48,145 @@ class HistoryScreen extends GetView<ReceiptController> {
         title: const Text('Receipt History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: Column(
+      body: _buildMainContent(),
+    );
+  }
+
+  Widget _buildWebHeader(BuildContext context) {
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE)))),
+      child: Row(
         children: [
-          _searchAndSortPanel(),
-          Expanded(
-            child: Obx(() {
-              final list = controller.filteredReceiptList;
-
-              // 🚀 સ્કેલેટન ઇફેક્ટ: જો લોડિંગ હોય તો ૬ ડમી કાર્ડ્સ બતાવો
-              return Skeletonizer(
-                enabled: controller.isLoading.value,
-                child: list.isEmpty && !controller.isLoading.value
-                    ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.search_off_rounded, size: 60, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text('No matching receipts found', style: TextStyle(color: Colors.grey, fontSize: 15)),
-                ]))
-                    : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  itemCount: controller.isLoading.value ? 6 : list.length,
-                  physics: const BouncingScrollPhysics(),
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) {
-                    final item = controller.isLoading.value
-                        ? ReceiptModel.dummy()
-                        : list[i];
-                    return _receiptCard(item);}
-
-                ),
-              );
-            }),
+          const Text("Receipts History", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.grey),
+            onPressed: controller.refreshData,
+            tooltip: "Refresh Data",
+          ),
+          const SizedBox(width: 16),
+          const VerticalDivider(width: 1, indent: 20, endIndent: 20),
+          const SizedBox(width: 16),
+          CircleAvatar(
+            backgroundColor: AppColors.appTheame.withValues(alpha: 0.1),
+            radius: 18,
+            child: Icon(Icons.history_rounded, color: AppColors.appTheame, size: 20),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMainContent() {
+    return Column(
+      children: [
+        _searchAndSortPanel(),
+        Expanded(
+          child: Obx(() {
+            final list = controller.filteredReceiptList;
+            final bool isWeb = MediaQuery.of(Get.context!).size.width > 900;
+
+            if (list.isEmpty && !controller.isLoading.value) {
+              return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.search_off_rounded, size: 60, color: Colors.grey),
+                SizedBox(height: 12),
+                Text('No matching receipts found', style: TextStyle(color: Colors.grey, fontSize: 15)),
+              ]));
+            }
+
+            return Skeletonizer(
+              enabled: controller.isLoading.value,
+              child: isWeb ? _buildWebTable(list) : _buildMobileList(list),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileList(List<ReceiptModel> list) {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: controller.isLoading.value ? 6 : list.length,
+      physics: const BouncingScrollPhysics(),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, i) {
+        final item = controller.isLoading.value ? ReceiptModel.dummy() : list[i];
+        return _receiptCard(item);
+      },
+    );
+  }
+
+  Widget _buildWebTable(List<ReceiptModel> list) {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20)],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(AppColors.appTheame.withValues(alpha: 0.05)),
+            dataRowMaxHeight: 65,
+            horizontalMargin: 24,
+            columns: const [
+              DataColumn(label: Text('Receipt No', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Donor Name', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Payment', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+            rows: list.map((r) {
+              return DataRow(cells: [
+                DataCell(Text('#${r.recNo}', style: TextStyle(color: AppColors.appTheame, fontWeight: FontWeight.bold))),
+                DataCell(Text(r.date)),
+                DataCell(Text(r.donorName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                DataCell(Text('₹${NumberFormat('#,##,###').format(r.amount)}', style: const TextStyle(fontWeight: FontWeight.bold))),
+                DataCell(Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
+                  child: Text(r.paymentType, style: const TextStyle(fontSize: 11)),
+                )),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _webActionButton(Icons.edit_note_rounded, Colors.blue, () {
+                      controller.setupForEdit(r);
+                      Get.toNamed(NewReceiptScreen.pageId);
+                    }),
+                    _webActionButton(Icons.local_printshop_rounded, Colors.blueGrey, () async {
+                      final file = await ReceiptPdfHelper.generate(r, isPrint: true);
+                      controller.printReceipt(file.path, receipt: r);
+                    }),
+                    _webActionButton(Icons.share_rounded, const Color(0xFF25D366), () async {
+                      final file = await ReceiptPdfHelper.generate(r, isPrint: false);
+                      controller.shareWhatsApp(file.path, receiptNo: r.recNo.toString(), mobileNo: r.mobileNo);
+                    }),
+                    _webActionButton(Icons.delete_outline_rounded, Colors.red, () => controller.deleteReceipt(r)),
+                  ],
+                )),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _webActionButton(IconData icon, Color color, VoidCallback onTap) {
+    return IconButton(
+      icon: Icon(icon, color: color, size: 20),
+      onPressed: onTap,
+      hoverColor: color.withValues(alpha: 0.1),
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
     );
   }
 

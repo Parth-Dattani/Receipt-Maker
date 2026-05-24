@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -50,27 +52,107 @@ class DashboardController extends GetxController {
 
       String currentYear = AppConstants.activeFy;
 
+      // 1. પેલા સાઇલન્ટ કનેક્ટ ટ્રાય કરો
       if (!GoogleSheetsService.isSignedIn && userEmail.isNotEmpty) {
-        bool isConnected = await GoogleSheetsService.signInSilentlyWithEmail(userEmail);
-        if (isConnected) {
-          String uId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
-
-          // Google Sheets માં એક્ટિવ શીટ સેટ કરો
-          GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
-
-          await GoogleSheetsService.setupUserDriveAndSheet(uId, currentYear);
-        }
+        await GoogleSheetsService.signInSilentlyWithEmail(userEmail);
       }
-      
-      // Ensure active sheet is correct even if already signed in
-      GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
 
-      await loadStats();
+      // 2. જો સાઇલન્ટ કનેક્ટ ફેલ થાય, તો યુઝરને લિન્ક કરવાનું પૂછો
+      // (આ ખાસ કરીને Email/Password વાળા યુઝર્સ માટે છે)
+      if (!GoogleSheetsService.isSignedIn && userEmail.isNotEmpty) {
+        _showGoogleLinkPrompt();
+      } else {
+        // 3. જો કનેક્ટેડ હોય તો ડેટા લોડ કરો
+        GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
+        await loadStats();
+      }
     } catch (e) {
       debugPrint('[DashboardController] Initialization Error: $e');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _showGoogleLinkPrompt() {
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.cloud_off_rounded, color: Colors.orange),
+              SizedBox(width: 12),
+              Text('Cloud Sync Required'),
+            ],
+          ),
+          content: const Text(
+            'To store your receipts and generate PDFs, you must link your Google account for Google Drive and Sheets access.',
+            style: TextStyle(height: 1.5),
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  Get.back();
+                  isLoading.value = true;
+                  String uId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
+                  String currentYear = AppConstants.activeFy.isEmpty ? "2026-27" : AppConstants.activeFy;
+                  
+                  final data = await GoogleSheetsService.setupUserDriveAndSheet(uId, currentYear);
+                  if (data != null) {
+                    // Firestore માં IDs સેવ કરો
+                    await FirebaseFirestore.instance.collection('users').doc(uId).set({
+                      'googleSheetId': data['spreadsheetId'],
+                      'driveFolderId': data['folderId'],
+                      'activeFY': data['financialYear'],
+                    }, SetOptions(merge: true));
+                    
+                    _showSuccessSnackBar("Google account linked successfully!");
+                    refreshDashboard();
+                  } else {
+                    _showErrorSnackBar("Could not link account. Try again.");
+                    _showGoogleLinkPrompt(); // ફરીથી બતાવો
+                  }
+                },
+                icon: const Icon(Icons.link_rounded),
+                label: const Text('Link Google Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.appTheame,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  void _showSuccessSnackBar(String msg) {
+    if (Get.context == null) return;
+    ScaffoldMessenger.of(Get.context!).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFE8F5E9),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String msg) {
+    if (Get.context == null) return;
+    ScaffoldMessenger.of(Get.context!).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(color: Color(0xFFC62828), fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFFFEBEE),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   /// 📊 ગૂગલ શીટમાંથી લાઈવ ડેટા ખેંચીને ગણતરી કરવાનું મુખ્ય ફંક્શન
@@ -310,18 +392,27 @@ class DashboardController extends GetxController {
       );
 
       // Save and Share
-      final directory = await getApplicationDocumentsDirectory();
-      String typeSuffix = selectedReportType.value == 'Detailed Report' ? "Detailed" : "Category";
-      String fileName = "Receipts_${typeSuffix}_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.pdf";
-      String filePath = "${directory.path}/$fileName";
+      final Uint8List pdfBytes = await pdf.save();
+      final String typeSuffix = selectedReportType.value == 'Full Report' ? "Detailed" : "Category";
+      final String fileName = "Receipts_${typeSuffix}_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.pdf";
       
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
-
       isLoading.value = false;
-      
-      // Open Share Sheet
-      await Share.shareXFiles([XFile(filePath)], text: "Receipts Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}");
+      final String message = "Receipts Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}";
+
+      if (kIsWeb) {
+        // Web: Download/Share using bytes
+        await Share.shareXFiles(
+          [XFile.fromData(pdfBytes, name: fileName, mimeType: 'application/pdf')],
+          text: message,
+        );
+      } else {
+        // Mobile: Save to file and share
+        final directory = await getApplicationDocumentsDirectory();
+        final String filePath = "${directory.path}/$fileName";
+        final file = File(filePath);
+        await file.writeAsBytes(pdfBytes);
+        await Share.shareXFiles([XFile(filePath)], text: message);
+      }
 
     } catch (e) {
       debugPrint("Export Error: $e");
@@ -384,12 +475,15 @@ class DashboardController extends GetxController {
     toDate.value = null;
     selectedReportType.value = 'Full Report';
     
+    double screenWidth = MediaQuery.of(context).size.width;
+    bool isWeb = screenWidth > 900;
+
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
         child: Container(
-          width: 420,
+          width: isWeb ? 550 : 420,
           padding: const EdgeInsets.all(0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -408,7 +502,8 @@ class DashboardController extends GetxController {
                       children: [
                         const Icon(Icons.assessment_rounded, color: Colors.white, size: 24),
                         const SizedBox(width: 14),
-                        const Text("Business Reports", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(isWeb ? "Generate Professional Business Reports" : "Business Reports", 
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                     IconButton(
@@ -429,50 +524,97 @@ class DashboardController extends GetxController {
                     const Text("Select Report Type", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
                     const SizedBox(height: 14),
                     
-                    // Report Type Selection
-                    _buildReportTypeTile(
-                      title: "Full Report",
-                      subtitle: "Complete chronological list of receipts",
-                      icon: Icons.receipt_long_rounded,
-                      type: 'Full Report',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildReportTypeTile(
-                      title: "Donation Type Wise",
-                      subtitle: "Grouped by category (Education, etc.)",
-                      icon: Icons.category_rounded,
-                      type: 'Donation Type Wise',
-                    ),
+                    if (isWeb)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildReportTypeTile(
+                              title: "Full Report",
+                              subtitle: "Complete chronological list",
+                              icon: Icons.receipt_long_rounded,
+                              type: 'Full Report',
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildReportTypeTile(
+                              title: "Category Wise",
+                              subtitle: "Grouped by donation type",
+                              icon: Icons.category_rounded,
+                              type: 'Donation Type Wise',
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      _buildReportTypeTile(
+                        title: "Full Report",
+                        subtitle: "Complete chronological list of receipts",
+                        icon: Icons.receipt_long_rounded,
+                        type: 'Full Report',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildReportTypeTile(
+                        title: "Donation Type Wise",
+                        subtitle: "Grouped by category (Education, etc.)",
+                        icon: Icons.category_rounded,
+                        type: 'Donation Type Wise',
+                      ),
+                    ],
 
                     const SizedBox(height: 28),
                     const Text("Select Duration", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
                     const SizedBox(height: 14),
 
-                    // From Date Picker
-                    _buildDateTile(
-                      context: context,
-                      label: "From Date",
-                      onTap: () => selectFromDate(context),
-                      icon: Icons.calendar_today_rounded,
-                      dateObs: fromDate,
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    _buildDateTile(
-                      context: context,
-                      label: "To Date",
-                      onTap: () => selectToDate(context),
-                      icon: Icons.event_rounded,
-                      dateObs: toDate,
-                    ),
+                    if (isWeb)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDateTile(
+                              context: context,
+                              label: "From Date",
+                              onTap: () => selectFromDate(context),
+                              icon: Icons.calendar_today_rounded,
+                              dateObs: fromDate,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDateTile(
+                              context: context,
+                              label: "To Date",
+                              onTap: () => selectToDate(context),
+                              icon: Icons.event_rounded,
+                              dateObs: toDate,
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      _buildDateTile(
+                        context: context,
+                        label: "From Date",
+                        onTap: () => selectFromDate(context),
+                        icon: Icons.calendar_today_rounded,
+                        dateObs: fromDate,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDateTile(
+                        context: context,
+                        label: "To Date",
+                        onTap: () => selectToDate(context),
+                        icon: Icons.event_rounded,
+                        dateObs: toDate,
+                      ),
+                    ],
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 32),
                     
                     // Export Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
-                      child: ElevatedButton(
+                      child: ElevatedButton.icon(
                         onPressed: () {
                           if (fromDate.value == null || toDate.value == null) {
                             Get.snackbar("Range Required", "Please select both dates", 
@@ -482,6 +624,8 @@ class DashboardController extends GetxController {
                           Get.back();
                           exportToPdf();
                         },
+                        icon: const Icon(Icons.picture_as_pdf_rounded),
+                        label: const Text("Generate & Download PDF Report", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
@@ -489,7 +633,6 @@ class DashboardController extends GetxController {
                           elevation: 2,
                           shadowColor: AppColors.appTheame.withOpacity(0.3),
                         ),
-                        child: const Text("Generate Report", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(height: 8),
