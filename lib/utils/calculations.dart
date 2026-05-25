@@ -3,11 +3,7 @@ import 'package:intl/intl.dart';
 import '../constant/constant.dart';
 
 class AppUtil {
-  static double calculateItemAmount(double price, double gstPercent) {
-    return AppConstants.withGST.value
-        ? price + (price * gstPercent / 100)
-        : price;
-  }
+
 
   static String formatDate(String dateString) {
     try {

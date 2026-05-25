@@ -80,14 +80,14 @@ class ReceiptModel {
       id: null,
       recNo: data['RecNo'] ?? 0,
       date: data['Date'] ?? '',
-      donorName: data['Donor Name'] ?? '',
-      panNo: data['PAN No'] ?? '',
+      donorName: (data['Donor Name'] ?? '').toString().toUpperCase(), // 🚀 Get in UPPERCASE
+      panNo: (data['PAN No'] ?? '').toString().toUpperCase(), // 🚀 Get in UPPERCASE
       mobileNo: data['Mobile No'] ?? '',
       amount: (data['Amount'] ?? 0.0).toDouble(),
       amountInWords: data['Amount In Words'] ?? '',
       paymentType: data['Payment Type'] ?? 'Cash',
-      bankName: data['Bank Name'] ?? '',
-      chequeNo: data['Cheque No'] ?? '',
+      bankName: (data['Bank Name'] ?? '').toString().toUpperCase(), // 🚀 Get in UPPERCASE
+      chequeNo: (data['Cheque No'] ?? '').toString().toUpperCase(),
       remarks: data['Remarks'] ?? '',
       donationType: data['Donation Type'] ?? 'General',
       createdAt: data['Created At'] ?? DateTime.now(),

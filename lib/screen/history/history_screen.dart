@@ -69,10 +69,19 @@ class HistoryScreen extends GetView<ReceiptController> {
           const SizedBox(width: 16),
           const VerticalDivider(width: 1, indent: 20, endIndent: 20),
           const SizedBox(width: 16),
-          CircleAvatar(
-            backgroundColor: AppColors.appTheame.withValues(alpha: 0.1),
-            radius: 18,
-            child: Icon(Icons.history_rounded, color: AppColors.appTheame, size: 20),
+          Row(
+            children: [
+              CircleAvatar(backgroundColor: AppColors.appTheame.withValues(alpha: 0.1), radius: 18, child: Icon(Icons.person_rounded, color: AppColors.appTheame, size: 20)),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(controller.userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text(controller.userEmail, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
+              ),
+            ],
           ),
         ],
       ),

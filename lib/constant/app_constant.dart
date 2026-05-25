@@ -1,51 +1,26 @@
 
 import 'dart:ui';
-
 import 'package:get/get.dart';
-
 import '../utils/shared_preferences_helper.dart';
 
-class AppConstants{
-
-   static String  userId = "";
-   static String  companyId = "";
-   static String  companyName = "";
-   static String appId = "";
+class AppConstants {
+   static String userId = "";
+   static String companyId = "";
+   static String companyName = "";
    static String spreadsheetId = "";
-   static String googleAccessToken = "";
+
    /// Active financial year (e.g. "2024-25"). Each FY has its own Google Sheet.
    static String activeFy = "";
-   /// Service Account JSON in assets/ — GetYourInvoice project key (Sheets/Drive).
-   static String serviceAccountJsonPath = "getyourinvoice-8f128-3dfb21843bde.json";
-   /// "Share sheet with" message માં દેખાડવાનો email — JSON ના client_email જેવો જ રાખો.
-   static String serviceAccountEmailForDisplay = "getyourinvoice-sheet-access@getyourinvoice-8f128.iam.gserviceaccount.com";
-   /// Web-only: paste Firebase Authentication → Google → Web SDK configuration → Web client ID (for Google Sign-In on web).
-   /// On Android, same ID is used as serverClientId so Firebase accepts the token. Use your project's Web client ID.
-   static String googleWebClientId = "134369591951-51gsni8h3hgeihrpgu3og7t0n42slbb8.apps.googleusercontent.com";
-   static String accessKey = "";
-   static String businessType = "Trading";
-   /// Purchase, stock, challan menus apply only when [businessType] is exactly `Trading`.
-   static bool get isTradingCompany => businessType.trim() == 'Trading';
+
+   /// Web-only: OAuth 2.0 Web client ID.
+   static String googleWebClientId = "710899897768-5v9fst3j5ol287cmk5mro5q14jmdp3g4.apps.googleusercontent.com";
+
    static String appName = "Noor Receipt";
-   static final isChallan = false.obs; //isChallanEnabled
-   static final isCashMemo = false.obs; // isCashMemoEnabled
-   static final withGST = false.obs; //isGstEnabled
-   static final isGujarati = false.obs; //Language toggle
-   static final isDemo = false.obs;
-   static final isDueDateEnabled = false.obs;
-   static int dueDateDays = 0;
-   static final RxBool isExtraNotesEnabled = false.obs;
-   static bool allowDuplicateItems = false;
-   static final RxBool enableCustomerOrderFeature = false.obs;
-   /// When false (Firestore), Payment / Receipt menu is hidden. Missing field = enabled.
-   static final RxBool enablePaymentReceiptFeature = true.obs;
-   /// When false (Firestore), Purchase menu is hidden (Trading). Missing field = enabled.
-   static final RxBool enablePurchaseFeature = true.obs;
+   static final isGujarati = false.obs; // Language toggle
    static var isWhatsappDirectShare = false.obs;
 
-   /// Digits after decimal point for amounts (e.g. 2 → 350.00, 0 → 350).
+   /// Digits after decimal point for amounts (e.g. 2 → 350.00).
    static int decimalPlaces = 2;
-
 
    /// Format amount with company's decimal places.
    static String formatAmount(double amount) => amount.toStringAsFixed(decimalPlaces);
@@ -54,59 +29,35 @@ class AppConstants{
    static Future<void> loadFromPrefs() async {
       userId = await sharedPreferencesHelper.getPrefData("userId") ?? "";
       companyId = await sharedPreferencesHelper.getPrefData("companyId") ?? "";
-      companyName = await sharedPreferencesHelper.getPrefData("companyName") ?? ""; // ✅ Load Company Name
-      appId = await sharedPreferencesHelper.getPrefData("appId") ?? "";
+      companyName = await sharedPreferencesHelper.getPrefData("companyName") ?? "";
       spreadsheetId = await sharedPreferencesHelper.getPrefData("spreadsheetId") ?? "";
-      
+
       String savedFY = await sharedPreferencesHelper.getPrefData("active_fy") ?? "2026-27";
-      // 🛡️ Normalization: Ensure 2026-2027 becomes 2026-27
+
+      // Normalize FY format
       if (savedFY.length == 9 && savedFY.contains('-')) {
-        List<String> parts = savedFY.split('-');
-        if (parts[1].length == 4) {
-          savedFY = "${parts[0]}-${parts[1].substring(2)}";
-          await sharedPreferencesHelper.storePrefData("active_fy", savedFY);
-        }
+         List<String> parts = savedFY.split('-');
+         if (parts[1].length == 4) {
+            savedFY = "${parts[0]}-${parts[1].substring(2)}";
+            await sharedPreferencesHelper.storePrefData("active_fy", savedFY);
+         }
       }
       activeFy = savedFY;
 
-      accessKey = await sharedPreferencesHelper.getPrefData("accessKey") ?? "";
-      businessType = await sharedPreferencesHelper.getPrefData("businessType") ?? "Trading"; // 🆕 Load businessType
-
-      isChallan.value = await sharedPreferencesHelper.retrievePrefBoolData("isChallanEnabled") ?? false;
-      isCashMemo.value = await sharedPreferencesHelper.retrievePrefBoolData("isCashMemoEnabled") ?? false;
-      withGST.value = await sharedPreferencesHelper.retrievePrefBoolData("isGstEnabled") ?? false;
       isGujarati.value = await sharedPreferencesHelper.retrievePrefBoolData("isGujarati") ?? false;
-      isDemo.value = await sharedPreferencesHelper.retrievePrefBoolData("isDemo") ?? false; // 🆕 Load demo status
 
-      // 🔹 Apply saved language
+      // Apply saved language
       if (isGujarati.value) {
          Get.updateLocale(const Locale('gu', 'IN'));
       } else {
          Get.updateLocale(const Locale('en', 'US'));
       }
 
-      isDueDateEnabled.value = await sharedPreferencesHelper.retrievePrefBoolData("isDueDateEnabled") ?? false;
-      dueDateDays = int.tryParse(await sharedPreferencesHelper.getPrefData("dueDateDays") ?? "0") ?? 0;
       decimalPlaces = int.tryParse(await sharedPreferencesHelper.getPrefData("decimalPlaces") ?? "2") ?? 2;
-      allowDuplicateItems = await sharedPreferencesHelper.retrievePrefBoolData("allowDuplicateItems") ?? false;
-
-      enableCustomerOrderFeature.value = await sharedPreferencesHelper.retrievePrefBoolData("enableCustomerOrderFeature") ?? false;
-
-      enablePaymentReceiptFeature.value =
-          await sharedPreferencesHelper.retrievePrefBoolData("enablePaymentReceiptFeature") ?? true;
-      enablePurchaseFeature.value =
-          await sharedPreferencesHelper.retrievePrefBoolData("enablePurchaseFeature") ?? true;
-
-      // Non-Trading (e.g. Service) never uses Purchase — avoid stale true from prefs.
-      if (!isTradingCompany) {
-        enablePurchaseFeature.value = false;
-        await sharedPreferencesHelper.storeBoolPrefData("enablePurchaseFeature", false);
-      }
-
       isWhatsappDirectShare.value = await sharedPreferencesHelper.retrievePrefBoolData("isWhatsappDirectShare") ?? false;
    }
 
-   /// 🔹 Update + persist decimalPlaces (digits after decimal point)
+   /// 🔹 Update + persist decimalPlaces
    static Future<void> setDecimalPlaces(int value) async {
       decimalPlaces = value.clamp(0, 6);
       await sharedPreferencesHelper.storePrefData("decimalPlaces", decimalPlaces.toString());
@@ -117,7 +68,6 @@ class AppConstants{
       isGujarati.value = isGuj;
       await sharedPreferencesHelper.storeBoolPrefData("isGujarati", isGuj);
 
-      // Update GetX locale
       if (isGuj) {
          Get.updateLocale(const Locale('gu', 'IN'));
       } else {
@@ -131,7 +81,7 @@ class AppConstants{
       await sharedPreferencesHelper.storePrefData("userId", id);
    }
 
-   /// 🔹 Update + persist spreadsheetId (used for current FY sheet)
+   /// 🔹 Update + persist spreadsheetId
    static Future<void> setSpreadsheetId(String id) async {
       spreadsheetId = id;
       await sharedPreferencesHelper.storePrefData("spreadsheetId", id);
@@ -149,87 +99,11 @@ class AppConstants{
       await sharedPreferencesHelper.storePrefData("companyId", id);
    }
 
-   /// 🔹 Update + persist companyName (✅ Add this method)
+   /// 🔹 Update + persist companyName
    static Future<void> setCompanyName(String name) async {
       companyName = name;
       await sharedPreferencesHelper.storePrefData("companyName", name);
       print("💾 Company Name Saved to Prefs: $name");
-   }
-
-   /// 🔹 Update + persist businessType
-   static Future<void> setBusinessType(String type) async {
-      businessType = type;
-      await sharedPreferencesHelper.storePrefData("businessType", type);
-      if (!isTradingCompany) {
-         await setEnablePurchaseFeature(false);
-      }
-   }
-
-   /// 🔹 Update + persist isChallanEnabled
-   static Future<void> setChallanEnabled(bool value) async {
-      isChallan.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData("isChallanEnabled", value);
-   }
-
-   /// 🔹 Update + persist isCashMemoEnabled
-   static Future<void> setCashMemoEnabled(bool value) async {
-      isCashMemo.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData("isCashMemoEnabled", value);
-   }
-
-   /// 🔹 Update + persist isGstEnabled
-   static Future<void> setGstEnabled(bool value) async {
-      withGST.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData("isGstEnabled", value);
-   }
-
-   static Future<void> setDemoMode(bool value) async {
-      isDemo.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData("isDemo", value);
-   }
-
-   /// 🔹 Update + persist isDueDateEnabled
-   static Future<void> setDueDateEnabled(bool value) async {
-      isDueDateEnabled.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData("isDueDateEnabled", value);
-   }
-
-   /// 🔹 Update + persist dueDateDays
-   static Future<void> setDueDateDays(int days) async {
-      dueDateDays = days;
-      await sharedPreferencesHelper.storePrefData("dueDateDays", days.toString());
-   }
-
-
-   static Future<void> setExtraNotesEnabled(bool value) async {
-      isExtraNotesEnabled.value = value;
-      await sharedPreferencesHelper.storeBoolPrefData('isExtraNotesEnabled', value);
-   }
-
-   static Future<bool> getExtraNotesEnabled() async {
-      // final prefs = await SharedPreferences.getInstance();
-      return await sharedPreferencesHelper.retrievePrefBoolData('isExtraNotesEnabled') ?? false;
-   }
-
-
-   static Future<void> setAllowDuplicateItems(bool value) async {
-      allowDuplicateItems = value;
-      await sharedPreferencesHelper.storeBoolPrefData("allowDuplicateItems", value);
-   }
-
-   static Future<void> setEnableCustomerOrderFeature(bool val) async {
-      enableCustomerOrderFeature.value = val;
-      await sharedPreferencesHelper.storeBoolPrefData("enableCustomerOrderFeature", val);
-   }
-
-   static Future<void> setEnablePaymentReceiptFeature(bool val) async {
-      enablePaymentReceiptFeature.value = val;
-      await sharedPreferencesHelper.storeBoolPrefData("enablePaymentReceiptFeature", val);
-   }
-
-   static Future<void> setEnablePurchaseFeature(bool val) async {
-      enablePurchaseFeature.value = val;
-      await sharedPreferencesHelper.storeBoolPrefData("enablePurchaseFeature", val);
    }
 
    static Future<void> setIsWhatsappDirectShare(bool val) async {
@@ -240,16 +114,15 @@ class AppConstants{
 }
 
 class AppStrings {
-  static const String appName = 'Noor Receipt';
-  static const String trustName = 'Noor Education Trust - Jamnagar';
-  static const String trustReg1 = 'Registered Under Section 80 (G) of the Income Tax Act 1961';
-  static const String trustReg2 = 'Regn. No. CIT (Exemption), Ahmedabad / 80 G / 2019-20/A/11023';
-  static const String trustReg3 = 'Registered Under the Bombay Public Trust Act 1956';
-  static const String trustRegNo = 'Reg. No. E/4326/Jamnagar';
-  static const String trustAddress = 'Office Address: Nr. Bus Stand, Darbargadh, Jamnagar   M.: 98248 68786';
-  static const String bankName = 'PUNJAB NATIONAL BANK';
-  static const String bankAcNo = '04912413000575';
-  static const String bankIfsc = 'PUNB0049110';
-  static const String taxNote = 'Donation are Qualified for Deduction\nFrom Income Tax Under 80 (G) (50%)';
-  static const String appsScriptUrl = 'YOUR_APPS_SCRIPT_WEB_APP_URL';
+   static const String appName = 'Noor Receipt';
+   static const String trustName = 'Noor Education Trust - Jamnagar';
+   static const String trustReg1 = 'Registered Under Section 80 (G) of the Income Tax Act 1961';
+   static const String trustReg2 = 'Regn. No. CIT (Exemption), Ahmedabad / 80 G / 2019-20/A/11023';
+   static const String trustReg3 = 'Registered Under the Bombay Public Trust Act 1956';
+   static const String trustRegNo = 'Reg. No. E/4326/Jamnagar';
+   static const String trustAddress = 'Office Address: Nr. Bus Stand, Darbargadh, Jamnagar   M.: 98248 68786';
+   static const String bankName = 'PUNJAB NATIONAL BANK';
+   static const String bankAcNo = '04912413000575';
+   static const String bankIfsc = 'PUNB0049110';
+   static const String taxNote = 'Donation are Qualified for Deduction\nFrom Income Tax Under 80 (G) (50%)';
 }

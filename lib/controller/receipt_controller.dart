@@ -41,6 +41,10 @@ class ReceiptController extends GetxController {
   var selectedPaymentType = 'Cash'.obs;
   var selectedDonationType = 'General'.obs;
 
+  // User Info
+  String get userEmail => FirebaseAuth.instance.currentUser?.email ?? '';
+  String get userName => FirebaseAuth.instance.currentUser?.displayName ?? userEmail.split('@')[0];
+
   // Edit Mode Management Variables
   var isEditMode = false.obs;
   String? editingReceiptId;
@@ -127,11 +131,23 @@ class ReceiptController extends GetxController {
   }
 
   Future<void> setupForNewReceipt() async {
-    int lastSavedNo = await FirebaseService.getLastReceiptNumber();
+    // 🚀 Improved: Fetch max RecNo directly from Google Sheet to avoid duplicates across devices
+    int maxNo = 0;
+    try {
+      final list = await GoogleSheetsService.fetchAllReceipts();
+      if (list.isNotEmpty) {
+        maxNo = list.map((r) => r.recNo).reduce((a, b) => a > b ? a : b);
+      }
+    } catch (e) {
+      debugPrint('[RecNo Sync] Error fetching from sheet, falling back to Firestore');
+      maxNo = await FirebaseService.getLastReceiptNumber();
+    }
+
     await sharedPreferencesHelper.getSharedPreferencesInstance();
     String startRecStr = await sharedPreferencesHelper.getPrefData("start_rec_no") ?? "1";
     int startNo = int.tryParse(startRecStr) ?? 1;
-    int nextNo = (lastSavedNo >= startNo) ? lastSavedNo + 1 : startNo;
+    
+    int nextNo = (maxNo >= startNo) ? maxNo + 1 : startNo;
     currentRecNo.value = nextNo;
     recNoCtrl.text = nextNo.toString();
     loadDonationTypes();
@@ -160,14 +176,14 @@ class ReceiptController extends GetxController {
         id: editingReceiptId,
         recNo: finalRecNo,
         date: dateCtrl.text.trim(),
-        donorName: donorNameCtrl.text.trim(),
-        panNo: panNoCtrl.text.trim().isEmpty ? 'N/A' : panNoCtrl.text.trim().toUpperCase(),
+        donorName: donorNameCtrl.text.trim().toUpperCase(), // 🚀 Store in UPPERCASE
+        panNo: panNoCtrl.text.trim().isEmpty ? 'N/A' : panNoCtrl.text.trim().toUpperCase(), // 🚀 Store in UPPERCASE
         mobileNo: mobileNoCtrl.text.trim(),
         amount: amount,
         amountInWords: AmountToWords.convert(amount),
         paymentType: selectedPaymentType.value,
-        bankName: bankNameCtrl.text.trim().isEmpty ? 'N/A' : bankNameCtrl.text.trim(),
-        chequeNo: chequeNoCtrl.text.trim().isEmpty ? 'N/A' : chequeNoCtrl.text.trim(),
+        bankName: bankNameCtrl.text.trim().isEmpty ? 'N/A' : bankNameCtrl.text.trim().toUpperCase(), // 🚀 Store in UPPERCASE
+        chequeNo: chequeNoCtrl.text.trim().isEmpty ? 'N/A' : chequeNoCtrl.text.trim().toUpperCase(),
         remarks: remarksCtrl.text.trim().isEmpty ? 'N/A' : remarksCtrl.text.trim(),
         donationType: selectedDonationType.value,
         createdAt: isEditMode.value ? (originalCreatedAt ?? DateTime.now()) : DateTime.now(),
@@ -216,29 +232,52 @@ class ReceiptController extends GetxController {
   }
 
   void _showSuccessDialog(ReceiptModel receipt, String pdfPath, String receiptNo, {Uint8List? pdfBytes}) {
+    final bool isWeb = kIsWeb || MediaQuery.of(Get.context!).size.width > 900;
+    
     Get.dialog(
-      Center(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
+          constraints: BoxConstraints(maxWidth: isWeb ? 450 : 340),
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 12))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 40,
+                offset: const Offset(0, 15),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(color: Color(0xFFE8F5E9), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 56),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 48),
               ),
               const SizedBox(height: 20),
-              const Text('Receipt Generated Successfully!', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none)),
-              const SizedBox(height: 6),
-              Text('Select output format:', style: TextStyle(fontSize: 13, color: Colors.grey.shade500, decoration: TextDecoration.none)),
-              const SizedBox(height: 24),
+              const Text(
+                'Receipt Generated!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Receipt #$receiptNo is ready for output.',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, decoration: TextDecoration.none),
+              ),
+              const SizedBox(height: 32),
+              
+              // Action Buttons
               _invoiceSathiButton(
                 icon: Icons.local_printshop_rounded,
                 label: 'Print Receipt (2 Copies)',
@@ -252,7 +291,7 @@ class ReceiptController extends GetxController {
               const SizedBox(height: 12),
               _invoiceSathiButton(
                 icon: Icons.share_rounded,
-                label: 'WhatsApp',
+                label: 'Share via WhatsApp',
                 color: AppColors.whatsappColor,
                 isPrimary: false,
                 onTap: () {
@@ -261,7 +300,13 @@ class ReceiptController extends GetxController {
                 },
               ),
               const SizedBox(height: 20),
-              TextButton(onPressed: () => Get.back(), child: const Text('Skip & Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text(
+                  'Skip & Close',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ),
             ],
           ),
         ),

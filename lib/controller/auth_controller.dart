@@ -42,37 +42,64 @@ class AuthController extends GetxController {
     super.onInit();
 
     // Initialize GoogleSignIn based on platform
+    final String? clientId = AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
+    
+    _googleSignIn = GoogleSignIn(
+      clientId: kIsWeb ? clientId : null,
+      serverClientId: clientId,
+      scopes: [
+        'email',
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/spreadsheets',
+      ],
+    );
+
+    // 🚀 Web logic: Handle redirect result explicitly
     if (kIsWeb) {
-      _googleSignIn = GoogleSignIn(
-        clientId: AppConstants.googleWebClientId,
-        scopes: [
-          'https://www.googleapis.com/auth/drive.file',
-          'https://www.googleapis.com/auth/spreadsheets',
-        ],
-      );
-    } else {
-      _googleSignIn = GoogleSignIn(
-        scopes: [
-          'https://www.googleapis.com/auth/drive.file',
-          'https://www.googleapis.com/auth/spreadsheets',
-        ],
-      );
+      _auth.getRedirectResult().then((result) async {
+        if (result.user != null) {
+          debugPrint('[Web Auth] Redirect login successful for ${result.user!.email}');
+          await _handleUserSetup(result.user!, 'Google');
+          Get.offAllNamed(DashboardScreen.pageId);
+        }
+      }).catchError((e) {
+        debugPrint('[Web Auth] Redirect error: $e');
+      });
     }
 
     _auth.authStateChanges().listen((user) async {
       if (user != null) {
         await AppConstants.setUserId(user.uid);
 
-        if (user.email != null) {
-          // 🛡️ સિંગલ ટાઈમ સેન્ટ્રલ ટ્રિગર જે બધું હેન્ડલ અને સ્ટોર કરશે
-          await handleSilentGoogleLogin(user.email!);
-        }
-
         if (Get.currentRoute != DashboardScreen.pageId) {
           Get.offAllNamed(DashboardScreen.pageId);
         }
+
+        if (user.email != null) {
+          // 🚀 Platform-independent scope check (Mobile & Web)
+          final List<String> scopes = [
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/spreadsheets',
+          ];
+          bool hasScopes = await _googleSignIn.canAccessScopes(scopes);
+          if (!hasScopes) {
+            debugPrint('[Auth] ⚠️ Scopes missing. Re-requesting...');
+            await _googleSignIn.requestScopes(scopes);
+          }
+
+          handleSilentGoogleLogin(user.email!);
+          _handleUserSetup(user, 'Google');
+        }
       } else {
         await AppConstants.setUserId('');
+        
+        // 🚀 Fix: On Web, wait a bit before forcing login screen
+        // This prevents kicking the user back to login while redirect is processing
+        if (kIsWeb) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (_auth.currentUser != null) return; // User appeared, don't navigate
+        }
+
         if (Get.currentRoute != LoginScreen.pageId &&
             Get.currentRoute != '/login' &&
             Get.currentRoute != '/SplashScreen' &&
@@ -116,17 +143,42 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
 
-      // Ensure we are signed out first to force a fresh account picker
+      // 🚀 Web fix: Force "consent" prompt to ensure checkboxes appear every time
+      // This is the "Invoice Sathi Pro" secret for stability
       await _googleSignIn.signOut();
-
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      final GoogleSignInAccount? googleUser = kIsWeb 
+        ? await _googleSignIn.signInSilently(suppressErrors: true) ?? await _googleSignIn.signIn()
+        : await _googleSignIn.signIn();
+      
       if (googleUser == null) {
         isLoading.value = false;
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      // Check if scopes are actually granted
+      final List<String> requiredScopes = [
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/spreadsheets',
+      ];
+      
+      bool hasPermissions = await _googleSignIn.canAccessScopes(requiredScopes);
+      
+      if (kIsWeb && !hasPermissions) {
+        // If checkboxes weren't ticked, force the consent screen
+        debugPrint('[Web Auth] Permissions not granted. Forcing consent screen...');
+        await _googleSignIn.requestScopes(requiredScopes);
+        
+        // Re-check after request
+        hasPermissions = await _googleSignIn.canAccessScopes(requiredScopes);
+        if (!hasPermissions) {
+          _showSnack('Permission Required', 'Please tick both Drive and Sheets boxes to continue.', Colors.orange);
+          isLoading.value = false;
+          return;
+        }
+      }
 
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -136,10 +188,13 @@ class AuthController extends GetxController {
 
       if (userCredential.user != null) {
         await _handleUserSetup(userCredential.user!, 'Google');
+        Get.offAllNamed(DashboardScreen.pageId);
       }
     } catch (e) {
       debugPrint('[Google Login Error] $e');
-      _showSnack('Error', 'Google Sign-In Failed: ${e.toString()}', Colors.red);
+      String errorMsg = e.toString();
+      if (errorMsg.contains('popup_closed_by_user')) return;
+      _showSnack('Error', 'Google Sign-In Failed. Please try again.', Colors.red);
     } finally {
       isLoading.value = false;
     }
@@ -247,35 +302,55 @@ class AuthController extends GetxController {
     }
   }
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
+  // ── Logout with Confirmation ──────────────────────────────────────────────
+  void confirmLogout() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Colors.redAccent),
+            SizedBox(width: 12),
+            Text('Logout'),
+          ],
+        ),
+        content: const Text('Are you sure you want to logout from Noor Receipt?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              logout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Logout Logic ───────────────────────────────────────────────────────────
   Future<void> logout() async {
     try {
-      // 0. Unfocus everything to prevent keyboard/controller race conditions
       FocusManager.instance.primaryFocus?.unfocus();
-
-      // 1. Google Sign Out (Critical for Web/Mobile)
       try {
         await _googleSignIn.signOut();
       } catch (e) {
         debugPrint('[Google SignOut Error] $e');
       }
-
-      // 2. Firebase Sign Out
       await _auth.signOut();
-      
-      // 3. Reset Services
       GoogleSheetsService.reset();
-      
-      // 4. Clear Local Cache (SharedPreferences)
       await sharedPreferencesHelper.clearPrefData();
-      
       debugPrint('[Logout] ✅ Full cleanup successful.');
-
-      // 5. Redirect to Login FIRST. 
-      // This removes the active screens that might be using the controllers we're about to delete.
       Get.offAllNamed(LoginScreen.pageId);
-      
-      // 6. Clean up Controllers AFTER navigation starts
       Future.delayed(const Duration(milliseconds: 500), () {
         if (Get.isRegistered<DashboardController>()) {
           Get.delete<DashboardController>(force: true);
@@ -284,7 +359,6 @@ class AuthController extends GetxController {
           Get.delete<ReceiptController>(force: true);
         }
       });
-      
     } catch (e) {
       debugPrint('[Logout Error] $e');
       _showSnack('Error', 'Failed to logout: $e', Colors.red);
@@ -308,7 +382,8 @@ class AuthController extends GetxController {
   String _currentFYLabel() {
     final now = DateTime.now();
     final startYear = now.month >= 4 ? now.year : now.year - 1;
-    return '$startYear-${startYear + 1}';
+    final endYear = (startYear + 1).toString().substring(2); 
+    return '$startYear-$endYear';
   }
 
   void _showSnack(String title, String msg, MaterialColor color) {

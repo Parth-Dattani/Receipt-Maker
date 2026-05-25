@@ -37,10 +37,11 @@ class LoginScreen extends GetView<AuthController> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Logo
-                      Container(
-                        padding: const EdgeInsets.all(15),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: Image.asset(ImagePath.appLogo, height: 80),
+                      Image.asset(
+                        ImagePath.appLogo, 
+                        height: 120, 
+                        filterQuality: FilterQuality.high,
+                        isAntiAlias: true,
                       ),
                       const SizedBox(height: 30),
                       Text(
@@ -58,7 +59,6 @@ class LoginScreen extends GetView<AuthController> {
                       _buildFeatureRow(Icons.verified_user_rounded, "Secure Data Access"),
                       _buildFeatureRow(Icons.print_rounded, "Print & Digital Receipts"),
                       _buildFeatureRow(Icons.analytics_rounded, "Advanced Collection Reports"),
-                      _buildFeatureRow(Icons.cloud_sync_rounded, "Live Google Sheet Sync"),
                     ],
                   ),
                 ),
@@ -91,7 +91,12 @@ class LoginScreen extends GetView<AuthController> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (!isWideScreen) ...[
-                          Image.asset(ImagePath.appLogo, height: 70),
+                          Image.asset(
+                            ImagePath.appLogo, 
+                            height: 90,
+                            filterQuality: FilterQuality.high,
+                            isAntiAlias: true,
+                          ),
                           const SizedBox(height: 16),
                         ],
                         const Text(

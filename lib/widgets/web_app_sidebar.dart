@@ -25,10 +25,14 @@ class WebAppSidebar extends StatelessWidget {
         children: [
           const SizedBox(height: 40),
           // Logo & Name
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: Image.asset(ImagePath.appLogo, height: 40),
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Image.asset(
+              ImagePath.appLogo, 
+              height: 60,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
+            ),
           ),
           const SizedBox(height: 16),
           const Text("NOOR RECEIPT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2)),
@@ -48,7 +52,7 @@ class WebAppSidebar extends StatelessWidget {
           const Spacer(),
           
           // Logout
-          _sidebarItem(Icons.logout_rounded, "Logout", onTap: () => Get.find<AuthController>().logout(), isDanger: true),
+          _sidebarItem(Icons.logout_rounded, "Logout", onTap: () => Get.find<AuthController>().confirmLogout(), isDanger: true),
           const SizedBox(height: 20),
         ],
       ),

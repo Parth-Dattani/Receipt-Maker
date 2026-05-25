@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../constant/constant.dart';
 import '../services/google_sheets_service.dart';
@@ -13,12 +14,34 @@ class SettingsController extends GetxController {
   var currentFY = "2026-27".obs;
   var donationTypes = <String>[].obs;
   var isLoadingTypes = false.obs;
+  
+  // 🚀 Dynamic FY Options List
+  var fyOptions = <String>[].obs;
+
+  // User Info
+  String get userEmail => FirebaseAuth.instance.currentUser?.email ?? '';
+  String get userName => FirebaseAuth.instance.currentUser?.displayName ?? userEmail.split('@')[0];
 
   @override
   void onInit() {
     super.onInit();
+    _generateFYOptions();
     loadSavedSettings();
     loadDonationTypes();
+  }
+
+  void _generateFYOptions() {
+    final now = DateTime.now();
+    final currentStartYear = now.month >= 4 ? now.year : now.year - 1;
+    
+    List<String> years = [];
+    // Generate 2 past years, current year, and 2 future years
+    for (int i = -2; i <= 2; i++) {
+      int start = currentStartYear + i;
+      String end = (start + 1).toString().substring(2);
+      years.add("$start-$end");
+    }
+    fyOptions.value = years;
   }
 
   void loadSavedSettings() async {

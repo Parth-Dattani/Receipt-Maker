@@ -1,13 +1,11 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../model/receipt_model.dart';
@@ -32,8 +30,9 @@ class DashboardController extends GetxController {
   var toDate = Rxn<DateTime>();
   var selectedReportType = 'Detailed Report'.obs;
 
-  // 👤 કરંટ યુઝર ઈમેલ ગેટર
+  // 👤 કરંટ યુઝર ઈમેલ અને નામ ગેટર
   String get userEmail => FirebaseAuth.instance.currentUser?.email ?? '';
+  String get userName => FirebaseAuth.instance.currentUser?.displayName ?? userEmail.split('@')[0];
 
   @override
   void onInit() {
@@ -46,23 +45,62 @@ class DashboardController extends GetxController {
     try {
       isLoading.value = true;
 
-      // SharedPreferences માંથી બધું લોડ કરો
+      // 1. SharedPreferences અને ફાયરબેઝ UID મેળવો
       await sharedPreferencesHelper.getSharedPreferencesInstance();
       await AppConstants.loadFromPrefs();
+      String? uId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (uId != null) {
+        // 🚀 ૨. Firestore માંથી આ યુઝરની સેટ થયેલી Spreadsheet ID ખેંચો
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uId).get();
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          
+          if (userData.containsKey('googleSheetId')) {
+            String remoteSheetId = userDoc.get('googleSheetId');
+            await AppConstants.setSpreadsheetId(remoteSheetId);
+            // 🌟 GoogleSheetsService ને આ નવો ID આપો
+            GoogleSheetsService.syncIdsFromConstants();
+            debugPrint('[Sync] 🔄 Spreadsheet ID synced from Firestore: $remoteSheetId');
+          }
+          
+          // ✨ Folder ID પણ સિંક કરો
+          if (userData.containsKey('driveFolderId')) {
+             String remoteFolderId = userDoc.get('driveFolderId');
+             await sharedPreferencesHelper.storePrefData("driveFolderId", remoteFolderId);
+             debugPrint('[Sync] 🔄 Folder ID synced from Firestore: $remoteFolderId');
+          }
+        }
+      }
 
       String currentYear = AppConstants.activeFy;
 
-      // 1. પેલા સાઇલન્ટ કનેક્ટ ટ્રાય કરો
-      if (!GoogleSheetsService.isSignedIn && userEmail.isNotEmpty) {
+      // 3. સાઇલન્ટ કનેક્ટ ટ્રાય કરો
+      if (userEmail.isNotEmpty) {
         await GoogleSheetsService.signInSilentlyWithEmail(userEmail);
       }
 
-      // 2. જો સાઇલન્ટ કનેક્ટ ફેલ થાય, તો યુઝરને લિન્ક કરવાનું પૂછો
-      // (આ ખાસ કરીને Email/Password વાળા યુઝર્સ માટે છે)
-      if (!GoogleSheetsService.isSignedIn && userEmail.isNotEmpty) {
+      // 4. જો સાઇલન્ટ કનેક્ટ ફેલ થાય અથવા પરમિશન ખૂટતી હોય, તો યુઝરને લિન્ક કરવાનું પૂછો
+      bool hasPermissions = await GoogleSheetsService.hasFullAccess();
+      
+      if (!hasPermissions && userEmail.isNotEmpty) {
+        debugPrint('[Dashboard] ⚠️ Permissions missing or not signed in. Prompting...');
         _showGoogleLinkPrompt();
       } else {
-        // 3. જો કનેક્ટેડ હોય તો ડેટા લોડ કરો
+        // 🚀 ૫. ફાઈલ હયાત છે કે નહીં તે વેરીફાય કરો (જો ડિલીટ થઈ હોય તો રી-ક્રિએટ કરશે)
+        String firebaseUid = uId ?? (userEmail.isNotEmpty ? userEmail.split('@')[0] : 'user');
+        final data = await GoogleSheetsService.setupUserDriveAndSheet(firebaseUid, currentYear);
+        
+        // ✨ જો નવી ફાઈલ બની હોય અથવા ID બદલાઈ હોય, તો Firestore માં અપડેટ કરો
+        if (data != null && uId != null) {
+          await FirebaseFirestore.instance.collection('users').doc(uId).set({
+            'googleSheetId': data['spreadsheetId'],
+            'driveFolderId': data['folderId'],
+            'activeFY': data['financialYear'],
+          }, SetOptions(merge: true));
+        }
+
+        // ૬. ડેટા લોડ કરો
         GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
         await loadStats();
       }
@@ -112,8 +150,9 @@ class DashboardController extends GetxController {
                     _showSuccessSnackBar("Google account linked successfully!");
                     refreshDashboard();
                   } else {
-                    _showErrorSnackBar("Could not link account. Try again.");
-                    _showGoogleLinkPrompt(); // ફરીથી બતાવો
+                    // 🚀 Specific fix: Tell user WHY it failed (usually missing checkboxes)
+                    _showErrorSnackBar("Permission Denied: Please make sure to check both Drive and Sheets boxes.");
+                    _showGoogleLinkPrompt(); // ફરીથી બતાવો જેથી તે ભૂલ સુધારી શકે
                   }
                 },
                 icon: const Icon(Icons.link_rounded),
@@ -391,7 +430,7 @@ class DashboardController extends GetxController {
         ),
       );
 
-      // Save and Share
+      // Save and Prepare for Output
       final Uint8List pdfBytes = await pdf.save();
       final String typeSuffix = selectedReportType.value == 'Full Report' ? "Detailed" : "Category";
       final String fileName = "Receipts_${typeSuffix}_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.pdf";
@@ -399,20 +438,7 @@ class DashboardController extends GetxController {
       isLoading.value = false;
       final String message = "Receipts Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}";
 
-      if (kIsWeb) {
-        // Web: Download/Share using bytes
-        await Share.shareXFiles(
-          [XFile.fromData(pdfBytes, name: fileName, mimeType: 'application/pdf')],
-          text: message,
-        );
-      } else {
-        // Mobile: Save to file and share
-        final directory = await getApplicationDocumentsDirectory();
-        final String filePath = "${directory.path}/$fileName";
-        final file = File(filePath);
-        await file.writeAsBytes(pdfBytes);
-        await Share.shareXFiles([XFile(filePath)], text: message);
-      }
+      _showReportSuccessDialog(pdfBytes, fileName, message);
 
     } catch (e) {
       debugPrint("Export Error: $e");
@@ -467,6 +493,78 @@ class DashboardController extends GetxController {
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: PdfColors.blue900)),
         ],
       ),
+    );
+  }
+
+  void _showReportSuccessDialog(Uint8List pdfBytes, String fileName, String message) {
+    Get.dialog(
+      Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 12))],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(color: Color(0xFFE8F5E9), shape: BoxShape.circle),
+                child: const Icon(Icons.analytics_rounded, color: Color(0xFF2E7D32), size: 56),
+              ),
+              const SizedBox(height: 20),
+              const Text('Report Generated Successfully!', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none)),
+              const SizedBox(height: 6),
+              Text('Select how to save the report:', style: TextStyle(fontSize: 13, color: Colors.grey.shade500, decoration: TextDecoration.none)),
+              const SizedBox(height: 24),
+              
+              // Print Button
+              _reportActionButton(
+                icon: Icons.local_printshop_rounded,
+                label: 'Print Report',
+                color: AppColors.appTheame,
+                isPrimary: true,
+                onTap: () async {
+                  Get.back();
+                  await Printing.layoutPdf(onLayout: (_) async => pdfBytes, name: fileName);
+                },
+              ),
+              const SizedBox(height: 12),
+              
+              // Share Button
+              _reportActionButton(
+                icon: Icons.share_rounded,
+                label: 'Share PDF',
+                color: const Color(0xFF25D366),
+                isPrimary: false,
+                onTap: () async {
+                  Get.back();
+                  await Share.shareXFiles(
+                    [XFile.fromData(pdfBytes, name: fileName, mimeType: 'application/pdf')],
+                    text: message,
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              TextButton(onPressed: () => Get.back(), child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Widget _reportActionButton({required IconData icon, required String label, required Color color, required bool isPrimary, required VoidCallback onTap}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: isPrimary 
+          ? ElevatedButton.icon(onPressed: onTap, icon: Icon(icon, size: 20), label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))
+          : OutlinedButton.icon(onPressed: onTap, icon: Icon(icon, size: 20, color: color), label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color)), style: OutlinedButton.styleFrom(side: BorderSide(color: color, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
     );
   }
 

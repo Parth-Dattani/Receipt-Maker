@@ -78,10 +78,19 @@ class NewReceiptScreen extends GetView<ReceiptController> {
           const SizedBox(width: 16),
           const VerticalDivider(width: 1, indent: 20, endIndent: 20),
           const SizedBox(width: 16),
-          CircleAvatar(
-            backgroundColor: AppColors.appTheame.withValues(alpha: 0.1),
-            radius: 18,
-            child: Icon(Icons.add_box_rounded, color: AppColors.appTheame, size: 20),
+          Row(
+            children: [
+              CircleAvatar(backgroundColor: AppColors.appTheame.withValues(alpha: 0.1), radius: 18, child: Icon(Icons.person_rounded, color: AppColors.appTheame, size: 20)),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(controller.userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text(controller.userEmail, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -110,7 +119,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                           Icon(Icons.add_circle_outline_rounded, size: 28, color: AppColors.appTheame),
                           const SizedBox(width: 14),
                           Text(
-                            controller.isEditMode.value ? 'Update Receipt Details' : 'Create New Collection Receipt',
+                            controller.isEditMode.value ? 'Update Receipt Details' : 'Create New Receipt',
                             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -163,6 +172,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                         label: 'Full Name / Donor Name',
                                         prefixIcon: Icons.badge_rounded,
                                         isRequired: true,
+                                        textCapitalization: TextCapitalization.characters,
                                       ),
                                       Row(
                                         children: [
@@ -225,6 +235,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                   label: 'Full Name / Donor Name',
                                   prefixIcon: Icons.badge_rounded,
                                   isRequired: true,
+                                  textCapitalization: TextCapitalization.characters,
                                 ),
                                 _buildResponsiveRow(
                                   screenWidth,
@@ -410,6 +421,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
             ),
             DropdownButtonFormField<String>(
               value: controller.selectedPaymentType.value,
+              isExpanded: true, // 🚀 Fix: Prevent Row overflow by allowing text to compress
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.account_balance_wallet_rounded, size: 18, color: Colors.grey.shade400),
@@ -449,6 +461,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
             ),
             DropdownButtonFormField<String>(
               value: controller.selectedDonationType.value,
+              isExpanded: true, // 🚀 Fix: Prevent Row overflow
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.volunteer_activism_rounded, size: 18, color: Colors.grey.shade400),

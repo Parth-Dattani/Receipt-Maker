@@ -1,1 +1,49 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"receipt-maker-398a8","appId":"1:710899897768:android:a3ebb97dd2530fe768b99d","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"receipt-maker-398a8","configurations":{"android":"1:710899897768:android:a3ebb97dd2530fe768b99d","ios":"1:710899897768:ios:43f775ac8496944d68b99d","macos":"1:710899897768:ios:24f1a3a78babf72a68b99d","web":"1:710899897768:web:297fc955a7da536468b99d"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "receipt-maker-398a8",
+          "appId": "1:710899897768:android:a3ebb97dd2530fe768b99d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "receipt-maker-398a8",
+          "configurations": {
+            "android": "1:710899897768:android:a3ebb97dd2530fe768b99d",
+            "ios": "1:710899897768:ios:43f775ac8496944d68b99d",
+            "macos": "1:710899897768:ios:24f1a3a78babf72a68b99d",
+            "web": "1:710899897768:web:297fc955a7da536468b99d"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

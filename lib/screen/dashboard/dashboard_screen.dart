@@ -104,22 +104,7 @@ class DashboardScreen extends GetView<DashboardController> {
                         const SizedBox(height: 40),
                         
                         // Main Sections Row
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Left: Recent Activity
-                            Expanded(
-                              flex: 2,
-                              child: _buildWebRecentReceipts(),
-                            ),
-                            const SizedBox(width: 32),
-                            // Right: Quick Actions
-                            Expanded(
-                              flex: 1,
-                              child: _buildWebQuickActions(context),
-                            ),
-                          ],
-                        ),
+                        _buildWebRecentReceipts(),
                       ],
                     ),
                   ),
@@ -153,7 +138,7 @@ class DashboardScreen extends GetView<DashboardController> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Admin User", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text(controller.userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   Text(controller.userEmail, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
@@ -192,7 +177,6 @@ class DashboardScreen extends GetView<DashboardController> {
               ],
             ),
           ),
-          Image.asset(ImagePath.splashImage, height: 140, color: Colors.white.withValues(alpha: 0.2)),
         ],
       ),
     );
@@ -264,48 +248,6 @@ class DashboardScreen extends GetView<DashboardController> {
     );
   }
 
-  Widget _buildWebQuickActions(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Quick Links", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        _webQuickActionTile(Icons.picture_as_pdf_rounded, "Generate Reports", "Export monthly/yearly collection PDF", () => controller.showExportDialog(context)),
-        _webQuickActionTile(Icons.settings_suggest_rounded, "App Settings", "Configure financial year & types", () => Get.toNamed(SettingsScreen.pageId)),
-        _webQuickActionTile(Icons.cloud_done_rounded, "Google Sheets", "View live data in spreadsheet", () {}),
-      ],
-    );
-  }
-
-  Widget _webQuickActionTile(IconData icon, String title, String sub, VoidCallback onTap) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFEEEEEE))),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.appTheame, size: 24),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(sub, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // 📱 ── MOBILE VIEW ──
   Widget _buildMobileBody(BuildContext context) {
@@ -384,7 +326,11 @@ class DashboardScreen extends GetView<DashboardController> {
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            currentAccountPicture: CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_rounded, size: 40, color: AppColors.appTheame)),
+            currentAccountPicture: Container(
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(ImagePath.appLogo, filterQuality: FilterQuality.high),
+            ),
             accountName: Text(AppStrings.appName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             accountEmail: Text(controller.userEmail, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
             decoration: BoxDecoration(color: AppColors.appTheame, borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16))),
@@ -425,11 +371,8 @@ class DashboardScreen extends GetView<DashboardController> {
   }
 
   void _performLogout() {
-    if (Get.isRegistered<AuthController>()) {
-      Get.find<AuthController>().logout();
-    } else {
-      Get.put(AuthController()).logout();
-    }
+    final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : Get.put(AuthController());
+    auth.confirmLogout();
   }
 
   Widget _drawerTile({required IconData icon, required String title, required VoidCallback onTap, bool selected = false}) {

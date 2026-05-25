@@ -54,10 +54,21 @@ class SettingsScreen extends GetView<SettingsController> {
         children: [
           const Text("Application Settings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const Spacer(),
-          CircleAvatar(
-            backgroundColor: AppColors.appTheame.withValues(alpha: 0.1),
-            radius: 18,
-            child: Icon(Icons.settings_suggest_rounded, color: AppColors.appTheame, size: 20),
+          const VerticalDivider(width: 1, indent: 20, endIndent: 20),
+          const SizedBox(width: 16),
+          Row(
+            children: [
+              CircleAvatar(backgroundColor: AppColors.appTheame.withValues(alpha: 0.1), radius: 18, child: Icon(Icons.person_rounded, color: AppColors.appTheame, size: 20)),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(controller.userName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text(controller.userEmail, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -93,21 +104,7 @@ class SettingsScreen extends GetView<SettingsController> {
               ),
               const SizedBox(height: 20),
 
-              // 📱 WhatsApp Sharing Section
-              _buildSettingCard(
-                title: "Sharing Preferences",
-                children: [
-                  Obx(() => SwitchListTile(
-                    title: const Text("Direct WhatsApp Chat", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    subtitle: const Text("Open donor's chat directly before sharing PDF", style: TextStyle(fontSize: 11)),
-                    value: AppConstants.isWhatsappDirectShare.value,
-                    activeColor: AppColors.whatsappColor,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (val) => controller.toggleDirectShare(val),
-                  )),
-                ],
-              ),
-              const SizedBox(height: 20),
+
 
               // 🎁 Donation Types Section
               _buildSettingCard(
