@@ -22,9 +22,11 @@ class GoogleSheetsService {
 
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? AppConstants.googleWebClientId : null,
+    serverClientId: AppConstants.googleWebClientId, // Necessary for Firebase exchange
     scopes: _scopes,
   );
 
+  static GoogleSignIn get googleSignIn => _googleSignIn;
   static GoogleSignInAccount? _googleAccount;
   static drive.DriveApi? _driveApi;
   static sheets_api.SheetsApi? _sheetsApi;
@@ -46,6 +48,27 @@ class GoogleSheetsService {
   static void syncIdsFromConstants() {
     if (AppConstants.spreadsheetId.isNotEmpty) {
       _spreadsheetId = AppConstants.spreadsheetId;
+    }
+  }
+
+  /// 🚀 નવી મેથડ: ગૂગલ શીટમાં રહેલી બધી જ FY ટેબ્સનું લિસ્ટ મેળવો
+  static Future<List<String>> fetchAvailableFYs() async {
+    if (_sheetsApi == null || _spreadsheetId == null) return [];
+    try {
+      final ss = await _sheetsApi!.spreadsheets.get(_spreadsheetId!);
+      List<String> fys = [];
+      for (var s in ss.sheets ?? []) {
+        String title = s.properties?.title ?? '';
+        if (title.startsWith('Receipts_')) {
+          fys.add(title.replaceFirst('Receipts_', ''));
+        }
+      }
+      // વર્ષોને સોર્ટ કરો (નવું વર્ષ પહેલા)
+      fys.sort((a, b) => b.compareTo(a));
+      return fys.isEmpty ? ['2026-27'] : fys;
+    } catch (e) {
+      debugPrint('[GSheetsService] Fetch FYs Error: $e');
+      return ['2026-27'];
     }
   }
 
@@ -73,13 +96,25 @@ class GoogleSheetsService {
     bool hasPermissions = await hasFullAccess();
     
     if (!isSignedIn || !hasPermissions) {
-      debugPrint('[GSheetsService] ⚠️ Re-authenticating for full access...');
-      _googleAccount = await _googleSignIn.signIn();
-      if (_googleAccount == null) return null;
-      await _buildClients(_googleAccount!);
+      debugPrint('[GSheetsService] ⚠️ Permissions missing. Forcing full consent screen...');
+      // 🚀 Web fix: Force consent to ensure checkboxes appear
+      try {
+        await _googleSignIn.signOut();
+        // On Web, we can't easily pass 'prompt' to .signIn() in some versions,
+        // but signing out + signing in is the most reliable way.
+        _googleAccount = await _googleSignIn.signIn();
+        if (_googleAccount != null) await _buildClients(_googleAccount!);
+      } catch (e) {
+        debugPrint('[GSheetsService] Sign-in Error: $e');
+        return null;
+      }
       
-      // Re-verify after sign in
-      if (!await hasFullAccess()) return null;
+      // Final permission check
+      hasPermissions = await hasFullAccess();
+      if (!hasPermissions) {
+        debugPrint('[GSheetsService] ❌ Permissions still not granted.');
+        return null;
+      }
     }
 
     if (!isSignedIn) return null;
@@ -115,23 +150,45 @@ class GoogleSheetsService {
   // 3. DATA OPERATIONS
   // ════════════════════════════════════════════════════════════════════════════
   static Future<bool> insertReceipt(ReceiptModel receipt) async {
-    if (!isSignedIn || _spreadsheetId == null || _sheetsApi == null) return false;
+    // 🚀 Check and Reconnect if session is lost
+    if (!isSignedIn || _sheetsApi == null) {
+      debugPrint('[GSheetsService] Session lost. Attempting silent reconnect...');
+      bool reconnected = await signInSilentlyWithEmail(AppConstants.userId); // Fallback attempt
+      if (!reconnected) return false;
+    }
+
     try {
       final String currentSheet = _activeWorksheetTitle;
       
       // Check if headers exist
-      final headerRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A1:Z1'));
+      sheets_api.ValueRange? headerRes;
+      try {
+        headerRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A1:Z1'));
+      } catch (e) {
+        // If 401 occurs here, try to rebuild clients once
+        if (e.toString().contains('401')) {
+          await signInSilentlyWithEmail(''); 
+          headerRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A1:Z1'));
+        }
+      }
       
       if (headerRes?.values == null || headerRes!.values!.isEmpty) {
+        debugPrint('[GSheetsService] Headers missing. Ensuring worksheet...');
         await _ensureWorksheetAndHeaders();
-        return insertReceipt(receipt); 
+        // Give it a small delay for Google to propagate
+        await Future.delayed(const Duration(milliseconds: 500));
+        headerRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A1:Z1'));
       }
+
+      if (headerRes?.values == null || headerRes!.values!.isEmpty) return false;
 
       final headerRow = headerRes.values!.first;
       final headerMap = {for (int i = 0; i < headerRow.length; i++) headerRow[i].toString().trim(): i};
 
-      final allRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A3:A'));
-      int lastDataRow = 2 + (allRes?.values?.where((r) => r.isNotEmpty).length ?? 0);
+      // 🚀 Fix: More robust way to find the last row
+      final allRes = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, _range(currentSheet, 'A:A'));
+      int nextRowIndex = (allRes?.values?.length ?? 0) + 1;
+      if (nextRowIndex < 3) nextRowIndex = 3; // Start after headers and hidden row
 
       List<dynamic> row = List.filled(headerRow.length, '');
       _mapReceiptToRow(receipt, row, headerMap);
@@ -139,9 +196,10 @@ class GoogleSheetsService {
       await _sheetsApi?.spreadsheets.values.update(
         sheets_api.ValueRange(values: [row]),
         _spreadsheetId!,
-        _range(currentSheet, 'A${lastDataRow + 1}'),
-        valueInputOption: 'RAW',
+        _range(currentSheet, 'A$nextRowIndex'),
+        valueInputOption: 'USER_ENTERED', // Use USER_ENTERED to allow Sheets to handle formats
       );
+      debugPrint('[GSheetsService] ✅ Inserted Receipt #${receipt.recNo} at Row $nextRowIndex');
       return true;
     } catch (e) {
       debugPrint('[GSheetsService] Insert Error: $e');
@@ -150,7 +208,9 @@ class GoogleSheetsService {
   }
 
   static Future<bool> updateReceipt(ReceiptModel receipt) async {
-    if (!isSignedIn || _spreadsheetId == null || _sheetsApi == null) return false;
+    if (!isSignedIn || _sheetsApi == null) {
+      await signInSilentlyWithEmail('');
+    }
     try {
       final res = await _sheetsApi?.spreadsheets.values.get(_spreadsheetId!, '$_activeWorksheetTitle!A1:Z');
       if (res?.values == null || res!.values!.isEmpty) return false;
@@ -329,29 +389,39 @@ class GoogleSheetsService {
   // ════════════════════════════════════════════════════════════════════════════
   static Future<String?> _getOrCreateFolder(String name, {String? hintId}) async {
     if (_driveApi == null) return null;
+    
+    // 🚀 Check if hintId is valid and NOT trashed
     if (hintId != null && hintId.isNotEmpty) {
       try {
         final f = await _driveApi?.files.get(hintId, $fields: 'id, trashed');
         if (f != null && !(f as drive.File).trashed!) return hintId;
+        debugPrint('[GSheetsService] Folder hint $hintId is trashed/invalid.');
       } catch (_) {}
     }
+    
     final q = "mimeType='application/vnd.google-apps.folder' and name='$name' and trashed=false";
     final res = await _driveApi?.files.list(q: q, $fields: 'files(id, name)');
     if (res?.files != null && res!.files!.isNotEmpty) return res.files!.first.id;
     
     final f = drive.File()..name = name..mimeType = 'application/vnd.google-apps.folder';
-    final c = await _driveApi?.files.create(f, $fields: 'id');
+    final c = await _driveApi!.files.create(f, $fields: 'id');
     return c?.id;
   }
 
   static Future<String?> _getOrCreateSpreadsheet(String name, String folderId, {String? hintId}) async {
     if (_sheetsApi == null || _driveApi == null) return null;
+    
+    // 🚀 Check if hintId is valid and NOT trashed
     if (hintId != null && hintId.isNotEmpty) {
       try {
-        final s = await _sheetsApi?.spreadsheets.get(hintId);
-        if (s != null) return s.spreadsheetId;
+        final driveFile = await _driveApi?.files.get(hintId, $fields: 'id, trashed');
+        if (driveFile != null && !(driveFile as drive.File).trashed!) {
+           return hintId;
+        }
+        debugPrint('[GSheetsService] Spreadsheet hint $hintId is trashed/invalid.');
       } catch (_) {}
     }
+
     final q = "mimeType='application/vnd.google-apps.spreadsheet' and name='$name' and '$folderId' in parents and trashed=false";
     final res = await _driveApi?.files.list(q: q, $fields: 'files(id, name)');
     if (res?.files != null && res!.files!.isNotEmpty) return res.files!.first.id;

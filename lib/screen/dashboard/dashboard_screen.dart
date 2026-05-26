@@ -125,6 +125,13 @@ class DashboardScreen extends GetView<DashboardController> {
       child: Row(
         children: [
           const Text("Dashboard Overview", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 16),
+          // 🚀 Web Header FY Badge
+          // Container(
+          //   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          //   decoration: BoxDecoration(color: AppColors.appTheame.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          //   child: Obx(() => Text("FY: ${AppConstants.activeFy.value}", style: TextStyle(color: AppColors.appTheame, fontSize: 12, fontWeight: FontWeight.bold))),
+          // ),
           const Spacer(),
           IconButton(icon: const Icon(Icons.refresh_rounded, color: Colors.grey), onPressed: controller.loadStats, tooltip: "Refresh Data"),
           const SizedBox(width: 16),
@@ -332,7 +339,7 @@ class DashboardScreen extends GetView<DashboardController> {
               child: Image.asset(ImagePath.appLogo, filterQuality: FilterQuality.high),
             ),
             accountName: Text(AppStrings.appName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            accountEmail: Text(controller.userEmail, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
+            accountEmail: Obx(() => Text("${controller.userEmail} • FY: ${AppConstants.activeFy.value}", style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13))),
             decoration: BoxDecoration(color: AppColors.appTheame, borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16))),
           ),
           Expanded(
@@ -404,7 +411,7 @@ class DashboardScreen extends GetView<DashboardController> {
             children: [
               const Icon(Icons.calendar_today_rounded, size: 14, color: Colors.blue),
               const SizedBox(width: 6),
-              Text('Active FY: ${AppConstants.activeFy}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
+              Obx(() => Text('Active FY: ${AppConstants.activeFy.value}', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.bold))),
             ],
           ),
         ],

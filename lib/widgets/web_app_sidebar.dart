@@ -29,14 +29,30 @@ class WebAppSidebar extends StatelessWidget {
             padding: const EdgeInsets.only(top: 20),
             child: Image.asset(
               ImagePath.appLogo, 
-              height: 60,
+              height: 85,
               filterQuality: FilterQuality.high,
               isAntiAlias: true,
+
             ),
           ),
           const SizedBox(height: 16),
-          const Text("NOOR RECEIPT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2)),
-          const SizedBox(height: 40),
+           Text(AppStrings.appName.toUpperCase(), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1.2)),
+          
+          // 🚀 Display Active Financial Year in Sidebar
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Obx(() => Text(
+              "FY: ${AppConstants.activeFy.value}",
+              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+            )),
+          ),
+          
+          const SizedBox(height: 30),
           
           // Menu Items
           _sidebarItem(Icons.dashboard_rounded, "Dashboard", isSelected: selectedItem == SidebarItem.dashboard, onTap: () => Get.offAllNamed(DashboardScreen.pageId)),

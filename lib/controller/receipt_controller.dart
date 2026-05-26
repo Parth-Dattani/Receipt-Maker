@@ -144,8 +144,13 @@ class ReceiptController extends GetxController {
     }
 
     await sharedPreferencesHelper.getSharedPreferencesInstance();
-    String startRecStr = await sharedPreferencesHelper.getPrefData("start_rec_no") ?? "1";
-    int startNo = int.tryParse(startRecStr) ?? 1;
+    // 🚀 Load start number for the ACTIVE year specifically
+    String activeFy = AppConstants.activeFy.value;
+    String? startRecStr = await sharedPreferencesHelper.getPrefData("start_rec_no_$activeFy");
+    // Fallback to global if not found
+    startRecStr ??= await sharedPreferencesHelper.getPrefData("start_rec_no");
+    
+    int startNo = int.tryParse(startRecStr ?? "1") ?? 1;
     
     int nextNo = (maxNo >= startNo) ? maxNo + 1 : startNo;
     currentRecNo.value = nextNo;
@@ -154,10 +159,10 @@ class ReceiptController extends GetxController {
   }
 
   Future<void> pickDate(BuildContext context) async {
-    if (isEditMode.value) return;
+    // 🚀 Fixed: Allow date picking even in edit mode
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: DateFormat('dd/MM/yyyy').parse(dateCtrl.text),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
@@ -197,17 +202,26 @@ class ReceiptController extends GetxController {
       // ☁️ Upload PDF to Google Drive using bytes
       await GoogleSheetsService.uploadPdfToDrive(pdfBytes, fileName);
 
+      // 🚀 Fix: Ensure Sheet connection is active before inserting
+      if (!GoogleSheetsService.isSignedIn) {
+        debugPrint('[ReceiptController] ⚠️ Sheet session lost. Re-authenticating...');
+        await GoogleSheetsService.signInSilentlyWithEmail(userEmail);
+      }
+
       bool isSuccess = await (isEditMode.value
           ? GoogleSheetsService.updateReceipt(initialReceipt)
           : GoogleSheetsService.insertReceipt(initialReceipt));
 
       if (isSuccess) {
         if (!isEditMode.value) await FirebaseService.updateLastReceiptNumber(finalRecNo);
+        
+        // 🚀 Fix: If in edit mode, we should NOT increment receipt counter
+        // Just refresh lists and notify dashboard
         await refreshData();
         if (Get.isRegistered<DashboardController>()) Get.find<DashboardController>().loadStats();
 
+        // 🚀 Close only the loading overlay, keep the screen for now
         if (Get.isDialogOpen == true) Get.back();
-        Get.back();
 
         String pdfPath = "";
         if (!kIsWeb) {
@@ -300,11 +314,28 @@ class ReceiptController extends GetxController {
                 },
               ),
               const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text(
-                  'Skip & Close',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    // 🚀 Improved: Clear the success dialog first
+                    if (Get.isDialogOpen == true) {
+                      Get.back();
+                    }
+                    
+                    // 🚀 Then navigate back to the Dashboard with a tiny delay 
+                    // to ensure GetX handles the stack transition on Web
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      if (Get.currentRoute == NewReceiptScreen.pageId || Get.currentRoute.contains('new-receipt')) {
+                        Get.back();
+                      }
+                    });
+                  },
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  child: Text(
+                    'Skip & Close',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500),
+                  ),
                 ),
               ),
             ],

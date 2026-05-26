@@ -41,18 +41,8 @@ class AuthController extends GetxController {
   void onInit() {
     super.onInit();
 
-    // Initialize GoogleSignIn based on platform
-    final String? clientId = AppConstants.googleWebClientId.isNotEmpty ? AppConstants.googleWebClientId : null;
-    
-    _googleSignIn = GoogleSignIn(
-      clientId: kIsWeb ? clientId : null,
-      serverClientId: clientId,
-      scopes: [
-        'email',
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/spreadsheets',
-      ],
-    );
+    // 🚀 Unified: Use the singleton from GoogleSheetsService
+    _googleSignIn = GoogleSheetsService.googleSignIn;
 
     // 🚀 Web logic: Handle redirect result explicitly
     if (kIsWeb) {

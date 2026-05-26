@@ -73,7 +73,7 @@ class DashboardController extends GetxController {
         }
       }
 
-      String currentYear = AppConstants.activeFy;
+      String currentYear = AppConstants.activeFy.value;
 
       // 3. સાઇલન્ટ કનેક્ટ ટ્રાય કરો
       if (userEmail.isNotEmpty) {
@@ -84,20 +84,23 @@ class DashboardController extends GetxController {
       bool hasPermissions = await GoogleSheetsService.hasFullAccess();
       
       if (!hasPermissions && userEmail.isNotEmpty) {
-        debugPrint('[Dashboard] ⚠️ Permissions missing or not signed in. Prompting...');
+        debugPrint('[Dashboard] ⚠️ Permissions missing. Prompting link...');
         _showGoogleLinkPrompt();
       } else {
-        // 🚀 ૫. ફાઈલ હયાત છે કે નહીં તે વેરીફાય કરો (જો ડિલીટ થઈ હોય તો રી-ક્રિએટ કરશે)
+        // 🚀 ૫. ફાઈલ હયાત છે કે નહીં તે વેરીફાય કરો
         String firebaseUid = uId ?? (userEmail.isNotEmpty ? userEmail.split('@')[0] : 'user');
-        final data = await GoogleSheetsService.setupUserDriveAndSheet(firebaseUid, currentYear);
         
-        // ✨ જો નવી ફાઈલ બની હોય અથવા ID બદલાઈ હોય, તો Firestore માં અપડેટ કરો
-        if (data != null && uId != null) {
-          await FirebaseFirestore.instance.collection('users').doc(uId).set({
-            'googleSheetId': data['spreadsheetId'],
-            'driveFolderId': data['folderId'],
-            'activeFY': data['financialYear'],
-          }, SetOptions(merge: true));
+        // ✨ Fix: Only run setup if fully authenticated and permissions are there
+        if (hasPermissions) {
+          final data = await GoogleSheetsService.setupUserDriveAndSheet(firebaseUid, currentYear);
+          
+          if (data != null && uId != null) {
+            await FirebaseFirestore.instance.collection('users').doc(uId).set({
+              'googleSheetId': data['spreadsheetId'],
+              'driveFolderId': data['folderId'],
+              'activeFY': data['financialYear'],
+            }, SetOptions(merge: true));
+          }
         }
 
         // ૬. ડેટા લોડ કરો
@@ -136,24 +139,24 @@ class DashboardController extends GetxController {
                   Get.back();
                   isLoading.value = true;
                   String uId = FirebaseAuth.instance.currentUser?.uid ?? 'default_user';
-                  String currentYear = AppConstants.activeFy.isEmpty ? "2026-27" : AppConstants.activeFy;
+                  String currentYear = AppConstants.activeFy.value.isEmpty ? "2026-27" : AppConstants.activeFy.value;
                   
                   final data = await GoogleSheetsService.setupUserDriveAndSheet(uId, currentYear);
-                  if (data != null) {
-                    // Firestore માં IDs સેવ કરો
-                    await FirebaseFirestore.instance.collection('users').doc(uId).set({
-                      'googleSheetId': data['spreadsheetId'],
-                      'driveFolderId': data['folderId'],
-                      'activeFY': data['financialYear'],
-                    }, SetOptions(merge: true));
-                    
-                    _showSuccessSnackBar("Google account linked successfully!");
-                    refreshDashboard();
-                  } else {
-                    // 🚀 Specific fix: Tell user WHY it failed (usually missing checkboxes)
-                    _showErrorSnackBar("Permission Denied: Please make sure to check both Drive and Sheets boxes.");
-                    _showGoogleLinkPrompt(); // ફરીથી બતાવો જેથી તે ભૂલ સુધારી શકે
-                  }
+                    if (data != null) {
+                      // Firestore માં IDs સેવ કરો
+                      await FirebaseFirestore.instance.collection('users').doc(uId).set({
+                        'googleSheetId': data['spreadsheetId'],
+                        'driveFolderId': data['folderId'],
+                        'activeFY': data['financialYear'],
+                      }, SetOptions(merge: true));
+                      
+                      _showSuccessSnackBar("Google account linked successfully!");
+                      refreshDashboard();
+                    } else {
+                      // 🚀 Specific fix: Tell user WHY it failed (usually missing checkboxes)
+                      _showErrorSnackBar("Sync Failed: Make sure to check BOTH Drive and Sheets boxes.");
+                      _showGoogleLinkPrompt(); // ફરીથી બતાવો જેથી તે ભૂલ સુધારી શકે
+                    }
                 },
                 icon: const Icon(Icons.link_rounded),
                 label: const Text('Link Google Account', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -251,7 +254,11 @@ class DashboardController extends GetxController {
     allReceiptsList.clear();
   }
 
-  void refreshDashboard() => initAndLoadStats();
+  void refreshDashboard() {
+    // 🚀 Clear memory IDs to force a fresh verification with Google Drive
+    GoogleSheetsService.reset();
+    initAndLoadStats();
+  }
 
   // DashboardController.dart માં ઉમેરો
   void updateDashboardAfterSettings() {
@@ -302,8 +309,9 @@ class DashboardController extends GetxController {
       return;
     }
 
+    _showBlurLoadingOverlay(msg: "Generating PDF Report...");
+
     try {
-      isLoading.value = true;
       final pdf = pw.Document();
 
       // Load Logo
@@ -321,9 +329,9 @@ class DashboardController extends GetxController {
       }).toList();
 
       if (filteredList.isEmpty) {
+        if (Get.isDialogOpen == true) Get.back(); // Close loading
         Get.snackbar("Info", "No data found for selected range",
           backgroundColor: Colors.orange.shade100, colorText: Colors.orange.shade900);
-        isLoading.value = false;
         return;
       }
 
@@ -435,17 +443,17 @@ class DashboardController extends GetxController {
       final String typeSuffix = selectedReportType.value == 'Full Report' ? "Detailed" : "Category";
       final String fileName = "Receipts_${typeSuffix}_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.pdf";
       
-      isLoading.value = false;
+      if (Get.isDialogOpen == true) Get.back(); // Close loading
+      
       final String message = "Receipts Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}";
 
       _showReportSuccessDialog(pdfBytes, fileName, message);
 
     } catch (e) {
+      if (Get.isDialogOpen == true) Get.back(); // Close loading
       debugPrint("Export Error: $e");
       Get.snackbar("Export Failed", e.toString(),
         backgroundColor: Colors.red.shade100, colorText: Colors.red.shade900);
-    } finally {
-      isLoading.value = false;
     }
   }
 
@@ -497,31 +505,53 @@ class DashboardController extends GetxController {
   }
 
   void _showReportSuccessDialog(Uint8List pdfBytes, String fileName, String message) {
+    final bool isWeb = MediaQuery.of(Get.context!).size.width > 900;
+    
     Get.dialog(
-      Center(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
+          constraints: BoxConstraints(maxWidth: isWeb ? 450 : 340),
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 12))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 40,
+                offset: const Offset(0, 15),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(color: Color(0xFFE8F5E9), shape: BoxShape.circle),
-                child: const Icon(Icons.analytics_rounded, color: Color(0xFF2E7D32), size: 56),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.analytics_rounded, color: Color(0xFF2E7D32), size: 48),
               ),
               const SizedBox(height: 20),
-              const Text('Report Generated Successfully!', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none)),
-              const SizedBox(height: 6),
-              Text('Select how to save the report:', style: TextStyle(fontSize: 13, color: Colors.grey.shade500, decoration: TextDecoration.none)),
-              const SizedBox(height: 24),
+              const Text(
+                'Report Generated!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your PDF report is ready for export.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, decoration: TextDecoration.none),
+              ),
+              const SizedBox(height: 32),
               
-              // Print Button
+              // Action Buttons
               _reportActionButton(
                 icon: Icons.local_printshop_rounded,
                 label: 'Print Report',
@@ -533,11 +563,9 @@ class DashboardController extends GetxController {
                 },
               ),
               const SizedBox(height: 12),
-              
-              // Share Button
               _reportActionButton(
                 icon: Icons.share_rounded,
-                label: 'Share PDF',
+                label: 'Share PDF File',
                 color: const Color(0xFF25D366),
                 isPrimary: false,
                 onTap: () async {
@@ -549,7 +577,13 @@ class DashboardController extends GetxController {
                 },
               ),
               const SizedBox(height: 20),
-              TextButton(onPressed: () => Get.back(), child: const Text('Close', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ),
             ],
           ),
         ),
@@ -565,6 +599,41 @@ class DashboardController extends GetxController {
       child: isPrimary 
           ? ElevatedButton.icon(onPressed: onTap, icon: Icon(icon, size: 20), label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))
           : OutlinedButton.icon(onPressed: onTap, icon: Icon(icon, size: 20, color: color), label: Text(label, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color)), style: OutlinedButton.styleFrom(side: BorderSide(color: color, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
+    );
+  }
+
+  void _showBlurLoadingOverlay({String msg = "Please wait, generating PDF"}) {
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.82),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                const SizedBox(height: 18),
+                Text(
+                  msg,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.25),
     );
   }
 

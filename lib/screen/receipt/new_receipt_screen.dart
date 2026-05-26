@@ -66,7 +66,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
       child: Row(
         children: [
           Obx(() => Text(
-              controller.isEditMode.value ? 'Update Receipt' : 'Generate New Receipt',
+              controller.isEditMode.value ? 'Update Receipt' : 'Create New Receipt',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
           )),
           const Spacer(),
@@ -102,33 +102,17 @@ class NewReceiptScreen extends GetView<ReceiptController> {
     return SafeArea(
       child: Center(
         child: Container(
-          constraints: BoxConstraints(maxWidth: isWeb ? 1000 : 850),
+          constraints: BoxConstraints(maxWidth: isWeb ? 1100 : 850),
           child: SingleChildScrollView(
-            padding: isWeb ? const EdgeInsets.symmetric(vertical: 32) : EdgeInsets.zero,
+            padding: isWeb ? const EdgeInsets.symmetric(vertical: 20, horizontal: 24) : EdgeInsets.zero,
             physics: const ClampingScrollPhysics(),
             child: Obx(() => Skeletonizer(
               enabled: controller.isLoading.value,
               child: Column(
                 children: [
                   if (!isWeb) _headerBanner(screenWidth),
-                  if (isWeb) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Icon(Icons.add_circle_outline_rounded, size: 28, color: AppColors.appTheame),
-                          const SizedBox(width: 14),
-                          Text(
-                            controller.isEditMode.value ? 'Update Receipt Details' : 'Create New Receipt',
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
                   Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: isWeb ? EdgeInsets.zero : const EdgeInsets.all(20),
                     child: Form(
                       key: controller.formKey,
                       child: Column(
@@ -160,7 +144,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 24),
+                                const SizedBox(width: 20),
                                 Expanded(
                                   flex: 2,
                                   child: _sectionCard(
@@ -256,7 +240,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                               ],
                             ),
                           ],
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
 
                           _sectionCard(
                             title: 'Payment & Collection Details',
@@ -277,17 +261,37 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                   Expanded(child: _paymentTypeDropdown()),
                                 ],
                               ),
-                              Row(
-                                children: [
-                                  Expanded(child: _donationTypeDropdown()),
-                                  if (isWeb) const Spacer(),
-                                ],
-                              ),
+                              if (isWeb)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: _donationTypeDropdown()),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: CustomTextFormField(
+                                        controller: controller.remarksCtrl,
+                                        label: 'Remarks (Optional)',
+                                        prefixIcon: Icons.notes_rounded,
+                                        textInputAction: TextInputAction.done,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                _donationTypeDropdown(),
+                                CustomTextFormField(
+                                  controller: controller.remarksCtrl,
+                                  label: 'Remarks (Optional)',
+                                  prefixIcon: Icons.notes_rounded,
+                                  maxLines: 2,
+                                  textInputAction: TextInputAction.done,
+                                ),
+                              ],
                               Obx(() {
                                 final pType = controller.selectedPaymentType.value;
                                 if (pType == 'Cheque' || pType == 'Bank Transfer' || pType == 'Online') {
                                   return Padding(
-                                    padding: const EdgeInsets.only(top: 8),
+                                    padding: const EdgeInsets.only(top: 4),
                                     child: Row(
                                       children: [
                                         Expanded(
@@ -296,6 +300,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                             label: 'Bank Name',
                                             prefixIcon: Icons.account_balance_rounded,
                                             isRequired: pType == 'Cheque',
+                                            textCapitalization: TextCapitalization.characters,
                                           ),
                                         ),
                                         const SizedBox(width: 16),
@@ -306,6 +311,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                             prefixIcon: Icons.confirmation_number_rounded,
                                             isRequired: pType == 'Cheque',
                                             textInputAction: TextInputAction.done,
+                                            textCapitalization: TextCapitalization.characters,
                                           ),
                                         ),
                                       ],
@@ -314,16 +320,9 @@ class NewReceiptScreen extends GetView<ReceiptController> {
                                 }
                                 return const SizedBox.shrink();
                               }),
-                              CustomTextFormField(
-                                controller: controller.remarksCtrl,
-                                label: 'Remarks / Narration (Optional)',
-                                prefixIcon: Icons.notes_rounded,
-                                maxLines: 2,
-                                textInputAction: TextInputAction.done,
-                              ),
                             ],
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 15),
                           Center(
                             child: Container(
                               constraints: const BoxConstraints(maxWidth: 400),
@@ -372,7 +371,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
 
   Widget _sectionCard({required String title, required IconData icon, required List<Widget> children}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -384,7 +383,7 @@ class NewReceiptScreen extends GetView<ReceiptController> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(color: AppColors.appTheame.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
                 child: Icon(icon, color: AppColors.appTheame, size: 20),
               ),

@@ -10,7 +10,7 @@ class AppConstants {
    static String spreadsheetId = "";
 
    /// Active financial year (e.g. "2024-25"). Each FY has its own Google Sheet.
-   static String activeFy = "";
+   static final activeFy = "2026-27".obs;
 
    /// Web-only: OAuth 2.0 Web client ID.
    static String googleWebClientId = "710899897768-5v9fst3j5ol287cmk5mro5q14jmdp3g4.apps.googleusercontent.com";
@@ -42,7 +42,7 @@ class AppConstants {
             await sharedPreferencesHelper.storePrefData("active_fy", savedFY);
          }
       }
-      activeFy = savedFY;
+      activeFy.value = savedFY;
 
       isGujarati.value = await sharedPreferencesHelper.retrievePrefBoolData("isGujarati") ?? false;
 
@@ -89,7 +89,7 @@ class AppConstants {
 
    /// 🔹 Update + persist activeFy (e.g. "2024-25")
    static Future<void> setActiveFy(String fy) async {
-      activeFy = fy;
+      activeFy.value = fy;
       await sharedPreferencesHelper.storePrefData("active_fy", fy);
    }
 
@@ -114,7 +114,7 @@ class AppConstants {
 }
 
 class AppStrings {
-   static const String appName = 'Noor Receipt';
+   static const String appName = 'Noor Education Trust';
    static const String trustName = 'Noor Education Trust - Jamnagar';
    static const String trustReg1 = 'Registered Under Section 80 (G) of the Income Tax Act 1961';
    static const String trustReg2 = 'Regn. No. CIT (Exemption), Ahmedabad / 80 G / 2019-20/A/11023';

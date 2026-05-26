@@ -39,7 +39,7 @@ class LoginScreen extends GetView<AuthController> {
                       // Logo
                       Image.asset(
                         ImagePath.appLogo, 
-                        height: 120, 
+                        height: 120,
                         filterQuality: FilterQuality.high,
                         isAntiAlias: true,
                       ),
@@ -200,7 +200,7 @@ class LoginScreen extends GetView<AuthController> {
 
                           const SizedBox(height: 60),
                           Text(
-                            "© 2026 Noor Receipt. All rights reserved.\nDeveloped by Intelligent Tech",
+                            "© 2026 Noor Education Trust. All rights reserved.\nDeveloped by Intelligent Tech",
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 12, color: Colors.grey.shade400, height: 1.5),
                           ),

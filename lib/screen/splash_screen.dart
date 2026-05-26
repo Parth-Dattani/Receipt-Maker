@@ -183,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 ).createShader(bounds);
                               },
                               child: Text(
-                                'Noor Receipt',
+                                'Noor Education Trust',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 22,

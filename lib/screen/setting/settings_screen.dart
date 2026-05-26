@@ -87,13 +87,13 @@ class SettingsScreen extends GetView<SettingsController> {
               _buildSettingCard(
                 title: "Financial Settings",
                 children: [
-                  _buildSettingsDropdown(
+                  Obx(() => _buildSettingsDropdown(
                     label: "Active Financial Year",
                     icon: Icons.calendar_month_rounded,
                     value: controller.currentFY.value,
-                    items: ["2026-27", "2027-28", "2028-29"],
+                    items: controller.fyOptions,
                     onChanged: (val) => controller.changeFinancialYear(val!),
-                  ),
+                  )),
                   CustomTextFormField(
                     controller: controller.startRecCtrl,
                     label: "Next Receipt Number",
@@ -157,16 +157,18 @@ class SettingsScreen extends GetView<SettingsController> {
               SizedBox(
                 width: double.infinity,
                 height: 54,
-                child: ElevatedButton(
+                child: Obx(() => ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.appTheame,
                     foregroundColor: Colors.white,
                     elevation: 2,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () => controller.saveSettings(),
-                  child: const Text("Save All Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
+                  onPressed: controller.isLoading.value ? null : () => controller.saveSettings(),
+                  child: controller.isLoading.value 
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    : const Text("Save All Settings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                )),
               ),
               const SizedBox(height: 40),
             ],
