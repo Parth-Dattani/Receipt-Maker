@@ -38,7 +38,7 @@ class LoginScreen extends GetView<AuthController> {
                     children: [
                       // Logo
                       Image.asset(
-                        ImagePath.appLogo, 
+                        ImagePath.appLogo,
                         height: 120,
                         filterQuality: FilterQuality.high,
                         isAntiAlias: true,
@@ -92,7 +92,7 @@ class LoginScreen extends GetView<AuthController> {
                       children: [
                         if (!isWideScreen) ...[
                           Image.asset(
-                            ImagePath.appLogo, 
+                            ImagePath.appLogo,
                             height: 90,
                             filterQuality: FilterQuality.high,
                             isAntiAlias: true,

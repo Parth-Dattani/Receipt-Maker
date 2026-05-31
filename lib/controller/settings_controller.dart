@@ -117,6 +117,41 @@ class SettingsController extends GetxController {
     await AppConstants.setIsWhatsappDirectShare(val);
   }
 
+  /// 🚀 નવી મેથડ: બધી જૂની PDF ફાઈલો સાફ કરો
+  Future<void> clearOldPdfs() async {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
+            SizedBox(width: 12),
+            Text('Clear PDF Cache'),
+          ],
+        ),
+        content: const Text('This will delete all generated PDF files from your Google Drive "PDF" folder. Your receipts in the sheet will remain safe.'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              isLoading.value = true;
+              bool success = await GoogleSheetsService.clearPdfFolder();
+              isLoading.value = false;
+              if (success) {
+                Get.snackbar("Success", "PDF folder cleared successfully!", backgroundColor: Colors.green.shade100);
+              } else {
+                Get.snackbar("Error", "Could not clear PDF folder.", backgroundColor: Colors.red.shade100);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // SettingsController.dart
   void changeFinancialYear(String newFY) async {
     currentFY.value = newFY;

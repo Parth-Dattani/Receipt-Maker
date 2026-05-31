@@ -25,14 +25,21 @@ class WebAppSidebar extends StatelessWidget {
         children: [
           const SizedBox(height: 40),
           // Logo & Name
-          Padding(
-            padding: const EdgeInsets.only(top: 20),
+          Container(
+            margin: const EdgeInsets.only(top: 20),
+            padding: const EdgeInsets.all(12), // Match login style spacing
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16), // Rounded square instead of circle
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)
+              ],
+            ),
             child: Image.asset(
-              ImagePath.appLogo, 
-              height: 85,
+              ImagePath.appLogo, // 🚀 Use appLogo to match login
+              height: 100, // 🚀 Larger size for better clarity
               filterQuality: FilterQuality.high,
               isAntiAlias: true,
-
             ),
           ),
           const SizedBox(height: 16),

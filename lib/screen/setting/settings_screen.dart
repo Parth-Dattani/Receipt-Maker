@@ -152,6 +152,24 @@ class SettingsScreen extends GetView<SettingsController> {
                         )),
                 ],
               ),
+              const SizedBox(height: 20),
+
+              // 🗑️ Storage Management Section
+              _buildSettingCard(
+                title: "Storage Management",
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent),
+                    title: const Text("Clear Generated PDFs", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    subtitle: const Text("Delete all receipt PDF files from Google Drive to save space.", style: TextStyle(fontSize: 12)),
+                    trailing: TextButton(
+                      onPressed: () => controller.clearOldPdfs(),
+                      child: const Text("Clear All", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 35),
               SizedBox(

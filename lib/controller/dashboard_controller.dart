@@ -106,11 +106,40 @@ class DashboardController extends GetxController {
         // ૬. ડેટા લોડ કરો
         GoogleSheetsService.setActiveSheet("Receipts_$currentYear");
         await loadStats();
+
+        // 🚀 ૭. Self-Cleaning Logic: દરરોજ એકવાર PDF ફોલ્ડર સાફ કરો
+        _runDailySelfCleaning();
       }
     } catch (e) {
       debugPrint('[DashboardController] Initialization Error: $e');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// 🧹 દરરોજ સવારે એપ ખુલતા જ ગૂગલ ડ્રાઇવ ક્લીન કરવાનું ફંક્શન
+  Future<void> _runDailySelfCleaning() async {
+    try {
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month}-${now.day}";
+      
+      // ૧. છેલ્લે ક્યારે સફાઈ કરી હતી તે ચેક કરો
+      String? lastCleanDate = await sharedPreferencesHelper.getPrefData("last_pdf_cleanup_date");
+
+      if (lastCleanDate != todayStr) {
+        debugPrint('[Self-Cleaning] 🧹 Starting daily PDF cleanup...');
+        bool success = await GoogleSheetsService.clearPdfFolder();
+        
+        if (success) {
+          // ૨. આજની તારીખ સેવ કરો જેથી ફરીથી આજે જ સફાઈ ના થાય
+          await sharedPreferencesHelper.storePrefData("last_pdf_cleanup_date", todayStr);
+          debugPrint('[Self-Cleaning] ✅ Daily PDF cleanup finished.');
+        }
+      } else {
+        debugPrint('[Self-Cleaning] ✨ Folder already cleaned today.');
+      }
+    } catch (e) {
+      debugPrint('[Self-Cleaning] Error: $e');
     }
   }
 
@@ -461,7 +490,7 @@ class DashboardController extends GetxController {
     return pw.TableHelper.fromTextArray(
       context: context,
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 9),
-      headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey700),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.purple700), // 🚀 Purple Table Header
       rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
       cellStyle: const pw.TextStyle(fontSize: 8),
       columnWidths: {
@@ -608,20 +637,23 @@ class DashboardController extends GetxController {
         canPop: false,
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.82),
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)
+              ]
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                const CircularProgressIndicator(color: Colors.deepPurple, strokeWidth: 3),
                 const SizedBox(height: 18),
                 Text(
                   msg,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     decoration: TextDecoration.none,
@@ -633,7 +665,7 @@ class DashboardController extends GetxController {
         ),
       ),
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.25),
+      barrierColor: Colors.black.withOpacity(0.3),
     );
   }
 

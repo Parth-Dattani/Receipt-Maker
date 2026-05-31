@@ -344,6 +344,32 @@ class GoogleSheetsService {
     _activeWorksheetTitle = title;
   }
 
+  /// 🚀 નવી મેથડ: PDF ફોલ્ડર અને તેની બધી ફાઈલો ક્લીન કરો
+  static Future<bool> clearPdfFolder() async {
+    if (!isSignedIn || _mainFolderId == null || _driveApi == null) {
+      debugPrint('[GSheetsService] ❌ Cannot clear PDF: Session or Folder ID missing.');
+      return false;
+    }
+    try {
+      // ૧. Receipts ફોલ્ડરની અંદર 'PDF' ફોલ્ડર શોધો
+      final q = "mimeType='application/vnd.google-apps.folder' and name='PDF' and '$_mainFolderId' in parents and trashed=false";
+      final res = await _driveApi!.files.list(q: q, $fields: 'files(id, name)');
+      
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pdfFolderId = res.files!.first.id!;
+        // ૨. તે ફોલ્ડરને ટ્રાશમાં મોકલી દો (આનાથી બધી PDF પણ જતી રહેશે)
+        await _driveApi!.files.update(drive.File(trashed: true), pdfFolderId);
+        debugPrint('[GSheetsService] ✅ PDF Folder cleared and moved to trash.');
+        return true;
+      }
+      debugPrint('[GSheetsService] ℹ️ PDF Folder not found, nothing to clear.');
+      return true; 
+    } catch (e) {
+      debugPrint('[GSheetsService] Clear PDF Error: $e');
+      return false;
+    }
+  }
+
   static Future<void> createNewFinancialYearTab(String fy) async {
     if (_sheetsApi == null || _spreadsheetId == null) return;
     final String oldActive = _activeWorksheetTitle;
