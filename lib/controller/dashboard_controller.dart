@@ -1,4 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:excel/excel.dart' as excel_pkg;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -28,7 +31,8 @@ class DashboardController extends GetxController {
   // 📅 Report Date Range variables
   var fromDate = Rxn<DateTime>();
   var toDate = Rxn<DateTime>();
-  var selectedReportType = 'Detailed Report'.obs;
+  var selectedReportType = 'Full Report'.obs;
+  var selectedExportFormat = 'PDF'.obs; // 🚀 Default to PDF
 
   // 👤 કરંટ યુઝર ઈમેલ અને નામ ગેટર
   String get userEmail => FirebaseAuth.instance.currentUser?.email ?? '';
@@ -364,7 +368,7 @@ class DashboardController extends GetxController {
         return;
       }
 
-      double totalRangeAmount = filteredList.fold(0.0, (sum, item) => sum + item.amount);
+      double totalRangeAmount = filteredList.fold(0.0, (acc, item) => acc + item.amount);
 
       pdf.addPage(
         pw.MultiPage(
@@ -429,7 +433,7 @@ class DashboardController extends GetxController {
 
               List<pw.Widget> content = [];
               groupedData.forEach((category, items) {
-                double categoryTotal = items.fold(0.0, (sum, item) => sum + item.amount);
+                double categoryTotal = items.fold(0.0, (acc, item) => acc + item.amount);
                 
                 // Use pw.Header to ensure category name stays with its table
                 content.add(
@@ -486,6 +490,191 @@ class DashboardController extends GetxController {
     }
   }
 
+  Future<void> exportToExcel() async {
+    if (fromDate.value == null || toDate.value == null) {
+      Get.snackbar("Error", "Please select date range first", 
+        backgroundColor: Colors.red.shade100, colorText: Colors.red.shade900);
+      return;
+    }
+
+    _showBlurLoadingOverlay(msg: "Generating Excel Report...");
+
+    try {
+      // Filter Data First
+      List<ReceiptModel> filteredList = allReceiptsList.where((r) {
+        DateTime receiptDate = DateFormat('dd/MM/yyyy').parse(r.date);
+        return receiptDate.isAfter(fromDate.value!.subtract(const Duration(days: 1))) && 
+               receiptDate.isBefore(toDate.value!.add(const Duration(days: 1)));
+      }).toList();
+
+      if (filteredList.isEmpty) {
+        if (Get.isDialogOpen == true) Get.back();
+        Get.snackbar("Info", "No data found for selected range", backgroundColor: Colors.orange.shade100);
+        return;
+      }
+
+      final String fileName = "Receipts_Report_${DateFormat('ddMMyyyy').format(fromDate.value!)}_to_${DateFormat('ddMMyyyy').format(toDate.value!)}.xlsx";
+      final String message = "Receipts Excel Report from ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}";
+
+      if (Get.isDialogOpen == true) Get.back(); // Close loading
+
+      // 🚀 Now show dialog with filtered data prepared
+      _showReportSuccessDialog(Uint8List(0), fileName, message, isExcel: true, excelData: filteredList);
+
+    } catch (e) {
+      if (Get.isDialogOpen == true) Get.back();
+      debugPrint("Excel Prep Error: $e");
+      Get.snackbar("Export Failed", e.toString(), backgroundColor: Colors.red.shade100);
+    }
+  }
+
+  /// 📊 🏗️ Excel ફાઇલ જનરેટ કરવાની મુખ્ય મેથડ (ડાઉનલોડ વખતે જ રન થશે)
+  Future<Uint8List> _buildExcelFile(List<ReceiptModel> filteredList) async {
+    final excel = excel_pkg.Excel.createExcel();
+    final String sheetName = "Receipts Report";
+    excel.rename('Sheet1', sheetName);
+    final excel_pkg.Sheet sheetObject = excel[sheetName];
+
+    // 🏗️ 1. Styling
+    final excel_pkg.CellStyle titleStyle = excel_pkg.CellStyle(
+      bold: true,
+      fontSize: 16,
+      horizontalAlign: excel_pkg.HorizontalAlign.Center,
+    );
+
+    final excel_pkg.CellStyle subtitleStyle = excel_pkg.CellStyle(
+      bold: true,
+      fontSize: 12,
+      horizontalAlign: excel_pkg.HorizontalAlign.Center,
+    );
+
+    final excel_pkg.CellStyle categoryHeaderStyle = excel_pkg.CellStyle(
+      bold: true,
+      fontSize: 12,
+      backgroundColorHex: excel_pkg.ExcelColor.fromHexString("#F3E5F5"), // Light Purple
+      fontColorHex: excel_pkg.ExcelColor.fromHexString("#4A148C"),
+    );
+
+    final excel_pkg.CellStyle subTotalStyle = excel_pkg.CellStyle(
+      bold: true,
+      fontSize: 11,
+      horizontalAlign: excel_pkg.HorizontalAlign.Right,
+    );
+
+    final excel_pkg.CellStyle headerStyle = excel_pkg.CellStyle(
+      backgroundColorHex: excel_pkg.ExcelColor.fromHexString("#3B3B98"),
+      fontColorHex: excel_pkg.ExcelColor.fromHexString("#FFFFFF"),
+      bold: true,
+      fontFamily: excel_pkg.getFontFamily(excel_pkg.FontFamily.Arial),
+    );
+
+    // 🏗️ 2. Company Header
+    var trustCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0));
+    trustCell.value = excel_pkg.TextCellValue(AppStrings.trustName);
+    trustCell.cellStyle = titleStyle;
+    sheetObject.merge(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0), 
+                      excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: 0));
+
+    var typeCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1));
+    typeCell.value = excel_pkg.TextCellValue(selectedReportType.value == 'Full Report' ? "Collection Report (Detailed)" : "Collection Report (Category-wise)");
+    typeCell.cellStyle = subtitleStyle;
+    sheetObject.merge(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1), 
+                      excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: 1));
+
+    var periodCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 2));
+    periodCell.value = excel_pkg.TextCellValue("Period: ${formatDate(fromDate.value)} to ${formatDate(toDate.value)}");
+    periodCell.cellStyle = subtitleStyle;
+    sheetObject.merge(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 2), 
+                      excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: 2));
+
+    // 🏗️ 3. Report Content
+    int currentRowIndex = 4;
+    final List<String> headers = ['No', 'Date', 'Donor Name', 'PAN', 'Mobile', 'Amount', 'Payment', 'Category', 'Bank', 'Cheque', 'Remarks'];
+
+    if (selectedReportType.value == 'Full Report') {
+      // Linear Table
+      for (int i = 0; i < headers.length; i++) {
+        var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: currentRowIndex));
+        cell.value = excel_pkg.TextCellValue(headers[i]);
+        cell.cellStyle = headerStyle;
+      }
+      currentRowIndex++;
+
+      for (var r in filteredList) {
+        _addReceiptRowToExcel(sheetObject, currentRowIndex, r);
+        currentRowIndex++;
+      }
+    } else {
+      // Category-wise Grouping
+      Map<String, List<ReceiptModel>> groupedData = {};
+      for (var r in filteredList) {
+        String cat = r.donationType.trim().toUpperCase();
+        groupedData.putIfAbsent(cat, () => []).add(r);
+      }
+
+      groupedData.forEach((category, items) {
+        // Category Header Row
+        var catHeader = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRowIndex));
+        catHeader.value = excel_pkg.TextCellValue(category);
+        catHeader.cellStyle = categoryHeaderStyle;
+        sheetObject.merge(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRowIndex), 
+                          excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: currentRowIndex));
+        currentRowIndex++;
+
+        // Table Header for this category
+        for (int i = 0; i < headers.length; i++) {
+          var cell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: currentRowIndex));
+          cell.value = excel_pkg.TextCellValue(headers[i]);
+          cell.cellStyle = headerStyle;
+        }
+        currentRowIndex++;
+
+        // Data Rows
+        double categoryTotal = 0;
+        for (var r in items) {
+          _addReceiptRowToExcel(sheetObject, currentRowIndex, r);
+          categoryTotal += r.amount;
+          currentRowIndex++;
+        }
+
+        // Category Sub-total
+        var totalCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: currentRowIndex));
+        totalCell.value = excel_pkg.TextCellValue("Total: Rs. ${NumberFormat('#,##,###.##').format(categoryTotal)}");
+        totalCell.cellStyle = subTotalStyle;
+        currentRowIndex += 2; // Extra space between categories
+      });
+    }
+
+    // Grand Total at bottom
+    currentRowIndex++;
+    double totalRangeAmount = filteredList.fold(0.0, (acc, item) => acc + item.amount);
+    var grandTotalCell = sheetObject.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: currentRowIndex));
+    grandTotalCell.value = excel_pkg.TextCellValue("Grand Total: Rs. ${NumberFormat('#,##,###.##').format(totalRangeAmount)}");
+    grandTotalCell.cellStyle = excel_pkg.CellStyle(bold: true, fontSize: 14, fontColorHex: excel_pkg.ExcelColor.fromHexString("#3B3B98"));
+
+    for (int i = 0; i < headers.length; i++) {
+      sheetObject.setColumnWidth(i, 20);
+    }
+
+    final List<int>? fileBytes = excel.encode(); // 🚀 Use encode() to get bytes without auto-download
+    if (fileBytes == null) throw "Could not generate Excel bytes";
+    return Uint8List.fromList(fileBytes);
+  }
+
+  void _addReceiptRowToExcel(excel_pkg.Sheet sheet, int rowIndex, ReceiptModel r) {
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = excel_pkg.IntCellValue(r.recNo);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.date);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.donorName);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.panNo);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.mobileNo);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = excel_pkg.DoubleCellValue(r.amount);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.paymentType);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.donationType);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.bankName);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.chequeNo);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.remarks);
+  }
+
   pw.Widget _buildReportTable(pw.Context context, List<ReceiptModel> data) {
     return pw.TableHelper.fromTextArray(
       context: context,
@@ -533,7 +722,7 @@ class DashboardController extends GetxController {
     );
   }
 
-  void _showReportSuccessDialog(Uint8List pdfBytes, String fileName, String message) {
+  void _showReportSuccessDialog(Uint8List fileBytes, String fileName, String message, {bool isExcel = false, List<ReceiptModel>? excelData}) {
     final bool isWeb = MediaQuery.of(Get.context!).size.width > 900;
     
     Get.dialog(
@@ -561,50 +750,84 @@ class DashboardController extends GetxController {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
+                  color: isExcel ? const Color(0xFFE3F2FD) : const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Icons.analytics_rounded, color: Color(0xFF2E7D32), size: 48),
+                child: Icon(
+                  isExcel ? Icons.table_chart_rounded : Icons.analytics_rounded, 
+                  color: isExcel ? Colors.blue.shade700 : const Color(0xFF2E7D32), 
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Report Generated!',
+              Text(
+                isExcel ? 'Excel Report Ready!' : 'Report Generated!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87, decoration: TextDecoration.none),
               ),
               const SizedBox(height: 8),
               Text(
-                'Your PDF report is ready for export.',
+                'Your ${isExcel ? "Excel" : "PDF"} report is ready for export.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600, decoration: TextDecoration.none),
               ),
               const SizedBox(height: 32),
               
               // Action Buttons
-              _reportActionButton(
-                icon: Icons.local_printshop_rounded,
-                label: 'Print Report',
-                color: AppColors.appTheame,
-                isPrimary: true,
-                onTap: () async {
-                  Get.back();
-                  await Printing.layoutPdf(onLayout: (_) async => pdfBytes, name: fileName);
-                },
-              ),
-              const SizedBox(height: 12),
-              _reportActionButton(
-                icon: Icons.share_rounded,
-                label: 'Share PDF File',
-                color: const Color(0xFF25D366),
-                isPrimary: false,
-                onTap: () async {
-                  Get.back();
-                  await Share.shareXFiles(
-                    [XFile.fromData(pdfBytes, name: fileName, mimeType: 'application/pdf')],
-                    text: message,
-                  );
-                },
-              ),
+              if (isExcel) ...[
+                _reportActionButton(
+                  icon: Icons.download_rounded,
+                  label: 'Download Excel File',
+                  color: Colors.blue.shade700,
+                  isPrimary: true,
+                  onTap: () async {
+                    Get.back();
+                    _showBlurLoadingOverlay(msg: "Downloading Excel File...");
+                    final bytes = await _buildExcelFile(excelData!);
+                    Get.back();
+
+                    if (kIsWeb) {
+                      // 🚀 Direct Download for Web
+                      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                      final url = html.Url.createObjectUrlFromBlob(blob);
+                      html.AnchorElement(href: url)
+                        ..setAttribute("download", fileName)
+                        ..click();
+                      html.Url.revokeObjectUrl(url);
+                    } else {
+                      // On Mobile, Share sheet is the best way to save
+                      await Share.shareXFiles(
+                        [XFile.fromData(bytes, name: fileName, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
+                      );
+                    }
+                  },
+                ),
+              ] else ...[
+                _reportActionButton(
+                  icon: Icons.local_printshop_rounded,
+                  label: 'Print Report',
+                  color: AppColors.appTheame,
+                  isPrimary: true,
+                  onTap: () async {
+                    Get.back();
+                    await Printing.layoutPdf(onLayout: (_) async => fileBytes, name: fileName);
+                  },
+                ),
+                const SizedBox(height: 12),
+                _reportActionButton(
+                  icon: Icons.share_rounded,
+                  label: 'Share PDF File',
+                  color: const Color(0xFF25D366),
+                  isPrimary: false,
+                  onTap: () async {
+                    Get.back();
+                    await Share.shareXFiles(
+                      [XFile.fromData(fileBytes, name: fileName, mimeType: 'application/pdf')],
+                      text: message,
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 20),
               TextButton(
                 onPressed: () => Get.back(),
@@ -642,7 +865,7 @@ class DashboardController extends GetxController {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)
+                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20)
               ]
             ),
             child: Column(
@@ -665,7 +888,7 @@ class DashboardController extends GetxController {
         ),
       ),
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
     );
   }
 
@@ -673,6 +896,7 @@ class DashboardController extends GetxController {
     fromDate.value = null;
     toDate.value = null;
     selectedReportType.value = 'Full Report';
+    selectedExportFormat.value = 'PDF'; // Reset to PDF
     
     double screenWidth = MediaQuery.of(context).size.width;
     bool isWeb = screenWidth > 900;
@@ -682,7 +906,7 @@ class DashboardController extends GetxController {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
         child: Container(
-          width: isWeb ? 550 : 420,
+          width: isWeb ? 580 : 420,
           padding: const EdgeInsets.all(0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -720,6 +944,32 @@ class DashboardController extends GetxController {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text("Select Export Format", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 14),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFormatTile(
+                            title: "PDF Report",
+                            icon: Icons.picture_as_pdf_rounded,
+                            format: 'PDF',
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildFormatTile(
+                            title: "Excel Sheet",
+                            icon: Icons.table_chart_rounded,
+                            format: 'Excel',
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 28),
                     const Text("Select Report Type", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
                     const SizedBox(height: 14),
                     
@@ -729,7 +979,7 @@ class DashboardController extends GetxController {
                           Expanded(
                             child: _buildReportTypeTile(
                               title: "Full Report",
-                              subtitle: "Complete chronological list",
+                              subtitle: "Chronological list",
                               icon: Icons.receipt_long_rounded,
                               type: 'Full Report',
                             ),
@@ -738,7 +988,7 @@ class DashboardController extends GetxController {
                           Expanded(
                             child: _buildReportTypeTile(
                               title: "Category Wise",
-                              subtitle: "Grouped by donation type",
+                              subtitle: "Grouped data",
                               icon: Icons.category_rounded,
                               type: 'Donation Type Wise',
                             ),
@@ -813,7 +1063,7 @@ class DashboardController extends GetxController {
                     SizedBox(
                       width: double.infinity,
                       height: 56,
-                      child: ElevatedButton.icon(
+                      child: Obx(() => ElevatedButton.icon(
                         onPressed: () {
                           if (fromDate.value == null || toDate.value == null) {
                             Get.snackbar("Range Required", "Please select both dates", 
@@ -821,10 +1071,19 @@ class DashboardController extends GetxController {
                             return;
                           }
                           Get.back();
-                          exportToPdf();
+                          if (selectedExportFormat.value == 'PDF') {
+                            exportToPdf();
+                          } else {
+                            exportToExcel();
+                          }
                         },
-                        icon: const Icon(Icons.picture_as_pdf_rounded),
-                        label: const Text("Generate & Download PDF Report", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        icon: Icon(selectedExportFormat.value == 'PDF' ? Icons.picture_as_pdf_rounded : Icons.table_chart_rounded),
+                        label: Text(
+                          selectedExportFormat.value == 'PDF' 
+                              ? "Generate & Download PDF Report" 
+                              : "Generate & Download Excel Report", 
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.appTheame,
                           foregroundColor: Colors.white,
@@ -832,7 +1091,7 @@ class DashboardController extends GetxController {
                           elevation: 2,
                           shadowColor: AppColors.appTheame.withOpacity(0.3),
                         ),
-                      ),
+                      )),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -845,6 +1104,36 @@ class DashboardController extends GetxController {
     );
   }
 
+  Widget _buildFormatTile({required String title, required IconData icon, required String format, required Color color}) {
+    return Obx(() {
+      bool isSelected = selectedExportFormat.value == format;
+      return InkWell(
+        onTap: () => selectedExportFormat.value = format,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.08) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isSelected ? color : Colors.grey.shade200, width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: isSelected ? color : Colors.grey.shade400, size: 20),
+              const SizedBox(width: 12),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isSelected ? color : Colors.black54)),
+              const Spacer(),
+              if (isSelected)
+                Icon(Icons.check_circle_rounded, color: color, size: 16),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildReportTypeTile({required String title, required String subtitle, required IconData icon, required String type}) {
     return Obx(() {
       bool isSelected = selectedReportType.value == type;
@@ -855,7 +1144,7 @@ class DashboardController extends GetxController {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.appTheame.withOpacity(0.04) : Colors.white,
+            color: isSelected ? AppColors.appTheame.withValues(alpha: 0.04) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: isSelected ? AppColors.appTheame : Colors.grey.shade200, width: 1.5),
           ),
@@ -875,7 +1164,7 @@ class DashboardController extends GetxController {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isSelected ? AppColors.appTheame : Colors.black87)),
-                    Text(subtitle, style: TextStyle(fontSize: 11, color: isSelected ? AppColors.appTheame.withOpacity(0.7) : Colors.grey)),
+                    Text(subtitle, style: TextStyle(fontSize: 11, color: isSelected ? AppColors.appTheame.withValues(alpha: 0.7) : Colors.grey)),
                   ],
                 ),
               ),
@@ -903,7 +1192,7 @@ class DashboardController extends GetxController {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)]),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5)]),
               child: Icon(icon, color: AppColors.appTheame, size: 20),
             ),
             const SizedBox(width: 16),

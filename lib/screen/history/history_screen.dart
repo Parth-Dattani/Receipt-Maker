@@ -171,12 +171,13 @@ class HistoryScreen extends GetView<ReceiptController> {
                       Get.toNamed(NewReceiptScreen.pageId);
                     }),
                     _webActionButton(Icons.local_printshop_rounded, Colors.blueGrey, () async {
-                      final file = await ReceiptPdfHelper.generate(r, isPrint: true);
-                      controller.printReceipt(file.path, receipt: r);
+                      // 🖨️ Works on Web & Mobile
+                      controller.printReceipt("", receipt: r);
                     }),
                     _webActionButton(Icons.share_rounded, const Color(0xFF25D366), () async {
-                      final file = await ReceiptPdfHelper.generate(r, isPrint: false);
-                      controller.shareWhatsApp(file.path, receiptNo: r.recNo.toString(), mobileNo: r.mobileNo);
+                      // 📄 Generate bytes first for Web support
+                      final bytes = await ReceiptPdfHelper.generateBytes(r, isPrint: false);
+                      controller.shareWhatsApp("", receiptNo: r.recNo.toString(), mobileNo: r.mobileNo, pdfBytes: bytes);
                     }),
                     _webActionButton(Icons.delete_outline_rounded, Colors.red, () => controller.deleteReceipt(r)),
                   ],
@@ -359,14 +360,13 @@ class HistoryScreen extends GetView<ReceiptController> {
                     Get.toNamed(NewReceiptScreen.pageId);
                   }),
                   _actionButton(Icons.local_printshop_rounded, 'Print', Colors.blueGrey.shade700, () async {
-                    // 🖨️ FIXED: 2 copies with Print parameter
-                    final file = await ReceiptPdfHelper.generate(r, isPrint: true);
-                    controller.printReceipt(file.path, receipt: r);
+                    // 🖨️ FIXED: Works on Web & Mobile
+                    controller.printReceipt("", receipt: r);
                   }),
                   _actionButton(Icons.share_rounded, 'Share', const Color(0xFF25D366), () async {
-                    // 📄 FIXED: 1 copy for sharing
-                    final file = await ReceiptPdfHelper.generate(r, isPrint: false);
-                    controller.shareWhatsApp(file.path, receiptNo: r.recNo.toString(), mobileNo: r.mobileNo);
+                    // 📄 FIXED: Generate bytes for Web support
+                    final bytes = await ReceiptPdfHelper.generateBytes(r, isPrint: false);
+                    controller.shareWhatsApp("", receiptNo: r.recNo.toString(), mobileNo: r.mobileNo, pdfBytes: bytes);
                   }),
                   _actionButton(Icons.delete_outline_rounded, 'Delete', Colors.red.shade700, () {
                     controller.deleteReceipt(r);
