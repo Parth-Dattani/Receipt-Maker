@@ -113,6 +113,47 @@ class SettingsController extends GetxController {
     Get.snackbar("Removed", "Donation type removed");
   }
 
+  /// 🚀 નવી મેથડ: Donation Type એડિટ કરવા માટે ડાયલોગ બતાવો
+  void showEditDonationDialog(String oldType) {
+    final editCtrl = TextEditingController(text: oldType);
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Edit Donation Type', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: editCtrl,
+          decoration: InputDecoration(
+            labelText: 'Type Name',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              String newType = editCtrl.text.trim();
+              if (newType.isNotEmpty && newType != oldType) {
+                Get.back();
+                isLoadingTypes.value = true;
+                // ૧. જૂનું હટાવો
+                await FirebaseService.removeDonationType(oldType);
+                // ૨. નવું ઉમેરો
+                await FirebaseService.addDonationType(newType);
+                loadDonationTypes();
+                Get.snackbar("Success", "Donation type updated successfully!");
+              } else {
+                Get.back();
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.appTheame, foregroundColor: Colors.white),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void toggleDirectShare(bool val) async {
     await AppConstants.setIsWhatsappDirectShare(val);
   }

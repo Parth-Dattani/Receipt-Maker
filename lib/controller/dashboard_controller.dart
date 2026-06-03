@@ -662,17 +662,19 @@ class DashboardController extends GetxController {
   }
 
   void _addReceiptRowToExcel(excel_pkg.Sheet sheet, int rowIndex, ReceiptModel r) {
+    String f(String? v) => (v == null || v.trim().isEmpty || v.trim().toUpperCase() == 'N/A') ? '' : v.trim();
+
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = excel_pkg.IntCellValue(r.recNo);
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.date);
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.donorName);
-    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.panNo);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(f(r.panNo));
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.mobileNo);
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = excel_pkg.DoubleCellValue(r.amount);
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.paymentType);
     sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.donationType);
-    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.bankName);
-    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.chequeNo);
-    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(r.remarks);
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 8, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(f(r.bankName));
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(f(r.chequeNo));
+    sheet.cell(excel_pkg.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: rowIndex)).value = excel_pkg.TextCellValue(f(r.remarks));
   }
 
   pw.Widget _buildReportTable(pw.Context context, List<ReceiptModel> data) {
@@ -693,16 +695,19 @@ class DashboardController extends GetxController {
         7: const pw.FlexColumnWidth(2),    // Donation Type
       },
       headers: ['No', 'Date', 'Donor Name', 'PAN', 'Mobile', 'Amount', 'Payment', 'Category'],
-      data: data.map((r) => [
-        r.recNo.toString(),
-        r.date,
-        r.donorName,
-        r.panNo,
-        r.mobileNo,
-        NumberFormat('#,##,###.##').format(r.amount),
-        r.paymentType,
-        r.donationType,
-      ]).toList(),
+      data: data.map((r) {
+        String f(String? v) => (v == null || v.trim().isEmpty || v.trim().toUpperCase() == 'N/A') ? '' : v.trim();
+        return [
+          r.recNo.toString(),
+          r.date,
+          r.donorName,
+          f(r.panNo), // 🚀 Cleaned PAN (Removed N/A)
+          r.mobileNo,
+          NumberFormat('#,##,###.##').format(r.amount),
+          r.paymentType,
+          r.donationType,
+        ];
+      }).toList(),
     );
   }
 

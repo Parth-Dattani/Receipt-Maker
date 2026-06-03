@@ -141,13 +141,15 @@ class SettingsScreen extends GetView<SettingsController> {
                       : Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: controller.donationTypes.map((type) => Chip(
+                          children: controller.donationTypes.map<Widget>((type) => InputChip(
                             label: Text(type, style: const TextStyle(fontSize: 12)),
                             backgroundColor: Colors.grey.shade100,
                             side: BorderSide.none,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            deleteIcon: const Icon(Icons.cancel, size: 16),
+                            avatar: Icon(Icons.edit_rounded, size: 14, color: Colors.blue.shade700),
+                            onPressed: () => controller.showEditDonationDialog(type),
                             onDeleted: () => controller.removeDonationType(type),
+                            deleteIcon: const Icon(Icons.cancel, size: 16),
                           )).toList(),
                         )),
                 ],
