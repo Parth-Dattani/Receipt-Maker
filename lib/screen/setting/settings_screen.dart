@@ -87,13 +87,29 @@ class SettingsScreen extends GetView<SettingsController> {
               _buildSettingCard(
                 title: "Financial Settings",
                 children: [
-                  Obx(() => _buildSettingsDropdown(
-                    label: "Active Financial Year",
-                    icon: Icons.calendar_month_rounded,
-                    value: controller.currentFY.value,
-                    items: controller.fyOptions,
-                    onChanged: (val) => controller.changeFinancialYear(val!),
-                  )),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Obx(() => _buildSettingsDropdown(
+                          label: "Active Financial Year",
+                          icon: Icons.calendar_month_rounded,
+                          value: controller.currentFY.value,
+                          items: controller.fyOptions,
+                          onChanged: (val) => controller.changeFinancialYear(val!),
+                        )),
+                      ),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: IconButton(
+                          onPressed: () => controller.cloneFinancialYear(),
+                          icon: const Icon(Icons.content_copy_rounded, color: Colors.blue),
+                          tooltip: "Clone/Copy Current Sheet",
+                        ),
+                      ),
+                    ],
+                  ),
                   CustomTextFormField(
                     controller: controller.startRecCtrl,
                     label: "Next Receipt Number",

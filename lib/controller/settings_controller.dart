@@ -214,6 +214,45 @@ class SettingsController extends GetxController {
     Get.snackbar("Success", "Financial year changed to $newFY");
   }
 
+  /// 🚀 નવી મેથડ: જૂના વર્ષની શીટ ક્લોન કરો (Copy)
+  Future<void> cloneFinancialYear() async {
+    final String source = "Receipts_${currentFY.value}";
+    final String target = "${source}_copy";
+    
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.content_copy_rounded, color: Colors.blue),
+            SizedBox(width: 12),
+            Text('Clone Sheet'),
+          ],
+        ),
+        content: Text('Do you want to create an exact copy of "$source" including all data and formatting? The new sheet will be named "$target".'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              isLoading.value = true;
+              bool success = await GoogleSheetsService.duplicateWorksheet(source, target);
+              if (success) {
+                await loadAvailableFYs(); // FY લિસ્ટ રિફ્રેશ કરો
+                Get.snackbar("Success", "Sheet cloned successfully!", backgroundColor: Colors.blue.shade100);
+              } else {
+                Get.snackbar("Error", "Could not clone sheet. Make sure the source exists.", backgroundColor: Colors.red.shade100);
+              }
+              isLoading.value = false;
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+            child: const Text('Clone Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void saveSettings() async {
     isLoading.value = true;
     try {

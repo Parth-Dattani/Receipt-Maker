@@ -126,7 +126,8 @@ class GoogleSheetsService {
       _mainFolderId = await _getOrCreateFolder('Receipts', hintId: savedFolderId);
       if (_mainFolderId == null) return null;
       
-      final sheetName = '${userId}_$financialYear';
+      // 🚀 Changed: One single file for all years (Tabs will handle the FY)
+      final sheetName = '${userId}_Receipts';
       _spreadsheetId = await _getOrCreateSpreadsheet(sheetName, _mainFolderId!, hintId: savedSheetId);
       if (_spreadsheetId == null) return null;
 
@@ -381,6 +382,41 @@ class GoogleSheetsService {
     }
   }
 
+  /// 🚀 નવી મેથડ: કોઈ પણ ટેબ (Sheet) ની બેઠી કોપી બનાવો (Data અને Formatting સાથે)
+  static Future<bool> duplicateWorksheet(String sourceTitle, String targetTitle) async {
+    if (_sheetsApi == null || _spreadsheetId == null) return false;
+    try {
+      final ss = await _sheetsApi!.spreadsheets.get(_spreadsheetId!);
+      int? sourceSheetId;
+      
+      // ૧. સોર્સ શીટ શોધો
+      for (var s in ss.sheets ?? []) {
+        if (s.properties?.title == sourceTitle) {
+          sourceSheetId = s.properties?.sheetId;
+          break;
+        }
+      }
+
+      if (sourceSheetId == null) return false;
+
+      // ૨. ગૂગલને ડુપ્લીકેટ બનાવવાનો આદેશ આપો
+      await _sheetsApi!.spreadsheets.batchUpdate(sheets_api.BatchUpdateSpreadsheetRequest(
+        requests: [
+          sheets_api.Request(duplicateSheet: sheets_api.DuplicateSheetRequest(
+            sourceSheetId: sourceSheetId,
+            newSheetName: targetTitle,
+          ))
+        ]
+      ), _spreadsheetId!);
+      
+      debugPrint('[GSheetsService] ✅ Sheet $sourceTitle cloned as $targetTitle');
+      return true;
+    } catch (e) {
+      debugPrint('[GSheetsService] Duplicate Error: $e');
+      return false;
+    }
+  }
+
   static Future<String?> uploadPdfToDrive(Uint8List bytes, String fileName) async {
     if (!isSignedIn || _mainFolderId == null || _driveApi == null) return null;
     try {
@@ -437,21 +473,35 @@ class GoogleSheetsService {
   static Future<String?> _getOrCreateSpreadsheet(String name, String folderId, {String? hintId}) async {
     if (_sheetsApi == null || _driveApi == null) return null;
     
-    // 🚀 Check if hintId is valid and NOT trashed
+    // 🚀 ૧. જો ફાયરબેઝમાં આઈડી હોય તો તે જ વાપરો
     if (hintId != null && hintId.isNotEmpty) {
       try {
         final driveFile = await _driveApi?.files.get(hintId, $fields: 'id, trashed');
-        if (driveFile != null && !(driveFile as drive.File).trashed!) {
-           return hintId;
-        }
-        debugPrint('[GSheetsService] Spreadsheet hint $hintId is trashed/invalid.');
+        if (driveFile != null && !(driveFile as drive.File).trashed!) return hintId;
       } catch (_) {}
     }
 
+    // 🚀 ૨. નવી માસ્ટર ફાઈલ શોધો (e.g. nPkebr..._Receipts)
     final q = "mimeType='application/vnd.google-apps.spreadsheet' and name='$name' and '$folderId' in parents and trashed=false";
     final res = await _driveApi?.files.list(q: q, $fields: 'files(id, name)');
     if (res?.files != null && res!.files!.isNotEmpty) return res.files!.first.id;
+
+    // 🚀 ૩. Smart Migration: જો માસ્ટર ફાઈલ ના મળે, તો જૂની ફાઈલ શોધો (e.g. nPkebr..._2026-27)
+    // આનાથી જૂના યુઝર્સનો ડેટા ખોવાશે નહીં.
+    final String userId = name.split('_').first;
+    final legacyQ = "mimeType='application/vnd.google-apps.spreadsheet' and name contains '$userId' and '$folderId' in parents and trashed=false";
+    final legacyRes = await _driveApi?.files.list(q: legacyQ, $fields: 'files(id, name)');
     
+    if (legacyRes?.files != null && legacyRes!.files!.isNotEmpty) {
+      final legacyFile = legacyRes.files!.first;
+      debugPrint('[Migration] 🔄 Found legacy file: ${legacyFile.name}. Migrating to master format...');
+      
+      // જૂની ફાઈલનું નામ બદલીને માસ્ટર ફાઈલ કરી દો
+      await _driveApi!.files.update(drive.File(name: name), legacyFile.id!);
+      return legacyFile.id;
+    }
+    
+    // 🚀 ૪. જો કશું જ ના મળે, તો જ નવી ફાઈલ બનાવો
     final f = drive.File()..name = name..mimeType = 'application/vnd.google-apps.spreadsheet'..parents = [folderId];
     final c = await _driveApi!.files.create(f, $fields: 'id');
     return c?.id;
@@ -478,6 +528,29 @@ class GoogleSheetsService {
         sheets_api.ValueRange(values: [['RecNo', 'Date', 'Donor Name', 'PAN No', 'Mobile No', 'Amount', 'Amount In Words', 'Payment Type', 'Bank Name', 'Cheque No', 'Remarks', 'Donation Type', 'Created At', 'UpdatedAt']]),
         _spreadsheetId!, '$_activeWorksheetTitle!A1:N1', valueInputOption: 'RAW',
       );
+
+      // 🚀 Format Headers (Bold, White Text, Purple Background)
+      if (targetSheetId != null) {
+        await _sheetsApi?.spreadsheets.batchUpdate(sheets_api.BatchUpdateSpreadsheetRequest(requests: [
+          sheets_api.Request(repeatCell: sheets_api.RepeatCellRequest(
+            range: sheets_api.GridRange(
+              sheetId: targetSheetId,
+              startRowIndex: 0,
+              endRowIndex: 1,
+              startColumnIndex: 0,
+              endColumnIndex: 14,
+            ),
+            cell: sheets_api.CellData(
+              userEnteredFormat: sheets_api.CellFormat(
+                backgroundColor: sheets_api.Color(red: 0.23, green: 0.23, blue: 0.60), // Match App Theme #3B3B98
+                textFormat: sheets_api.TextFormat(bold: true, foregroundColor: sheets_api.Color(red: 1.0, green: 1.0, blue: 1.0)),
+                horizontalAlignment: 'CENTER',
+              ),
+            ),
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+          ))
+        ]), _spreadsheetId!);
+      }
 
       // HIDDEN_ROW row 2
       await _sheetsApi?.spreadsheets.values.update(

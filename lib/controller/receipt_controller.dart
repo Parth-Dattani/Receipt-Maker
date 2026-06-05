@@ -318,23 +318,23 @@ class ReceiptController extends GetxController {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () {
-                    // 🚀 Improved: Clear the success dialog first
+                    // 🚀 Fix for Web: Close dialog and navigate to dashboard directly
                     if (Get.isDialogOpen == true) {
                       Get.back();
                     }
                     
-                    // 🚀 Then navigate back to the Dashboard with a tiny delay 
-                    // to ensure GetX handles the stack transition on Web
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      if (Get.currentRoute == NewReceiptScreen.pageId || Get.currentRoute.contains('new-receipt')) {
-                        Get.back();
-                      }
+                    // Use a slightly longer delay and a direct route check
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      Get.offAllNamed('/dashboard'); // Use a reliable navigation method
                     });
                   },
-                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: Colors.grey.shade50,
+                  ),
                   child: Text(
                     'Skip & Close',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade500),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ),
               ),
